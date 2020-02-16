@@ -1,0 +1,98 @@
+
+// std :: import std;
+// fmt :: std.fmt;
+
+// fmt :: import std.fmt;
+// fmt :: import "std.fmt";
+// fmt :: @import("std.fmt");
+
+#naked _start :: () 
+{
+    posix_call_main_and_exit();
+}
+
+posix_call_main_and_exit :: ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+
+main :: () -> int
+{
+    return 0;
+}
+
+// main :: (args: []std.String) -> int
+// {
+//     fmt.print("Hello World!\n");
+//     return 0;
+// }
+
+// Vec2 :: struct 
+// {
+//     x : int;
+//     y : int;
+// 
+//     add :: (self: *Vec2, other: Vec2) -> Vec2
+//     {
+//         self.x += other.x;
+//         self.y += other.y;
+//         return <self;
+//     }
+// 
+//     add :: (a: Vec2, b: Vec2) -> Vec2
+//     {
+//         return { a.x + b.x, a.y + b.y };
+//     }
+// }
+// 
+// main :: (args: []std.String) -> int
+// {
+//     p1 : Vec2;
+//     p1.x = 1;
+//     p1.y = 2;
+//     fmt.print("p1: {}\n", p1);
+// 
+//     p2 : Vec2 = { 3, 4 };
+//     fmt.print("p2: {}\n", p2);
+// 
+//     p3 := Vec2 { 5, 6 };
+//     fmt.print("p3: {}\n", p3);
+// 
+//     p4 := Vec2.add(p1, p2);
+//     fmt.print("p4: {} (=Vec2.add(p1, p2))\n", p4);
+// 
+//     fmt.print("p3.add(p4) = {}\n", p3.add(p4));
+//     fmt.print("p3: {}\n", p3);
+// 
+//     return 0;
+// }
+
+// Vec3 :: struct(T: Type)
+// {
+//     x, y, z : T;
+// 
+//     add :: (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
+//     {
+//         return { a.x + b.x, a.y + b.y, a.z + b.z };
+//     }
+// }
+// 
+// vec3_sub :: (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
+// {
+//     return { a.x - b.x, a.y - b.y, a.z - b.z };
+// }
+// 
+// main :: (args: []std.String) -> int
+// {
+//     p1 : Vec3(float) = { 1, 2, 3 };
+//     p2 := Vec3(float){ 4, 5, 6 };
+// 
+//     fmt.print(p1);
+//     fmt.print(p2);
+//     fmt.print(Vec3(float).add(p1, p2));
+//     fmt.print(Vec3.add(p1, p2));
+//     fmt.print(vec3_sub(p2, p1));
+// 
+//     return 0;
+// }
