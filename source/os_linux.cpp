@@ -23,7 +23,7 @@ const char* os_get_absolute_path(Allocator* allocator, const char* path)
     auto path_len = strlen(path);
     auto total_len = cwd_len + path_len + 1;
 
-    char* result = alloc_array(allocator, char, total_len + 1);
+    char* result = alloc_array<char>(allocator, total_len + 1);
 
     memcpy(result, cwd, cwd_len);
     result[cwd_len] = '/';
@@ -42,7 +42,7 @@ const char* os_get_cwd(Allocator* allocator)
     assert(ret == buf);
 
     auto result_len = strlen(buf);
-    char* result = alloc_array(allocator, char, result_len + 1);
+    char* result = alloc_array<char>(allocator, result_len + 1);
     memcpy(result, buf, result_len);
     result[result_len] = '\0';
 

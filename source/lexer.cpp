@@ -6,6 +6,8 @@
 #include "zodiac_string.h"
 
 #include <cassert>
+#include <stdio.h>
+#include <inttypes.h>
 
 Lexer lexer_create(Allocator* allocator)
 {
@@ -30,10 +32,227 @@ Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
     array_init(lexer->allocator, &result.tokens);
     hash_table_init(lexer->allocator, &result.file_positions);
 
+    Lexer_Data ld = {};
+    ld.lexer = lexer;
+    ld.file_path = file_path;
+    ld.file_data = read_file_string(lexer->allocator, file_path);
+    ld.file_size = string_length(ld.file_data);
+    ld.current_line = 1;
+    ld.current_column = 1;
+
+    while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
+    {
+        Token t = next_token(&ld);
+        token_print(t);
+    }
+
+    return result;
+}
+
+Token next_token(Lexer_Data* ld)
+{
+restart:
+    skip_whitespace(ld);
+
+    auto c = current_char(ld);
+
+#define __SINGLE_CHAR_TOKEN_CASE(_c, kind) \
+        case _c: \
+        { \
+            auto fp = get_file_pos(ld); \
+            String str = copy_string(ld->lexer->allocator, &c, 1); \
+            advance(ld); \
+            return token_create(fp, kind, str); \
+        } 
+
+    switch (c)
+    {
+        __SINGLE_CHAR_TOKEN_CASE('#', TOK_POUND);
+        __SINGLE_CHAR_TOKEN_CASE(':', TOK_COLON);
+        __SINGLE_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
+        __SINGLE_CHAR_TOKEN_CASE('@', TOK_AT);
+
+        __SINGLE_CHAR_TOKEN_CASE('(', TOK_LPAREN);
+        __SINGLE_CHAR_TOKEN_CASE(')', TOK_RPAREN);
+        __SINGLE_CHAR_TOKEN_CASE('{', TOK_LBRACE);
+        __SINGLE_CHAR_TOKEN_CASE('}', TOK_RBRACE);
+        __SINGLE_CHAR_TOKEN_CASE('[', TOK_LBRACK);
+        __SINGLE_CHAR_TOKEN_CASE(']', TOK_RBRACK);
+
+        __SINGLE_CHAR_TOKEN_CASE('=', TOK_EQ);
+        __SINGLE_CHAR_TOKEN_CASE('<', TOK_LT);
+        __SINGLE_CHAR_TOKEN_CASE('>', TOK_LTEQ);
+
+        __SINGLE_CHAR_TOKEN_CASE('+', TOK_PLUS);
+        __SINGLE_CHAR_TOKEN_CASE('-', TOK_MINUS);
+        __SINGLE_CHAR_TOKEN_CASE('*', TOK_STAR);
+
+        case '/':
+        {
+            if (peek_char(ld, 1) == '/')
+            {
+                while (!is_newline(current_char(ld))) advance(ld);
+                goto restart;
+            }
+            else assert(false);
+            break;
+        }
+
+        case EOF: // This can happen here after we've skipped whitespace
+        {
+            auto fp = get_file_pos(ld);
+            return token_create(fp, TOK_EOF, nullptr);
+            break;
+        }
+
+        default: 
+        {
+            if (is_alpha(c) || c == '_')
+            {
+                return lex_identifier(ld);
+            }
+            else if (is_num(c) || c == '.')
+            {
+                return lex_number_literal(ld);
+            }
+
+            fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: Unexpected character: '%c'\n", 
+                    ld->file_path, ld->current_line, ld->current_column, c);
+            assert(false);
+            break;
+        }
+    }
+
+#undef __SINGLE_CHAR_TOKEN_CASE
+
+    assert(false);
+    return {};
+}
+
+Token lex_identifier(Lexer_Data* ld)
+{
+    auto fc = current_char(ld);
+    assert(is_alpha(fc) || fc == '_');
+
+    File_Pos begin_fp = get_file_pos(ld);
+
+    File_Pos last_valid_fp = begin_fp;
+
+    while (is_alpha_num(current_char(ld)) || current_char(ld) == '_')
+    {
+        advance(ld);
+        last_valid_fp = get_file_pos(ld);
+    }
+
+    auto end_fp = last_valid_fp;
+    auto length = end_fp.index - begin_fp.index;
+    String string = copy_string(ld->lexer->allocator, &ld->file_data[begin_fp.index], length);
+
+    return token_create(begin_fp, end_fp, TOK_IDENTIFIER, string);
+}
+
+Token lex_number_literal(Lexer_Data* ld)
+{
+    auto fc = current_char(ld);
+    assert(is_num(fc) || fc == '.');
+
+    bool found_dot = false;
+    if (fc == '.') found_dot = true;
+
+    File_Pos begin_fp = get_file_pos(ld);
+    File_Pos last_valid_fp = begin_fp;
+
+    while (is_num(current_char(ld)) || (current_char(ld) == '.' && !found_dot))
+    {
+        advance(ld);
+        last_valid_fp = get_file_pos(ld);
+    }
+
+    auto end_fp = last_valid_fp;
+    auto length = end_fp.index - begin_fp.index;
+    String string = copy_string(ld->lexer->allocator, &ld->file_data[begin_fp.index], length);
+
+    return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, string);
+}
+
+void advance(Lexer_Data* ld)
+{
+    assert(ld->file_index < ld->file_size);
+
+    char c = current_char(ld);
+
+    if (c == '\n') 
+    {
+        ld->current_line += 1;
+        ld->current_column = 1;
+    }
+
+    ld->file_index += 1;
+}
+
+char current_char(Lexer_Data* ld)
+{
+    return peek_char(ld, 0);
+}
+
+char peek_char(Lexer_Data* ld, uint64_t offset)
+{
+    if (ld->file_index + offset < ld->file_size)
+        return ld->file_data[ld->file_index + offset];
+    
+    return EOF;
+}
+
+void skip_whitespace(Lexer_Data* ld)
+{
+    while (is_whitespace(current_char(ld))) 
+    {
+        advance(ld);
+    }
+}
+
+bool is_alpha(char c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool is_alpha_num(char c)
+{
+    return is_alpha(c) || is_num(c);
+}
+
+bool is_num(char c)
+{
+    return c >= '0' && c <= '9';
+}
+
+bool is_whitespace(char c)
+{
+    return c == ' ' || c == '\t' || is_newline(c);
+}
+
+bool is_newline(char c)
+{
+    return c == '\n' || c == '\r';
+}
+
+File_Pos get_file_pos(Lexer_Data* ld)
+{
+    File_Pos result = {};
+
+    result.index = ld->file_index;
+    result.line = ld->current_line;
+    result.column = ld->current_column;
+    result.file_name = ld->file_path;
+
     return result;
 }
 
 void lexed_file_print(Lexed_File* lf)
 {
-    assert(false);
+    printf("Lexed file: '%s'\n", lf->path);
+    for (int64_t i = 0; i < lf->tokens.count; i++)
+    {
+        token_print(lf->tokens[i]);
+    }
 }

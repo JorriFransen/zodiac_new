@@ -14,5 +14,6 @@ struct Hash_Table
 template <typename Key_Type, typename Value_Type>
 void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* hash_table)
 {
-    assert(false);
+    assert(allocator);
+    assert(hash_table);
 }

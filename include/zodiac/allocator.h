@@ -22,7 +22,12 @@ struct Allocator
     Alloc_Function alloc = nullptr; 
 };
 
-#define alloc(allocator, size) (allocator->alloc(allocator, ALLOCATE, size, nullptr))
-#define free(allocator, ptr) (allocator->alloc(allocator, FREE, 0, ptr))
 
-#define alloc_array(allocator, type, elem_count) ((type*)alloc(allocator, sizeof(type) * elem_count))
+void* alloc(Allocator* allocator, int64_t size);
+void* free(Allocator* allocator, void* ptr);
+
+template <typename Element_Type>
+Element_Type* alloc_array(Allocator* allocator, int64_t element_count)
+{
+    return (Element_Type*)alloc(allocator, sizeof(Element_Type) * element_count);
+}
