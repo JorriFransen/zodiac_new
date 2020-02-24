@@ -8,6 +8,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/allocator.cpp
     source/atom.cpp
     source/c_allocator.cpp
+    source/hash_table.cpp
     source/lexer.cpp
     source/os.cpp
     source/os_linux.cpp

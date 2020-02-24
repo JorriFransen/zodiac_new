@@ -1,6 +1,6 @@
 #pragma once
 
-#include "array.h"
+#include "hash_table.h"
 #include "zodiac_string.h"
 
 namespace Zodiac
@@ -12,15 +12,9 @@ struct Atom
     uint64_t length = 0;
 };
 
-struct Atom_Entry
-{
-    uint64_t hash = 0;
-    Atom atom = {};
-};
-
 struct Atom_Table
 {
-    Array<Atom_Entry> atoms = {};
+    Hash_Table<String, Atom> atoms = {};
 };
 
 void atom_table_init(Allocator* allocator, Atom_Table* at);

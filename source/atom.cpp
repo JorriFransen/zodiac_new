@@ -5,22 +5,20 @@ namespace Zodiac
 
 void atom_table_init(Allocator* allocator, Atom_Table* at)
 {
-    array_init(allocator, &at->atoms);
+    hash_table_init(allocator, &at->atoms);
 }
 
 Atom atom_get(Atom_Table* at, String str, uint64_t length)
 {
-    auto hash = atom_hash(str, length);
+    Atom atom;
+    bool found = hash_table_find(&at->atoms, str, &atom);
 
-    for (int64_t i = 0; i < at->atoms.count; i++)
+    if (!found)
     {
-        const Atom_Entry& atom_entry = at->atoms[i];
-        if (atom_entry.hash == hash) return atom_entry.atom;
+        atom = { str, length };
+        hash_table_add(&at->atoms, str, atom);
     }
 
-    Atom atom = { str, length };
-    Atom_Entry atom_entry = { hash, atom };
-    array_append(&at->atoms, atom_entry);
     return atom;
 }
 
