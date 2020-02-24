@@ -1,9 +1,15 @@
 #pragma once
 
 #include "allocator.h"
+#include "zodiac_string.h"
 
 #include <cassert>
 #include <string.h>
+
+template <typename Key_Type>
+using Hash_Table_Keys_Equal_FN = bool (*)(const Key_Type& a, const Key_Type& b);
+
+bool hash_table_strings_equal(const String& a, const String& b);
 
 template <typename Key_Type, typename Value_Type>
 struct Hash_Table
@@ -14,6 +20,7 @@ struct Hash_Table
 
     int64_t capacity = 0;
 
+    Hash_Table_Keys_Equal_FN<Key_Type> keys_equal = nullptr;
     Allocator* allocator = {};
 };
 
@@ -22,7 +29,8 @@ uint64_t hash_key(const char* str);
 #define HASH_TABLE_INITIAL_CAPACITY 16
 
 template <typename Key_Type, typename Value_Type>
-void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* hash_table)
+void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* hash_table,
+                     Hash_Table_Keys_Equal_FN<Key_Type> keys_equal)
 {
     assert(allocator);
     assert(hash_table);
@@ -43,6 +51,7 @@ void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* has
     memset(hash_table->hashes, 0, hashes_size);
 
     hash_table->capacity = HASH_TABLE_INITIAL_CAPACITY;
+    hash_table->keys_equal = keys_equal;
     hash_table->allocator = allocator;
 }
 
@@ -116,14 +125,10 @@ bool hash_table_find(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_T
     uint64_t hash_index = hash % ht->capacity;
     int64_t iteration_count = 0;
 
-    while (true)
+    while (iteration_count < ht->capacity)
     {
-        if (iteration_count >= ht->capacity)
-        {
-            return false;
-        }
-
-        if (ht->hashes[hash_index] == hash)
+        if (ht->hashes[hash_index] == hash &&
+            ht->keys_equal(ht->keys[hash_index], key))
         {
             *vptr = ht->values[hash_index];
             return true;

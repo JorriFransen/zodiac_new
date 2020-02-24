@@ -31,7 +31,7 @@ Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
     Lexed_File result = {};
     result.path = copy_string(lexer->allocator, file_path);
     array_init(lexer->allocator, &result.tokens);
-    hash_table_init(lexer->allocator, &result.file_positions);
+    hash_table_init(lexer->allocator, &result.file_positions, *token_equal);
 
     auto file_data = read_file_string(lexer->allocator, file_path);
     auto file_size = string_length(file_data);

@@ -22,3 +22,8 @@ uint64_t hash_key(const char* str)
 
     return hash;
 }
+
+bool hash_table_strings_equal(const String& a, const String& b)
+{
+    return strcmp(a, b) == 0;
+}

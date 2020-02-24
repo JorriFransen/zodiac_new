@@ -69,6 +69,8 @@ struct Token
 Token token_create(File_Pos file_pos, Token_Kind kind, Atom atom);
 Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom atom);
 
+bool token_equal(const Token& a, const Token& b);
+
 String token_kind_name(Token_Kind);
 void token_print(const Token& token);
 

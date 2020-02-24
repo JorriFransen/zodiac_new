@@ -17,6 +17,16 @@ Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom ato
     return { kind, begin_fp, end_fp, atom };
 }
 
+bool token_equal(const Token& a, const Token& b)
+{
+    if (a.kind != b.kind) return false;
+    if (a.begin_file_pos != b.begin_file_pos) return false;
+    if (a.end_file_pos != b.end_file_pos) return false;
+    if (a.atom.data != b.atom.data) return false;
+
+    return true;
+}
+
 String token_kind_name(Token_Kind kind)
 {
     return Token_Kind_Names[kind];
