@@ -3,6 +3,7 @@
 #include "allocator.h"
 
 #include <cassert>
+#include <string.h>
 
 template <typename Key_Type, typename Value_Type>
 struct Hash_Table
@@ -39,6 +40,8 @@ void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* has
     hash_table->keys = (Key_Type*)(&mem[hashes_size]);
     hash_table->values = (Value_Type*)(&mem[hashes_size + values_size]);
 
+    memset(hash_table->hashes, 0, hashes_size);
+
     hash_table->capacity = HASH_TABLE_INITIAL_CAPACITY;
     hash_table->allocator = allocator;
 }
@@ -66,7 +69,44 @@ void hash_table_add(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_Ty
         iteration_count++;
     }
 
-    assert(false); // grow
+    hash_table_grow(ht);
+    hash_table_add(ht, key, value);
+}
+
+template <typename Key_Type, typename Value_Type>
+void hash_table_grow(Hash_Table<Key_Type, Value_Type>* ht)
+{
+    auto new_cap = ht->capacity * 2;
+
+    auto new_hashes_size = sizeof(uint64_t) * new_cap;
+    auto new_keys_size = sizeof(Key_Type) * new_cap;
+    auto new_values_size = sizeof(Value_Type) * new_cap;
+
+    auto new_total_size = new_hashes_size + new_keys_size + new_values_size;
+
+    auto old_cap = ht->capacity;
+    auto old_hashes = ht->hashes;
+    auto old_keys = ht->keys;
+    auto old_values = ht->values;
+
+    auto new_mem = alloc_array<uint8_t>(ht->allocator, new_total_size);
+
+    ht->capacity = new_cap;
+    ht->hashes = (uint64_t*)(&new_mem[0]);
+    ht->keys = (Key_Type*)(&new_mem[new_hashes_size]);
+    ht->values = (Value_Type*)(&new_mem[new_hashes_size + new_keys_size]);
+
+    memset(ht->hashes, 0, new_hashes_size);
+
+    for (int64_t i = 0; i < old_cap; i++)
+    {
+        if (old_hashes[i])
+        {
+            hash_table_add(ht, old_keys[i], old_values[i]);
+        }
+    }
+
+    free(ht->allocator, old_hashes);
 }
 
 template <typename Key_Type, typename Value_Type>
