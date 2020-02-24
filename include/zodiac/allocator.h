@@ -19,7 +19,7 @@ typedef void* (*Alloc_Function)(Allocator* allocator,
 
 struct Allocator
 {
-    Alloc_Function alloc = nullptr; 
+    Alloc_Function alloc = nullptr;
 };
 
 

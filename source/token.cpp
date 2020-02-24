@@ -6,15 +6,15 @@
 namespace Zodiac
 {
 
-Token token_create(File_Pos file_pos, Token_Kind kind, String string)
+Token token_create(File_Pos file_pos, Token_Kind kind, Atom atom)
 {
-    Token result = { kind, file_pos, file_pos, string };
+    Token result = { kind, file_pos, file_pos, atom };
     return result;
 }
 
-Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, String string)
+Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom atom)
 {
-    return { kind, begin_fp, end_fp, string };
+    return { kind, begin_fp, end_fp, atom };
 }
 
 String token_kind_name(Token_Kind kind)
@@ -25,9 +25,9 @@ String token_kind_name(Token_Kind kind)
 void token_print(const Token& token)
 {
     printf("%s", token_kind_name(token.kind));
-    if (token.string)
+    if (token.atom.data)
     {
-        printf(" \"%s\"", token.string);
+        printf(" \"%.*s\"", (int)token.atom.length, token.atom.data);
     }
     printf("\n");
 }

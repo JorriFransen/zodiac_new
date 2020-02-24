@@ -2,6 +2,7 @@
 #pragma once
 
 #include "allocator.h"
+#include "atom.h"
 #include "array.h"
 #include "hash_table.h"
 #include "token.h"
@@ -13,6 +14,7 @@ using namespace Zodiac;
 struct Lexer
 {
     Allocator* allocator = nullptr;
+    Atom_Table atom_table = { };
 };
 
 struct Lexer_Data

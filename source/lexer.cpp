@@ -19,6 +19,7 @@ Lexer lexer_create(Allocator* allocator)
 void lexer_init(Allocator* allocator, Lexer* lexer)
 {
     lexer->allocator = allocator;
+    atom_table_init(allocator, &lexer->atom_table);
 }
 
 Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
@@ -68,10 +69,10 @@ restart:
 #define __1_CHAR_TOKEN_CASE(_c, kind) \
         case _c: { \
             auto fp = get_file_pos(ld); \
-            String str = copy_string(ld->lexer->allocator, &c, 1); \
+            auto atom = atom_get(&ld->lexer->atom_table, &c, 1); \
             advance(ld); \
-            return token_create(fp, kind, str); \
-        } 
+            return token_create(fp, kind, atom); \
+        }
 
 #define __2_CHAR_TOKEN_CASE(_c1, kind1, _c2, kind2) \
         case _c1: { \
@@ -87,8 +88,8 @@ restart:
                 len = 1; \
             } \
             advance(ld, len); \
-            auto str = copy_string(ld->lexer->allocator, ccp, len); \
-            return token_create(fp, kind, str); \
+            auto atom = atom_get(&ld->lexer->atom_table, ccp, len); \
+            return token_create(fp, kind, atom); \
         }
 
     switch (c)
@@ -128,7 +129,7 @@ restart:
         case EOF: // This can happen here after we've skipped whitespace
         {
             auto fp = get_file_pos(ld);
-            return token_create(fp, TOK_EOF, nullptr);
+            return token_create(fp, TOK_EOF, {});
             break;
         }
 
@@ -173,9 +174,9 @@ Token lex_identifier(Lexer_Data* ld)
 
     auto end_fp = last_valid_fp;
     auto length = end_fp.index - begin_fp.index;
-    String string = copy_string(ld->lexer->allocator, &ld->file_data[begin_fp.index], length);
+    Atom atom = atom_get(&ld->lexer->atom_table, &ld->file_data[begin_fp.index], length);
 
-    return token_create(begin_fp, end_fp, TOK_IDENTIFIER, string);
+    return token_create(begin_fp, end_fp, TOK_IDENTIFIER, atom);
 }
 
 Token lex_number_literal(Lexer_Data* ld)
@@ -197,9 +198,9 @@ Token lex_number_literal(Lexer_Data* ld)
 
     auto end_fp = last_valid_fp;
     auto length = end_fp.index - begin_fp.index;
-    String string = copy_string(ld->lexer->allocator, &ld->file_data[begin_fp.index], length);
+    Atom atom = atom_get(&ld->lexer->atom_table, &ld->file_data[begin_fp.index], length);
 
-    return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, string);
+    return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, atom);
 }
 
 void advance(Lexer_Data* ld, uint64_t count/*=1*/)

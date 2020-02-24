@@ -1,5 +1,6 @@
 #pragma once
 
+#include "atom.h"
 #include "file_pos.h"
 #include "zodiac_string.h"
 
@@ -48,7 +49,7 @@ enum Token_Kind
     #undef DEFINE_TOKEN
 };
 
-static const String Token_Kind_Names[] = 
+static const String Token_Kind_Names[] =
 {
     #define DEFINE_TOKEN(x) #x
     TOKEN_LIST
@@ -62,11 +63,11 @@ struct Token
     File_Pos begin_file_pos = {};
     File_Pos end_file_pos = {};
 
-    String string = nullptr;
+    Atom atom = {};
 };
 
-Token token_create(File_Pos file_pos, Token_Kind kind, String string);
-Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, String string);
+Token token_create(File_Pos file_pos, Token_Kind kind, Atom atom);
+Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom atom);
 
 String token_kind_name(Token_Kind);
 void token_print(const Token& token);

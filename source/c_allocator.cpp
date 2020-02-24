@@ -7,7 +7,7 @@
 void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void* old_ptr)
 {
     assert(allocator);
-    
+
     switch (mode)
     {
         case ALLOCATE:
@@ -37,7 +37,6 @@ void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void
         }
     }
 
-    assert(false);
     return nullptr;
 }
 

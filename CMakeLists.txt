@@ -6,6 +6,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/main.cpp
 
     source/allocator.cpp
+    source/atom.cpp
     source/c_allocator.cpp
     source/lexer.cpp
     source/os.cpp
