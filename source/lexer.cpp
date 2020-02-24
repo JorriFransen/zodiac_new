@@ -32,19 +32,28 @@ Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
     array_init(lexer->allocator, &result.tokens);
     hash_table_init(lexer->allocator, &result.file_positions);
 
-    Lexer_Data ld = {};
-    ld.lexer = lexer;
-    ld.file_path = file_path;
-    ld.file_data = read_file_string(lexer->allocator, file_path);
-    ld.file_size = string_length(ld.file_data);
-    ld.current_line = 1;
-    ld.current_column = 1;
+    auto file_data = read_file_string(lexer->allocator, file_path);
+    auto file_size = string_length(file_data);
+    Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
 
     while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
     {
         Token t = next_token(&ld);
         token_print(t);
     }
+
+    return result;
+}
+
+Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size)
+{
+    Lexer_Data result = {};
+    result.lexer = lexer;
+    result.file_path = file_path;
+    result.file_data = file_data;
+    result.file_size = file_size;
+    result.current_line = 1;
+    result.current_column = 1;
 
     return result;
 }
@@ -56,36 +65,54 @@ restart:
 
     auto c = current_char(ld);
 
-#define __SINGLE_CHAR_TOKEN_CASE(_c, kind) \
-        case _c: \
-        { \
+#define __1_CHAR_TOKEN_CASE(_c, kind) \
+        case _c: { \
             auto fp = get_file_pos(ld); \
             String str = copy_string(ld->lexer->allocator, &c, 1); \
             advance(ld); \
             return token_create(fp, kind, str); \
         } 
 
+#define __2_CHAR_TOKEN_CASE(_c1, kind1, _c2, kind2) \
+        case _c1: { \
+            auto fp = get_file_pos(ld); \
+            auto ccp = current_char_ptr(ld); \
+            uint64_t len = 0; \
+            Token_Kind kind = TOK_INVALID; \
+            if (peek_char(ld, 1) == _c2) { \
+                kind = kind2; \
+                len = 2; \
+            } else { \
+                kind = kind1; \
+                len = 1; \
+            } \
+            advance(ld, len); \
+            auto str = copy_string(ld->lexer->allocator, ccp, len); \
+            return token_create(fp, kind, str); \
+        }
+
     switch (c)
     {
-        __SINGLE_CHAR_TOKEN_CASE('#', TOK_POUND);
-        __SINGLE_CHAR_TOKEN_CASE(':', TOK_COLON);
-        __SINGLE_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
-        __SINGLE_CHAR_TOKEN_CASE('@', TOK_AT);
+        __1_CHAR_TOKEN_CASE('#', TOK_POUND);
+        __1_CHAR_TOKEN_CASE(':', TOK_COLON);
+        __1_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
+        __1_CHAR_TOKEN_CASE('@', TOK_AT);
 
-        __SINGLE_CHAR_TOKEN_CASE('(', TOK_LPAREN);
-        __SINGLE_CHAR_TOKEN_CASE(')', TOK_RPAREN);
-        __SINGLE_CHAR_TOKEN_CASE('{', TOK_LBRACE);
-        __SINGLE_CHAR_TOKEN_CASE('}', TOK_RBRACE);
-        __SINGLE_CHAR_TOKEN_CASE('[', TOK_LBRACK);
-        __SINGLE_CHAR_TOKEN_CASE(']', TOK_RBRACK);
+        __1_CHAR_TOKEN_CASE('(', TOK_LPAREN);
+        __1_CHAR_TOKEN_CASE(')', TOK_RPAREN);
+        __1_CHAR_TOKEN_CASE('{', TOK_LBRACE);
+        __1_CHAR_TOKEN_CASE('}', TOK_RBRACE);
+        __1_CHAR_TOKEN_CASE('[', TOK_LBRACK);
+        __1_CHAR_TOKEN_CASE(']', TOK_RBRACK);
 
-        __SINGLE_CHAR_TOKEN_CASE('=', TOK_EQ);
-        __SINGLE_CHAR_TOKEN_CASE('<', TOK_LT);
-        __SINGLE_CHAR_TOKEN_CASE('>', TOK_LTEQ);
+        __1_CHAR_TOKEN_CASE('=', TOK_EQ);
+        __1_CHAR_TOKEN_CASE('<', TOK_LT);
+        __1_CHAR_TOKEN_CASE('>', TOK_LTEQ);
 
-        __SINGLE_CHAR_TOKEN_CASE('+', TOK_PLUS);
-        __SINGLE_CHAR_TOKEN_CASE('-', TOK_MINUS);
-        __SINGLE_CHAR_TOKEN_CASE('*', TOK_STAR);
+        __1_CHAR_TOKEN_CASE('+', TOK_PLUS);
+        __1_CHAR_TOKEN_CASE('*', TOK_STAR);
+
+        __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
 
         case '/':
         {
@@ -175,19 +202,24 @@ Token lex_number_literal(Lexer_Data* ld)
     return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, string);
 }
 
-void advance(Lexer_Data* ld)
+void advance(Lexer_Data* ld, uint64_t count/*=1*/)
 {
     assert(ld->file_index < ld->file_size);
 
-    char c = current_char(ld);
-
-    if (c == '\n') 
+    while (count && current_char(ld) != EOF)
     {
-        ld->current_line += 1;
-        ld->current_column = 1;
-    }
+        char c = current_char(ld);
 
-    ld->file_index += 1;
+        if (c == '\n') 
+        {
+            ld->current_line += 1;
+            ld->current_column = 1;
+        }
+
+        ld->file_index += 1;
+
+        count -= 1;
+    }
 }
 
 char current_char(Lexer_Data* ld)
@@ -201,6 +233,16 @@ char peek_char(Lexer_Data* ld, uint64_t offset)
         return ld->file_data[ld->file_index + offset];
     
     return EOF;
+}
+
+const char* current_char_ptr(Lexer_Data* ld)
+{
+    if (ld->file_index < ld->file_size)
+    {
+        return &ld->file_data[ld->file_index];
+    }
+    
+    return nullptr;
 }
 
 void skip_whitespace(Lexer_Data* ld)

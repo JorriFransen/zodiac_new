@@ -27,7 +27,7 @@ void token_print(const Token& token)
     printf("%s", token_kind_name(token.kind));
     if (token.string)
     {
-        printf(" %s", token.string);
+        printf(" \"%s\"", token.string);
     }
     printf("\n");
 }

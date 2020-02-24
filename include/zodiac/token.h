@@ -34,6 +34,8 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_STAR),                                \
     DEFINE_TOKEN(TOK_FORWARD_SLASH),                       \
                                                            \
+    DEFINE_TOKEN(TOK_RARROW),                              \
+                                                           \
     DEFINE_TOKEN(TOK_IDENTIFIER),                          \
     DEFINE_TOKEN(TOK_NUMBER_LITERAL),                      \
                                                            \

@@ -38,15 +38,19 @@ Lexer lexer_create(Allocator* allocator);
 void lexer_init(Allocator* allocator, Lexer* lexer);
 Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path);
 
+Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size);
+
 Token next_token(Lexer_Data* ld);
 
 Token lex_identifier(Lexer_Data* ld);
 Token lex_number_literal(Lexer_Data* ld);
 
-void advance(Lexer_Data* ld);
+void advance(Lexer_Data* ld, uint64_t count = 1);
 
 char current_char(Lexer_Data* ld);
 char peek_char(Lexer_Data* ld, uint64_t offset);
+
+const char* current_char_ptr(Lexer_Data* ld);
 
 void skip_whitespace(Lexer_Data* ld);
 

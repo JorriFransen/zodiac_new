@@ -19,7 +19,7 @@ posix_call_main_and_exit :: ()
 
 main :: () -> int
 {
-    return 0;
+    return 10 - 3;
 }
 
 // main :: (args: []std.String) -> int
