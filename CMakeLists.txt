@@ -13,8 +13,11 @@ set (ZODIAC_COMPILER_SOURCE
     source/lexer.cpp
     source/os.cpp
     source/os_linux.cpp
+    source/parser.cpp
+    source/parse_tree_node.cpp
     source/temp_allocator.cpp
     source/token.cpp
+    source/token_stream.cpp
     source/zodiac_string.cpp
 )
 

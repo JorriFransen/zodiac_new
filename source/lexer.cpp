@@ -36,14 +36,15 @@ Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
     auto file_data = read_file_string(lexer->allocator, file_path);
     auto file_size = string_length(file_data);
     Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
+    ld.lexed_file = result;
 
     while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
     {
         Token t = next_token(&ld);
-        token_print(t);
+        array_append(&ld.lexed_file.tokens, t);
     }
 
-    return result;
+    return ld.lexed_file;
 }
 
 Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size)
@@ -133,7 +134,7 @@ restart:
             break;
         }
 
-        default: 
+        default:
         {
             if (is_alpha(c) || c == '_')
             {
@@ -211,7 +212,7 @@ void advance(Lexer_Data* ld, uint64_t count/*=1*/)
     {
         char c = current_char(ld);
 
-        if (c == '\n') 
+        if (c == '\n')
         {
             ld->current_line += 1;
             ld->current_column = 1;
@@ -232,7 +233,7 @@ char peek_char(Lexer_Data* ld, uint64_t offset)
 {
     if (ld->file_index + offset < ld->file_size)
         return ld->file_data[ld->file_index + offset];
-    
+
     return EOF;
 }
 
@@ -242,7 +243,7 @@ const char* current_char_ptr(Lexer_Data* ld)
     {
         return &ld->file_data[ld->file_index];
     }
-    
+
     return nullptr;
 }
 
@@ -298,4 +299,37 @@ void lexed_file_print(Lexed_File* lf)
     {
         token_print(lf->tokens[i]);
     }
+}
+
+Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)
+{
+    auto lfts = alloc_type<Lexed_File_Token_Stream>(allocator);
+    assert(lfts);
+
+    lfts->lexed_file = lf;
+
+    return lfts;
+}
+
+Token Lexed_File_Token_Stream::current_token()
+{
+    if (current_index >= lexed_file->tokens.count)
+    {
+        Token result = {};
+        result.kind = TOK_EOF;
+        return result;
+    }
+
+    return lexed_file->tokens[current_index];
+}
+
+Token Lexed_File_Token_Stream::next_token()
+{
+    assert(false);
+}
+
+Token Lexed_File_Token_Stream::peek_token(uint64_t offset)
+{
+    assert(false);
+    assert(offset);
 }

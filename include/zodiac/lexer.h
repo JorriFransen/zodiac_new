@@ -6,6 +6,7 @@
 #include "array.h"
 #include "hash_table.h"
 #include "token.h"
+#include "token_stream.h"
 #include "file_pos.h"
 #include "zodiac_string.h"
 
@@ -15,6 +16,13 @@ struct Lexer
 {
     Allocator* allocator = nullptr;
     Atom_Table atom_table = { };
+};
+
+struct Lexed_File
+{
+    const char* path = nullptr;
+    Array<Token> tokens = {};
+    Hash_Table<Token, File_Pos> file_positions = {};
 };
 
 struct Lexer_Data
@@ -27,13 +35,22 @@ struct Lexer_Data
 
     uint64_t current_line = 1;
     uint64_t current_column = 1;
+
+    Lexed_File lexed_file = {};
 };
 
-struct Lexed_File
+struct Lexed_File_Token_Stream : public Token_Stream
 {
-    const char* path = nullptr;
-    Array<Token> tokens = {};
-    Hash_Table<Token, File_Pos> file_positions = {};
+    Lexed_File* lexed_file = nullptr;
+    int64_t current_index = 0;
+
+    Lexed_File_Token_Stream(){}
+    ~Lexed_File_Token_Stream(){}
+
+    Token current_token();
+    Token next_token();
+    Token peek_token(uint64_t offset);
+
 };
 
 Lexer lexer_create(Allocator* allocator);
@@ -67,3 +84,4 @@ File_Pos get_file_pos(Lexer_Data* ld);
 
 void lexed_file_print(Lexed_File* lf);
 
+Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <new>
 
 struct Allocator;
 
@@ -25,6 +26,14 @@ struct Allocator
 
 void* alloc(Allocator* allocator, int64_t size);
 void* free(Allocator* allocator, void* ptr);
+
+template <typename Type>
+Type* alloc_type(Allocator* allocator)
+{
+    auto mem = (Type*)alloc(allocator, sizeof(Type));
+    auto result = new (mem) Type();
+    return result;
+}
 
 template <typename Element_Type>
 Element_Type* alloc_array(Allocator* allocator, int64_t element_count)
