@@ -37,7 +37,7 @@ void array_grow(Array<Element_Type>* array, int64_t new_cap)
 {
     assert(new_cap > array->capacity);
 
-    auto new_data = array->data = alloc_array<Element_Type>(array->allocator, new_cap);
+    auto new_data = alloc_array<Element_Type>(array->allocator, new_cap);
     memcpy(new_data, array->data, array->count * sizeof(Element_Type));
     free(array->allocator, array->data);
 
