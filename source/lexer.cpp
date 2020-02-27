@@ -28,15 +28,13 @@ Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
         file_path = get_absolute_path(temp_allocator_get(), file_path);
     }
 
-    Lexed_File result = {};
-    result.path = copy_string(lexer->allocator, file_path);
-    array_init(lexer->allocator, &result.tokens);
-    hash_table_init(lexer->allocator, &result.file_positions, *token_equal);
-
     auto file_data = read_file_string(lexer->allocator, file_path);
     auto file_size = string_length(file_data);
     Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
-    ld.lexed_file = result;
+
+    ld.lexed_file.path = copy_string(lexer->allocator, file_path);
+    array_init(lexer->allocator, &ld.lexed_file.tokens);
+    hash_table_init(lexer->allocator, &ld.lexed_file.file_positions, *token_equal);
 
     while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
     {
@@ -303,6 +301,8 @@ void lexed_file_print(Lexed_File* lf)
 
 Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)
 {
+    assert(lf);
+
     auto lfts = alloc_type<Lexed_File_Token_Stream>(allocator);
     assert(lfts);
 

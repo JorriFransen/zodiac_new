@@ -6,7 +6,7 @@
 // fmt :: import "std.fmt";
 // fmt :: @import("std.fmt");
 
-#naked _start :: () 
+#naked _start :: ()
 {
     posix_call_main_and_exit();
 }

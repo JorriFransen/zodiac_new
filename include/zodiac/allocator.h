@@ -40,3 +40,12 @@ Element_Type* alloc_array(Allocator* allocator, int64_t element_count)
 {
     return (Element_Type*)alloc(allocator, sizeof(Element_Type) * element_count);
 }
+
+template <typename T>
+bool is_power_of_two(T v)
+{
+    if (v <= 0) return false;
+    return (v & (v - 1)) == 0;
+}
+
+void* align_up(void* ptr, uint64_t align);
