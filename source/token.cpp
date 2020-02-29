@@ -27,7 +27,7 @@ bool token_equal(const Token& a, const Token& b)
     return true;
 }
 
-String token_kind_name(Token_Kind kind)
+const char* token_kind_name(Token_Kind kind)
 {
     return Token_Kind_Names[kind];
 }

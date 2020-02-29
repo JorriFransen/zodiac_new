@@ -9,21 +9,23 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-Lexer lexer_create(Allocator* allocator)
+Lexer lexer_create(Allocator* allocator, Build_Data* build_data)
 {
     Lexer result = {};
-    lexer_init(allocator, &result);
+    lexer_init(allocator, build_data, &result);
     return result;
 }
 
-void lexer_init(Allocator* allocator, Lexer* lexer)
+void lexer_init(Allocator* allocator, Build_Data* build_data, Lexer* lexer)
 {
     lexer->allocator = allocator;
-    atom_table_init(allocator, &lexer->atom_table);
+    lexer->build_data = build_data;
 }
 
-Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path)
+Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
 {
+    String file_path = _file_path;
+
     if (is_relative_path(file_path)) {
         file_path = get_absolute_path(temp_allocator_get(), file_path);
     }
@@ -68,7 +70,7 @@ restart:
 #define __1_CHAR_TOKEN_CASE(_c, kind) \
         case _c: { \
             auto fp = get_file_pos(ld); \
-            auto atom = atom_get(&ld->lexer->atom_table, &c, 1); \
+            auto atom = atom_get(&ld->lexer->build_data->atom_table, &c, 1); \
             advance(ld); \
             return token_create(fp, kind, atom); \
         }
@@ -87,7 +89,7 @@ restart:
                 len = 1; \
             } \
             advance(ld, len); \
-            auto atom = atom_get(&ld->lexer->atom_table, ccp, len); \
+            auto atom = atom_get(&ld->lexer->build_data->atom_table, ccp, len); \
             return token_create(fp, kind, atom); \
         }
 
@@ -136,7 +138,7 @@ restart:
         {
             if (is_alpha(c) || c == '_')
             {
-                return lex_identifier(ld);
+                return lex_keyword_or_identifier(ld);
             }
             else if (is_num(c) || c == '.')
             {
@@ -144,7 +146,7 @@ restart:
             }
 
             fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: Unexpected character: '%c'\n", 
-                    ld->file_path, ld->current_line, ld->current_column, c);
+                    ld->file_path.data, ld->current_line, ld->current_column, c);
             assert(false);
             break;
         }
@@ -154,6 +156,24 @@ restart:
 
     assert(false);
     return {};
+}
+
+Token lex_keyword_or_identifier(Lexer_Data* ld)
+{
+    Token result = lex_identifier(ld);
+
+    const auto& kw_atoms = ld->lexer->build_data->kw_atoms;
+
+    for (int64_t i = 0; i < kw_atoms.count; i++)
+    {
+        if (result.atom == kw_atoms[i])
+        {
+            result.kind = KW_Tokens[i].kind;
+            break;
+        }
+    }
+
+    return result;
 }
 
 Token lex_identifier(Lexer_Data* ld)
@@ -173,7 +193,8 @@ Token lex_identifier(Lexer_Data* ld)
 
     auto end_fp = last_valid_fp;
     auto length = end_fp.index - begin_fp.index;
-    Atom atom = atom_get(&ld->lexer->atom_table, &ld->file_data[begin_fp.index], length);
+    Atom atom = atom_get(&ld->lexer->build_data->atom_table, &ld->file_data[begin_fp.index],
+                         length);
 
     return token_create(begin_fp, end_fp, TOK_IDENTIFIER, atom);
 }
@@ -197,7 +218,8 @@ Token lex_number_literal(Lexer_Data* ld)
 
     auto end_fp = last_valid_fp;
     auto length = end_fp.index - begin_fp.index;
-    Atom atom = atom_get(&ld->lexer->atom_table, &ld->file_data[begin_fp.index], length);
+    Atom atom = atom_get(&ld->lexer->build_data->atom_table, &ld->file_data[begin_fp.index],
+                         length);
 
     return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, atom);
 }
@@ -292,7 +314,7 @@ File_Pos get_file_pos(Lexer_Data* ld)
 
 void lexed_file_print(Lexed_File* lf)
 {
-    printf("Lexed file: '%s'\n", lf->path);
+    printf("Lexed file: '%s'\n", lf->path.data);
     for (int64_t i = 0; i < lf->tokens.count; i++)
     {
         token_print(lf->tokens[i]);

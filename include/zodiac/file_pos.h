@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "zodiac_string.h"
+
 #include <stdint.h>
 
 struct File_Pos
@@ -8,7 +10,7 @@ struct File_Pos
     uint64_t index = 0;
     uint64_t line = 0;
     uint64_t column = 0;
-    const char* file_name = nullptr;
+    String file_name = {};
 };
 
 bool operator==(const File_Pos& a, const File_Pos& b);

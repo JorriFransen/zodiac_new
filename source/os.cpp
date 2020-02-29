@@ -8,21 +8,21 @@
 
 #include <cassert>
 
-bool is_relative_path(const char* path)
+bool is_relative_path(const String& path)
 {
     return os_is_relative_path(path);
 }
 
-const char* get_absolute_path(Allocator* allocator, const char* path)
+const String get_absolute_path(Allocator* allocator, const String& path)
 {
     assert(is_relative_path(path));
     return os_get_absolute_path(allocator, path);
 }
 
-bool is_regular_file(String file_path)
+bool is_regular_file(const String& file_path)
 {
     struct stat statbuf;
-    auto stat_res = stat(file_path, &statbuf);
+    auto stat_res = stat(file_path.data, &statbuf);
     if (stat_res != 0)
     {
         return false;
@@ -31,11 +31,11 @@ bool is_regular_file(String file_path)
     return S_ISREG(statbuf.st_mode);
 }
 
-String read_file_string(Allocator* allocator, String file_path)
+String read_file_string(Allocator* allocator, const String& file_path)
 {
     assert(is_regular_file(file_path));
 
-    auto file = fopen(file_path, "rb");
+    auto file = fopen(file_path.data, "rb");
     assert(file);
 
     int64_t length = 0;
@@ -43,14 +43,14 @@ String read_file_string(Allocator* allocator, String file_path)
     length = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char* result = alloc_array<char>(allocator, length + 1);
+    String result = { alloc_array<char>(allocator, length + 1), length };
 
-    auto read_res = fread(result, 1, length, file);
+    auto read_res = fread(result.data, 1, length, file);
     assert((int64_t)read_res == length);
 
     fclose(file);
 
-    result[length] = '\0';
+    result.data[length] = '\0';
 
-    return (String)result;
+    return result;
 }

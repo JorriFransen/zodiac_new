@@ -38,6 +38,11 @@ Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts)
     assert(parser);
     assert(ts);
 
+    while (ts->current_token().kind == TOK_POUND)
+    {
+        assert(false);
+    }
+
     auto identifier = parser_parse_identifier(parser, ts);
     if (!identifier) return nullptr;
 

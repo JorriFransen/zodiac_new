@@ -7,8 +7,14 @@
 namespace Zodiac
 {
 
+#define KW_TOKEN_LIST                                      \
+    DEFINE_KW_TOKEN(TOK_KW_RETURN, "return"),              \
+
+
 #define TOKEN_LIST                                         \
     DEFINE_TOKEN(TOK_INVALID),                             \
+                                                           \
+    KW_TOKEN_LIST                                          \
                                                            \
     DEFINE_TOKEN(TOK_COLON),                               \
     DEFINE_TOKEN(TOK_SEMICOLON),                           \
@@ -37,6 +43,7 @@ namespace Zodiac
                                                            \
     DEFINE_TOKEN(TOK_RARROW),                              \
                                                            \
+                                                           \
     DEFINE_TOKEN(TOK_IDENTIFIER),                          \
     DEFINE_TOKEN(TOK_NUMBER_LITERAL),                      \
                                                            \
@@ -45,15 +52,32 @@ namespace Zodiac
 enum Token_Kind
 {
     #define DEFINE_TOKEN(x) x
+    #define DEFINE_KW_TOKEN(x, y) x
     TOKEN_LIST
+    #undef DEFINE_KW_TOKEN
     #undef DEFINE_TOKEN
 };
 
-static const String Token_Kind_Names[] =
+static const char* Token_Kind_Names[] =
 {
     #define DEFINE_TOKEN(x) #x
+    #define DEFINE_KW_TOKEN(x, y) #x
     TOKEN_LIST
+    #undef DEFINE_KW_TOKEN
     #undef DEFINE_TOKEN
+};
+
+struct KW_Token
+{
+    Token_Kind kind = TOK_INVALID;
+    const char* string = nullptr;
+};
+
+static const KW_Token KW_Tokens[] =
+{
+    #define DEFINE_KW_TOKEN(x, y) { x, y }
+    KW_TOKEN_LIST
+    #undef DEFINE_KW_TOKEN
 };
 
 struct Token
@@ -71,7 +95,7 @@ Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom ato
 
 bool token_equal(const Token& a, const Token& b);
 
-String token_kind_name(Token_Kind);
+const char* token_kind_name(Token_Kind);
 void token_print(const Token& token);
 
 }

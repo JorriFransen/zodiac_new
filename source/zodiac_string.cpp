@@ -6,20 +6,20 @@
 
 int64_t string_length(String string)
 {
-    return strlen(string);
+    return string.length;
 }
 
-String copy_string(Allocator* allocator, String string, int64_t length)
+const String copy_string(Allocator* allocator, const String& string)
 {
-    char* new_str = alloc_array<char>(allocator, length + 1);
+    String new_str = { alloc_array<char>(allocator, string.length + 1), string.length };
+    memcpy(new_str.data, string.data, string.length);
+    new_str.data[string.length] = '\0';
 
-    memcpy(new_str, string, length);
-    new_str[length] = '\0';
-
-    return (String)new_str;
+    return new_str;
 }
 
-String copy_string(Allocator* allocator, String string)
+const String string_ref(const char* cstr)
 {
-    return copy_string(allocator, string, string_length(string));
+    String result = { (char*)cstr, (int64_t)strlen(cstr) };
+    return result;
 }

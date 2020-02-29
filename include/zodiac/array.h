@@ -21,15 +21,26 @@ struct Array
     {
         return data[index];
     }
+
+    const Element_Type& operator[](int index) const
+    {
+        return data[index];
+    }
 };
+
+template <typename Element_Type>
+void array_init(Allocator* allocator, Array<Element_Type>* array, int64_t capacity)
+{
+    array->data = alloc_array<Element_Type>(allocator, capacity);
+    array->count = 0;
+    array->capacity = DEFAULT_ARRAY_CAPACITY;
+    array->allocator = allocator;
+}
 
 template <typename Element_Type>
 void array_init(Allocator* allocator, Array<Element_Type>* array)
 {
-    array->data = alloc_array<Element_Type>(allocator, DEFAULT_ARRAY_CAPACITY);
-    array->count = 0;
-    array->capacity = DEFAULT_ARRAY_CAPACITY;
-    array->allocator = allocator;
+    array_init(allocator, array, DEFAULT_ARRAY_CAPACITY);
 }
 
 template <typename Element_Type>

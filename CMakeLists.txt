@@ -7,6 +7,7 @@ set (ZODIAC_COMPILER_SOURCE
 
     source/allocator.cpp
     source/atom.cpp
+    source/build_data.cpp
     source/c_allocator.cpp
     source/file_pos.cpp
     source/hash_table.cpp

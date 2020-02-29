@@ -24,6 +24,7 @@ struct Hash_Table
     Allocator* allocator = {};
 };
 
+uint64_t hash_key(const String& str);
 uint64_t hash_key(const char* str);
 
 #define HASH_TABLE_INITIAL_CAPACITY 16

@@ -12,10 +12,14 @@ int main(int argc, char** argv)
 
     auto ca = c_allocator_get();
 
-    Lexer lexer = lexer_create(ca);
-    Lexed_File lexed_file = lexer_lex_file(&lexer, argv[1]);
+    Build_Data build_data = {};
+    build_data_init(ca, &build_data);
 
-    // lexed_file_print(&lexed_file);
+    Lexer lexer = lexer_create(ca, &build_data);
+    String file_path = string_ref(argv[1]);
+    Lexed_File lexed_file = lexer_lex_file(&lexer, file_path);
+
+    lexed_file_print(&lexed_file);
 
     Token_Stream* token_stream = lexer_new_token_stream(ca, &lexed_file);
 

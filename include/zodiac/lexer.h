@@ -4,6 +4,7 @@
 #include "allocator.h"
 #include "atom.h"
 #include "array.h"
+#include "build_data.h"
 #include "hash_table.h"
 #include "token.h"
 #include "token_stream.h"
@@ -14,13 +15,13 @@ using namespace Zodiac;
 
 struct Lexer
 {
+    Build_Data* build_data = nullptr;
     Allocator* allocator = nullptr;
-    Atom_Table atom_table = { };
 };
 
 struct Lexed_File
 {
-    const char* path = nullptr;
+    String path = {};
     Array<Token> tokens = {};
     Hash_Table<Token, File_Pos> file_positions = {};
 };
@@ -28,8 +29,8 @@ struct Lexed_File
 struct Lexer_Data
 {
     Lexer* lexer = nullptr;
-    String file_path = nullptr;
-    String file_data = nullptr;
+    String file_path = {};
+    String file_data = {};
     uint64_t file_index = 0;
     uint64_t file_size = 0;
 
@@ -53,14 +54,15 @@ struct Lexed_File_Token_Stream : public Token_Stream
 
 };
 
-Lexer lexer_create(Allocator* allocator);
-void lexer_init(Allocator* allocator, Lexer* lexer);
-Lexed_File lexer_lex_file(Lexer* lexer, const char* file_path);
+Lexer lexer_create(Allocator* allocator, Build_Data* build_data);
+void lexer_init(Allocator* allocator, Build_Data* build_data, Lexer* lexer);
+Lexed_File lexer_lex_file(Lexer* lexer, const String& file_path);
 
 Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size);
 
 Token next_token(Lexer_Data* ld);
 
+Token lex_keyword_or_identifier(Lexer_Data* ld);
 Token lex_identifier(Lexer_Data* ld);
 Token lex_number_literal(Lexer_Data* ld);
 
