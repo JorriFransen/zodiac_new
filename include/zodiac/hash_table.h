@@ -75,6 +75,7 @@ void hash_table_add(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_Ty
         else
         {
             hash_index++;
+            if (hash_index >= (uint64_t)ht->capacity) hash_index = 0;
         }
         iteration_count++;
     }
@@ -140,6 +141,7 @@ bool hash_table_find(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_T
         }
 
         hash_index++;
+        if (hash_index >= (uint64_t)ht->capacity) hash_index = 0;
         iteration_count++;
     }
 

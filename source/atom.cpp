@@ -1,5 +1,7 @@
 #include "atom.h"
 
+#include <stdio.h>
+
 namespace Zodiac
 {
 
@@ -19,6 +21,7 @@ Atom atom_get(Atom_Table* at, const String& str, uint64_t length)
         auto str_copy = copy_string(at->allocator, str);
         atom = { str_copy.data, length };
         hash_table_add(&at->atoms, str_copy, atom);
+
     }
 
     return atom;
