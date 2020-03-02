@@ -9,6 +9,7 @@ namespace Zodiac
 
 #define KW_TOKEN_LIST                                      \
     DEFINE_KW_TOKEN(TOK_KW_RETURN, "return"),              \
+    DEFINE_KW_TOKEN(TOK_KW_FUNC, "func"),                  \
 
 
 #define TOKEN_LIST                                         \
@@ -20,6 +21,7 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_SEMICOLON),                           \
     DEFINE_TOKEN(TOK_POUND),                               \
     DEFINE_TOKEN(TOK_AT),                                  \
+    DEFINE_TOKEN(TOK_COMMA),                               \
                                                            \
     DEFINE_TOKEN(TOK_LPAREN),                              \
     DEFINE_TOKEN(TOK_RPAREN),                              \

@@ -1,10 +1,13 @@
 
+#include "builtin.h"
 #include "lexer.h"
 #include "parser.h"
 #include "c_allocator.h"
 
 #include <stdio.h>
 #include <cassert>
+
+using namespace Zodiac;
 
 int main(int argc, char** argv)
 {
@@ -14,6 +17,7 @@ int main(int argc, char** argv)
 
     Build_Data build_data = {};
     build_data_init(ca, &build_data);
+    builtin_initialize_atoms(&build_data.atom_table);
 
     Lexer lexer = lexer_create(ca, &build_data);
     String file_path = string_ref(argv[1]);

@@ -99,6 +99,7 @@ restart:
         __1_CHAR_TOKEN_CASE(':', TOK_COLON);
         __1_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
         __1_CHAR_TOKEN_CASE('@', TOK_AT);
+        __1_CHAR_TOKEN_CASE(',', TOK_COMMA);
 
         __1_CHAR_TOKEN_CASE('(', TOK_LPAREN);
         __1_CHAR_TOKEN_CASE(')', TOK_RPAREN);
@@ -335,23 +336,23 @@ Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)
 
 Token Lexed_File_Token_Stream::current_token()
 {
-    if (current_index >= lexed_file->tokens.count)
+    return peek_token(0);
+}
+
+Token Lexed_File_Token_Stream::next_token()
+{
+    current_index++;
+    return current_token();
+}
+
+Token Lexed_File_Token_Stream::peek_token(uint64_t offset)
+{
+    if (current_index + offset >= (uint64_t)lexed_file->tokens.count)
     {
         Token result = {};
         result.kind = TOK_EOF;
         return result;
     }
 
-    return lexed_file->tokens[current_index];
-}
-
-Token Lexed_File_Token_Stream::next_token()
-{
-    assert(false);
-}
-
-Token Lexed_File_Token_Stream::peek_token(uint64_t offset)
-{
-    assert(false);
-    assert(offset);
+    return lexed_file->tokens[current_index + offset];
 }
