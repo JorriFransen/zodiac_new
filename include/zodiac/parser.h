@@ -15,7 +15,7 @@ struct Parser
 
 struct Parsed_File
 {
-    
+    Array<Declaration_Parse_Tree_Node*> declarations = {}; 
 };
 
 Parser parser_create(Allocator* allocator);
@@ -41,6 +41,8 @@ Expression_Parse_Tree_Node* parser_parse_add_expression(Parser* parser, Token_St
 Expression_Parse_Tree_Node* parser_parse_base_expression(Parser* parser, Token_Stream* ts);
 Call_Expression_Parse_Tree_Node* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
                                                               bool is_builtin = false);
+Number_Literal_Expression_Parse_Tree_Node*
+parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts);
 
 Expression_List_Parse_Tree_Node* parser_parse_expression_list(Parser* parser, Token_Stream* ts);
 

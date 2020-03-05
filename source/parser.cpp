@@ -24,11 +24,12 @@ void parser_init(Allocator* allocator, Parser* parser)
 Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts)
 {
     Parsed_File result = {};
+    array_init(parser->allocator, &result.declarations);
 
     while (ts->current_token().kind != TOK_EOF)
     {
         auto ptn = parser_parse_declaration(parser, ts);
-        assert(ptn);
+        array_append(&result.declarations, ptn);
     }
 
     return result;
@@ -296,7 +297,7 @@ Expression_Parse_Tree_Node* parser_parse_base_expression(Parser* parser, Token_S
 
         case TOK_NUMBER_LITERAL:
         {
-            assert(false);
+            return parser_parse_number_literal_expression(parser, ts);
             break;
         }
 
@@ -330,6 +331,15 @@ Call_Expression_Parse_Tree_Node* parser_parse_call_expression(Parser* parser, To
                                                 arg_list);
 }
 
+Number_Literal_Expression_Parse_Tree_Node*
+parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts)
+{
+    auto num_tok = ts->current_token();
+    ts->next_token();
+
+    return new_number_literal_expression_parse_tree_node(parser->allocator, num_tok.atom);
+}
+
 Expression_List_Parse_Tree_Node* parser_parse_expression_list(Parser* parser, Token_Stream* ts)
 {
     Array<Expression_Parse_Tree_Node*> expressions = {};
@@ -357,14 +367,26 @@ Expression_List_Parse_Tree_Node* parser_parse_expression_list(Parser* parser, To
 Binary_Operator parser_parse_add_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
+    Binary_Operator result = BINOP_INVALID;
     switch (ct.kind)
     {
-        case TOK_PLUS: return BINOP_ADD;
-        case TOK_MINUS: return BINOP_SUB;
+        case TOK_PLUS:
+        {
+            result = BINOP_ADD;
+            break;
+        }
+
+        case TOK_MINUS:
+        {
+            result = BINOP_SUB;
+            break;
+        }
+
         default: assert(false);
     }
 
-    assert(false);
+    ts->next_token();
+    return result;
 }
 
 bool parser_expect_token(Parser* parser, Token_Stream* ts, Token_Kind kind)
@@ -414,8 +436,10 @@ bool parser_is_add_op(Token_Stream* ts)
 
 void parsed_file_print(Parsed_File* parsed_file)
 {
-    assert(false);
-    assert(parsed_file);
+    for (int64_t i = 0; i < parsed_file->declarations.count; i++)
+    {
+        parsed_file->declarations[i]->print();
+    }
 }
 
 }

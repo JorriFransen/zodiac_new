@@ -47,4 +47,65 @@ bool operator==(const Atom& a, const Atom& b)
     return a.data == b.data;
 }
 
+static uint64_t _digit_value(char c)
+{
+    if (c >= '0' && c <= '9')
+    {
+        return ((uint64_t)c - '0');
+    }
+    else if (c >= 'a'  && c <= 'f')
+    {
+        return ((uint64_t)c - 'a') + 10;
+    }
+    else if (c >= 'A' && c <= 'F')
+    {
+        return ((uint64_t)c - 'A') + 10;
+    }
+    else assert(false);
+
+    assert(false);
+    return 0;
+}
+
+int64_t atom_to_s64(const Atom& atom, uint64_t base /*= 10*/)
+{
+    uint64_t result = 0;
+
+    uint64_t start_index = 0;
+    bool negate = false;
+    if (atom.data[0] == '-')
+    {
+        negate = true;
+        start_index = 1;
+    }
+
+    for (uint64_t i = start_index; i < atom.length; i++)
+    {
+        result *= base;
+        uint64_t digit_value = _digit_value(atom.data[i]);
+        result += digit_value;
+    }
+
+    if (negate)
+    {
+        result = -result;
+    }
+
+    return result;
+}
+
+uint64_t atom_to_u64(const Atom& atom, uint64_t base /*= 10*/)
+{
+    uint64_t result = 0;
+
+    for (uint64_t i = 0; i < atom.length; i++)
+    {
+        result *= base;
+        uint64_t digit_value = _digit_value(atom.data[i]);
+        result += digit_value;
+    }
+
+    return result;
+}
+
 }

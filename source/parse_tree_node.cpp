@@ -157,4 +157,76 @@ Binary_Expression_Parse_Tree_Node* new_binary_expression_parse_tree_node(
     return result;
 }
 
+Number_Literal_Expression_Parse_Tree_Node* new_number_literal_expression_parse_tree_node(
+    Allocator* allocator,
+    Atom atom
+)
+{
+    auto result = new_parse_tree_node<Number_Literal_Expression_Parse_Tree_Node>(allocator);
+    if (atom.data[0] == '-')
+    {
+        result->value.s64 = atom_to_s64(atom);
+    }
+    else
+    {
+        result->value.u64 = atom_to_u64(atom);
+    }
+
+    return result;
+}
+
+void Function_Prototype_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
+{
+    print_indent(indent);
+    printf("FUNC_PROTO\n");
+    print_indent(indent);
+    printf("  PARAMS\n");
+    for (int64_t i = 0; i < parameters.count; i++)
+    {
+        parameters[i]->print(indent + 4);
+    }
+
+    if (return_type_expression)
+    {
+        print_indent(indent);
+        printf("  RETURN_TYPE\n");
+        return_type_expression->print(indent + 4);
+    }
+}
+
+void Function_Body_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
+{
+    print_indent(indent);
+    printf("FUNC_BODY\n");
+    for (int64_t i = 0; i < statements.count; i++)
+    {
+        statements[i]->print(indent + 2);
+    }
+}
+
+void Expression_Statement_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
+{
+    expression->print(indent + 2);
+}
+
+void Mutable_Declaration_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
+{
+    print_indent(indent);
+    printf("MUTABLE: \"%s\"\n", identifier->identifier.data);
+
+    if (init_expression)
+    {
+        print_indent(indent);
+        printf("  INIT_EXPR:\n");
+        init_expression->print(indent + 4);
+    }
+}
+
+void Return_Statement_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
+{
+    print_indent(indent);
+    printf("RETURN: \n");
+    expression->print(indent + 2);
+}
+
 }
