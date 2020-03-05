@@ -88,6 +88,17 @@ Declaration_Statement_Parse_Tree_Node* new_declaration_statement_parse_tree_node
     return result;
 }
 
+Struct_Declaration_Parse_Tree_Node*
+new_struct_declaration_parse_tree_node(Allocator* allocator,
+                                        Identifier_Parse_Tree_Node* identifier,
+                                        Array<Declaration_Parse_Tree_Node*> members)
+{
+    auto result = new_parse_tree_node<Struct_Declaration_Parse_Tree_Node>(allocator);
+    result->identifier = identifier;
+    result->member_declarations = members;
+    return result;
+}
+
 Expression_Statement_Parse_Tree_Node* new_expression_statement_parse_tree_node(
     Allocator* allocator,
     Expression_Parse_Tree_Node* expression

@@ -26,6 +26,10 @@ Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts);
 Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts);
 Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts,
                                                       Identifier_Parse_Tree_Node* identifier);
+Struct_Declaration_Parse_Tree_Node*
+parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
+                                Identifier_Parse_Tree_Node* identifier);
+
 Identifier_Parse_Tree_Node* parser_parse_identifier(Parser* parser, Token_Stream* ts);
 
 Function_Prototype_Parse_Tree_Node* parser_parse_function_prototype(Parser* parser,

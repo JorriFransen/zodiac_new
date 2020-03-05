@@ -7,6 +7,7 @@
 #include <cassert>
 
 namespace Zodiac
+#include <stdio.h>
 {
 
 Parser parser_create(Allocator* allocator)
@@ -64,15 +65,23 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
+    Expression_Parse_Tree_Node* specified_type = nullptr;
+
     if (!parser_is_token(ts, TOK_COLON) && !parser_is_token(ts, TOK_EQ))
     {
-        assert(false);
+        specified_type = parser_parse_expression(parser, ts);
+        if (parser_is_token(ts, TOK_SEMICOLON))
+        {
+            return new_mutable_declaration_parse_tree_node(parser->allocator, identifier,
+                                                           nullptr);
+        }
     }
 
     if (parser_match_token(ts, TOK_COLON))
     {
         if (parser_is_token(ts, TOK_KW_FUNC))
         {
+            assert(!specified_type);
             auto function_proto = parser_parse_function_prototype(parser, ts);
             assert(function_proto);
 
@@ -85,6 +94,15 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
 
             return new_function_declaration_parse_tree_node(parser->allocator, identifier,
                                                             function_proto, function_defn);
+        }
+        else if (parser_is_token(ts, TOK_KW_STRUCT))
+        {
+            assert(!specified_type);
+            return parser_parse_struct_declaration(parser, ts, identifier);
+        }
+        else
+        {
+            assert(false);
         }
     }
     else if (parser_match_token(ts, TOK_EQ))
@@ -100,6 +118,32 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
     }
 
     assert(false);
+}
+
+Struct_Declaration_Parse_Tree_Node*
+parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
+                                Identifier_Parse_Tree_Node* identifier)
+{
+    if (!parser_expect_token(parser, ts, TOK_KW_STRUCT)) assert(false);
+
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) assert(false);
+
+    Array<Declaration_Parse_Tree_Node*> member_decls = {};
+    array_init(parser->allocator, &member_decls);
+
+    while (!parser_match_token(ts, TOK_RBRACE))
+    {
+        auto decl = parser_parse_declaration(parser, ts);
+        array_append(&member_decls, decl);
+        if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
+    }
+
+    if (!member_decls.count)
+    {
+        array_free(&member_decls);
+    }
+
+    return new_struct_declaration_parse_tree_node(parser->allocator, identifier, member_decls);
 }
 
 Identifier_Parse_Tree_Node* parser_parse_identifier(Parser* parser, Token_Stream* ts)

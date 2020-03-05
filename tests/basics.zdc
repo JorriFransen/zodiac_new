@@ -22,30 +22,36 @@ main :: func () -> int
     return 10 - 3;
 }
 
-// main :: (args: []std.String) -> int
+Vec2 :: struct
+{
+    x : int;
+    y : int;
+}
+
+// main :: func (args: []std.String) -> int
 // {
 //     fmt.print("Hello World!\n");
 //     return 0;
 // }
 
-// Vec2 :: struct 
+// Vec2 :: struct
 // {
 //     x : int;
 //     y : int;
-// 
+
 //     add :: (self: *Vec2, other: Vec2) -> Vec2
 //     {
 //         self.x += other.x;
 //         self.y += other.y;
 //         return <self;
 //     }
-// 
+
 //     add :: (a: Vec2, b: Vec2) -> Vec2
 //     {
 //         return { a.x + b.x, a.y + b.y };
 //     }
 // }
-// 
+
 // main :: (args: []std.String) -> int
 // {
 //     p1 : Vec2;

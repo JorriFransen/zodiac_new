@@ -37,7 +37,7 @@ struct Identifier_Parse_Tree_Node : public Parse_Tree_Node
 
 struct Parameter_Parse_Tree_Node : public Parse_Tree_Node
 {
-    
+
 };
 
 struct Function_Prototype_Parse_Tree_Node : public Parse_Tree_Node
@@ -81,6 +81,21 @@ struct Mutable_Declaration_Parse_Tree_Node : public Declaration_Parse_Tree_Node
     Expression_Parse_Tree_Node* init_expression = nullptr;
 
     void print(uint64_t indent = 0);
+};
+
+struct Struct_Declaration_Parse_Tree_Node : public Declaration_Parse_Tree_Node
+{
+    Array<Declaration_Parse_Tree_Node*> member_declarations = {};
+
+    void print(uint64_t indent = 0)
+    {
+        print_indent(indent);
+        printf("STRUCT: \"%s\"\n", identifier->identifier.data);
+        for (int64_t i = 0; i < member_declarations.count; i++)
+        {
+            member_declarations[i]->print(indent + 2);
+        }
+    }
 };
 
 struct Statement_Parse_Tree_Node : public Parse_Tree_Node
@@ -244,6 +259,11 @@ Mutable_Declaration_Parse_Tree_Node* new_mutable_declaration_parse_tree_node(
     Identifier_Parse_Tree_Node* identifier,
     Expression_Parse_Tree_Node* init_expression
 );
+
+Struct_Declaration_Parse_Tree_Node*
+new_struct_declaration_parse_tree_node(Allocator* allocator,
+                                       Identifier_Parse_Tree_Node* identifier,
+                                       Array<Declaration_Parse_Tree_Node*> members);
 
 Declaration_Statement_Parse_Tree_Node* new_declaration_statement_parse_tree_node(
     Allocator* allocator,
