@@ -25,20 +25,19 @@ Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts);
 
 Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts);
 Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts,
-                                                      Identifier_Parse_Tree_Node* identifier);
+                                                      Identifier_PTN* identifier);
 Struct_Declaration_Parse_Tree_Node*
 parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
-                                Identifier_Parse_Tree_Node* identifier);
+                                Identifier_PTN* identifier);
 
-Identifier_Parse_Tree_Node* parser_parse_identifier(Parser* parser, Token_Stream* ts);
+Identifier_PTN* parser_parse_identifier(Parser* parser, Token_Stream* ts);
 
-Function_Prototype_Parse_Tree_Node* parser_parse_function_prototype(Parser* parser,
-                                                                    Token_Stream* ts);
-Function_Body_Parse_Tree_Node* parser_parse_function_body(Parser* parser, Token_Stream* ts);
+Function_Proto_PTN* parser_parse_function_prototype(Parser* parser, Token_Stream* ts);
 Array<Parameter_Parse_Tree_Node*> parser_parse_parameter_list(Parser* parser, Token_Stream* ts);
 Parameter_Parse_Tree_Node* parser_parse_parameter(Parser* parser, Token_Stream* ts);
 
 Statement_Parse_Tree_Node* parser_parse_statement(Parser* parser, Token_Stream* ts);
+Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts);
 
 Expression_Parse_Tree_Node* parser_parse_expression(Parser* parser, Token_Stream* ts);
 Expression_Parse_Tree_Node* parser_parse_add_expression(Parser* parser, Token_Stream* ts);

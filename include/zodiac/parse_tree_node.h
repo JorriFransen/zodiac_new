@@ -9,6 +9,79 @@
 namespace Zodiac
 {
 
+enum class PT_Node_Kind
+{
+    INVALID,
+
+    IDENTIFIER,
+    FUNCTION_PROTO,
+
+    DECLARATION,
+
+    STATEMENT,
+
+    EXPRESSION,
+
+};
+
+typedef PT_Node_Kind PTN_Kind;
+
+struct PT_Node
+{
+    PT_Node_Kind kind = PT_Node_Kind::INVALID;
+};
+
+typedef PT_Node PTN;
+
+struct Identifier_PTN
+{
+    static PTN_Kind _kind;
+    PT_Node self = {};
+    Atom atom = {};
+};
+
+// @CLEANUP: NOCHECKIN:
+struct Parameter_Parse_Tree_Node;
+struct Expression_Parse_Tree_Node;
+
+struct Function_Proto_PTN
+{
+    static PTN_Kind _kind;
+    PT_Node self = {};
+    Array<Parameter_Parse_Tree_Node*> parameters = {};
+    Expression_Parse_Tree_Node* return_type_expression = nullptr;
+};
+
+enum class Statement_PTN_Kind
+{
+    INVALID,
+    BLOCK,
+};
+
+struct Statement_PTN
+{
+    static PTN_Kind _kind;
+    PT_Node self = {};
+    Statement_PTN_Kind kind = Statement_PTN_Kind::INVALID;
+
+    union
+    {
+        struct
+        {
+            Array<Statement_PTN*> statements = {};
+        } block;
+    };
+
+    Statement_PTN() {}
+};
+
+
+void print_ptn(PTN* ptn, uint64_t indent);
+
+
+
+
+
 struct Parse_Tree_Node
 {
     virtual void print(uint64_t indent = 0) = 0;
@@ -22,56 +95,28 @@ struct Parse_Tree_Node
 };
 
 struct Statement_Parse_Tree_Node;
-struct Expression_Parse_Tree_Node;
-
-struct Identifier_Parse_Tree_Node : public Parse_Tree_Node
-{
-    Atom identifier = {};
-
-    void print (uint64_t indent = 0)
-    {
-        print_indent(indent);
-        printf("IDENTIFIER: %s\n", identifier.data);
-    }
-};
 
 struct Parameter_Parse_Tree_Node : public Parse_Tree_Node
 {
 
 };
 
-struct Function_Prototype_Parse_Tree_Node : public Parse_Tree_Node
-{
-    Array<Parameter_Parse_Tree_Node*> parameters = {};
-    Expression_Parse_Tree_Node* return_type_expression = nullptr;
-
-    void print(uint64_t indent = 0);
-
-};
-
-struct Function_Body_Parse_Tree_Node : public Parse_Tree_Node
-{
-    Array<Statement_Parse_Tree_Node*> statements = {};
-
-    void print(uint64_t indent = 0);
-};
-
 struct Declaration_Parse_Tree_Node : public Parse_Tree_Node
 {
-    Identifier_Parse_Tree_Node* identifier = nullptr;
+    Identifier_PTN* identifier = nullptr;
 };
 
 struct Function_Declaration_Parse_Tree_Node : public Declaration_Parse_Tree_Node
 {
-    Function_Prototype_Parse_Tree_Node* prototype = nullptr;
-    Function_Body_Parse_Tree_Node* body = nullptr;
+    Function_Proto_PTN* prototype = nullptr;
+    Statement_PTN* body = nullptr;
 
     void print(uint64_t indent = 0)
     {
         print_indent(indent);
-        printf("FUNCTION: \"%s\"\n", identifier->identifier.data);
-        prototype->print(indent + 2);
-        body->print(indent + 2);
+        printf("FUNCTION: \"%s\"\n", identifier->atom.data);
+        print_ptn(&prototype->self, indent + 2);
+        print_ptn(&body->self, indent + 2);
         printf("\n");
     }
 };
@@ -90,7 +135,7 @@ struct Struct_Declaration_Parse_Tree_Node : public Declaration_Parse_Tree_Node
     void print(uint64_t indent = 0)
     {
         print_indent(indent);
-        printf("STRUCT: \"%s\"\n", identifier->identifier.data);
+        printf("STRUCT: \"%s\"\n", identifier->atom.data);
         for (int64_t i = 0; i < member_declarations.count; i++)
         {
             member_declarations[i]->print(indent + 2);
@@ -148,13 +193,13 @@ struct Expression_List_Parse_Tree_Node : public Parse_Tree_Node
 struct Call_Expression_Parse_Tree_Node : public Expression_Parse_Tree_Node
 {
     bool is_builtin = false;
-    Identifier_Parse_Tree_Node* identifier = nullptr;
+    Identifier_PTN* identifier = nullptr;
     Expression_List_Parse_Tree_Node* arg_list = nullptr;
 
     void print(uint64_t indent = 0)
     {
         print_indent(indent);
-        printf("CALL: \"%s\"\n", identifier->identifier.data);
+        printf("CALL: \"%s\"\n", identifier->atom.data);
 
         if (arg_list)
         {
@@ -167,12 +212,12 @@ struct Call_Expression_Parse_Tree_Node : public Expression_Parse_Tree_Node
 
 struct Identifier_Expression_Parse_Tree_Node : public Expression_Parse_Tree_Node
 {
-    Identifier_Parse_Tree_Node* identifier = nullptr;
+    Identifier_PTN* identifier = nullptr;
 
     void print(uint64_t indent = 0)
     {
         print_indent(indent);
-        printf("IDENT_EXPR: \"%s\"\n", identifier->identifier.data);
+        printf("IDENT_EXPR: \"%s\"\n", identifier->atom.data);
     }
 };
 
@@ -220,7 +265,16 @@ struct Number_Literal_Expression_Parse_Tree_Node : public Expression_Parse_Tree_
     }
 };
 
+void init_ptn(PTN* ptn, PTN_Kind kind);
 void init_parse_tree_node(Parse_Tree_Node* ptn);
+
+template <typename T>
+T* new_ptn(Allocator* allocator)
+{
+    T* result = alloc_type<T>(allocator);
+    init_ptn(&result->self, T::_kind);
+    return result;
+}
 
 template <typename T>
 T* new_parse_tree_node(Allocator* allocator)
@@ -230,39 +284,38 @@ T* new_parse_tree_node(Allocator* allocator)
     return result;
 }
 
-Identifier_Parse_Tree_Node* new_identifier_parse_tree_node(Allocator* allocator, const Atom& atom);
+Statement_PTN* new_statement(Allocator* allocator, Statement_PTN_Kind kind);
+
+Identifier_PTN* new_identifier_ptn(Allocator* allocator, const Atom& atom);
+
+Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN*> statements);
 
 Parameter_Parse_Tree_Node* new_parameter_parse_tree_node(
     Allocator* allocator
 );
 
-Function_Prototype_Parse_Tree_Node* new_function_prototype_parse_tree_node(
+Function_Proto_PTN* new_function_prototype_parse_tree_node(
     Allocator* allocator,
     Array<Parameter_Parse_Tree_Node*> parameters,
     Expression_Parse_Tree_Node* return_type_expr
 );
 
-Function_Body_Parse_Tree_Node* new_function_body_parse_tree_node(
-    Allocator* allocator,
-    Array<Statement_Parse_Tree_Node*> statements
-);
-
 Function_Declaration_Parse_Tree_Node* new_function_declaration_parse_tree_node(
     Allocator* allocator,
-    Identifier_Parse_Tree_Node* identifier,
-    Function_Prototype_Parse_Tree_Node* prototype,
-    Function_Body_Parse_Tree_Node* body
+    Identifier_PTN* identifier,
+    Function_Proto_PTN* prototype,
+    Statement_PTN* body
 );
 
 Mutable_Declaration_Parse_Tree_Node* new_mutable_declaration_parse_tree_node(
     Allocator* allocator,
-    Identifier_Parse_Tree_Node* identifier,
+    Identifier_PTN* identifier,
     Expression_Parse_Tree_Node* init_expression
 );
 
 Struct_Declaration_Parse_Tree_Node*
 new_struct_declaration_parse_tree_node(Allocator* allocator,
-                                       Identifier_Parse_Tree_Node* identifier,
+                                       Identifier_PTN* identifier,
                                        Array<Declaration_Parse_Tree_Node*> members);
 
 Declaration_Statement_Parse_Tree_Node* new_declaration_statement_parse_tree_node(
@@ -288,13 +341,13 @@ Expression_List_Parse_Tree_Node* new_expression_list_parse_tree_node(
 Call_Expression_Parse_Tree_Node* new_call_expression_parse_tree_node(
     Allocator* allocator,
     bool is_builtin,
-    Identifier_Parse_Tree_Node* identifier,
+    Identifier_PTN* identifier,
     Expression_List_Parse_Tree_Node* arg_list
 );
 
 Identifier_Expression_Parse_Tree_Node* new_identifier_expression_parse_tree_node(
     Allocator* allocator,
-    Identifier_Parse_Tree_Node* identifier
+    Identifier_PTN* identifier
 );
 
 Binary_Expression_Parse_Tree_Node* new_binary_expression_parse_tree_node(
@@ -308,5 +361,6 @@ Number_Literal_Expression_Parse_Tree_Node* new_number_literal_expression_parse_t
     Allocator* allocator,
     Atom atom
 );
+
 
 }

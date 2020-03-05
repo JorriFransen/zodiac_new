@@ -61,7 +61,7 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
 }
 
 Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stream* ts,
-                                                      Identifier_Parse_Tree_Node* identifier)
+                                                      Identifier_PTN* identifier)
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
@@ -85,15 +85,16 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
             auto function_proto = parser_parse_function_prototype(parser, ts);
             assert(function_proto);
 
-            Function_Body_Parse_Tree_Node* function_defn = nullptr;
+            Statement_PTN* function_body = nullptr;
             if (parser_is_token(ts, TOK_LBRACE))
             {
-                function_defn = parser_parse_function_body(parser, ts);
-                assert(function_defn);
+                function_body = _parser_parse_statement(parser, ts);
+                assert(function_body);
+                assert(function_body->kind == Statement_PTN_Kind::BLOCK);
             }
 
             return new_function_declaration_parse_tree_node(parser->allocator, identifier,
-                                                            function_proto, function_defn);
+                                                            function_proto, function_body);
         }
         else if (parser_is_token(ts, TOK_KW_STRUCT))
         {
@@ -122,7 +123,7 @@ Declaration_Parse_Tree_Node* parser_parse_declaration(Parser* parser, Token_Stre
 
 Struct_Declaration_Parse_Tree_Node*
 parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
-                                Identifier_Parse_Tree_Node* identifier)
+                                Identifier_PTN* identifier)
 {
     if (!parser_expect_token(parser, ts, TOK_KW_STRUCT)) assert(false);
 
@@ -146,7 +147,7 @@ parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
     return new_struct_declaration_parse_tree_node(parser->allocator, identifier, member_decls);
 }
 
-Identifier_Parse_Tree_Node* parser_parse_identifier(Parser* parser, Token_Stream* ts)
+Identifier_PTN* parser_parse_identifier(Parser* parser, Token_Stream* ts)
 {
     assert(parser);
     assert(ts);
@@ -154,11 +155,10 @@ Identifier_Parse_Tree_Node* parser_parse_identifier(Parser* parser, Token_Stream
     auto ident_token = ts->current_token();
     if (!parser_expect_token(parser, ts, TOK_IDENTIFIER)) return nullptr;
 
-    return new_identifier_parse_tree_node(parser->allocator, ident_token.atom);
+    return new_identifier_ptn(parser->allocator, ident_token.atom);
 }
 
-Function_Prototype_Parse_Tree_Node* parser_parse_function_prototype(Parser* parser,
-                                                                    Token_Stream* ts)
+Function_Proto_PTN* parser_parse_function_prototype(Parser* parser, Token_Stream* ts)
 {
     if (!parser_expect_token(parser, ts, TOK_KW_FUNC))
     {
@@ -184,37 +184,6 @@ Function_Prototype_Parse_Tree_Node* parser_parse_function_prototype(Parser* pars
     }
 
     return new_function_prototype_parse_tree_node(parser->allocator, param_list, return_type_expr);
-}
-
-Function_Body_Parse_Tree_Node* parser_parse_function_body(Parser* parser, Token_Stream* ts)
-{
-    if (!parser_expect_token(parser, ts, TOK_LBRACE))
-    {
-        assert(false);
-    }
-
-    Array<Statement_Parse_Tree_Node*> statements = {};
-    array_init(parser->allocator, &statements);
-
-    while (!parser_match_token(ts, TOK_RBRACE))
-    {
-        auto statement = parser_parse_statement(parser, ts);
-        assert(statement);
-
-        if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-        {
-            assert(false);
-        }
-
-        array_append(&statements, statement);
-    }
-
-    if (!statements.count)
-    {
-        array_free(&statements);
-    }
-
-    return new_function_body_parse_tree_node(parser->allocator, statements);
 }
 
 Array<Parameter_Parse_Tree_Node*> parser_parse_parameter_list(Parser* parser, Token_Stream* ts)
@@ -288,6 +257,57 @@ Statement_Parse_Tree_Node* parser_parse_statement(Parser* parser, Token_Stream* 
     {
         auto expr = parser_parse_expression(parser, ts);
         return new_expression_statement_parse_tree_node(parser->allocator, expr);
+    }
+}
+
+Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+
+    switch (ct.kind)
+    {
+        case TOK_LBRACE:
+        {
+            ts->next_token();
+            Array<Statement_PTN*> block_statements = {};
+            array_init(parser->allocator, &block_statements);
+
+            while (!parser_match_token(ts, TOK_LBRACE))
+            {
+                if (block_statements.count)
+                {
+                    if (!parser_expect_token(parser, ts, TOK_COMMA)) assert(false);
+                }
+
+                auto statement = _parser_parse_statement(parser, ts);
+                array_append(&block_statements, statement);
+            }
+
+            if (!block_statements.count) array_free(&block_statements);
+
+            return new_block_statement_ptn(parser->allocator, block_statements);
+            break;
+        }
+
+        case TOK_IDENTIFIER:
+        {
+            if (ts->peek_token(1).kind == TOK_COLON)
+            {
+                auto decl = parser_parse_declaration(parser, ts);
+                assert(decl);
+                assert(false);
+                // return new_declaration_statement_parse_tree_node(parser->allocator, decl);
+            }
+            else
+            {
+                auto expr = parser_parse_expression(parser, ts);
+                assert(expr);
+                return new_expression_statement_ptn(parser->allocator, expr);
+            }
+            break;
+        }
+
+        default: assert(false);
     }
 }
 

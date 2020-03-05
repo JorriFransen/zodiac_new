@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     String file_path = string_ref(argv[1]);
     Lexed_File lexed_file = lexer_lex_file(&lexer, file_path);
 
-    lexed_file_print(&lexed_file);
+    // lexed_file_print(&lexed_file);
 
     Token_Stream* token_stream = lexer_new_token_stream(ca, &lexed_file);
 
