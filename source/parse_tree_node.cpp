@@ -6,6 +6,7 @@ namespace Zodiac
 PTN_Kind Identifier_PTN::_kind = PTN_Kind::IDENTIFIER;
 PTN_Kind Function_Proto_PTN::_kind = PTN_Kind::FUNCTION_PROTO;
 PTN_Kind Statement_PTN::_kind = PTN_Kind::STATEMENT;
+PTN_Kind Declaration_PTN::_kind = PTN_Kind::DECLARATION;
 
 void init_ptn(PTN* ptn, PTN_Kind kind)
 {
@@ -39,18 +40,32 @@ Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN
     return result;
 }
 
-Parameter_Parse_Tree_Node* new_parameter_parse_tree_node(
-    Allocator* allocator
-)
+Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
+                                            Expression_Parse_Tree_Node* expr)
 {
-    assert(allocator);
-    assert(false);
+    auto result = new_statement(allocator, Statement_PTN_Kind::EXPRESSION);
+    result->expression = expr;
+    return result;
 }
 
+Statement_PTN* new_declaration_statement_ptn(Allocator* allocator,
+                                             Declaration_PTN* decl)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::DECLARATION);
+    result->declaration = decl;
+    return result;
+}
+
+Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_Parse_Tree_Node* expr)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::RETURN);
+    result->return_stmt.expression = expr;
+    return result;
+}
 
 Function_Proto_PTN* new_function_prototype_parse_tree_node(
     Allocator* allocator,
-    Array<Parameter_Parse_Tree_Node*> parameters,
+    Array<Parameter_PTN*> parameters,
     Expression_Parse_Tree_Node* return_type_expr
 )
 {
@@ -60,41 +75,36 @@ Function_Proto_PTN* new_function_prototype_parse_tree_node(
     return result;
 }
 
-Function_Declaration_Parse_Tree_Node* new_function_declaration_parse_tree_node(
-    Allocator* allocator,
-    Identifier_PTN* identifier,
-    Function_Proto_PTN* prototype,
-    Statement_PTN* body
-)
+Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                              Function_Proto_PTN* prototype, Statement_PTN* body)
 {
     assert(prototype);
     if (body) assert(body->kind == Statement_PTN_Kind::BLOCK);
 
-    auto result = new_parse_tree_node<Function_Declaration_Parse_Tree_Node>(allocator);
+    auto result = new_ptn<Declaration_PTN>(allocator);
     assert(result);
 
+    result->kind = Declaration_PTN_Kind::FUNCTION;
     result->identifier = identifier;
-    result->prototype = prototype;
-    result->body = body;
+    result->function.prototype = prototype;
+    result->function.body = body;
 
     return result;
 }
 
-Mutable_Declaration_Parse_Tree_Node* new_mutable_declaration_parse_tree_node(
-    Allocator* allocator,
-    Identifier_PTN* identifier,
-    Expression_Parse_Tree_Node* init_expression
-)
+Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                              Expression_Parse_Tree_Node* init_expression)
 {
-    auto result = new_parse_tree_node<Mutable_Declaration_Parse_Tree_Node>(allocator);
+    auto result = new_ptn<Declaration_PTN>(allocator);
+    result->kind = Declaration_PTN_Kind::VARIABLE;
     result->identifier = identifier;
-    result->init_expression = init_expression;
+    result->variable.init_expression = init_expression;
     return result;
 }
 
 Declaration_Statement_Parse_Tree_Node* new_declaration_statement_parse_tree_node(
     Allocator* allocator,
-    Declaration_Parse_Tree_Node* declaration
+    Declaration_PTN* declaration
 )
 {
     auto result = new_parse_tree_node<Declaration_Statement_Parse_Tree_Node>(allocator);
@@ -102,14 +112,13 @@ Declaration_Statement_Parse_Tree_Node* new_declaration_statement_parse_tree_node
     return result;
 }
 
-Struct_Declaration_Parse_Tree_Node*
-new_struct_declaration_parse_tree_node(Allocator* allocator,
-                                        Identifier_PTN* identifier,
-                                        Array<Declaration_Parse_Tree_Node*> members)
+Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                            Array<Declaration_PTN*> members)
 {
-    auto result = new_parse_tree_node<Struct_Declaration_Parse_Tree_Node>(allocator);
+    auto result = new_ptn<Declaration_PTN>(allocator);
+    result->kind = Declaration_PTN_Kind::STRUCT;
     result->identifier = identifier;
-    result->member_declarations = members;
+    result->structure.member_declarations = members;
     return result;
 }
 
@@ -205,18 +214,18 @@ void Expression_Statement_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
     expression->print(indent + 2);
 }
 
-void Mutable_Declaration_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
-{
-    print_indent(indent);
-    printf("MUTABLE: \"%s\"\n", identifier->atom.data);
+// void Declaration_PTN::print(uint64_t indent /*= 0*/)
+// {
+//     print_indent(indent);
+//     printf("MUTABLE: \"%s\"\n", identifier->atom.data);
 
-    if (init_expression)
-    {
-        print_indent(indent);
-        printf("  INIT_EXPR:\n");
-        init_expression->print(indent + 4);
-    }
-}
+//     if (init_expression)
+//     {
+//         print_indent(indent);
+//         printf("  INIT_EXPR:\n");
+//         init_expression->print(indent + 4);
+//     }
+// }
 
 void Return_Statement_Parse_Tree_Node::print(uint64_t indent /*= 0*/)
 {
@@ -255,24 +264,33 @@ void print_ptn(PTN* ptn, uint64_t indent)
         {
             auto _this = (Function_Proto_PTN*)ptn;
             printf("FUNC_PROTO:\n");
-            print_indent(indent);
-            printf("PARAMS:\n");
-            for (int64_t i = 0; i < _this->parameters.count; i++)
+            if (_this->parameters.count)
             {
-                _this->parameters[i]->print(indent + 4);
+                print_indent(indent);
+                printf("  PARAMS:\n");
+                for (int64_t i = 0; i < _this->parameters.count; i++)
+                {
+                    print_ptn(&_this->parameters[i]->self, indent + 4);
+                }
             }
+            break;
+        }
+
+        case PTN_Kind::PARAMETER:
+        {
+            assert(false);
             break;
         }
 
         case PTN_Kind::DECLARATION:
         {
-            assert(false);
+            print_declaration_ptn((Declaration_PTN*)ptn, indent);
             break;
         }
 
         case PTN_Kind::STATEMENT:
         {
-            assert(false);
+            print_statement_ptn((Statement_PTN*)ptn, indent);
             break;
         }
 
@@ -282,26 +300,94 @@ void print_ptn(PTN* ptn, uint64_t indent)
             break;
         }
     }
+}
 
-    // void Function_Proto_PTN::print(uint64_t indent /*= 0*/)
-    // {
-    //     print_indent(indent);
-    //     printf("FUNC_PROTO\n");
-    //     print_indent(indent);
-    //     printf("  PARAMS\n");
-    //     for (int64_t i = 0; i < parameters.count; i++)
-    //     {
-    //         parameters[i]->print(indent + 4);
-    //     }
+void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
+{
+    switch (statement->kind)
+    {
+        case Statement_PTN_Kind::INVALID: assert(false);
 
-    //     if (return_type_expression)
-    //     {
-    //         print_indent(indent);
-    //         printf("  RETURN_TYPE\n");
-    //         return_type_expression->print(indent + 4);
-    //     }
-    // }
+        case Statement_PTN_Kind::BLOCK:
+        {
+            print_indent(indent);
+            printf("{\n");
 
+            for (int64_t i = 0; i < statement->block.statements.count; i++)
+            {
+                print_statement_ptn(statement->block.statements[i], indent + 2);
+            }
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+
+        case Statement_PTN_Kind::DECLARATION:
+        {
+            print_declaration_ptn(statement->declaration, indent);
+            break;
+        }
+
+        case Statement_PTN_Kind::EXPRESSION:
+        {
+            statement->expression->print(indent);
+            break;
+        }
+
+        case Statement_PTN_Kind::RETURN:
+        {
+            print_indent(indent);
+            printf("RETURN:\n");
+            if (statement->return_stmt.expression)
+            {
+                statement->return_stmt.expression->print(indent + 2);
+            }
+        }
+    }
+}
+
+void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
+{
+    switch (decl->kind)
+    {
+        case Declaration_PTN_Kind::INVALID: assert(false);
+
+        case Declaration_PTN_Kind::FUNCTION:
+        {
+            print_indent(indent);
+            printf("FUNCTION: \"%s\"\n", decl->identifier->atom.data);
+            print_ptn(&decl->function.prototype->self, indent + 2);
+            if (decl->function.body)
+            {
+                print_statement_ptn(decl->function.body, indent + 2);
+            }
+            printf("\n");
+            break;
+        }
+
+        case Declaration_PTN_Kind::VARIABLE:
+        {
+            print_indent(indent);
+            printf("VARIABLE: %s\n", decl->identifier->atom.data);
+            break;
+        }
+
+        case Declaration_PTN_Kind::STRUCT:
+        {
+            print_indent(indent);
+            printf("STRUCT: \"%s\"\n", decl->identifier->atom.data);
+            print_indent(indent);
+            printf("{\n");
+            for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)
+            {
+                print_declaration_ptn(decl->structure.member_declarations[i], indent + 2);
+            }
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+    }
 }
 
 }

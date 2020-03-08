@@ -32,7 +32,7 @@ Type* alloc_type(Allocator* allocator)
 {
     auto mem = (Type*)alloc(allocator, sizeof(Type));
     auto result = new (mem) Type();
-    return mem;
+    return result;
 }
 
 template <typename Element_Type>
