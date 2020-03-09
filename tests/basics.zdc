@@ -19,7 +19,8 @@ posix_call_main_and_exit :: func ()
 
 main :: func () -> int
 {
-    return 10 - 3;
+    result : int = 10 - 3;
+    return result - 7;
 }
 
 Vec2 :: struct
