@@ -65,14 +65,15 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
-    Expression_Parse_Tree_Node* specified_type = nullptr;
+    Expression_PTN* specified_type = nullptr;
 
     if (!parser_is_token(ts, TOK_COLON) && !parser_is_token(ts, TOK_EQ))
     {
         specified_type = parser_parse_expression(parser, ts);
         if (parser_is_token(ts, TOK_SEMICOLON))
         {
-            return new_variable_declaration_ptn(parser->allocator, identifier, nullptr);
+            return new_variable_declaration_ptn(parser->allocator, identifier, specified_type,
+                                                nullptr);
         }
     }
 
@@ -109,7 +110,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
     {
         auto expression = parser_parse_expression(parser, ts);
 
-        return new_variable_declaration_ptn(parser->allocator, identifier, expression);
+        return new_variable_declaration_ptn(parser->allocator, identifier, nullptr, expression);
     }
     else
     {
@@ -175,7 +176,7 @@ Function_Proto_PTN* parser_parse_function_prototype(Parser* parser, Token_Stream
         assert(false);
     }
 
-    Expression_Parse_Tree_Node* return_type_expr = nullptr;
+    Expression_PTN* return_type_expr = nullptr;
     if (parser_match_token(ts, TOK_RARROW))
     {
         return_type_expr = parser_parse_expression(parser, ts);
@@ -217,50 +218,6 @@ Parameter_PTN* parser_parse_parameter(Parser* parser, Token_Stream* ts)
     assert(parser);
     assert(ts);
     assert(false);
-}
-
-Statement_Parse_Tree_Node* parser_parse_statement(Parser* parser, Token_Stream* ts)
-{
-    assert(parser);
-    // assert(ts);
-    // assert(false);
-
-    if (parser_is_token(ts, TOK_IDENTIFIER))
-    {
-        if (ts->peek_token(1).kind == TOK_COLON)
-        {
-            auto decl = parser_parse_declaration(parser, ts);
-            assert(decl);
-            return new_declaration_statement_parse_tree_node(parser->allocator, decl);
-        }
-        else
-        {
-            auto expr = parser_parse_expression(parser, ts);
-            assert(expr);
-            return new_expression_statement_parse_tree_node(parser->allocator, expr);
-        }
-    }
-    else if (parser_match_token(ts, TOK_KW_RETURN))
-    {
-        Expression_Parse_Tree_Node* return_expr = nullptr;
-        if (!parser_is_token(ts, TOK_SEMICOLON))
-        {
-            return_expr = parser_parse_expression(parser, ts);
-            assert(return_expr);
-        }
-
-        auto result = new_return_statement_parse_tree_node(parser->allocator, return_expr);
-        if (!parser_is_token(ts, TOK_SEMICOLON))
-        {
-            assert(false);
-        }
-        return result;
-    }
-    else
-    {
-        auto expr = parser_parse_expression(parser, ts);
-        return new_expression_statement_parse_tree_node(parser->allocator, expr);
-    }
 }
 
 Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
@@ -320,7 +277,7 @@ Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
         case TOK_KW_RETURN:
         {
             ts->next_token();
-            Expression_Parse_Tree_Node* expr = nullptr;
+            Expression_PTN* expr = nullptr;
             bool found_semicolon = false;
             if (!parser_match_token(ts, TOK_SEMICOLON))
             {
@@ -359,12 +316,12 @@ Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
     }
 }
 
-Expression_Parse_Tree_Node* parser_parse_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts)
 {
     return parser_parse_add_expression(parser, ts);
 }
 
-Expression_Parse_Tree_Node* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
 {
     auto lhs = parser_parse_base_expression(parser, ts);
     assert(lhs);
@@ -374,13 +331,13 @@ Expression_Parse_Tree_Node* parser_parse_add_expression(Parser* parser, Token_St
         auto op = parser_parse_add_op(ts);
         auto rhs = parser_parse_base_expression(parser, ts);
         assert(rhs);
-        lhs = new_binary_expression_parse_tree_node(parser->allocator, op, lhs, rhs);
+        lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs);
     }
 
     return lhs;
 }
 
-Expression_Parse_Tree_Node* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
 {
     auto ct = ts->current_token();
 
@@ -395,7 +352,7 @@ Expression_Parse_Tree_Node* parser_parse_base_expression(Parser* parser, Token_S
             else
             {
                 auto identifier = parser_parse_identifier(parser, ts);
-                return new_identifier_expression_parse_tree_node(parser->allocator, identifier);
+                return new_identifier_expression_ptn(parser->allocator, identifier);
             }
             break;
         }
@@ -417,8 +374,8 @@ Expression_Parse_Tree_Node* parser_parse_base_expression(Parser* parser, Token_S
     }
 }
 
-Call_Expression_Parse_Tree_Node* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
-                                                              bool is_builtin/*=false*/)
+Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
+                                             bool is_builtin/*=false*/)
 {
     auto identifier = parser_parse_identifier(parser, ts);
     assert(identifier);
@@ -428,7 +385,7 @@ Call_Expression_Parse_Tree_Node* parser_parse_call_expression(Parser* parser, To
         assert(false);
     }
 
-    Expression_List_Parse_Tree_Node* arg_list = nullptr;
+    Expression_List_PTN* arg_list = nullptr;
     if (!parser_is_token(ts, TOK_RPAREN))
     {
         arg_list = parser_parse_expression_list(parser, ts);
@@ -439,22 +396,20 @@ Call_Expression_Parse_Tree_Node* parser_parse_call_expression(Parser* parser, To
         assert(false);
     }
 
-    return new_call_expression_parse_tree_node(parser->allocator, is_builtin, identifier,
-                                                arg_list);
+    return new_call_expression_ptn(parser->allocator, is_builtin, identifier, arg_list);
 }
 
-Number_Literal_Expression_Parse_Tree_Node*
-parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts)
 {
     auto num_tok = ts->current_token();
     ts->next_token();
 
-    return new_number_literal_expression_parse_tree_node(parser->allocator, num_tok.atom);
+    return new_number_literal_expression_ptn(parser->allocator, num_tok.atom);
 }
 
-Expression_List_Parse_Tree_Node* parser_parse_expression_list(Parser* parser, Token_Stream* ts)
+Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts)
 {
-    Array<Expression_Parse_Tree_Node*> expressions = {};
+    Array<Expression_PTN*> expressions = {};
     array_init(parser->allocator, &expressions, 4);
 
     auto first = parser_parse_expression(parser, ts);
@@ -473,7 +428,7 @@ Expression_List_Parse_Tree_Node* parser_parse_expression_list(Parser* parser, To
         array_free(&expressions);
     }
 
-    return new_expression_list_parse_tree_node(parser->allocator, expressions);
+    return new_expression_list_ptn(parser->allocator, expressions);
 }
 
 Binary_Operator parser_parse_add_op(Token_Stream* ts)
