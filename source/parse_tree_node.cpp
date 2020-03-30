@@ -9,6 +9,7 @@ PTN_Kind Statement_PTN::_kind = PTN_Kind::STATEMENT;
 PTN_Kind Declaration_PTN::_kind = PTN_Kind::DECLARATION;
 PTN_Kind Expression_List_PTN::_kind = PTN_Kind::EXPRESSION_LIST;
 PTN_Kind Expression_PTN::_kind = PTN_Kind::EXPRESSION;
+PTN_Kind Parameter_PTN::_kind = PTN_Kind::PARAMETER;
 
 void init_ptn(PTN* ptn, PTN_Kind kind)
 {
@@ -211,6 +212,17 @@ Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* par
     return result;
 }
 
+Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                 Expression_PTN* type_expression)
+{
+    auto result = new_ptn<Parameter_PTN>(allocator);
+
+    result->identifier = identifier;
+    result->type_expression = type_expression;
+
+    return result;
+}
+
 void print_indent(uint64_t indent)
 {
     for (uint64_t i = 0; i < indent; i++)
@@ -231,7 +243,9 @@ void print_ptn(PTN* ptn, uint64_t indent)
 
         case PTN_Kind::IDENTIFIER:
         {
-            assert(false);
+            auto _this = (Identifier_PTN*)ptn;
+            print_indent(indent);
+            printf("%s", _this->atom.data);
             break;
         }
 
@@ -246,7 +260,7 @@ void print_ptn(PTN* ptn, uint64_t indent)
                 for (int64_t i = 0; i < _this->parameters.count; i++)
                 {
                     if (i > 0) printf(", ");
-                    print_ptn(&_this->parameters[i]->self, indent + 4);
+                    print_ptn(&_this->parameters[i]->self, 0);
                 }
             }
             printf(")");
@@ -263,7 +277,11 @@ void print_ptn(PTN* ptn, uint64_t indent)
 
         case PTN_Kind::PARAMETER:
         {
-            assert(false);
+            print_indent(indent);
+            auto _this = (Parameter_PTN*)ptn;
+            print_ptn(&_this->identifier->self, 0);
+            printf(": ");
+            print_expression_ptn(_this->type_expression, 0);
             break;
         }
 
@@ -272,6 +290,7 @@ void print_ptn(PTN* ptn, uint64_t indent)
             auto _this = (Expression_List_PTN*)ptn;
             for (int64_t i = 0 ; i < _this->expressions.count; i++)
             {
+                if (i > 0) printf(", ");
                 print_expression_ptn(_this->expressions[i], indent);
             }
             break;
@@ -427,7 +446,7 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
                 printf(";\n");
             }
             print_indent(indent);
-            printf("}\n");
+            printf("}\n\n");
             break;
         }
     }
@@ -509,4 +528,5 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
     }
 }
 
+            
 }

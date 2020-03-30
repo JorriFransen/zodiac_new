@@ -249,7 +249,20 @@ Parameter_PTN* parser_parse_parameter(Parser* parser, Token_Stream* ts)
 {
     assert(parser);
     assert(ts);
-    assert(false);
+
+    Identifier_PTN* identifier = parser_parse_identifier(parser, ts);
+
+    if (!parser_expect_token(parser, ts, TOK_COLON))
+    {
+        assert(false);
+    }
+
+    Expression_PTN* type_expr = parser_parse_expression(parser, ts);
+
+    assert(identifier);
+    assert(type_expr);
+
+    return new_parameter_ptn(parser->allocator, identifier, type_expr);
 }
 
 Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)

@@ -156,6 +156,9 @@ struct Parameter_PTN
 {
     static PT_Node_Kind _kind;
     PT_Node self = {};
+
+    Identifier_PTN* identifier = nullptr;
+    Expression_PTN* type_expression = nullptr;
 };
 
 enum class Expression_PTN_Kind
@@ -260,14 +263,14 @@ Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN
                                             Array<Declaration_PTN*> members);
 
 Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                              Expression_PTN* type_expr, Expression_PTN* init_expr);
+                                              Expression_PTN* type_expr,
+                                              Expression_PTN* init_expr);
 
 Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
                                             Expression_PTN* expression);
 
 Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
-                                             Array<Expression_PTN*> expressions
-);
+                                             Array<Expression_PTN*> expressions);
 
 Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
                                         Identifier_PTN* identifier, Expression_List_PTN* arg_list);
@@ -281,6 +284,9 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
 Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
                                        Expression_PTN* child);
+
+Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                 Expression_PTN* type_expression);
 
 void print_ptn(PTN* ptn, uint64_t indent);
 void print_statement_ptn(Statement_PTN* statement, uint64_t indent);

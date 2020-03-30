@@ -29,6 +29,11 @@ Vec2 :: struct
     y : int;
 }
 
+print_num :: func (num: int) -> void
+{
+    fmt.print("{}\n", num);
+}
+
 // main :: func (args: []std.String) -> int
 // {
 //     fmt.print("Hello World!\n");
