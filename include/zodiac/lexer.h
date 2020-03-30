@@ -65,6 +65,7 @@ Token next_token(Lexer_Data* ld);
 Token lex_keyword_or_identifier(Lexer_Data* ld);
 Token lex_identifier(Lexer_Data* ld);
 Token lex_number_literal(Lexer_Data* ld);
+Token lex_string_literal(Lexer_Data* ld);
 
 void advance(Lexer_Data* ld, uint64_t count = 1);
 

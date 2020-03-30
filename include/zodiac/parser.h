@@ -46,6 +46,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
                                                               bool is_builtin = false);
 Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts);
+Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Stream* ts);
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts);
 

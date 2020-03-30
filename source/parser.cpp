@@ -404,6 +404,12 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_STRING_LITERAL:
+        {
+            result = parser_parse_string_literal_expression(parser, ts);
+            break;
+        }
+
         default: assert(false);
     }
 
@@ -450,6 +456,14 @@ Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Str
     ts->next_token();
 
     return new_number_literal_expression_ptn(parser->allocator, num_tok.atom);
+}
+
+Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Stream* ts)
+{
+    auto string_tok = ts->current_token();
+    ts->next_token();
+
+    return new_string_literal_expression_ptn(parser->allocator, string_tok.atom);
 }
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts)

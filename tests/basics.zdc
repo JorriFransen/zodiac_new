@@ -3,8 +3,8 @@ std :: import std;
 fmt :: std.fmt;
 
 fmt2 :: import std.fmt;
-// fmt2 :: import "std.fmt";
-fmt :: @import("std.fmt");
+fmt3 :: import "std.fmt";
+// fmt :: @import("std.fmt");
 
 #naked _start :: func ()
 {

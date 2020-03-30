@@ -51,6 +51,7 @@ namespace Zodiac
                                                            \
     DEFINE_TOKEN(TOK_IDENTIFIER),                          \
     DEFINE_TOKEN(TOK_NUMBER_LITERAL),                      \
+    DEFINE_TOKEN(TOK_STRING_LITERAL),                      \
                                                            \
     DEFINE_TOKEN(TOK_EOF),                                 \
 

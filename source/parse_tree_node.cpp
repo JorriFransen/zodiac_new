@@ -191,7 +191,18 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
     return result;
 }
 
-Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent, Expression_PTN* child)
+Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::STRING_LITERAL;
+
+    result->string_literal.atom = atom;
+
+    return result;
+}
+
+Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
+                                       Expression_PTN* child)
 {
     auto result = new_ptn<Expression_PTN>(allocator);
     result->kind = Expression_PTN_Kind::DOT;
@@ -229,7 +240,7 @@ void print_ptn(PTN* ptn, uint64_t indent)
             auto _this = (Function_Proto_PTN*)ptn;
 
             print_indent(indent);
-            printf("(");
+            printf("func (");
             if (_this->parameters.count)
             {
                 for (int64_t i = 0; i < _this->parameters.count; i++)
@@ -436,7 +447,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             {
                 print_ptn(&expression->call.arg_list->self, 0);
             }
-            printf(")");
+             printf(")");
 
             // printf("CALL: \"%s\"\n", expression->call.identifier->atom.data);
             break;
@@ -477,6 +488,13 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         {
             print_indent(indent);
             printf("%ld", expression->number_literal.value.s64);
+            break;
+        }
+
+        case Expression_PTN_Kind::STRING_LITERAL:
+        {
+            print_indent(indent);
+            printf("\"%s\"", expression->string_literal.atom.data);
             break;
         }
 

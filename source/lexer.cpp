@@ -138,7 +138,11 @@ restart:
 
         default:
         {
-            if (is_alpha(c) || c == '_')
+            if (c == '"')
+            {
+                return lex_string_literal(ld);
+            }
+            else if (is_alpha(c) || c == '_')
             {
                 return lex_keyword_or_identifier(ld);
             }
@@ -224,6 +228,31 @@ Token lex_number_literal(Lexer_Data* ld)
                          length);
 
     return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, atom);
+}
+
+Token lex_string_literal(Lexer_Data* ld)
+{
+    auto fc = current_char(ld);
+    assert(fc == '"');
+
+    File_Pos begin_fp = get_file_pos(ld);
+
+    advance(ld);
+
+    while (current_char(ld) != '"')
+    {
+        advance(ld);
+    }
+
+    advance(ld);
+
+    auto end_fp = get_file_pos(ld);
+    auto length = end_fp.index - begin_fp.index;
+    assert(length >= 2);
+    Atom atom = atom_get(&ld->lexer->build_data->atom_table, &ld->file_data[begin_fp.index] + 1,
+                         length - 2);
+
+    return token_create(begin_fp, end_fp, TOK_STRING_LITERAL, atom);
 }
 
 void advance(Lexer_Data* ld, uint64_t count/*=1*/)

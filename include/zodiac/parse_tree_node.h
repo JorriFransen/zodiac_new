@@ -165,8 +165,10 @@ enum class Expression_PTN_Kind
     CALL,
     IDENTIFIER,
     BINARY,
-    NUMBER_LITERAL,
     DOT,
+
+    NUMBER_LITERAL,
+    STRING_LITERAL,
 };
 
 struct Expression_PTN
@@ -205,6 +207,11 @@ struct Expression_PTN
 
         struct
         {
+            Atom atom;
+        } string_literal;
+
+        struct
+        {
             Expression_PTN* parent_expression;
             Expression_PTN* child_expression;
         } dot;
@@ -212,11 +219,6 @@ struct Expression_PTN
 
     Expression_PTN() {}
 };
-
-void print_ptn(PTN* ptn, uint64_t indent);
-void print_statement_ptn(Statement_PTN* statement, uint64_t indent);
-void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent);
-void print_expression_ptn(Expression_PTN* expression, uint64_t indent);
 
 void init_ptn(PTN* ptn, PTN_Kind kind);
 
@@ -276,6 +278,13 @@ Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator 
                                           Expression_PTN* lhs, Expression_PTN* rhs);
 
 Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom);
-Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent, Expression_PTN* child);
+Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
+Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
+                                       Expression_PTN* child);
+
+void print_ptn(PTN* ptn, uint64_t indent);
+void print_statement_ptn(Statement_PTN* statement, uint64_t indent);
+void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent);
+void print_expression_ptn(Expression_PTN* expression, uint64_t indent);
 
 }
