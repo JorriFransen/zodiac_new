@@ -212,6 +212,15 @@ Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* par
     return result;
 }
 
+Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
+                                              Expression_PTN* element_type_expression)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::ARRAY_TYPE;
+    result->array_type.element_type_expression = element_type_expression;
+    return result;
+}
+
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression)
 {
@@ -525,8 +534,15 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             print_expression_ptn(expression->dot.child_expression, 0);
             break;
         }
+
+        case Expression_PTN_Kind::ARRAY_TYPE:
+        {
+            print_indent(indent);
+            printf("[]");
+            print_expression_ptn(expression->array_type.element_type_expression, 0);
+            break;
+        }
     }
 }
 
-            
 }

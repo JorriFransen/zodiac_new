@@ -423,7 +423,19 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             break;
         }
 
-        default: assert(false);
+        case TOK_LBRACK:
+        {
+            result = parser_parse_array_type_expression(parser, ts);
+            break;
+        }
+
+        default:
+        {
+            auto ct = ts->current_token();
+            parser_report_error(parser, ts, "Unexpected token when parsing expression: '%s', '%s'",
+                                token_kind_name(ct.kind), ct.atom.data);
+            break;
+        }
     }
 
     assert(result);
@@ -477,6 +489,24 @@ Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Str
     ts->next_token();
 
     return new_string_literal_expression_ptn(parser->allocator, string_tok.atom);
+}
+
+Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream* ts)
+{
+    if (!parser_expect_token(parser, ts, TOK_LBRACK))
+    {
+        assert(false);
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_RBRACK))
+    {
+        assert(false);
+    }
+
+    Expression_PTN* element_type = parser_parse_expression(parser, ts);
+    assert(element_type);
+
+    return new_array_type_expression_ptn(parser->allocator, element_type);
 }
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts)
@@ -573,6 +603,32 @@ bool parser_is_add_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
     return ct.kind == TOK_PLUS || ct.kind == TOK_MINUS;
+}
+
+void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, ...)
+{
+    assert(parser);
+    assert(ts);
+    assert(format);
+
+    va_list args;
+    va_start(args, format);
+    parser_report_error(parser, ts, format, args);
+    va_end(args);
+}
+
+void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, va_list args)
+{
+    assert(parser);
+    assert(ts);
+    assert(format);
+
+    auto ct = ts->current_token();
+    auto bfp = ct.begin_file_pos;
+
+    fprintf(stderr, "%s:%lu:%lu: Error: ", bfp.file_name.data, bfp.line, bfp.column);
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
 }
 
 void parsed_file_print(Parsed_File* parsed_file)

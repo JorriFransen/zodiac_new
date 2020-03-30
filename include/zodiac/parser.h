@@ -48,6 +48,8 @@ Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
 Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Stream* ts);
 
+Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream* ts);
+
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts);
 
 Binary_Operator parser_parse_add_op(Token_Stream* ts);
@@ -57,6 +59,9 @@ bool parser_match_token(Token_Stream* ts, Token_Kind kind);
 bool parser_is_token(Token_Stream* ts, Token_Kind kind);
 
 bool parser_is_add_op(Token_Stream* ts);
+
+void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, ...);
+void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, va_list args);
 
 void parsed_file_print(Parsed_File* parsed_file);
 }

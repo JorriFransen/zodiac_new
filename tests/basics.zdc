@@ -4,7 +4,6 @@ fmt :: std.fmt;
 
 fmt2 :: import std.fmt;
 fmt3 :: import "std.fmt";
-// fmt :: @import("std.fmt");
 
 #naked _start :: func ()
 {
@@ -19,6 +18,7 @@ posix_call_main_and_exit :: func ()
 
 main :: func () -> int
 {
+    print_num(1);
     result : int = 10 - 3;
     return result - 7;
 }
@@ -34,11 +34,11 @@ print_num :: func (num: int) -> void
     fmt.print("{}\n", num);
 }
 
-// main :: func (args: []std.String) -> int
-// {
-//     fmt.print("Hello World!\n");
-//     return 0;
-// }
+main :: func (args: []std.String) -> int
+{
+    fmt.print("Hello World!\n");
+    return 0;
+}
 
 // Vec2 :: struct
 // {

@@ -172,6 +172,8 @@ enum class Expression_PTN_Kind
 
     NUMBER_LITERAL,
     STRING_LITERAL,
+
+    ARRAY_TYPE,
 };
 
 struct Expression_PTN
@@ -218,6 +220,11 @@ struct Expression_PTN
             Expression_PTN* parent_expression;
             Expression_PTN* child_expression;
         } dot;
+
+        struct
+        {
+            Expression_PTN* element_type_expression;
+        } array_type;
     };
 
     Expression_PTN() {}
@@ -284,6 +291,8 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
 Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
                                        Expression_PTN* child);
+Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
+                                              Expression_PTN* element_type_expression);
 
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression);
