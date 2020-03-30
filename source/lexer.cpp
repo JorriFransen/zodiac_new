@@ -99,6 +99,7 @@ restart:
         __1_CHAR_TOKEN_CASE(':', TOK_COLON);
         __1_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
         __1_CHAR_TOKEN_CASE('@', TOK_AT);
+        __1_CHAR_TOKEN_CASE('.', TOK_DOT);
         __1_CHAR_TOKEN_CASE(',', TOK_COMMA);
 
         __1_CHAR_TOKEN_CASE('(', TOK_LPAREN);

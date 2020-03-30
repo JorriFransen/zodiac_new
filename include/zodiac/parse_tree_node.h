@@ -93,9 +93,14 @@ enum class Declaration_PTN_Kind
 {
     INVALID,
 
-    FUNCTION,
+    IMPORT,
+
     VARIABLE,
+    CONSTANT,
+
+    FUNCTION,
     STRUCT,
+
 };
 
 struct Declaration_PTN
@@ -108,6 +113,11 @@ struct Declaration_PTN
 
     union
     {
+        struct
+        {
+            Expression_PTN* module_ident_expr;
+        } import;
+
         struct
         {
             Expression_PTN* init_expression;
@@ -124,6 +134,12 @@ struct Declaration_PTN
         {
             Array<Declaration_PTN*> member_declarations;
         } structure;
+
+        struct
+        {
+            Expression_PTN* type_expression;
+            Expression_PTN* init_expression;
+        } constant;
     };
 
     Declaration_PTN() {}
@@ -150,6 +166,7 @@ enum class Expression_PTN_Kind
     IDENTIFIER,
     BINARY,
     NUMBER_LITERAL,
+    DOT,
 };
 
 struct Expression_PTN
@@ -185,6 +202,12 @@ struct Expression_PTN
                 uint64_t u64;
             } value;
         } number_literal;
+
+        struct
+        {
+            Expression_PTN* parent_expression;
+            Expression_PTN* child_expression;
+        } dot;
     };
 
     Expression_PTN() {}
@@ -221,6 +244,9 @@ Function_Proto_PTN* new_function_prototype_parse_tree_node(
     Expression_PTN* return_type_expr
 );
 
+Declaration_PTN* new_import_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                            Expression_PTN* module_ident_expr);
+
 Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                               Function_Proto_PTN* prototype, Statement_PTN* body);
 
@@ -230,6 +256,9 @@ Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_P
 
 Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                             Array<Declaration_PTN*> members);
+
+Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                              Expression_PTN* type_expr, Expression_PTN* init_expr);
 
 Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
                                             Expression_PTN* expression);
@@ -247,6 +276,6 @@ Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator 
                                           Expression_PTN* lhs, Expression_PTN* rhs);
 
 Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom);
-
+Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent, Expression_PTN* child);
 
 }

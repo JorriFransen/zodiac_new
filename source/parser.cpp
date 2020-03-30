@@ -101,9 +101,21 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
             assert(!specified_type);
             return parser_parse_struct_declaration(parser, ts, identifier);
         }
+        else if (parser_is_token(ts, TOK_KW_IMPORT))
+        {
+            assert(!specified_type);
+            return parser_parse_import_declaration(parser, ts, identifier);
+        }
         else
         {
-            assert(false);
+            Expression_PTN* const_expr = parser_parse_expression(parser, ts);
+            assert(const_expr);
+            auto result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr, const_expr);
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+            {
+                assert(false);
+            }
+            return result;
         }
     }
     else if (parser_match_token(ts, TOK_EQ))
@@ -145,6 +157,25 @@ parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
     }
 
     return new_struct_declaration_ptn(parser->allocator, identifier, member_decls);
+}
+
+Declaration_PTN* parser_parse_import_declaration(Parser* parser, Token_Stream* ts,
+                                                 Identifier_PTN* identifier)
+{
+    if (!parser_expect_token(parser, ts, TOK_KW_IMPORT))
+    {
+        assert(false);
+    }
+
+    Expression_PTN* ident_expr = parser_parse_expression(parser, ts);
+    assert(ident_expr);
+
+    if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+    {
+        assert(false);
+    }
+
+    return new_import_declaration_ptn(parser->allocator, identifier, ident_expr);
 }
 
 Identifier_PTN* parser_parse_identifier(Parser* parser, Token_Stream* ts)
@@ -342,6 +373,8 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
 {
     auto ct = ts->current_token();
 
+    Expression_PTN* result = nullptr;
+
     switch (ct.kind)
     {
         case TOK_IDENTIFIER:
@@ -353,7 +386,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             else
             {
                 auto identifier = parser_parse_identifier(parser, ts);
-                return new_identifier_expression_ptn(parser->allocator, identifier);
+                result = new_identifier_expression_ptn(parser->allocator, identifier);
             }
             break;
         }
@@ -361,18 +394,29 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
         case TOK_AT:
         {
             ts->next_token();
-            return parser_parse_call_expression(parser, ts, true);
+            result = parser_parse_call_expression(parser, ts, true);
             break;
         }
 
         case TOK_NUMBER_LITERAL:
         {
-            return parser_parse_number_literal_expression(parser, ts);
+            result = parser_parse_number_literal_expression(parser, ts);
             break;
         }
 
         default: assert(false);
     }
+
+    assert(result);
+
+    if (parser_match_token(ts, TOK_DOT))
+    {
+        auto parent = result;
+        Expression_PTN* child = parser_parse_base_expression(parser, ts);
+        result = new_dot_expression_ptn(parser->allocator, parent, child);
+    }
+
+    return result;
 }
 
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
@@ -464,6 +508,8 @@ bool parser_expect_token(Parser* parser, Token_Stream* ts, Token_Kind kind)
     if (!parser_match_token(ts, kind))
     {
         auto ct = ts->current_token();
+        auto fp = ct.begin_file_pos;
+        fprintf(stderr, "%s:%lu:%lu: ", fp.file_name.data, fp.line, fp.column);
         fprintf(stderr, "Error: Expected token: \"%s\", got: \"%s\"\n",
                 token_kind_name(kind), token_kind_name(ct.kind));
         assert(false); // report error

@@ -71,6 +71,19 @@ Function_Proto_PTN* new_function_prototype_parse_tree_node(
     return result;
 }
 
+Declaration_PTN* new_import_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                            Expression_PTN* module_ident_expr)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator);
+    assert(result);
+
+    result->kind = Declaration_PTN_Kind::IMPORT;
+    result->identifier = identifier;
+    result->import.module_ident_expr = module_ident_expr;
+
+    return result;
+}
+
 Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                               Function_Proto_PTN* prototype, Statement_PTN* body)
 {
@@ -107,6 +120,18 @@ Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN
     result->kind = Declaration_PTN_Kind::STRUCT;
     result->identifier = identifier;
     result->structure.member_declarations = members;
+    return result;
+}
+
+Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                              Expression_PTN* type_expr, Expression_PTN* init_expr)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator);
+    result->kind = Declaration_PTN_Kind::CONSTANT;
+    result->identifier = identifier;
+    result->constant.type_expression = type_expr;
+    result->constant.init_expression = init_expr;
+
     return result;
 }
 
@@ -163,6 +188,15 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
         result->number_literal.value.u64 = atom_to_u64(atom);
     }
 
+    return result;
+}
+
+Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent, Expression_PTN* child)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::DOT;
+    result->dot.parent_expression = parent;
+    result->dot.child_expression = child;
     return result;
 }
 
@@ -307,6 +341,15 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
     {
         case Declaration_PTN_Kind::INVALID: assert(false);
 
+        case Declaration_PTN_Kind::IMPORT:
+        {
+            print_indent(indent);
+            printf("%s :: import ", decl->identifier->atom.data);
+            print_expression_ptn(decl->import.module_ident_expr, 0);
+            printf(";\n\n");
+            break;
+        }
+
         case Declaration_PTN_Kind::FUNCTION:
         {
             print_indent(indent);
@@ -339,6 +382,27 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             }
             break;
         }
+
+        case Declaration_PTN_Kind::CONSTANT:
+        {
+            print_indent(indent);
+            printf("%s :", decl->identifier->atom.data);
+            bool has_type = false;
+            if (decl->constant.type_expression)
+            {
+                printf(" ");
+                print_expression_ptn(decl->constant.type_expression, 0);
+                has_type = true;
+            }
+            if (decl->constant.init_expression)
+            {
+                if (has_type) printf(" ");
+                printf(": ");
+                print_expression_ptn(decl->constant.init_expression, 0);
+            }
+            printf(";\n\n");
+            break;
+        };
 
         case Declaration_PTN_Kind::STRUCT:
         {
@@ -416,6 +480,14 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             break;
         }
 
+        case Expression_PTN_Kind::DOT:
+        {
+            print_indent(indent);
+            print_expression_ptn(expression->dot.parent_expression, 0);
+            printf(".");
+            print_expression_ptn(expression->dot.child_expression, 0);
+            break;
+        }
     }
 }
 
