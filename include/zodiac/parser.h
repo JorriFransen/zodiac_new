@@ -38,7 +38,9 @@ Function_Proto_PTN* parser_parse_function_prototype(Parser* parser, Token_Stream
 Array<Parameter_PTN*> parser_parse_parameter_list(Parser* parser, Token_Stream* ts);
 Parameter_PTN* parser_parse_parameter(Parser* parser, Token_Stream* ts);
 
-Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts);
+Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts);
+Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* ts,
+                                                 Expression_PTN* ident_expression);
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts);
@@ -49,6 +51,7 @@ Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Str
 Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Stream* ts);
 
 Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream* ts);
+Expression_PTN* parser_parse_pointer_type_expression(Parser* parser, Token_Stream* ts);
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts);
 

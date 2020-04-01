@@ -62,6 +62,7 @@ enum class Statement_PTN_Kind
     DECLARATION,
     EXPRESSION,
     RETURN,
+    ASSIGNMENT,
 };
 
 struct Statement_PTN
@@ -84,6 +85,12 @@ struct Statement_PTN
         {
             Expression_PTN* expression;
         } return_stmt;
+
+        struct
+        {
+            Expression_PTN* ident_expression;
+            Expression_PTN* rhs_expression;
+        } assignment;
     };
 
     Statement_PTN() {}
@@ -174,6 +181,7 @@ enum class Expression_PTN_Kind
     STRING_LITERAL,
 
     ARRAY_TYPE,
+    POINTER_TYPE,
 };
 
 struct Expression_PTN
@@ -225,6 +233,11 @@ struct Expression_PTN
         {
             Expression_PTN* element_type_expression;
         } array_type;
+
+        struct
+        {
+            Expression_PTN* pointee_type_expression;
+        } pointer_type;
     };
 
     Expression_PTN() {}
@@ -249,6 +262,9 @@ Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
                                             Expression_PTN* expr);
 Statement_PTN* new_declaration_statement_ptn(Allocator* allocator, Declaration_PTN* decl);
 Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* expr);
+Statement_PTN* new_assignment_statement_ptn(Allocator* allocator,
+                                            Expression_PTN* ident_expression,
+                                            Expression_PTN* rhs_expression);
 
 Function_Proto_PTN* new_function_prototype_parse_tree_node(
     Allocator* allocator,
@@ -293,6 +309,8 @@ Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* par
                                        Expression_PTN* child);
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
                                               Expression_PTN* element_type_expression);
+Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
+                                                Expression_PTN* pointee_type_expression);
 
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression);

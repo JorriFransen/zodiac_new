@@ -60,6 +60,16 @@ Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* ex
     return result;
 }
 
+Statement_PTN* new_assignment_statement_ptn(Allocator* allocator,
+                                            Expression_PTN* ident_expression,
+                                            Expression_PTN* rhs_expression)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::ASSIGNMENT);
+    result->assignment.ident_expression = ident_expression;
+    result->assignment.rhs_expression = rhs_expression;
+    return result;
+}
+
 Function_Proto_PTN* new_function_prototype_parse_tree_node(
     Allocator* allocator,
     Array<Parameter_PTN*> parameters,
@@ -221,6 +231,15 @@ Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
     return result;
 }
 
+Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
+                                                Expression_PTN* pointee_type_expression)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::POINTER_TYPE;
+    result->pointer_type.pointee_type_expression = pointee_type_expression;
+    return result;
+}
+
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression)
 {
@@ -370,6 +389,16 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
                 print_expression_ptn(statement->return_stmt.expression, 0);
             }
             printf(";\n");
+            break;
+        }
+
+        case Statement_PTN_Kind::ASSIGNMENT:
+        {
+            print_expression_ptn(statement->assignment.ident_expression, indent);
+            printf(" = ");
+            print_expression_ptn(statement->assignment.rhs_expression, 0);
+            printf(";\n");
+            break;
         }
     }
 }
@@ -398,7 +427,7 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             {
                 print_statement_ptn(decl->function.body, indent);
             }
-            printf("\n");
+            // printf("\n");
             break;
         }
 
@@ -451,8 +480,13 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             printf("{\n");
             for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)
             {
-                print_declaration_ptn(decl->structure.member_declarations[i], indent + 4);
-                printf(";\n");
+                auto mem_decl = decl->structure.member_declarations[i];
+                print_declaration_ptn(mem_decl, indent + 4);
+
+                if (mem_decl->kind != Declaration_PTN_Kind::FUNCTION)
+                {
+                    printf(";\n");
+                }
             }
             print_indent(indent);
             printf("}\n\n");
@@ -542,6 +576,15 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             print_expression_ptn(expression->array_type.element_type_expression, 0);
             break;
         }
+
+        case Expression_PTN_Kind::POINTER_TYPE:
+        {
+            print_indent(indent);
+            printf("*");
+            print_expression_ptn(expression->pointer_type.pointee_type_expression, 0);
+            break;
+        }
+
     }
 }
 

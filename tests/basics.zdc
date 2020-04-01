@@ -40,25 +40,25 @@ main :: func (args: []std.String) -> int
     return 0;
 }
 
-// Vec2 :: struct
-// {
-//     x : int;
-//     y : int;
+Vec2 :: struct
+{
+    x : int;
+    y : int;
 
-//     add :: (self: *Vec2, other: Vec2) -> Vec2
-//     {
-//         self.x += other.x;
-//         self.y += other.y;
-//         return <self;
-//     }
+    add :: func (self: *Vec2, other: Vec2) -> Vec2
+    {
+        self.x = self.x + other.x;
+        // self.y += other.y;
+        // return <self;
+    }
 
-//     add :: (a: Vec2, b: Vec2) -> Vec2
-//     {
-//         return { a.x + b.x, a.y + b.y };
-//     }
-// }
+    // add :: func (a: Vec2, b: Vec2) -> Vec2
+    // {
+    //     return { a.x + b.x, a.y + b.y };
+    // }
+}
 
-// main :: (args: []std.String) -> int
+// main :: func (args: []std.String) -> int
 // {
 //     p1 : Vec2;
 //     p1.x = 1;
@@ -84,18 +84,18 @@ main :: func (args: []std.String) -> int
 // {
 //     x, y, z : T;
 // 
-//     add :: (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
+//     add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
 //     {
 //         return { a.x + b.x, a.y + b.y, a.z + b.z };
 //     }
 // }
 // 
-// vec3_sub :: (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
+// vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
 // {
 //     return { a.x - b.x, a.y - b.y, a.z - b.z };
 // }
 // 
-// main :: (args: []std.String) -> int
+// main :: func (args: []std.String) -> int
 // {
 //     p1 : Vec3(float) = { 1, 2, 3 };
 //     p2 := Vec3(float){ 4, 5, 6 };

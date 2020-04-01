@@ -61,7 +61,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
 }
 
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
-                                                      Identifier_PTN* identifier)
+                                          Identifier_PTN* identifier)
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
@@ -88,7 +88,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
             Statement_PTN* function_body = nullptr;
             if (parser_is_token(ts, TOK_LBRACE))
             {
-                function_body = _parser_parse_statement(parser, ts);
+                function_body = parser_parse_statement(parser, ts);
                 assert(function_body);
                 assert(function_body->kind == Statement_PTN_Kind::BLOCK);
             }
@@ -110,7 +110,8 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
         {
             Expression_PTN* const_expr = parser_parse_expression(parser, ts);
             assert(const_expr);
-            auto result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr, const_expr);
+            auto result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr,
+                                                       const_expr);
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
             {
                 assert(false);
@@ -148,10 +149,14 @@ parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
     {
         auto decl = parser_parse_declaration(parser, ts);
         array_append(&member_decls, decl);
-        if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
+
+        if (decl->kind != Declaration_PTN_Kind::FUNCTION)
+        {
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
+        }
     }
 
-    if (!member_decls.count)
+   if (!member_decls.count)
     {
         array_free(&member_decls);
     }
@@ -265,7 +270,7 @@ Parameter_PTN* parser_parse_parameter(Parser* parser, Token_Stream* ts)
     return new_parameter_ptn(parser->allocator, identifier, type_expr);
 }
 
-Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
+Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
 {
     auto ct = ts->current_token();
 
@@ -285,7 +290,7 @@ Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
                 //     parser_match_token(ts, TOK_SEMICOLON);
                 // }
 
-                auto statement = _parser_parse_statement(parser, ts);
+                auto statement = parser_parse_statement(parser, ts);
                 array_append(&block_statements, statement);
             }
 
@@ -308,7 +313,18 @@ Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
             {
                 auto expr = parser_parse_expression(parser, ts);
                 assert(expr);
-                result = new_expression_statement_ptn(parser->allocator, expr);
+
+                if (parser_is_token(ts, TOK_EQ))
+                {
+                    assert(expr->kind == Expression_PTN_Kind::IDENTIFIER ||
+                           expr->kind == Expression_PTN_Kind::DOT);
+
+                    result = parser_parse_assignment_statement(parser, ts, expr);
+                }
+                else
+                {
+                    result = new_expression_statement_ptn(parser->allocator, expr);
+                }
             }
             assert(result);
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
@@ -359,6 +375,23 @@ Statement_PTN* _parser_parse_statement(Parser* parser, Token_Stream* ts)
             return new_expression_statement_ptn(parser->allocator, expr);
         }
     }
+}
+
+Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* ts,
+                                                 Expression_PTN* ident_expression)
+{
+    assert(ident_expression->kind == Expression_PTN_Kind::IDENTIFIER ||
+           ident_expression->kind == Expression_PTN_Kind::DOT);
+
+    if (!parser_expect_token(parser, ts, TOK_EQ))
+    {
+        assert(false);
+    }
+
+    Expression_PTN* rhs_value = parser_parse_expression(parser, ts);
+    assert(rhs_value);
+
+    return new_assignment_statement_ptn(parser->allocator, ident_expression, rhs_value);
 }
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts)
@@ -426,6 +459,12 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
         case TOK_LBRACK:
         {
             result = parser_parse_array_type_expression(parser, ts);
+            break;
+        }
+
+        case TOK_STAR:
+        {
+            result = parser_parse_pointer_type_expression(parser, ts);
             break;
         }
 
@@ -507,6 +546,19 @@ Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream*
     assert(element_type);
 
     return new_array_type_expression_ptn(parser->allocator, element_type);
+}
+
+Expression_PTN* parser_parse_pointer_type_expression(Parser* parser, Token_Stream* ts)
+{
+    if (!parser_expect_token(parser, ts, TOK_STAR))
+    {
+        assert(false);
+    }
+
+    Expression_PTN* pointee_type_expression = parser_parse_expression(parser, ts);
+    assert(pointee_type_expression);
+
+    return new_pointer_type_expression_ptn(parser->allocator, pointee_type_expression);
 }
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts)
