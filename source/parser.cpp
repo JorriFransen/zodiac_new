@@ -315,6 +315,13 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
 
                     result = parser_parse_assignment_statement(parser, ts, expr);
                 }
+                else if (parser_is_add_op(ts) && ts->peek_token(1).kind == TOK_EQ)
+                {
+                    assert(expr->kind == Expression_PTN_Kind::IDENTIFIER ||
+                           expr->kind == Expression_PTN_Kind::DOT);
+
+                    result = parser_parse_self_assignment_statement(parser, ts, expr);
+                }
                 else
                 {
                     result = new_expression_statement_ptn(parser->allocator, expr);
@@ -388,6 +395,36 @@ Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* t
     return new_assignment_statement_ptn(parser->allocator, ident_expression, rhs_value);
 }
 
+Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stream* ts,
+                                                      Expression_PTN* ident_expression)
+{
+    assert(ident_expression->kind == Expression_PTN_Kind::IDENTIFIER ||
+           ident_expression->kind == Expression_PTN_Kind::DOT);
+
+
+    Binary_Operator op = BINOP_INVALID;
+
+    if (parser_is_add_op(ts))
+    {
+        op = parser_parse_add_op(ts);
+    }
+    else assert(false);
+
+    if (!parser_expect_token(parser, ts, TOK_EQ))
+    {
+        assert(false);
+    }
+
+
+    Expression_PTN* rhs_expr = parser_parse_expression(parser, ts);
+    assert(rhs_expr);
+
+    rhs_expr = new_binary_expression_ptn(parser->allocator, op, ident_expression, rhs_expr);
+
+    return new_assignment_statement_ptn(parser->allocator,
+                                        ident_expression, rhs_expr);
+}
+
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts)
 {
     return parser_parse_add_expression(parser, ts);
@@ -398,7 +435,7 @@ Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
     auto lhs = parser_parse_base_expression(parser, ts);
     assert(lhs);
 
-    while (parser_is_add_op(ts))
+    while (parser_is_add_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
         auto op = parser_parse_add_op(ts);
         auto rhs = parser_parse_base_expression(parser, ts);

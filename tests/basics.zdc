@@ -48,7 +48,7 @@ Vec2 :: struct
     add :: func (self: *Vec2, other: Vec2) -> Vec2
     {
         self.x = self.x + other.x;
-        // self.y += other.y;
+        self.y += other.y;
         // return <self;
     }
 
@@ -56,6 +56,13 @@ Vec2 :: struct
     // {
     //     return { a.x + b.x, a.y + b.y };
     // }
+
+    sub :: func (self: *Vec2, other: Vec2) -> Vec2
+    {
+        self.x -= other.x;
+        self.y -= other.y;
+        // return <self;
+    }
 }
 
 // main :: func (args: []std.String) -> int

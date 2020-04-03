@@ -41,6 +41,8 @@ Parameter_PTN* parser_parse_parameter(Parser* parser, Token_Stream* ts);
 Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts);
 Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* ts,
                                                  Expression_PTN* ident_expression);
+Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stream* ts,
+                                                      Expression_PTN* ident_expression);
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts);
