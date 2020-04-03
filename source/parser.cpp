@@ -284,12 +284,6 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
 
             while (!parser_match_token(ts, TOK_RBRACE))
             {
-                // if (block_statements.count)
-                // {
-                //     // if (!parser_expect_token(parser, ts, TOK_COMMA)) assert(false);
-                //     parser_match_token(ts, TOK_SEMICOLON);
-                // }
-
                 auto statement = parser_parse_statement(parser, ts);
                 array_append(&block_statements, statement);
             }
@@ -479,22 +473,30 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
 
     assert(result);
 
-    if (parser_match_token(ts, TOK_DOT))
+    while (true)
     {
-        auto parent = result;
-        Expression_PTN* child = parser_parse_base_expression(parser, ts);
-        result = new_dot_expression_ptn(parser->allocator, parent, child);
+        if (parser_match_token(ts, TOK_DOT))
+        {
+            auto parent = result;
+            Identifier_PTN* child_ident = parser_parse_identifier(parser, ts);
+            result = new_dot_expression_ptn(parser->allocator, parent, child_ident);
+        }
+        else if (parser_is_token(ts, TOK_LPAREN))
+        {
+            result = parser_parse_call_expression(parser, ts, result, false);
+        }
+        else
+        {
+            break;
+        }
     }
 
     return result;
 }
 
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
-                                             bool is_builtin/*=false*/)
+                                             Expression_PTN* ident_expr, bool is_builtin/*=false*/)
 {
-    auto identifier = parser_parse_identifier(parser, ts);
-    assert(identifier);
-
     if (!parser_expect_token(parser, ts, TOK_LPAREN))
     {
         assert(false);
@@ -511,7 +513,18 @@ Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
         assert(false);
     }
 
-    return new_call_expression_ptn(parser->allocator, is_builtin, identifier, arg_list);
+    return new_call_expression_ptn(parser->allocator, is_builtin, ident_expr, arg_list);
+}
+
+Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
+                                             bool is_builtin/*=false*/)
+{
+    auto identifier = parser_parse_identifier(parser, ts);
+    assert(identifier);
+
+    auto ident_expr = new_identifier_expression_ptn(parser->allocator, identifier);
+
+    return parser_parse_call_expression(parser, ts, ident_expr, is_builtin);
 }
 
 Expression_PTN* parser_parse_number_literal_expression(Parser* parser, Token_Stream* ts)

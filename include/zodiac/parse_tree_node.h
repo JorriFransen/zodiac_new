@@ -198,7 +198,7 @@ struct Expression_PTN
         struct
         {
             bool is_builtin;
-            Identifier_PTN* identifier;
+            Expression_PTN* ident_expression;
             Expression_List_PTN* arg_list;
         } call;
 
@@ -226,7 +226,7 @@ struct Expression_PTN
         struct
         {
             Expression_PTN* parent_expression;
-            Expression_PTN* child_expression;
+            Identifier_PTN* child_identifier;
         } dot;
 
         struct
@@ -296,7 +296,7 @@ Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
                                              Array<Expression_PTN*> expressions);
 
 Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
-                                        Identifier_PTN* identifier, Expression_List_PTN* arg_list);
+                                        Expression_PTN* ident_expr, Expression_List_PTN* arg_list);
 
 Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_PTN* identifier);
 
@@ -306,7 +306,7 @@ Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator 
 Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
-                                       Expression_PTN* child);
+                                       Identifier_PTN* child_ident);
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
                                               Expression_PTN* element_type_expression);
 Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,

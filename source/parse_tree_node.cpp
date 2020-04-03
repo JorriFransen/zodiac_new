@@ -156,12 +156,15 @@ Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
 }
 
 Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
-                                        Identifier_PTN* identifier, Expression_List_PTN* arg_list)
+                                        Expression_PTN* ident_expr, Expression_List_PTN* arg_list)
 {
+    assert(ident_expr->kind == Expression_PTN_Kind::IDENTIFIER ||
+           ident_expr->kind == Expression_PTN_Kind::DOT);
+
     auto result = new_ptn<Expression_PTN>(allocator);
     result->kind = Expression_PTN_Kind::CALL;
     result->call.is_builtin = is_builtin;
-    result->call.identifier = identifier;
+    result->call.ident_expression = ident_expr;
     result->call.arg_list = arg_list;
     return result;
 }
@@ -213,12 +216,12 @@ Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom ato
 }
 
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
-                                       Expression_PTN* child)
+                                       Identifier_PTN* child_ident)
 {
     auto result = new_ptn<Expression_PTN>(allocator);
     result->kind = Expression_PTN_Kind::DOT;
     result->dot.parent_expression = parent;
-    result->dot.child_expression = child;
+    result->dot.child_identifier = child_ident;
     return result;
 }
 
@@ -503,8 +506,8 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
 
         case Expression_PTN_Kind::CALL:
         {
-            print_indent(indent);
-            printf("%s(", expression->call.identifier->atom.data);
+            print_expression_ptn(expression->call.ident_expression, indent);
+            printf("(");
             if (expression->call.arg_list)
             {
                 print_ptn(&expression->call.arg_list->self, 0);
@@ -565,7 +568,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             print_indent(indent);
             print_expression_ptn(expression->dot.parent_expression, 0);
             printf(".");
-            print_expression_ptn(expression->dot.child_expression, 0);
+            print_ptn(&expression->dot.child_identifier->self, 0);
             break;
         }
 
