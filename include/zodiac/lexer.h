@@ -24,6 +24,7 @@ struct Lexed_File
     String path = {};
     Array<Token> tokens = {};
     Hash_Table<Token, File_Pos> file_positions = {};
+    bool valid = false;
 };
 
 struct Lexer_Data

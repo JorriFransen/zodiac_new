@@ -26,7 +26,16 @@ Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
 {
     String file_path = _file_path;
 
-    if (is_relative_path(file_path)) {
+    Lexed_File result = {};
+
+    if (!is_regular_file(file_path))
+    {
+        fprintf(stderr, "Error: Invalid file path: '%s'\n", file_path.data);
+        return result;
+    }
+
+    if (is_relative_path(file_path))
+    {
         file_path = get_absolute_path(temp_allocator_get(), file_path);
     }
 
@@ -34,9 +43,13 @@ Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
     auto file_size = string_length(file_data);
     Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
 
-    ld.lexed_file.path = copy_string(lexer->allocator, file_path);
-    array_init(lexer->allocator, &ld.lexed_file.tokens);
-    hash_table_init(lexer->allocator, &ld.lexed_file.file_positions, *token_equal);
+    result.path = copy_string(lexer->allocator, file_path);
+    array_init(lexer->allocator, &result.tokens);
+    hash_table_init(lexer->allocator, &result.file_positions, *token_equal);
+
+    result.valid = true;
+
+    ld.lexed_file = result;
 
     while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
     {

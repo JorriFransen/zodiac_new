@@ -11,7 +11,11 @@ using namespace Zodiac;
 
 int main(int argc, char** argv)
 {
-    assert(argc == 2);
+    if (argc != 2)
+    {
+        fprintf(stderr, "Error: Expected 1 argument (file name).\n");
+        return 1;
+    }
 
     auto ca = c_allocator_get();
 
@@ -22,6 +26,7 @@ int main(int argc, char** argv)
     Lexer lexer = lexer_create(ca, &build_data);
     String file_path = string_ref(argv[1]);
     Lexed_File lexed_file = lexer_lex_file(&lexer, file_path);
+    if (!lexed_file.valid) return 1;
 
     // lexed_file_print(&lexed_file);
 
