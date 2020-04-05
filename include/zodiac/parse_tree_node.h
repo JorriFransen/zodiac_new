@@ -316,8 +316,8 @@ Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifie
                                  Expression_PTN* type_expression);
 
 void print_ptn(PTN* ptn, uint64_t indent);
-void print_statement_ptn(Statement_PTN* statement, uint64_t indent);
-void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent);
+void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline = true);
+void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent, bool newline = true);
 void print_expression_ptn(Expression_PTN* expression, uint64_t indent);
 
 }

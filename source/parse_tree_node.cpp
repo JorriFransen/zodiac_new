@@ -347,7 +347,7 @@ void print_ptn(PTN* ptn, uint64_t indent)
     }
 }
 
-void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
+void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline/*=true*/)
 {
     switch (statement->kind)
     {
@@ -360,18 +360,19 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
 
             for (int64_t i = 0; i < statement->block.statements.count; i++)
             {
-                print_statement_ptn(statement->block.statements[i], indent + 4);
+                print_statement_ptn(statement->block.statements[i], indent + 4, false);
             }
 
             print_indent(indent);
-            printf("}\n");
+            printf("}");
+            if (newline) printf("\n");
             break;
         }
 
         case Statement_PTN_Kind::DECLARATION:
         {
-            print_declaration_ptn(statement->declaration, indent);
-            printf(";\n");
+            print_declaration_ptn(statement->declaration, indent, false);
+            if (newline) printf("\n");
             break;
         }
 
@@ -379,6 +380,7 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
         {
             print_expression_ptn(statement->expression, indent);
             printf(";\n");
+            if (newline) printf("\n");
             break;
         }
 
@@ -406,7 +408,7 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent)
     }
 }
 
-void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
+void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent, bool newline/*=true*/)
 {
     switch (decl->kind)
     {
@@ -417,7 +419,8 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             print_indent(indent);
             printf("%s :: import ", decl->identifier->atom.data);
             print_expression_ptn(decl->import.module_ident_expr, 0);
-            printf(";\n\n");
+            printf(";\n");
+            if (newline) printf("\n");
             break;
         }
 
@@ -430,7 +433,8 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             {
                 print_statement_ptn(decl->function.body, indent);
             }
-            // printf("\n");
+
+            if (newline) printf("\n");
             break;
         }
 
@@ -451,6 +455,8 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
                 printf("= ");
                 print_expression_ptn(decl->variable.init_expression, 0);
             }
+            printf(";\n");
+            if (newline) printf("\n");
             break;
         }
 
@@ -471,7 +477,8 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
                 printf(": ");
                 print_expression_ptn(decl->constant.init_expression, 0);
             }
-            printf(";\n\n");
+            printf(";\n");
+            if (newline) printf("\n");
             break;
         };
 
@@ -484,15 +491,15 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent)
             for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)
             {
                 auto mem_decl = decl->structure.member_declarations[i];
-                print_declaration_ptn(mem_decl, indent + 4);
-
-                if (mem_decl->kind != Declaration_PTN_Kind::FUNCTION)
+                if (mem_decl->kind == Declaration_PTN_Kind::FUNCTION)
                 {
-                    printf(";\n");
+                    printf("\n");
                 }
+                print_declaration_ptn(mem_decl, indent + 4, false);
             }
             print_indent(indent);
-            printf("}\n\n");
+            printf("}\n");
+            if (newline) printf("\n");
             break;
         }
     }
