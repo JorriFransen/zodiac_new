@@ -175,6 +175,7 @@ enum class Expression_PTN_Kind
     CALL,
     IDENTIFIER,
     BINARY,
+    UNARY,
     DOT,
 
     NUMBER_LITERAL,
@@ -208,6 +209,12 @@ struct Expression_PTN
             Expression_PTN* lhs;
             Expression_PTN* rhs;
         } binary;
+
+        struct
+        {
+            Unary_Operator op = UNOP_INVALID;
+            Expression_PTN* operand_expression;
+        } unary;
 
         struct
         {
@@ -302,6 +309,8 @@ Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_P
 
 Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator op,
                                           Expression_PTN* lhs, Expression_PTN* rhs);
+Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op,
+                                         Expression_PTN* operand_expression);
 
 Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);

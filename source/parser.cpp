@@ -432,18 +432,32 @@ Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts)
 
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
 {
-    auto lhs = parser_parse_base_expression(parser, ts);
+    auto lhs = parser_parse_unary_expression(parser, ts);
     assert(lhs);
 
     while (parser_is_add_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
         auto op = parser_parse_add_op(ts);
-        auto rhs = parser_parse_base_expression(parser, ts);
+        auto rhs = parser_parse_unary_expression(parser, ts);
         assert(rhs);
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs);
     }
 
     return lhs;
+}
+
+Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts)
+{
+    auto op = parser_parse_unary_op(ts);
+    if (op != UNOP_INVALID)
+    {
+        auto operand_expr = parser_parse_unary_expression(parser, ts);
+        return new_unary_expression_ptn(parser->allocator, op, operand_expr);
+    }
+    else
+    {
+        return parser_parse_base_expression(parser, ts);
+    }
 }
 
 Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
@@ -705,6 +719,31 @@ bool parser_is_add_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
     return ct.kind == TOK_PLUS || ct.kind == TOK_MINUS;
+}
+
+Unary_Operator parser_parse_unary_op(Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+
+    Unary_Operator result = UNOP_INVALID;
+
+    switch (ct.kind)
+    {
+        case TOK_LT:
+        {
+            result = UNOP_DEREF;
+            break;
+        }
+
+        default: result = UNOP_INVALID;
+    }
+
+    if (result != UNOP_INVALID)
+    {
+        ts->next_token();
+    }
+
+    return result;
 }
 
 void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, ...)

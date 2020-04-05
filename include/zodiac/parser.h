@@ -46,6 +46,7 @@ Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stre
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts);
+Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts);
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
                                              Expression_PTN* ident_expr, bool is_builtin = false);
@@ -66,6 +67,8 @@ bool parser_match_token(Token_Stream* ts, Token_Kind kind);
 bool parser_is_token(Token_Stream* ts, Token_Kind kind);
 
 bool parser_is_add_op(Token_Stream* ts);
+
+Unary_Operator parser_parse_unary_op(Token_Stream* ts);
 
 void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, ...);
 void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, va_list args);

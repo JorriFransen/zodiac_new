@@ -189,6 +189,17 @@ Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator 
     return result;
 }
 
+Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op,
+                                         Expression_PTN* operand_expression)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::UNARY;
+    result->unary.op = op;
+    result->unary.operand_expression = operand_expression;
+
+    return result;
+}
+
 Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom)
 {
     auto result = new_ptn<Expression_PTN>(allocator);
@@ -379,7 +390,7 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline
         case Statement_PTN_Kind::EXPRESSION:
         {
             print_expression_ptn(statement->expression, indent);
-            printf(";\n");
+            printf(";");
             if (newline) printf("\n");
             break;
         }
@@ -535,6 +546,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         case Expression_PTN_Kind::BINARY:
         {
             print_indent(indent);
+            printf("(");
             print_expression_ptn(expression->binary.lhs, 0);
             switch (expression->binary.op)
             {
@@ -553,8 +565,23 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
                 }
             }
             print_expression_ptn(expression->binary.rhs, 0);
+            printf(")");
             break;
         }
+
+        case Expression_PTN_Kind::UNARY:
+        {
+            print_indent(indent);
+            printf("(");
+            switch (expression->unary.op)
+            {
+                case UNOP_INVALID: assert(false); break;
+                case UNOP_DEREF:   printf("<");   break;
+            }
+            print_expression_ptn(expression->unary.operand_expression, 0);
+            printf(")");
+            break;
+        };
 
         case Expression_PTN_Kind::NUMBER_LITERAL:
         {

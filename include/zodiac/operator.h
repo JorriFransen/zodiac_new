@@ -9,4 +9,11 @@ namespace Zodiac
         BINOP_ADD,
         BINOP_SUB,
     };
+
+    enum Unary_Operator
+    {
+        UNOP_INVALID,
+
+        UNOP_DEREF,
+    };
 }
