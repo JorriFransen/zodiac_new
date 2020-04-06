@@ -283,6 +283,103 @@ void print_indent(uint64_t indent)
     }
 }
 
+Declaration_PTN* copy_declaration_ptn(Allocator* allocator, Declaration_PTN* decl,
+                                      PTN_Copy_Flags flags/*= PTNC_FLAG_NONE*/)
+{
+    Identifier_PTN* ident_copy = nullptr;
+    if (flags & PTNC_FLAG_DONT_COPY_IDENTIFIERS)
+    {
+        ident_copy = decl->identifier;
+    }
+    else
+    {
+        ident_copy = copy_identifier_ptn(allocator, decl->identifier);
+    }
+
+    assert(ident_copy);
+
+    switch (decl->kind)
+    {
+        case Declaration_PTN_Kind::INVALID: assert(false);
+        case Declaration_PTN_Kind::IMPORT: assert(false);
+
+        case Declaration_PTN_Kind::VARIABLE:
+        {
+            Expression_PTN* type_expr_copy = nullptr;
+            Expression_PTN* init_expr_copy = nullptr;
+            if (flags & PTNC_FLAG_DONT_COPY_EXPRESSIONS)
+            {
+                type_expr_copy = decl->variable.type_expression;
+                init_expr_copy = decl->variable.init_expression;
+            }
+            else
+            {
+                type_expr_copy = copy_expression_ptn(allocator, decl->variable.type_expression);
+                init_expr_copy = copy_expression_ptn(allocator, decl->variable.init_expression);
+            }
+
+            assert(type_expr_copy);
+            if (decl->variable.init_expression) assert(init_expr_copy);
+            
+            return new_variable_declaration_ptn(allocator,
+                                                ident_copy,
+                                                type_expr_copy,
+                                                init_expr_copy);
+        }
+
+        case Declaration_PTN_Kind::CONSTANT: assert(false);
+        case Declaration_PTN_Kind::FUNCTION: assert(false);
+        case Declaration_PTN_Kind::STRUCT: assert(false);
+    }
+
+    assert(false);
+    return nullptr;
+}
+
+Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
+                                    PTN_Copy_Flags flags/*= PTNC_FLAG_NONE*/)
+{
+    if (!expr) return nullptr;
+
+    assert(allocator);
+
+    switch (expr->kind)
+    {
+        case Expression_PTN_Kind::INVALID: assert(false);
+        case Expression_PTN_Kind::CALL: assert(false);
+
+        case Expression_PTN_Kind::IDENTIFIER:
+        {
+            Identifier_PTN* new_identifier = nullptr;
+            if (flags & PTNC_FLAG_DONT_COPY_IDENTIFIERS)
+                new_identifier = expr->identifier;
+            else
+                new_identifier = copy_identifier_ptn(allocator, expr->identifier);
+
+            assert(new_identifier);
+
+            return new_identifier_expression_ptn(allocator, new_identifier);
+        }
+
+        case Expression_PTN_Kind::BINARY: assert(false);
+        case Expression_PTN_Kind::UNARY: assert(false);
+        case Expression_PTN_Kind::DOT: assert(false);
+        case Expression_PTN_Kind::COMPOUND: assert(false);
+        case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
+        case Expression_PTN_Kind::STRING_LITERAL: assert(false);
+        case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
+        case Expression_PTN_Kind::POINTER_TYPE: assert(false);
+    }
+
+    assert(false);
+    return nullptr;
+}
+
+Identifier_PTN* copy_identifier_ptn(Allocator* allocator, Identifier_PTN* identifier)
+{
+    return new_identifier_ptn(allocator, identifier->atom);
+}
+
 void print_ptn(PTN* ptn, uint64_t indent)
 {
     switch (ptn->kind)

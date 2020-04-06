@@ -30,14 +30,15 @@ void* _temp_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, v
 
         case FREE:
         {
-            assert(false);
             assert(old_ptr);
+            return nullptr;
             break;
         }
 
         case FREE_ALL:
         {
             assert(false); 
+            return nullptr;
             break;
         }
     }

@@ -333,6 +333,20 @@ Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression);
 
+typedef uint64_t PTN_Copy_Flags;
+enum PTN_Copy_Flag__ : PTN_Copy_Flags
+{
+    PTNC_FLAG_NONE                  = 0x00, 
+    PTNC_FLAG_DONT_COPY_IDENTIFIERS = 0x01,
+    PTNC_FLAG_DONT_COPY_EXPRESSIONS = 0x02,
+};
+
+Declaration_PTN* copy_declaration_ptn(Allocator* allocator, Declaration_PTN* decl,
+                                      PTN_Copy_Flags flags = PTNC_FLAG_NONE);
+Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
+                                    PTN_Copy_Flags flags = PTNC_FLAG_NONE);
+Identifier_PTN* copy_identifier_ptn(Allocator* allocator, Identifier_PTN* identifier);
+
 void print_ptn(PTN* ptn, uint64_t indent);
 void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline = true);
 void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent, bool newline = true);
