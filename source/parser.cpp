@@ -7,7 +7,6 @@
 #include <cassert>
 
 namespace Zodiac
-#include <stdio.h>
 {
 
 Parser parser_create(Allocator* allocator)
@@ -507,6 +506,19 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_LBRACE:
+        {
+            ts->next_token();
+            auto expr_list= parser_parse_expression_list(parser, ts);
+            assert(expr_list);
+            if (!parser_expect_token(parser, ts, TOK_RBRACE)) 
+            {
+                assert(false);
+            }
+            result = new_compound_expression_ptn(parser->allocator, expr_list);
+            break;
+        }
+
         case TOK_STAR:
         {
             result = parser_parse_pointer_type_expression(parser, ts);
@@ -780,4 +792,4 @@ void parsed_file_print(Parsed_File* parsed_file)
     }
 }
 
-}
+} 

@@ -52,16 +52,16 @@ Vec2 :: struct
         return <self + 1;
     }
 
-    // add :: func (a: Vec2, b: Vec2) -> Vec2
-    // {
-    //     return { a.x + b.x, a.y + b.y };
-    // }
+    add :: func (a: Vec2, b: Vec2) -> Vec2
+    {
+        return { a.x + b.x, a.y + b.y };
+    }
 
     sub :: func (self: *Vec2, other: Vec2) -> Vec2
     {
         self.x -= other.x;
         self.y -= other.y;
-        // return <self;
+        return <self;
     }
 }
 
