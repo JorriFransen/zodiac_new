@@ -276,13 +276,14 @@ void advance(Lexer_Data* ld, uint64_t count/*=1*/)
     {
         char c = current_char(ld);
 
+        ld->file_index += 1;
+        ld->current_column += 1;
+
         if (c == '\n')
         {
             ld->current_line += 1;
             ld->current_column = 1;
         }
-
-        ld->file_index += 1;
 
         count -= 1;
     }
