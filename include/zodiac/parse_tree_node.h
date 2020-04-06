@@ -240,6 +240,7 @@ struct Expression_PTN
         struct
         {
             Expression_List_PTN* list;
+            Expression_PTN* type_expression;
         } compound;
 
         struct
@@ -322,7 +323,8 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
 Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
                                        Identifier_PTN* child_ident);
-Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list);
+Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list,
+                                            Expression_PTN* type_expression);
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
                                               Expression_PTN* element_type_expression);
 Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,

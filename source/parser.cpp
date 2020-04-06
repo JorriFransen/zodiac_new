@@ -215,7 +215,7 @@ Function_Proto_PTN* parser_parse_function_prototype(Parser* parser, Token_Stream
     Expression_PTN* return_type_expr = nullptr;
     if (parser_match_token(ts, TOK_RARROW))
     {
-        return_type_expr = parser_parse_expression(parser, ts);
+        return_type_expr = parser_parse_expression(parser, ts, true);
     }
 
     return new_function_prototype_parse_tree_node(parser->allocator, param_list, return_type_expr);
@@ -424,20 +424,20 @@ Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stre
                                         ident_expression, rhs_expr);
 }
 
-Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
 {
-    return parser_parse_add_expression(parser, ts);
+    return parser_parse_add_expression(parser, ts, is_type);
 }
 
-Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
 {
-    auto lhs = parser_parse_unary_expression(parser, ts);
+    auto lhs = parser_parse_unary_expression(parser, ts, is_type);
     assert(lhs);
 
     while (parser_is_add_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
         auto op = parser_parse_add_op(ts);
-        auto rhs = parser_parse_unary_expression(parser, ts);
+        auto rhs = parser_parse_unary_expression(parser, ts, is_type);
         assert(rhs);
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs);
     }
@@ -445,21 +445,22 @@ Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts)
     return lhs;
 }
 
-Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts,
+                                              bool is_type/*=false*/)
 {
     auto op = parser_parse_unary_op(ts);
     if (op != UNOP_INVALID)
     {
-        auto operand_expr = parser_parse_unary_expression(parser, ts);
+        auto operand_expr = parser_parse_unary_expression(parser, ts, is_type);
         return new_unary_expression_ptn(parser->allocator, op, operand_expr);
     }
     else
     {
-        return parser_parse_base_expression(parser, ts);
+        return parser_parse_base_expression(parser, ts, is_type);
     }
 }
 
-Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
+Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
 {
     auto ct = ts->current_token();
 
@@ -472,6 +473,20 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             if (ts->peek_token(1).kind == TOK_LPAREN)
             {
                 return parser_parse_call_expression(parser, ts);
+            }
+            else if (!is_type && ts->peek_token(1).kind == TOK_LBRACE)
+            {
+                auto type_ident = parser_parse_identifier(parser, ts);
+                auto type_expr = new_identifier_expression_ptn(parser->allocator, type_ident);
+
+                assert(type_expr);
+
+                if (!parser_expect_token(parser, ts, TOK_LBRACE)) assert(false);
+                auto expr_list = parser_parse_expression_list(parser, ts);
+                assert(expr_list);
+                if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
+
+                result = new_compound_expression_ptn(parser->allocator, expr_list, type_expr);
             }
             else
             {
@@ -515,7 +530,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts)
             {
                 assert(false);
             }
-            result = new_compound_expression_ptn(parser->allocator, expr_list);
+            result = new_compound_expression_ptn(parser->allocator, expr_list, nullptr);
             break;
         }
 

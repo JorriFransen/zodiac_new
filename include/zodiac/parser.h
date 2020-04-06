@@ -44,10 +44,11 @@ Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* t
 Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stream* ts,
                                                       Expression_PTN* ident_expression);
 
-Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts);
-Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts);
-Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts);
-Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts);
+Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
+Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
+Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts,
+                                              bool is_type = false);
+Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,
                                              Expression_PTN* ident_expr, bool is_builtin = false);
 Expression_PTN* parser_parse_call_expression(Parser* parser, Token_Stream* ts,

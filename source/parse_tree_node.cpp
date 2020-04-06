@@ -236,11 +236,13 @@ Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* par
     return result;
 }
 
-Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list)
+Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list,
+                                            Expression_PTN* type_expression)
 {
     auto result = new_ptn<Expression_PTN>(allocator);
     result->kind = Expression_PTN_Kind::COMPOUND;
     result->compound.list = expr_list;
+    result->compound.type_expression = type_expression;
     return result;
 }
 
@@ -617,6 +619,11 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         case Expression_PTN_Kind::COMPOUND:
         {
             print_indent(indent);
+            if (expression->compound.type_expression) 
+            {
+                print_expression_ptn(expression->compound.type_expression, 0);
+                printf(" ");
+            }
             printf("{ ");
             print_ptn(&expression->compound.list->self, 0);
             if (expression->compound.list->expressions.count) printf(" ");
