@@ -98,22 +98,42 @@ Vec3 :: struct(T: Type)
 {
     x, y, z : T;
 
-    //add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
-    //{
-        //return { a.x + b.x, a.y + b.y, a.z + b.z };
-    //}
+    add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
+    {
+        return { a.x + b.x, a.y + b.y, a.z + b.z };
+    }
 }
 
-Array :: struct(T)
+vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
 {
-    data     : *T;
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
+}
+
+Array :: struct(Element_Type)
+{
+    data     : *Element_Type;
     count    : s64;
     capacity : s64;
 }
 
-//vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
+array_add1 :: func (array: *Array($T), elem: T)
+{
+}
+
+//array_add2 :: func (array: *$T/Array, elem: array.Element_Type)
 //{
-    //return { a.x - b.x, a.y - b.y, a.z - b.z };
+//}
+
+//array_add3 :: func (array: *$T/Array, elem: T.Element_Type)
+//{
+//}
+
+//array_add4 :: func (array: *Array, elem: array.Element_Type)
+//{
+//}
+
+//array_add5 :: func (array: *Array, elem: Array.Element_Type)
+//{
 //}
 
 //main :: func (args: []std.String) -> int

@@ -266,6 +266,14 @@ Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
     return result;
 }
 
+Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PTN* identifier)
+{
+    auto result = new_ptn<Expression_PTN>(allocator);
+    result->kind = Expression_PTN_Kind::POLY_TYPE;
+    result->identifier = identifier;
+    return result;
+}
+
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                  Expression_PTN* type_expression)
 {
@@ -371,6 +379,7 @@ Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
         case Expression_PTN_Kind::STRING_LITERAL: assert(false);
         case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
         case Expression_PTN_Kind::POINTER_TYPE: assert(false);
+        case Expression_PTN_Kind::POLY_TYPE: assert(false);
     }
 
     assert(false);
@@ -756,6 +765,14 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             print_indent(indent);
             printf("*");
             print_expression_ptn(expression->pointer_type.pointee_type_expression, 0);
+            break;
+        }
+
+        case Expression_PTN_Kind::POLY_TYPE:
+        {
+            print_indent(indent);
+            printf("$");
+            print_ptn(&expression->identifier->self, 0);
             break;
         }
 

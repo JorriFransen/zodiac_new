@@ -594,6 +594,16 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, b
             break;
         }
 
+        case TOK_DOLLAR:
+        {
+            ts->next_token();
+            auto identifier = parser_parse_identifier(parser, ts);
+            assert(identifier);
+
+            result = new_poly_type_expression_ptn(parser->allocator, identifier);
+            break;
+        }
+
         default:
         {
             auto ct = ts->current_token();

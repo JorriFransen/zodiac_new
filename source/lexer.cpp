@@ -114,6 +114,7 @@ restart:
         __1_CHAR_TOKEN_CASE('@', TOK_AT);
         __1_CHAR_TOKEN_CASE('.', TOK_DOT);
         __1_CHAR_TOKEN_CASE(',', TOK_COMMA);
+        __1_CHAR_TOKEN_CASE('$', TOK_DOLLAR);
 
         __1_CHAR_TOKEN_CASE('(', TOK_LPAREN);
         __1_CHAR_TOKEN_CASE(')', TOK_RPAREN);
