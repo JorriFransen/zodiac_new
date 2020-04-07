@@ -431,8 +431,11 @@ void print_ptn(PTN* ptn, uint64_t indent)
             print_indent(indent);
             auto _this = (Parameter_PTN*)ptn;
             print_ptn(&_this->identifier->self, 0);
-            printf(": ");
-            print_expression_ptn(_this->type_expression, 0);
+            if (_this->type_expression)
+            {
+                printf(": ");
+                print_expression_ptn(_this->type_expression, 0);
+            }
             break;
         }
 

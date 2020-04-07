@@ -93,6 +93,7 @@ Vec3 :: struct
     x, y, z : float;
 }
 
+
 Vec3 :: struct(T: Type)
 {
     x, y, z : T;
@@ -101,6 +102,13 @@ Vec3 :: struct(T: Type)
     //{
         //return { a.x + b.x, a.y + b.y, a.z + b.z };
     //}
+}
+
+Array :: struct(T)
+{
+    data     : *T;
+    count    : s64;
+    capacity : s64;
 }
 
 //vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
