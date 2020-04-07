@@ -139,7 +139,14 @@ restart:
                 while (!is_newline(current_char(ld))) advance(ld);
                 goto restart;
             }
-            else assert(false);
+            else 
+            {
+                auto fp = get_file_pos(ld);
+                auto ccp = current_char_ptr(ld);
+                advance(ld);
+                auto atom = atom_get(&ld->lexer->build_data->atom_table, ccp, 1);
+                return token_create(fp, TOK_FORWARD_SLASH, atom);
+            }
             break;
         }
 

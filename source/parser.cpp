@@ -596,11 +596,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, b
 
         case TOK_DOLLAR:
         {
-            ts->next_token();
-            auto identifier = parser_parse_identifier(parser, ts);
-            assert(identifier);
-
-            result = new_poly_type_expression_ptn(parser->allocator, identifier);
+            result = parser_parse_poly_type_expression(parser, ts);
             break;
         }
 
@@ -714,6 +710,22 @@ Expression_PTN* parser_parse_pointer_type_expression(Parser* parser, Token_Strea
     assert(pointee_type_expression);
 
     return new_pointer_type_expression_ptn(parser->allocator, pointee_type_expression);
+}
+
+Expression_PTN* parser_parse_poly_type_expression(Parser* parser, Token_Stream* ts)
+{
+    if (!parser_expect_token(parser, ts, TOK_DOLLAR)) assert(false);
+
+    auto identifier = parser_parse_identifier(parser, ts);
+    assert(identifier);
+
+    Identifier_PTN* spec_ident = nullptr;
+    if (parser_match_token(ts, TOK_FORWARD_SLASH))
+    {
+        spec_ident = parser_parse_identifier(parser, ts);
+    }
+
+    return new_poly_type_expression_ptn(parser->allocator, identifier, spec_ident);
 }
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts)

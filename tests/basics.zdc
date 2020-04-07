@@ -120,26 +120,26 @@ array_add1 :: func (array: *Array($T), elem: T)
 {
 }
 
-//array_add2 :: func (array: *$T/Array, elem: array.Element_Type)
-//{
-//}
+array_add2 :: func (array: *$T/Array, elem: array.Element_Type)
+{
+}
 
-//array_add3 :: func (array: *$T/Array, elem: T.Element_Type)
-//{
-//}
+array_add3 :: func (array: *$T/Array, elem: T.Element_Type)
+{
+}
 
-//array_add4 :: func (array: *Array, elem: array.Element_Type)
-//{
-//}
+array_add4 :: func (array: *Array, elem: array.Element_Type)
+{
+}
 
-//array_add5 :: func (array: *Array, elem: Array.Element_Type)
-//{
-//}
+array_add5 :: func (array: *Array, elem: Array.Element_Type)
+{
+}
 
 //main :: func (args: []std.String) -> int
 //{
     //p1 : Vec3(float) = { 1, 2, 3 };
-    //p2 := Vec3(float){ 4, 5, 6 };
+    //p2 := Vec3(float) { 4, 5, 6 };
 
     //fmt.print(p1);
     //fmt.print(p2);

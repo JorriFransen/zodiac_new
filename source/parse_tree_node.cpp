@@ -266,11 +266,13 @@ Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
     return result;
 }
 
-Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PTN* identifier)
+Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                             Identifier_PTN* specification_identifier)
 {
     auto result = new_ptn<Expression_PTN>(allocator);
     result->kind = Expression_PTN_Kind::POLY_TYPE;
-    result->identifier = identifier;
+    result->poly_type.identifier = identifier;
+    result->poly_type.specification_identifier = specification_identifier;
     return result;
 }
 
@@ -772,7 +774,12 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         {
             print_indent(indent);
             printf("$");
-            print_ptn(&expression->identifier->self, 0);
+            print_ptn(&expression->poly_type.identifier->self, 0);
+            if (expression->poly_type.specification_identifier)
+            {
+                printf("/");
+                print_ptn(&expression->poly_type.specification_identifier->self, 0);
+            }
             break;
         }
 
