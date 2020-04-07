@@ -125,12 +125,14 @@ Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_P
 }
 
 Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                            Array<Declaration_PTN*> members)
+                                            Array<Declaration_PTN*> members,
+                                            Array<Parameter_PTN*> parameters)
 {
     auto result = new_ptn<Declaration_PTN>(allocator);
     result->kind = Declaration_PTN_Kind::STRUCT;
     result->identifier = identifier;
     result->structure.member_declarations = members;
+    result->structure.parameters = parameters;
     return result;
 }
 
@@ -603,7 +605,17 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent, bool newline/
         case Declaration_PTN_Kind::STRUCT:
         {
             print_indent(indent);
-            printf("%s :: struct\n", decl->identifier->atom.data);
+            printf("%s :: struct", decl->identifier->atom.data);
+            if (decl->structure.parameters.count)
+            {
+                printf("(");
+                for (int64_t i = 0; i < decl->structure.parameters.count; i++)
+                {
+                    print_ptn(&decl->structure.parameters[i]->self, 0);
+                }
+                printf(")");
+            }
+            printf("\n");
             print_indent(indent);
             printf("{\n");
             for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)

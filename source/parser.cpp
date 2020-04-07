@@ -139,6 +139,15 @@ Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* t
 {
     if (!parser_expect_token(parser, ts, TOK_KW_STRUCT)) assert(false);
 
+    Array<Parameter_PTN*> parameters = {};
+    if (parser_match_token(ts, TOK_LPAREN))
+    {
+        parameters = parser_parse_parameter_list(parser, ts);
+        assert(parameters.count);
+
+        if (!parser_expect_token(parser, ts, TOK_RPAREN)) assert(false);
+    }
+
     if (!parser_expect_token(parser, ts, TOK_LBRACE)) assert(false);
 
     Array<Declaration_PTN*> member_decls = {};
@@ -203,7 +212,7 @@ Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* t
         array_free(&member_decls);
     }
 
-    return new_struct_declaration_ptn(parser->allocator, identifier, member_decls);
+    return new_struct_declaration_ptn(parser->allocator, identifier, member_decls, parameters);
 }
 
 Declaration_PTN* parser_parse_import_declaration(Parser* parser, Token_Stream* ts,

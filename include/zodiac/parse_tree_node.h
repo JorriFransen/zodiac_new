@@ -140,6 +140,7 @@ struct Declaration_PTN
         struct
         {
             Array<Declaration_PTN*> member_declarations;
+            Array<Parameter_PTN*> parameters;
         } structure;
 
         struct
@@ -297,7 +298,8 @@ Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_P
                                               Expression_PTN* init_expression);
 
 Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                            Array<Declaration_PTN*> members);
+                                            Array<Declaration_PTN*> members,
+                                            Array<Parameter_PTN*> parameters);
 
 Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                               Expression_PTN* type_expr,
