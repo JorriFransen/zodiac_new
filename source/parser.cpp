@@ -526,7 +526,21 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, b
         {
             if (ts->peek_token(1).kind == TOK_LPAREN)
             {
-                return parser_parse_call_expression(parser, ts);
+                auto call_expr = parser_parse_call_expression(parser, ts);
+                assert(call_expr);
+
+                if (!is_type && parser_match_token(ts, TOK_LBRACE))
+                {
+                    auto expr_list = parser_parse_expression_list(parser, ts);
+                    assert(expr_list);
+                    if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
+
+                    result = new_compound_expression_ptn(parser->allocator, expr_list, call_expr);
+                }
+                else
+                {
+                    result = call_expr;
+                }
             }
             else if (!is_type && ts->peek_token(1).kind == TOK_LBRACE)
             {
