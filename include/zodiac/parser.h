@@ -25,7 +25,8 @@ Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts);
 
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts);
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
-                                          Identifier_PTN* identifier);
+                                          Identifier_PTN* identifier,
+                                          bool is_naked = false);
 
 Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
                                                  Identifier_PTN* identifier);

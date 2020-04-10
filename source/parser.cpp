@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <cassert>
+#include <cstdarg>
 
 namespace Zodiac
 {
@@ -57,14 +58,16 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
     auto identifier = parser_parse_identifier(parser, ts);
     if (!identifier) return nullptr;
 
-    return parser_parse_declaration(parser, ts, identifier);
+    return parser_parse_declaration(parser, ts, identifier, is_naked);
 }
 
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
-                                          Identifier_PTN* identifier)
+                                          Identifier_PTN* identifier,
+                                          bool is_naked /*= false*/)
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
+    Declaration_PTN* result = nullptr;
     Expression_PTN* specified_type = nullptr;
 
     if (!parser_is_token(ts, TOK_COLON) && !parser_is_token(ts, TOK_EQ))
@@ -93,45 +96,50 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
                 assert(function_body->kind == Statement_PTN_Kind::BLOCK);
             }
 
-            return new_function_declaration_ptn(parser->allocator, identifier, function_proto,
-                                                function_body);
+            result = new_function_declaration_ptn(parser->allocator, identifier, function_proto,
+                                                  function_body);
         }
         else if (parser_is_token(ts, TOK_KW_STRUCT))
         {
             assert(!specified_type);
-            return parser_parse_struct_declaration(parser, ts, identifier);
+            result = parser_parse_struct_declaration(parser, ts, identifier);
         }
         else if (parser_is_token(ts, TOK_KW_IMPORT))
         {
             assert(!specified_type);
-            return parser_parse_import_declaration(parser, ts, identifier);
+            result = parser_parse_import_declaration(parser, ts, identifier);
         }
         else
         {
             Expression_PTN* const_expr = parser_parse_expression(parser, ts);
             assert(const_expr);
-            auto result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr,
-                                                       const_expr);
+            result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr,
+                                                  const_expr);
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
             {
                 assert(false);
             }
-            return result;
         }
     }
     else if (parser_match_token(ts, TOK_EQ))
     {
         auto expression = parser_parse_expression(parser, ts);
 
-        return new_variable_declaration_ptn(parser->allocator, identifier, specified_type,
-                                            expression);
+        result = new_variable_declaration_ptn(parser->allocator, identifier, specified_type,
+                                              expression);
     }
     else
     {
         assert(false);
     }
 
-    assert(false);
+    assert(result);
+    if (is_naked)
+    {
+        assert(result->kind == Declaration_PTN_Kind::FUNCTION);
+        result->flags |= DPTN_FLAG_IS_NAKED;
+    }
+    return result;
 }
 
 Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,

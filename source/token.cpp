@@ -27,6 +27,15 @@ bool token_equal(const Token& a, const Token& b)
     return true;
 }
 
+static const char* Token_Kind_Names[] =
+{
+    #define DEFINE_TOKEN(x) #x
+    #define DEFINE_KW_TOKEN(x, y) #x
+    TOKEN_LIST
+    #undef DEFINE_KW_TOKEN
+    #undef DEFINE_TOKEN
+};
+
 const char* token_kind_name(Token_Kind kind)
 {
     return Token_Kind_Names[kind];

@@ -65,15 +65,6 @@ enum Token_Kind
     #undef DEFINE_TOKEN
 };
 
-static const char* Token_Kind_Names[] =
-{
-    #define DEFINE_TOKEN(x) #x
-    #define DEFINE_KW_TOKEN(x, y) #x
-    TOKEN_LIST
-    #undef DEFINE_KW_TOKEN
-    #undef DEFINE_TOKEN
-};
-
 struct KW_Token
 {
     Token_Kind kind = TOK_INVALID;

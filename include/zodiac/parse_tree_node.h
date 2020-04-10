@@ -23,7 +23,6 @@ enum class PT_Node_Kind
     STATEMENT,
 
     EXPRESSION,
-
 };
 
 struct Declaration_PTN;
@@ -110,11 +109,20 @@ enum class Declaration_PTN_Kind
 
 };
 
+typedef uint64_t Declaration_PTN_Flag;
+
+enum Declaration_PTN_FLAG : Declaration_PTN_Flag
+{
+    DPTN_FLAG_NONE =     0x00,
+    DPTN_FLAG_IS_NAKED = 0x01,
+};
+
 struct Declaration_PTN
 {
     static PTN_Kind _kind;
     PT_Node self = {};
     Declaration_PTN_Kind kind = Declaration_PTN_Kind::INVALID;
+    Declaration_PTN_Flag flags = DPTN_FLAG_NONE;
 
     Identifier_PTN* identifier = nullptr;
 
