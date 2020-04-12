@@ -9,6 +9,8 @@ namespace Zodiac
 
     struct PT_Node;
     struct Declaration_PTN;
+    struct Statement_PTN;
+    struct Expression_PTN;
 
     struct Parsed_File
     {
