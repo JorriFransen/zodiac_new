@@ -3,6 +3,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "c_allocator.h"
+#include "ast.h"
 
 #include <stdio.h>
 #include <cassert>
@@ -36,6 +37,10 @@ int main(int argc, char** argv)
     Parsed_File parsed_file = parser_parse_file(&parser, token_stream);
 
     parsed_file_print(&parsed_file);
+
+    AST_Node* ast_root = ast_create_from_parsed_file(ca, &parsed_file);
+    assert(ast_root);
+    ast_print(ast_root);
 
     return 0;
 }

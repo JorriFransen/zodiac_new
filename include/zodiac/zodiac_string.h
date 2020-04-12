@@ -1,9 +1,13 @@
 
 #pragma once
 
+
 #include "allocator.h"
 
 #include <cassert>
+
+namespace Zodiac
+{
 
 struct String
 {
@@ -27,3 +31,5 @@ int64_t string_length(String string);
 const String copy_string(Allocator* allocator, const String& string);
 
 const String string_ref(const char* cstr);
+
+}

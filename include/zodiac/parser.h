@@ -4,6 +4,7 @@
 #include "parse_tree_node.h"
 #include "token_stream.h"
 #include "operator.h"
+#include "struct_predecls.h"
 
 namespace Zodiac
 {
@@ -11,11 +12,6 @@ namespace Zodiac
 struct Parser
 {
     Allocator* allocator = nullptr;
-};
-
-struct Parsed_File
-{
-    Array<Declaration_PTN*> declarations = {};
 };
 
 Parser parser_create(Allocator* allocator);

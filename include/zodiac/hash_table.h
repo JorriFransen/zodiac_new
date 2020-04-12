@@ -6,6 +6,9 @@
 #include <cassert>
 #include <string.h>
 
+namespace Zodiac 
+{
+
 template <typename Key_Type>
 using Hash_Table_Keys_Equal_FN = bool (*)(const Key_Type& a, const Key_Type& b);
 
@@ -146,4 +149,6 @@ bool hash_table_find(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_T
     }
 
     return false;
+}
+
 }

@@ -8,6 +8,9 @@
 
 #include <cassert>
 
+namespace Zodiac
+{
+
 bool is_relative_path(const String& path)
 {
     return os_is_relative_path(path);
@@ -53,4 +56,6 @@ String read_file_string(Allocator* allocator, const String& file_path)
     result.data[length] = '\0';
 
     return result;
+}
+
 }

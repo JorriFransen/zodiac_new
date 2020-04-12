@@ -5,6 +5,9 @@
 
 #include <stdint.h>
 
+namespace Zodiac
+{
+
 struct File_Pos
 {
     uint64_t index = 0;
@@ -15,3 +18,5 @@ struct File_Pos
 
 bool operator==(const File_Pos& a, const File_Pos& b);
 bool operator!=(const File_Pos& a, const File_Pos& b);
+
+}

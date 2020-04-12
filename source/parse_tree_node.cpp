@@ -561,6 +561,12 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent, bool newline/
         case Declaration_PTN_Kind::FUNCTION:
         {
             print_indent(indent);
+
+            if (decl->flags & DPTN_FLAG_IS_NAKED)
+            {
+                printf("#naked ");
+            }
+
             printf("%s :: ", decl->identifier->atom.data);
             print_ptn(&decl->function.prototype->self, 0);
             if (decl->function.body)

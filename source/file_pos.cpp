@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+namespace Zodiac
+{
+
 bool operator==(const File_Pos& a, const File_Pos& b)
 {
     if (a.index != b.index) return false;
@@ -15,4 +18,6 @@ bool operator==(const File_Pos& a, const File_Pos& b)
 bool operator!=(const File_Pos& a, const File_Pos& b)
 {
     return !operator==(a, b);
+}
+
 }

@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+namespace Zodiac
+{
+
 uint64_t hash_key(const String& str)
 {
     auto length = (uint64_t)str.length;
@@ -54,4 +57,6 @@ bool hash_table_strings_equal(const String& a, const String& b)
     }
 
     return true;
+}
+
 }

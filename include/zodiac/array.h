@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <string.h>
 
+namespace Zodiac
+{
+
 const int64_t DEFAULT_ARRAY_CAPACITY = 8;
 
 template <typename Element_Type>
@@ -75,4 +78,6 @@ void array_append(Array<Element_Type>* array, const Element_Type& element)
 
     array->data[array->count] = element;
     array->count += 1;
+}
+
 }

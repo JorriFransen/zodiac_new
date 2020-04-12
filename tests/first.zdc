@@ -1,0 +1,16 @@
+
+#naked _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+
+main :: func () -> int
+{
+    return 1;
+}

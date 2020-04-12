@@ -5,6 +5,7 @@ project(zodiac)
 set (ZODIAC_COMPILER_SOURCE
     source/main.cpp
 
+    source/ast.cpp
     source/allocator.cpp
     source/atom.cpp
     source/build_data.cpp

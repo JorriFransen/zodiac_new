@@ -4,6 +4,9 @@
 #include <cassert>
 #include <string.h>
 
+namespace Zodiac
+{
+
 int64_t string_length(String string)
 {
     return string.length;
@@ -22,4 +25,6 @@ const String string_ref(const char* cstr)
 {
     String result = { (char*)cstr, (int64_t)strlen(cstr) };
     return result;
+}
+
 }

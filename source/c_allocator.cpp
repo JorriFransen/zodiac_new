@@ -1,8 +1,11 @@
 
 #include "c_allocator.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <cassert>
+
+namespace Zodiac
+{
 
 void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void* old_ptr)
 {
@@ -26,7 +29,7 @@ void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void
         case FREE:
         {
             assert(old_ptr);
-            free(old_ptr);
+            std::free(old_ptr);
             break;
         }
 
@@ -50,4 +53,6 @@ Allocator* c_allocator_get()
     }
 
     return &instance;
+}
+
 }

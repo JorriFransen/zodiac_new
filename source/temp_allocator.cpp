@@ -4,6 +4,9 @@
 
 #include <cassert>
 
+namespace Zodiac
+{
+
 void* _temp_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void* old_ptr)
 {
     auto ta = (Temp_Allocator*)allocator;
@@ -66,4 +69,6 @@ Allocator* temp_allocator_get()
     }
 
     return &__global_instance__.allocator;
+}
+
 }

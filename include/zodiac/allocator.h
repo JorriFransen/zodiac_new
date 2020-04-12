@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <new>
 
+namespace Zodiac
+{
+
 struct Allocator;
 
 enum Allocation_Mode
@@ -49,3 +52,5 @@ bool is_power_of_two(T v)
 }
 
 void* align_up(void* ptr, uint64_t align);
+
+}

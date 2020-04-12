@@ -2,6 +2,9 @@
 
 #include <cassert>
 
+namespace Zodiac
+{
+
 void* alloc(Allocator* allocator, int64_t size)
 {
     return allocator->alloc(allocator, ALLOCATE, size, nullptr);
@@ -20,4 +23,6 @@ void* align_up(void* ptr, uint64_t align)
     addr = (addr + (align - 1)) & -align;
     assert(addr >= (uint64_t)ptr);
     return (void*)addr;
+}
+
 }

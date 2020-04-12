@@ -6,6 +6,9 @@
 #include <cstring>
 #include <unistd.h>
 
+namespace Zodiac
+{
+
 bool os_is_relative_path(const String& path)
 {
     assert(path.data);
@@ -47,4 +50,6 @@ const char* os_get_cwd(Allocator* allocator)
     result[result_len] = '\0';
 
     return result;
+}
+
 }

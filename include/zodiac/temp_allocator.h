@@ -3,6 +3,9 @@
 
 #include "allocator.h"
 
+namespace Zodiac
+{
+
 struct Temp_Allocator
 {
     Allocator allocator = {};
@@ -12,3 +15,5 @@ struct Temp_Allocator
 };
 
 Allocator* temp_allocator_get();
+
+}
