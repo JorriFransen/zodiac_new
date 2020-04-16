@@ -46,11 +46,20 @@ namespace Zodiac
         FUNCTION,
     };
 
+    typedef uint64_t AST_Declaration_Flag;
+
+    enum AST_Declaration_Flag__ : AST_Declaration_Flag
+    {
+        AST_DECL_FLAG_NONE     = 0x00,
+        AST_DECL_FLAG_IS_NAKED = 0x01,
+    };
+
     struct AST_Declaration : public AST_Node
     {
         static AST_Node_Kind _kind;
 
         AST_Declaration_Kind kind = AST_Declaration_Kind::INVALID;
+        AST_Declaration_Flag flags = AST_DECL_FLAG_NONE;
 
         AST_Identifier* identifier = nullptr;
 
@@ -189,7 +198,8 @@ namespace Zodiac
                                                   AST_Type_Spec* type_spec,
                                                   AST_Expression* init_expr);
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
-                                                  AST_Type_Spec* type_spec, AST_Statement* body);
+                                                  AST_Type_Spec* type_spec, AST_Statement* body,
+                                                  bool is_naked);
 
     AST_Statement* ast_statement_new(Allocator* allocator, AST_Statement_Kind kind);
     AST_Statement* ast_block_statement_new(Allocator* allocator, Array<AST_Statement*> statements);

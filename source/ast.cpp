@@ -92,7 +92,10 @@ namespace Zodiac
                                                                         ptn->function.body);
                 assert(ast_body);
 
-                return ast_function_declaration_new(allocator, ast_ident, ast_type, ast_body);
+                bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
+
+                return ast_function_declaration_new(allocator, ast_ident, ast_type, ast_body,
+                                                   is_naked);
                 break;
             }
 
@@ -357,7 +360,8 @@ namespace Zodiac
     }
 
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
-                                                  AST_Type_Spec* type_spec, AST_Statement* body)
+                                                  AST_Type_Spec* type_spec, AST_Statement* body,
+                                                  bool is_naked = false)
     {
         assert(body->kind == AST_Statement_Kind::BLOCK);
 
@@ -365,6 +369,11 @@ namespace Zodiac
 
         result->function.type_spec = type_spec;
         result->function.body = body;
+
+        if (is_naked)
+        {
+            result->flags |= AST_DECL_FLAG_IS_NAKED;
+        }
 
         return result;
     }
@@ -524,6 +533,11 @@ namespace Zodiac
     void ast_print_declaration(AST_Declaration* ast_decl, uint64_t indent)
     {
         ast_print_indent(indent);
+
+        if (ast_decl->flags & AST_DECL_FLAG_IS_NAKED)
+        {
+            printf("#naked ");
+        }
 
         printf("%s :", ast_decl->identifier->atom.data);
 
