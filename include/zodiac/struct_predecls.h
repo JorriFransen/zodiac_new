@@ -23,5 +23,6 @@ namespace Zodiac
     struct AST_Declaration;
     struct AST_Statement;
     struct AST_Expression;
+    struct AST_Type_Spec;
 }
 

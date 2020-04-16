@@ -366,6 +366,7 @@ Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
                                     PTN_Copy_Flags flags = PTNC_FLAG_NONE);
 Identifier_PTN* copy_identifier_ptn(Allocator* allocator, Identifier_PTN* identifier);
 
+void print_indent(uint64_t indent);
 void print_ptn(PTN* ptn, uint64_t indent);
 void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline = true);
 void print_declaration_ptn(Declaration_PTN* declaration, uint64_t indent, bool newline = true);
