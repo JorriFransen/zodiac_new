@@ -43,6 +43,7 @@ namespace Zodiac
         INVALID,
 
         VARIABLE,
+        PARAMETER,
         FUNCTION,
     };
 
@@ -56,6 +57,8 @@ namespace Zodiac
 
     struct AST_Declaration : public AST_Node
     {
+        AST_Declaration() {}
+
         static AST_Node_Kind _kind;
 
         AST_Declaration_Kind kind = AST_Declaration_Kind::INVALID;
@@ -70,9 +73,16 @@ namespace Zodiac
                 AST_Type_Spec* type_spec;
                 AST_Expression* init_expression;
             } variable;
+
+            struct
+            {
+                AST_Type_Spec* type_spec;
+            } parameter;
+
             struct 
             {
                 AST_Type_Spec* type_spec;
+                Array<AST_Declaration*> parameter_declarations; 
                 AST_Statement* body;
             } function;
         };
@@ -197,8 +207,12 @@ namespace Zodiac
     AST_Declaration* ast_variable_declaration_new(Allocator* allocator, AST_Identifier* identifier,
                                                   AST_Type_Spec* type_spec,
                                                   AST_Expression* init_expr);
+    AST_Declaration* ast_parameter_declaration_new(Allocator* allocator, AST_Identifier* identifier,
+                                                   AST_Type_Spec* type_spec);
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
-                                                  AST_Type_Spec* type_spec, AST_Statement* body,
+                                                  AST_Type_Spec* type_spec, 
+                                                  Array<AST_Declaration*> parameter_declarations,
+                                                  AST_Statement* body,
                                                   bool is_naked);
 
     AST_Statement* ast_statement_new(Allocator* allocator, AST_Statement_Kind kind);

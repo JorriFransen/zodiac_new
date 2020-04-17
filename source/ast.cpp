@@ -88,14 +88,45 @@ namespace Zodiac
                     ast_create_type_spec_from_ptn(allocator, &ptn->function.prototype->self);
                 assert(ast_type);
 
+                assert(ast_type->kind == AST_Type_Spec_Kind::FUNCTION);
+                assert(ptn->function.prototype->parameters.count ==
+                       ast_type->function.parameter_type_specs.count);
+
+                Array<AST_Declaration*> ast_param_decls = {};
+                if (ast_type->function.parameter_type_specs.count)
+                {
+                    array_init(allocator, &ast_param_decls);
+                    
+                    auto& ptn_params = ptn->function.prototype->parameters;
+                    auto& ast_param_type_specs = ast_type->function.parameter_type_specs;
+
+                    for (int64_t i = 0; i < ptn_params.count; i++)
+                    {
+                        
+                        auto ast_param_ident = ast_identifier_new(allocator,
+                                                                  ptn_params[i]->identifier->atom);
+                        assert(ast_param_ident);
+
+                        auto ast_param_type_spec = ast_param_type_specs[i];
+
+                        AST_Declaration* param_decl =
+                            ast_parameter_declaration_new(allocator, ast_param_ident,
+                                                          ast_param_type_spec);
+                        assert(param_decl);
+
+                        array_append(&ast_param_decls, param_decl);
+                    }
+
+                }
+
                 AST_Statement* ast_body = ast_create_statement_from_ptn(allocator,
                                                                         ptn->function.body);
                 assert(ast_body);
 
                 bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
 
-                return ast_function_declaration_new(allocator, ast_ident, ast_type, ast_body,
-                                                   is_naked);
+                return ast_function_declaration_new(allocator, ast_ident, ast_type,
+                                                    ast_param_decls, ast_body, is_naked);
                 break;
             }
 
@@ -248,7 +279,7 @@ namespace Zodiac
                     array_init(allocator, &ast_param_types);
                     for (int64_t i = 0; i < function_ptn->parameters.count; i++)
                     {
-                        AST_Type_Spec* ast_param_type = nullptr;
+                        AST_Type_Spec* ast_param_type = 
                             ast_create_type_spec_from_ptn(allocator,
                                                           &function_ptn->parameters[i]->self);
                         assert(ast_param_type);
@@ -271,7 +302,14 @@ namespace Zodiac
                 break;
             }
 
-            case PT_Node_Kind::PARAMETER: assert(false);
+            case PT_Node_Kind::PARAMETER:
+            {
+                auto param_ptn = (Parameter_PTN*)ptn;
+                return ast_create_type_spec_from_expression_ptn(allocator,
+                                                                param_ptn->type_expression);
+                break;
+            }
+
             case PT_Node_Kind::EXPRESSION_LIST: assert(false);
             case PT_Node_Kind::DECLARATION: assert(false);
             case PT_Node_Kind::STATEMENT: assert(false);
@@ -359,15 +397,28 @@ namespace Zodiac
         return  result;
     }
 
+    AST_Declaration* ast_parameter_declaration_new(Allocator* allocator, AST_Identifier* identifier,
+                                                   AST_Type_Spec* type_spec)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::PARAMETER, identifier);
+
+        result->parameter.type_spec = type_spec;
+
+        return result;
+    }
+
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
-                                                  AST_Type_Spec* type_spec, AST_Statement* body,
-                                                  bool is_naked = false)
+                                                  AST_Type_Spec* type_spec, 
+                                                  Array<AST_Declaration*> parameter_declarations,
+                                                  AST_Statement* body,
+                                                  bool is_naked)
     {
         assert(body->kind == AST_Statement_Kind::BLOCK);
 
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::FUNCTION, identifier);
 
         result->function.type_spec = type_spec;
+        result->function.parameter_declarations = parameter_declarations;
         result->function.body = body;
 
         if (is_naked)
@@ -539,7 +590,7 @@ namespace Zodiac
             printf("#naked ");
         }
 
-        printf("%s :", ast_decl->identifier->atom.data);
+        printf("%s", ast_decl->identifier->atom.data);
 
         switch (ast_decl->kind)
         {
@@ -547,6 +598,7 @@ namespace Zodiac
 
             case AST_Declaration_Kind::VARIABLE:
             {
+                printf(" :");
                 if (ast_decl->variable.type_spec)
                 {
                     printf(" ");
@@ -563,10 +615,31 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::FUNCTION:
+            case AST_Declaration_Kind::PARAMETER:
             {
                 printf(": ");
-                ast_print_type_spec(ast_decl->function.type_spec);
+                ast_print_type_spec(ast_decl->parameter.type_spec);
+                break;
+            }
+
+            case AST_Declaration_Kind::FUNCTION:
+            {
+                printf(" :: func (");
+                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
+                {
+                    if (i > 0) printf(", ");
+                    auto param_decl = ast_decl->function.parameter_declarations[i];
+                    ast_print_declaration(param_decl, 0);
+                }
+                printf(")");
+                auto function_ts = ast_decl->function.type_spec;
+                if (function_ts->function.return_type_spec)
+                {
+                    printf(" -> ");
+                    ast_print_type_spec(function_ts->function.return_type_spec);
+                }
+                   
+                //ast_print_type_spec(ast_decl->function.type_spec);
                 ast_print_statement(ast_decl->function.body, 0);
                 printf("\n");
                 break;

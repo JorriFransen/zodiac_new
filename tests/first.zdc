@@ -12,5 +12,10 @@ posix_call_main_and_exit :: func ()
 
 main :: func () -> int
 {
-    return 1;
+    return echo(40);
+}
+
+echo :: func (val: int) -> int
+{
+    return a;
 }
