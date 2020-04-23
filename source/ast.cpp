@@ -895,6 +895,8 @@ namespace Zodiac
 
     AST_Type_Spec* ast_pointer_type_spec_new(Allocator* allocator, AST_Type_Spec* base_ts)
     {
+        assert(base_ts); 
+
         auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::POINTER);
 
         result->base_type_spec = base_ts;
@@ -953,7 +955,7 @@ namespace Zodiac
     AST_Type_Spec* ast_poly_identifier_type_spec_new(Allocator* allocator, AST_Identifier* ident,
                                                      AST_Identifier* spec_ident)
     {
-        auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::TEMPLATED);
+        auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::POLY_IDENTIFIER);
 
         result->poly_identifier.identifier = ident;
         result->poly_identifier.specification_identifier = spec_ident;
@@ -987,7 +989,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Node_Kind::IDENTIFIER: assert(false);
+            case AST_Node_Kind::IDENTIFIER:
+            {
+                auto ident = (AST_Identifier*)ast_node;
+                printf("%s", ident->atom.data);
+                break;
+            }
+
             case AST_Node_Kind::DECLARATION: assert(false);
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
@@ -997,6 +1005,12 @@ namespace Zodiac
 
     void ast_print_declaration(AST_Declaration* ast_decl, uint64_t indent)
     {
+        if (ast_decl->kind == AST_Declaration_Kind::FUNCTION ||
+            ast_decl->kind == AST_Declaration_Kind::STRUCTURE)
+        {
+            printf("\n");
+        }
+
         ast_print_indent(indent);
 
         if (ast_decl->flags & AST_DECL_FLAG_IS_NAKED)
@@ -1014,7 +1028,7 @@ namespace Zodiac
             {
                 printf(" :: import ");
                 ast_print_expression(ast_decl->import.ident_expression, 0);
-                printf(";\n\n");
+                printf(";\n");
                 break;
             }
 
@@ -1026,7 +1040,10 @@ namespace Zodiac
                 {
                     printf(" ");
                     ast_print_type_spec(ast_decl->variable.type_spec);
-                    printf(" ");
+                    if (ast_decl->variable.init_expression)
+                    {
+                        printf(" ");
+                    }
                 }
                 
                 if (ast_decl->variable.init_expression)
@@ -1035,17 +1052,18 @@ namespace Zodiac
                     else printf(": ");
 
                     ast_print_expression(ast_decl->variable.init_expression, 0);
-                    printf(";\n");
-
-                    if (ast_decl->kind == AST_Declaration_Kind::CONSTANT) printf("\n");
                 }
+                printf(";\n");
                 break;
             }
 
             case AST_Declaration_Kind::PARAMETER:
             {
-                printf(": ");
-                ast_print_type_spec(ast_decl->parameter.type_spec);
+                if (ast_decl->parameter.type_spec)
+                {
+                    printf(": ");
+                    ast_print_type_spec(ast_decl->parameter.type_spec);
+                }
                 break;
             }
 
@@ -1067,14 +1085,34 @@ namespace Zodiac
                 }
                    
                 //ast_print_type_spec(ast_decl->function.type_spec);
-                ast_print_statement(ast_decl->function.body, 0);
-                printf("\n");
+                ast_print_statement(ast_decl->function.body, indent);
                 break;
             }
 
             case AST_Declaration_Kind::STRUCTURE:
             {
-                assert(false);
+                printf(" :: struct");
+                if (ast_decl->structure.parameters.count)
+                {
+                    printf("(");
+                    for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++)
+                    {
+                        if (i > 0) printf(", ");
+                        auto param_decl = ast_decl->structure.parameters[i];
+                        ast_print_declaration(param_decl, 0);
+                    }
+                    printf(")");
+                }
+                printf("\n");
+                ast_print_indent(indent);
+                printf("{\n");
+                for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
+                {
+                    auto mem_decl = ast_decl->structure.member_declarations[i];
+                    ast_print_declaration(mem_decl, indent + 1);
+                }
+                ast_print_indent(indent);
+                printf("}\n");
                 break;
             }
         }
@@ -1090,19 +1128,24 @@ namespace Zodiac
 
             case AST_Statement_Kind::BLOCK:
             {
-                printf("\n{\n");
+                printf("\n");
+                ast_print_indent(indent);
+                printf("{\n");
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
                 {
                     ast_print_statement(ast_stmt->block.statements[i], indent + 1);
-                    printf("\n");
                 }
+                ast_print_indent(indent);
                 printf("}\n");
                 break;  
             }
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                assert(false);
+                ast_print_expression(ast_stmt->assignment.identifier_expression, 0);
+                printf(" = ");
+                ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
+                printf("\n");
                 break;
             }
 
@@ -1113,7 +1156,7 @@ namespace Zodiac
                 {
                     printf(" ");
                     ast_print_expression(ast_stmt->expression, 0);
-                    printf(";");
+                    printf(";\n");
                 }
                 break;
             }
@@ -1127,7 +1170,7 @@ namespace Zodiac
             case AST_Statement_Kind::EXPRESSION:
             {
                 ast_print_expression(ast_stmt->expression, 0);
-                printf(";");
+                printf(";\n");
             }
         } 
     }
@@ -1146,13 +1189,14 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::POINTER:
             {
-                assert(false);
+                printf("*");
+                ast_print_type_spec(type_spec->base_type_spec);
                 break; 
             }
 
             case AST_Type_Spec_Kind::DOT:
             {
-                assert(false);
+                ast_print_expression(type_spec->dot_expression, 0);
                 break; 
             }
 
@@ -1175,19 +1219,33 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::ARRAY:
             {
-                assert(false);
+                printf("[]");
+                ast_print_type_spec(type_spec->array.element_type_spec);
                 break;
             }
 
             case AST_Type_Spec_Kind::TEMPLATED:
             {
-                assert(false);
+                ast_print_expression(type_spec->templated.ident_expression, 0);
+                printf("(");
+                for (int64_t i = 0; i < type_spec->templated.argument_expressions.count; i++)
+                {
+                    if (i > 0) printf(", ");
+                    ast_print_expression(type_spec->templated.argument_expressions[i], 0);
+                }
+                printf(")");
                 break;
             }
 
             case AST_Type_Spec_Kind::POLY_IDENTIFIER:
             {
-                assert(false);
+                printf("$");
+                ast_print(type_spec->poly_identifier.identifier);
+                if (type_spec->poly_identifier.specification_identifier)
+                {
+                    printf("/");
+                    ast_print(type_spec->poly_identifier.specification_identifier);
+                }
                 break;
             }
         }
@@ -1209,7 +1267,12 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER:
             {
-                assert(false);
+                printf("$");
+                ast_print(ast_expr->poly_identifier.identifier);
+                if (ast_expr->poly_identifier.specification_identifier)
+                {
+                    assert(false);
+                }
                 break;
             }
 
@@ -1226,8 +1289,8 @@ namespace Zodiac
                 switch (ast_expr->binary.op)
                 {
                     case BINOP_INVALID: assert(false);
-                    case BINOP_ADD: printf(" + ");
-                    case BINOP_SUB: printf(" - ");
+                    case BINOP_ADD: printf(" + "); break;
+                    case BINOP_SUB: printf(" - "); break;
                 }
                 ast_print_expression(ast_expr->binary.rhs, 0);
                 break;
@@ -1235,7 +1298,13 @@ namespace Zodiac
 
             case AST_Expression_Kind::UNARY:
             {
-                assert(false);
+                switch(ast_expr->unary.op)
+                {
+                    case UNOP_INVALID: assert(false); break;
+                    case UNOP_DEREF: printf("<"); break;
+                }
+
+                ast_print_expression(ast_expr->unary.operand_expression, 0);
                 break;
             }
 
@@ -1254,7 +1323,20 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND:
             {
-                assert(false);
+                if (ast_expr->compound.type_spec)
+                {
+                    ast_print_type_spec(ast_expr->compound.type_spec);
+                    printf(" ");
+                }
+                printf("{");
+                for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++)
+                {
+                    if (i > 0) printf(", ");
+                    else printf(" ");
+
+                    ast_print_expression(ast_expr->compound.expressions[i], 0);
+                }
+                printf(" }");
                 break;
             }
 
