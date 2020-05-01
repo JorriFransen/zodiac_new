@@ -6,16 +6,18 @@
 
 posix_call_main_and_exit :: func ()
 {
-    exit_code := main();
-    @exit(exit_code);
+    //exit_code := main();
+    //@exit(exit_code);
+
+    @exit(41);
 }
 
-main :: func () -> int
-{
-    return echo(40);
-}
+//main :: func () -> int
+//{
+    //return echo(40);
+//}
 
-echo :: func (val: int) -> int
-{
-    return a;
-}
+//echo :: func (val: int) -> int
+//{
+    //return a;
+//}

@@ -1310,6 +1310,10 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL: 
             {
+                if (ast_expr->call.is_builtin)
+                {
+                    printf("@");
+                }
                 ast_print_expression(ast_expr->call.ident_expression, 0);
                 printf("(");
                 for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)

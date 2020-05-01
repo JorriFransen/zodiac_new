@@ -663,7 +663,12 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
 
         case Expression_PTN_Kind::CALL:
         {
-            print_expression_ptn(expression->call.ident_expression, indent);
+            print_indent(indent);
+            if (expression->call.is_builtin)
+            {
+                printf("@");
+            }
+            print_expression_ptn(expression->call.ident_expression, 0);
             printf("(");
             if (expression->call.arg_list)
             {
