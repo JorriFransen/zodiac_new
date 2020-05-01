@@ -27,4 +27,10 @@ const String string_ref(const char* cstr)
     return result;
 }
 
+const String string_ref(const char* cstr, int64_t length)
+{
+    String result = { (char*)cstr, length };
+    return result;
+}
+
 }

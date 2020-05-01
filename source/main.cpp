@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "c_allocator.h"
 #include "ast.h"
+#include "scope.h"
 
 #include <stdio.h>
 #include <cassert>
@@ -42,8 +43,10 @@ int main(int argc, char** argv)
     assert(ast_root);
     ast_print(ast_root);
 
+    scope_populate_ast(ca,ast_root);
+
     printf("\nSCOPE DUMP:\n");
-    ast_print_scope(ast_root);
+    ast_print_scope(ca, ast_root);
 
     return 0;
 }

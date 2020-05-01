@@ -6,6 +6,8 @@
 namespace Zodiac
 {
     struct Allocator;
+    struct String;
+    struct String_Builder;
 
     struct PT_Node;
     struct Declaration_PTN;
@@ -18,6 +20,7 @@ namespace Zodiac
         Array<Declaration_PTN*> declarations = {};
     };
 
+    struct Scope;
 
     struct AST_Node;
     struct AST_Module;

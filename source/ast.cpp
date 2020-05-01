@@ -2,6 +2,8 @@
 #include "ast.h"
 
 #include "parse_tree_node.h"
+#include "string_builder.h"
+#include "scope.h"
 
 #include <cassert>
 
@@ -1356,5 +1358,45 @@ namespace Zodiac
                 break;
             }
         }
+    }
+
+    void ast_print_scope(Allocator* allocator, AST_Node* anode)
+    {
+        assert(anode);
+
+        String_Builder sb = {};
+        string_builder_init(allocator, &sb);
+
+        ast_print_scope(allocator, &sb, anode);
+
+        string_builder_free(&sb);
+    }
+
+    void ast_print_scope(Allocator* allocator, String_Builder* sb, AST_Node* anode)
+    {
+        assert(allocator);
+        assert(sb);
+
+        switch (anode->kind)
+        {
+            case AST_Node_Kind::INVALID: assert(false);
+
+            case AST_Node_Kind::MODULE:
+            {
+                auto ast_module = static_cast<AST_Module*>(anode);
+                scope_print(sb, ast_module->module_scope);
+                break;
+            }
+
+            case AST_Node_Kind::IDENTIFIER: assert(false);
+            case AST_Node_Kind::DECLARATION: assert(false);
+            case AST_Node_Kind::STATEMENT: assert(false);
+            case AST_Node_Kind::EXPRESSION: assert(false);
+            case AST_Node_Kind::TYPE_SPEC: assert(false);
+        }
+
+        auto str = string_builder_to_string(allocator, sb);
+        printf("%s\n", str.data);
+        free(allocator, str.data);
     }
 }

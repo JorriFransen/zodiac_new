@@ -21,6 +21,8 @@ set (ZODIAC_COMPILER_SOURCE
     source/temp_allocator.cpp
     source/token.cpp
     source/token_stream.cpp
+    source/scope.cpp
+    source/string_builder.cpp
     source/zodiac_string.cpp
 )
 
