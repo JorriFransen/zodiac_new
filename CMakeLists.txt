@@ -18,7 +18,6 @@ set (ZODIAC_COMPILER_SOURCE
     source/os_linux.cpp
     source/parser.cpp
     source/parse_tree_node.cpp
-    source/resolver.cpp
     source/temp_allocator.cpp
     source/token.cpp
     source/token_stream.cpp

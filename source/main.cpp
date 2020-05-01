@@ -4,7 +4,6 @@
 #include "parser.h"
 #include "c_allocator.h"
 #include "ast.h"
-#include "resolver.h"
 
 #include <stdio.h>
 #include <cassert>
@@ -43,12 +42,8 @@ int main(int argc, char** argv)
     assert(ast_root);
     ast_print(ast_root);
 
-    Resolve_Result rr = resolver_resolve_ast_node(ast_root);
-    if (rr.error_count)
-    {
-        fprintf(stderr, "Errors found...\n");
-        return -1;
-    }
+    printf("\nSCOPE DUMP:\n");
+    ast_print_scope(ast_root);
 
     return 0;
 }
