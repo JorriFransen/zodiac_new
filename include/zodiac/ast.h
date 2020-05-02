@@ -105,6 +105,9 @@ namespace Zodiac
             {
                 Array<AST_Declaration*> member_declarations;
                 Array<AST_Declaration*> parameters;
+
+                Scope *parameter_scope;
+                Scope *member_scope;
             } structure;
         };
     };

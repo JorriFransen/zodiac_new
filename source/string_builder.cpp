@@ -74,18 +74,20 @@ namespace Zodiac
     {
         auto block = sb->current_block;
         auto block_rem = block->capacity - block->used;
+
         auto size_for_cur_block = min(block_rem, length);
 
         if (size_for_cur_block > 0)
         {
             string_builder_append_to_block(block, cstr, size_for_cur_block);
         }
+        else assert(size_for_cur_block == 0);
 
         auto rem = length - size_for_cur_block;
 
         if (rem > 0)
         {
-            auto new_block_cap = max(block->capacity, rem);
+            auto new_block_cap = max(block->capacity * 2, rem);
             string_builder_push_new_block(sb, new_block_cap);
             string_builder_append_to_block(sb->current_block, cstr + size_for_cur_block, rem);
         }

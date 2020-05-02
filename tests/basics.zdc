@@ -65,88 +65,88 @@ Vec2 :: struct
     }
 }
 
- main :: func (args: []std.String) -> int
- {
-     p1 : Vec2;
-     p1.x = 1;
-     p1.y = 2;
-
-     fmt.print("p1: {}\n", p1);
- 
-     p2 : Vec2 = { 3, 4 };
-     fmt.print("p2: {}\n", p2);
- 
-     p3 := Vec2 { 5, 6 };
-     fmt.print("p3: {}\n", p3);
- 
-     p4 := Vec2.add(p1, p2);
-     fmt.print("p4: {} (=Vec2.add(p1, p2))\n", p4);
- 
-     fmt.print("p3.add(p4) = {}\n", p3.add(p4));
-     fmt.print("p3: {}\n", p3);
- 
-     return 0;
- }
-
-Vec3 :: struct
-{
-    x, y, z : float;
-}
-
-
-Vec3 :: struct(T: Type)
-{
-    x, y, z : T;
-
-    add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
-    {
-        return { a.x + b.x, a.y + b.y, a.z + b.z };
-    }
-}
-
-vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
-{
-    return { a.x - b.x, a.y - b.y, a.z - b.z };
-}
-
-Array :: struct(Element_Type)
-{
-    data     : *Element_Type;
-    count    : s64;
-    capacity : s64;
-}
-
-array_add1 :: func (array: *Array($T), elem: T)
-{
-}
-
-array_add2 :: func (array: *$T/Array, elem: array.Element_Type)
-{
-}
-
-array_add3 :: func (array: *$T/Array, elem: T.Element_Type)
-{
-}
-
-array_add4 :: func (array: *Array, elem: array.Element_Type)
-{
-}
-
-array_add5 :: func (array: *Array, elem: Array.Element_Type)
-{
-}
-
 main :: func (args: []std.String) -> int
 {
-    p1 : Vec3(float) = { 1, 2, 3 };
-    p2 := Vec3(float) { 4, 5, 6 };
+    p1 : Vec2;
+    p1.x = 1;
+    p1.y = 2;
 
-    fmt.print(p1);
-    fmt.print(p2);
-    fmt.print(p1.add(p1, p2));
-    fmt.print(Vec3(float).add(p1, p2));
-    fmt.print(Vec3.add(p1, p2));
-    fmt.print(vec3_sub(p2, p1));
+    fmt.print("p1: {}\n", p1);
+
+    p2 : Vec2 = { 3, 4 };
+    fmt.print("p2: {}\n", p2);
+
+    p3 := Vec2 { 5, 6 };
+    fmt.print("p3: {}\n", p3);
+
+    p4 := Vec2.add(p1, p2);
+    //fmt.print("p4: {} (=Vec2.add(p1, p2))\n", p4);
+
+    //fmt.print("p3.add(p4) = {}\n", p3.add(p4));
+    //fmt.print("p3: {}\n", p3);
 
     return 0;
 }
+
+//Vec3 :: struct
+//{
+    //x, y, z : float;
+//}
+
+
+//Vec3 :: struct(T: Type)
+//{
+    //x, y, z : T;
+
+    //add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
+    //{
+        //return { a.x + b.x, a.y + b.y, a.z + b.z };
+    //}
+//}
+
+//vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
+//{
+    //return { a.x - b.x, a.y - b.y, a.z - b.z };
+//}
+
+//Array :: struct(Element_Type)
+//{
+    //data     : *Element_Type;
+    //count    : s64;
+    //capacity : s64;
+//}
+
+//array_add1 :: func (array: *Array($T), elem: T)
+//{
+//}
+
+//array_add2 :: func (array: *$T/Array, elem: array.Element_Type)
+//{
+//}
+
+//array_add3 :: func (array: *$T/Array, elem: T.Element_Type)
+//{
+//}
+
+//array_add4 :: func (array: *Array, elem: array.Element_Type)
+//{
+//}
+
+//array_add5 :: func (array: *Array, elem: Array.Element_Type)
+//{
+//}
+
+//main :: func (args: []std.String) -> int
+//{
+    //p1 : Vec3(float) = { 1, 2, 3 };
+    //p2 := Vec3(float) { 4, 5, 6 };
+
+    //fmt.print(p1);
+    //fmt.print(p2);
+    //fmt.print(p1.add(p1, p2));
+    //fmt.print(Vec3(float).add(p1, p2));
+    //fmt.print(Vec3.add(p1, p2));
+    //fmt.print(vec3_sub(p2, p1));
+
+    //return 0;
+//}

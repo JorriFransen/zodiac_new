@@ -713,6 +713,9 @@ namespace Zodiac
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
 
+        result->structure.parameter_scope = nullptr;
+        result->structure.member_scope = nullptr;
+
         return result;
     }
 
@@ -1417,15 +1420,24 @@ namespace Zodiac
         switch (ast_decl->kind)
         {
             case AST_Declaration_Kind::INVALID: assert(false);
-            case AST_Declaration_Kind::IMPORT: assert(false);
 
-            case AST_Declaration_Kind::VARIABLE:
+            case AST_Declaration_Kind::IMPORT:
             {
-                string_builder_append(sb, " (var)");
+                string_builder_append(sb, " (import)");
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                string_builder_append(sb, " (variable)");
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                string_builder_append(sb, " (constant)");
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER:
             {
@@ -1441,7 +1453,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+            case AST_Declaration_Kind::STRUCTURE:
+            {
+                string_builder_append(sb, " (struct)\n");
+                if (ast_decl->structure.parameter_scope->first_block.decl_count > 0)
+                {
+                    assert(false);
+                }
+                scope_print(sb, ast_decl->structure.member_scope, indent);
+                break;
+            }
         }
     }
 

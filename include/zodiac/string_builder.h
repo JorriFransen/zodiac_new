@@ -5,6 +5,7 @@
 
 namespace Zodiac
 {
+    
     struct String_Builder_Block;
     struct String_Builder
     {
