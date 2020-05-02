@@ -94,9 +94,11 @@ namespace Zodiac
 
             struct 
             {
-                AST_Type_Spec* type_spec;
+                AST_Type_Spec *type_spec;
                 Array<AST_Declaration*> parameter_declarations; 
-                AST_Statement* body;
+                AST_Statement *body;
+
+                Scope *parameter_scope;
             } function;
 
             struct
@@ -129,18 +131,19 @@ namespace Zodiac
 
         union
         {
-            AST_Declaration* declaration;
-            AST_Expression* expression;
+            AST_Declaration *declaration;
+            AST_Expression *expression;
 
             struct
             {
                 Array<AST_Statement*> statements;
+                Scope *scope;
             } block;
 
             struct
             {
-                AST_Expression* identifier_expression;
-                AST_Expression* rhs_expression;
+                AST_Expression *identifier_expression;
+                AST_Expression *rhs_expression;
             } assignment;
         };
     };
@@ -368,6 +371,7 @@ namespace Zodiac
     void ast_print_expression(AST_Expression* ast_expr, uint64_t indent);
     void ast_print_type_spec(AST_Type_Spec* type_spec);
 
-    void ast_print_scope(Allocator* allocator, AST_Node* anode);
-    void ast_print_scope(Allocator* allocator, String_Builder* sb, AST_Node* anode);
+    void ast_print_scope(Allocator *allocator, AST_Node *anode);
+    void ast_print_scope(String_Builder* sb, AST_Node *anode, int64_t indent = 0);
+    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl, int64_t indent);
 }

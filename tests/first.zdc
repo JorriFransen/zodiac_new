@@ -19,5 +19,6 @@ main :: func () -> int
 
 echo :: func (val: int) -> int
 {
-    return a;
+    result := val;
+    return result;
 }

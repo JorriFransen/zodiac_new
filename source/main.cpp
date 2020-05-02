@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     assert(ast_root);
     ast_print(ast_root);
 
-    scope_populate_ast(ca,ast_root);
+    scope_populate_ast(ca, ast_root, nullptr);
 
     printf("\nSCOPE DUMP:\n");
     ast_print_scope(ca, ast_root);

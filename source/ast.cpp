@@ -693,6 +693,7 @@ namespace Zodiac
         result->function.type_spec = type_spec;
         result->function.parameter_declarations = parameter_declarations;
         result->function.body = body;
+        result->function.parameter_scope = nullptr;
 
         if (is_naked)
         {
@@ -729,6 +730,7 @@ namespace Zodiac
         auto result = ast_statement_new(allocator, AST_Statement_Kind::BLOCK);
 
         result->block.statements = statements;
+        result->block.scope = nullptr;
 
         return result;
     }
@@ -1367,16 +1369,17 @@ namespace Zodiac
         String_Builder sb = {};
         string_builder_init(allocator, &sb);
 
-        ast_print_scope(allocator, &sb, anode);
+        ast_print_scope(&sb, anode);
+
+        auto str = string_builder_to_string(allocator, &sb);
+        printf("%s\n", str.data);
+        free(allocator, str.data);
 
         string_builder_free(&sb);
     }
 
-    void ast_print_scope(Allocator* allocator, String_Builder* sb, AST_Node* anode)
+    void ast_print_scope(String_Builder *sb, AST_Node *anode, int64_t indent/*=0*/)
     {
-        assert(allocator);
-        assert(sb);
-
         switch (anode->kind)
         {
             case AST_Node_Kind::INVALID: assert(false);
@@ -1384,19 +1387,62 @@ namespace Zodiac
             case AST_Node_Kind::MODULE:
             {
                 auto ast_module = static_cast<AST_Module*>(anode);
-                scope_print(sb, ast_module->module_scope);
+                scope_print(sb, ast_module->module_scope, indent);
                 break;
             }
 
             case AST_Node_Kind::IDENTIFIER: assert(false);
-            case AST_Node_Kind::DECLARATION: assert(false);
+
+            case AST_Node_Kind::DECLARATION:
+            {
+                auto ast_decl = static_cast<AST_Declaration*>(anode);
+                ast_print_declaration_scopes(sb, ast_decl, indent);
+                break;
+            }
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
         }
-
-        auto str = string_builder_to_string(allocator, sb);
-        printf("%s\n", str.data);
-        free(allocator, str.data);
     }
+
+    void ast_print_scope_indent(String_Builder *sb, int64_t indent)
+    {
+        for (int64_t i = 0; i < indent; i ++) string_builder_append(sb, "    ");
+    }
+
+    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl, int64_t indent)
+    {
+        assert(sb);
+        switch (ast_decl->kind)
+        {
+            case AST_Declaration_Kind::INVALID: assert(false);
+            case AST_Declaration_Kind::IMPORT: assert(false);
+
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                string_builder_append(sb, " (var)");
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER:
+            {
+                string_builder_append(sb, " (param)");
+                break;
+            }
+
+            case AST_Declaration_Kind::FUNCTION:
+            {
+                string_builder_append(sb, " (func)\n");
+                scope_print(sb, ast_decl->function.parameter_scope, indent);
+                scope_print(sb, ast_decl->function.body->block.scope, indent);
+                break;
+            }
+
+            case AST_Declaration_Kind::STRUCTURE: assert(false);
+        }
+    }
+
 }
