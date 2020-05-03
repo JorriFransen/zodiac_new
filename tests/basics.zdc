@@ -80,34 +80,34 @@ main :: func (args: []std.String) -> int
     fmt.print("p3: {}\n", p3);
 
     p4 := Vec2.add(p1, p2);
-    //fmt.print("p4: {} (=Vec2.add(p1, p2))\n", p4);
+    fmt.print("p4: {} (=Vec2.add(p1, p2))\n", p4);
 
-    //fmt.print("p3.add(p4) = {}\n", p3.add(p4));
-    //fmt.print("p3: {}\n", p3);
+    fmt.print("p3.add(p4) = {}\n", p3.add(p4));
+    fmt.print("p3: {}\n", p3);
 
     return 0;
 }
 
-//Vec3 :: struct
-//{
-    //x, y, z : float;
-//}
+Vec3 :: struct
+{
+    x, y, z : float;
+}
 
 
-//Vec3 :: struct(T: Type)
-//{
-    //x, y, z : T;
+Vec3 :: struct(T: Type)
+{
+    x, y, z : T;
 
-    //add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
-    //{
-        //return { a.x + b.x, a.y + b.y, a.z + b.z };
-    //}
-//}
+    add :: func (a: Vec3(T), b: Vec3(T)) -> Vec3(T)
+    {
+        return { a.x + b.x, a.y + b.y, a.z + b.z };
+    }
+}
 
-//vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
-//{
-    //return { a.x - b.x, a.y - b.y, a.z - b.z };
-//}
+vec3_sub :: func (a: Vec3($T), b: Vec3(T)) -> Vec3(T)
+{
+    return { a.x - b.x, a.y - b.y, a.z - b.z };
+}
 
 //Array :: struct(Element_Type)
 //{

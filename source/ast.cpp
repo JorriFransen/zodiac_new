@@ -1456,9 +1456,9 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE:
             {
                 string_builder_append(sb, " (struct)\n");
-                if (ast_decl->structure.parameter_scope->first_block.decl_count > 0)
+                if (ast_decl->structure.parameters.count > 0)
                 {
-                    assert(false);
+                    scope_print(sb, ast_decl->structure.parameter_scope, indent);
                 }
                 scope_print(sb, ast_decl->structure.member_scope, indent);
                 break;

@@ -48,7 +48,7 @@ namespace Zodiac
         String_Builder_Block *block = (String_Builder_Block*)mem;
         assert(block);
 
-        block->buf = (uint8_t*)(block + sizeof(String_Builder_Block));
+        block->buf = ((uint8_t*)block) + sizeof(String_Builder_Block);
         block->used = 0;
         block->capacity = capacity;
         block->next = nullptr;

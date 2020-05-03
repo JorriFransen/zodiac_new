@@ -27,7 +27,8 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < ast_module->declarations.count; i++)
                 {
-                    scope_populate_ast(allocator, ast_module->declarations[i], ast_module->module_scope);
+                    scope_populate_ast(allocator, ast_module->declarations[i],
+                                       ast_module->module_scope);
                 }
 
                 break;
@@ -48,7 +49,8 @@ namespace Zodiac
         }
     }
 
-    void scope_populate_declaration_ast(Allocator *allocator, AST_Declaration *ast_decl, Scope *parent_scope)
+    void scope_populate_declaration_ast(Allocator *allocator, AST_Declaration *ast_decl,
+                                        Scope *parent_scope)
     {
         assert(allocator);
 
@@ -99,12 +101,6 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++)
                 {
-                    scope_add_declaration(allocator, ast_decl->structure.parameter_scope,
-                                          ast_decl->structure.parameters[i]);
-                }
-
-                for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++)
-                {
                     scope_populate_ast(allocator, ast_decl->structure.parameters[i],
                                        ast_decl->structure.parameter_scope);
                 }
@@ -123,7 +119,8 @@ namespace Zodiac
         }
     }
 
-    void scope_populate_statement_ast(Allocator *allocator, AST_Statement *ast_stmt, Scope *parent_scope)
+    void scope_populate_statement_ast(Allocator *allocator, AST_Statement *ast_stmt,
+                                      Scope *parent_scope)
     {
         assert(parent_scope);
 
@@ -258,7 +255,8 @@ namespace Zodiac
 
     Scope *scope_new(Allocator* allocator, Scope_Kind kind, Scope *parent, int64_t initial_cap/*=4*/)
     {
-        auto mem = (uint8_t*)alloc(allocator, sizeof(Scope) + (initial_cap * sizeof(AST_Declaration*)));
+        auto mem = (uint8_t*)alloc(allocator,
+                                   sizeof(Scope) + (initial_cap * sizeof(AST_Declaration*)));
         assert(mem);
 
         if (parent == nullptr) assert(kind == Scope_Kind::MODULE);
@@ -275,7 +273,6 @@ namespace Zodiac
 
         return result;
     }
-
 
     void scope_print_indent(String_Builder *sb, int64_t indent)
     {
