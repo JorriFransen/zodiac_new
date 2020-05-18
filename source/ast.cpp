@@ -433,7 +433,11 @@ namespace Zodiac
                     assert(ast_spec_ident);
                 }
 
-                return ast_poly_identifier_expression_new(allocator, ast_ident, ast_spec_ident);
+                AST_Declaration *poly_type_decl = ast_poly_type_declaration_new(allocator,
+                                                                                ast_ident,
+                                                                                ast_spec_ident);
+                assert(poly_type_decl);
+                return ast_poly_identifier_expression_new(allocator, poly_type_decl);
                 break;
             }
         }
@@ -719,6 +723,17 @@ namespace Zodiac
         return result;
     }
 
+    AST_Declaration* ast_poly_type_declaration_new(Allocator* allocator,
+                                                   AST_Identifier* identifier,
+                                                   AST_Identifier* spec_ident)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::POLY_TYPE, identifier);
+
+        result->poly_type.specification_identifier = spec_ident;
+
+        return result;
+    }
+
     AST_Statement* ast_statement_new(Allocator* allocator, AST_Statement_Kind kind)
     {
         auto result = ast_node_new<AST_Statement>(allocator);
@@ -795,13 +810,12 @@ namespace Zodiac
         return result;
     }
 
-    AST_Expression* ast_poly_identifier_expression_new(Allocator* allocator, AST_Identifier* ident,
-                                                       AST_Identifier* specification_identifier)
+    AST_Expression* ast_poly_identifier_expression_new(Allocator* allocator,
+                                                       AST_Declaration *poly_type_decl)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::POLY_IDENTIFIER);
 
-        result->poly_identifier.identifier = ident;
-        result->poly_identifier.specification_identifier = specification_identifier;
+        result->poly_identifier.poly_type_decl = poly_type_decl;
 
         return result;
     }
@@ -1003,7 +1017,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Node_Kind::DECLARATION: assert(false);
+            case AST_Node_Kind::DECLARATION:
+            {
+                auto ast_decl = static_cast<AST_Declaration*>(ast_node);
+                ast_print_declaration(ast_decl, 0);
+                break;
+            }
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
@@ -1023,6 +1043,11 @@ namespace Zodiac
         if (ast_decl->flags & AST_DECL_FLAG_IS_NAKED)
         {
             printf("#naked ");
+        }
+
+        if (ast_decl->kind == AST_Declaration_Kind::POLY_TYPE)
+        {
+            printf("$");
         }
 
         printf("%s", ast_decl->identifier->atom.data);
@@ -1120,6 +1145,16 @@ namespace Zodiac
                 }
                 ast_print_indent(indent);
                 printf("}\n");
+                break;
+            }
+
+            case AST_Declaration_Kind::POLY_TYPE:
+            {
+                if (ast_decl->poly_type.specification_identifier)
+                {
+                    printf("/");
+                    ast_print(ast_decl->poly_type.specification_identifier);
+                }
                 break;
             }
         }
@@ -1274,12 +1309,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER:
             {
-                printf("$");
-                ast_print(ast_expr->poly_identifier.identifier);
-                if (ast_expr->poly_identifier.specification_identifier)
-                {
-                    assert(false);
-                }
+                ast_print(ast_expr->poly_identifier.poly_type_decl);
                 break;
             }
 
@@ -1461,6 +1491,12 @@ namespace Zodiac
                     scope_print(sb, ast_decl->structure.parameter_scope, indent);
                 }
                 scope_print(sb, ast_decl->structure.member_scope, indent);
+                break;
+            }
+
+            case AST_Declaration_Kind::POLY_TYPE:
+            {
+                string_builder_append(sb, " (poly_param)");
                 break;
             }
         }

@@ -65,7 +65,11 @@ namespace Zodiac
             case AST_Declaration_Kind::CONSTANT:
             case AST_Declaration_Kind::PARAMETER: 
             {
-                // Do nothing for now
+                if (ast_decl->parameter.type_spec)
+                {
+                    scope_populate_type_spec_ast(allocator, ast_decl->parameter.type_spec,
+                                                 parent_scope);
+                }
                 break;
             }
 
@@ -116,6 +120,12 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Declaration_Kind::POLY_TYPE:
+            {
+                //
+                break;
+            }
         }
     }
 
@@ -143,8 +153,10 @@ namespace Zodiac
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                scope_populate_expression_ast(allocator, ast_stmt->assignment.identifier_expression);
-                scope_populate_expression_ast(allocator, ast_stmt->assignment.rhs_expression);
+                scope_populate_expression_ast(allocator, ast_stmt->assignment.identifier_expression,
+                                              parent_scope);
+                scope_populate_expression_ast(allocator, ast_stmt->assignment.rhs_expression,
+                                              parent_scope);
                 break;
             }
 
@@ -152,7 +164,7 @@ namespace Zodiac
             {
                 if (ast_stmt->expression)
                 {
-                    scope_populate_expression_ast(allocator, ast_stmt->expression);
+                    scope_populate_expression_ast(allocator, ast_stmt->expression, parent_scope);
                 }
                 break;
             }
@@ -165,14 +177,15 @@ namespace Zodiac
 
             case AST_Statement_Kind::EXPRESSION:
             {
-                scope_populate_expression_ast(allocator, ast_stmt->expression);
+                scope_populate_expression_ast(allocator, ast_stmt->expression, parent_scope);
                 break;
             }
 
         }
     }
 
-    void scope_populate_expression_ast(Allocator* allocator, AST_Expression *ast_expr)
+    void scope_populate_expression_ast(Allocator* allocator, AST_Expression *ast_expr,
+                                       Scope *parent_scope)
     {
         assert(allocator);
 
@@ -182,24 +195,31 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER: break;
 
-            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Expression_Kind::POLY_IDENTIFIER:
+            {
+                scope_populate_declaration_ast(allocator, ast_expr->poly_identifier.poly_type_decl,
+                                               parent_scope);
+                break;
+            }
 
             case AST_Expression_Kind::DOT:
             {
-                scope_populate_expression_ast(allocator, ast_expr->dot.parent_expression);
+                scope_populate_expression_ast(allocator, ast_expr->dot.parent_expression,
+                                              parent_scope);
                 break;
             }
 
             case AST_Expression_Kind::BINARY:
             {
-                scope_populate_expression_ast(allocator, ast_expr->binary.lhs);
-                scope_populate_expression_ast(allocator, ast_expr->binary.rhs);
+                scope_populate_expression_ast(allocator, ast_expr->binary.lhs, parent_scope);
+                scope_populate_expression_ast(allocator, ast_expr->binary.rhs, parent_scope);
                 break;
             }
 
             case AST_Expression_Kind::UNARY: 
             {
-                scope_populate_expression_ast(allocator, ast_expr->unary.operand_expression);
+                scope_populate_expression_ast(allocator, ast_expr->unary.operand_expression,
+                                              parent_scope);
                 break;
             }
 
@@ -210,7 +230,8 @@ namespace Zodiac
                 for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++)
                 {
                     assert(ast_expr->compound.expressions[i]);
-                    scope_populate_expression_ast(allocator, ast_expr->compound.expressions[i]);
+                    scope_populate_expression_ast(allocator, ast_expr->compound.expressions[i],
+                                                  parent_scope);
                 }
                 break;
             }
@@ -218,6 +239,56 @@ namespace Zodiac
             case AST_Expression_Kind::NUMBER_LITERAL: break;
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
 
+        }
+    }
+ 
+    void scope_populate_type_spec_ast(Allocator *allocator, AST_Type_Spec *type_spec,
+                                      Scope *parent_scope)
+    {
+        assert(allocator);
+        assert(parent_scope);
+
+        switch (type_spec->kind)
+        {
+            case AST_Type_Spec_Kind::INVALID: assert(false);
+
+            case AST_Type_Spec_Kind::IDENTIFIER: break;
+
+            case AST_Type_Spec_Kind::POINTER:
+            {
+                scope_populate_type_spec_ast(allocator, type_spec->base_type_spec, parent_scope);
+                break;
+            }
+
+            case AST_Type_Spec_Kind::DOT:
+            {
+                scope_populate_expression_ast(allocator, type_spec->dot_expression, parent_scope);
+                break;
+            }
+
+            case AST_Type_Spec_Kind::FUNCTION: assert(false);
+
+            case AST_Type_Spec_Kind::ARRAY:
+            {
+                scope_populate_type_spec_ast(allocator, type_spec->array.element_type_spec,
+                                             parent_scope);
+                break;
+            }
+
+            case AST_Type_Spec_Kind::TEMPLATED:
+            {
+                scope_populate_expression_ast(allocator, type_spec->templated.ident_expression,
+                                              parent_scope);
+                for (int64_t i = 0; i < type_spec->templated.argument_expressions.count; i++)
+                {
+                    scope_populate_expression_ast(allocator,
+                                                  type_spec->templated.argument_expressions[i],
+                                                  parent_scope);
+                }
+                break;
+            }
+
+            case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
         }
     }
 
@@ -240,7 +311,8 @@ namespace Zodiac
 
         auto new_cap = scope->current_block->decl_cap * 2; 
 
-        auto mem = (uint8_t*)alloc(allocator, sizeof(Scope_Block) + (new_cap * sizeof(AST_Declaration*)));
+        auto mem = (uint8_t*)alloc(allocator, sizeof(Scope_Block) +
+                                                     (new_cap * sizeof(AST_Declaration*)));
         assert(mem);
 
         Scope_Block *new_block = (Scope_Block*)mem;

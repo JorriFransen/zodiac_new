@@ -53,6 +53,8 @@ namespace Zodiac
         PARAMETER,
         FUNCTION,
         STRUCTURE,
+
+        POLY_TYPE,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -109,6 +111,11 @@ namespace Zodiac
                 Scope *parameter_scope;
                 Scope *member_scope;
             } structure;
+
+            struct
+            {
+                AST_Identifier *specification_identifier;
+            } poly_type;
         };
     };
 
@@ -182,8 +189,7 @@ namespace Zodiac
 
             struct
             {
-                AST_Identifier* identifier;
-                AST_Identifier* specification_identifier;
+                AST_Declaration *poly_type_decl;
             } poly_identifier;
 
             struct
@@ -277,8 +283,8 @@ namespace Zodiac
 
             struct
             {
-                AST_Identifier* identifier;
-                AST_Identifier* specification_identifier; 
+                AST_Identifier *identifier;
+                AST_Identifier *specification_identifier;
             } poly_identifier;
         };
     };
@@ -326,6 +332,9 @@ namespace Zodiac
                                                    AST_Identifier* identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters);
+    AST_Declaration* ast_poly_type_declaration_new(Allocator* allocator,
+                                                   AST_Identifier* identifier,
+                                                   AST_Identifier* spec_ident);
 
     AST_Statement* ast_statement_new(Allocator* allocator, AST_Statement_Kind kind);
     AST_Statement* ast_block_statement_new(Allocator* allocator, Array<AST_Statement*> statements);
@@ -338,8 +347,8 @@ namespace Zodiac
 
     AST_Expression* ast_expression_new(Allocator* allocator, AST_Expression_Kind kind);
     AST_Expression* ast_identifier_expression_new(Allocator* allocator, AST_Identifier* identifier);
-    AST_Expression* ast_poly_identifier_expression_new(Allocator* allocator, AST_Identifier* ident,
-                                                       AST_Identifier* specification_identifier);
+    AST_Expression* ast_poly_identifier_expression_new(Allocator* allocator,
+                                                       AST_Declaration *poly_type_decl);
     AST_Expression* ast_dot_expression_new(Allocator* allocator, AST_Expression* parent_expr,
                                            AST_Identifier* child_ident);
     AST_Expression* ast_binary_expression_new(Allocator* allocator, Binary_Operator op,
