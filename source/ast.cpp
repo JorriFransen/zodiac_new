@@ -602,7 +602,11 @@ namespace Zodiac
                     assert(ast_spec_ident);
                 }
 
-                return ast_poly_identifier_type_spec_new(allocator, ast_ident, ast_spec_ident);
+                AST_Declaration *ast_decl = ast_poly_type_declaration_new(allocator, ast_ident,
+                                                                          ast_spec_ident);
+                assert(ast_decl);
+
+                return ast_poly_identifier_type_spec_new(allocator, ast_decl, ast_spec_ident);
                 break;
             }
         }
@@ -973,12 +977,12 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type_Spec* ast_poly_identifier_type_spec_new(Allocator* allocator, AST_Identifier* ident,
+    AST_Type_Spec* ast_poly_identifier_type_spec_new(Allocator* allocator, AST_Declaration *decl,
                                                      AST_Identifier* spec_ident)
     {
         auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::POLY_IDENTIFIER);
 
-        result->poly_identifier.identifier = ident;
+        result->poly_identifier.declaration = decl;
         result->poly_identifier.specification_identifier = spec_ident;
 
         return result;
@@ -1282,7 +1286,7 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POLY_IDENTIFIER:
             {
                 printf("$");
-                ast_print(type_spec->poly_identifier.identifier);
+                ast_print(type_spec->poly_identifier.declaration);
                 if (type_spec->poly_identifier.specification_identifier)
                 {
                     printf("/");

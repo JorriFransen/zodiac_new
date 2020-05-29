@@ -283,7 +283,7 @@ namespace Zodiac
 
             struct
             {
-                AST_Identifier *identifier;
+                AST_Declaration *declaration;
                 AST_Identifier *specification_identifier;
             } poly_identifier;
         };
@@ -373,7 +373,7 @@ namespace Zodiac
     AST_Type_Spec* ast_array_type_spec_new(Allocator* allocator, AST_Type_Spec* element_ts);
     AST_Type_Spec* ast_templated_type_spec_new(Allocator* allocator, AST_Expression* ident_expr,
                                                Array<AST_Expression*> arg_exprs);
-    AST_Type_Spec* ast_poly_identifier_type_spec_new(Allocator* allocator, AST_Identifier* ident,
+    AST_Type_Spec* ast_poly_identifier_type_spec_new(Allocator* allocator, AST_Declaration *decl,
                                                      AST_Identifier* spec_ident);
 
     void ast_print_indent(uint64_t indent);

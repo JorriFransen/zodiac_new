@@ -288,7 +288,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Type_Spec_Kind::POLY_IDENTIFIER:
+            {
+                scope_populate_declaration_ast(allocator, type_spec->poly_identifier.declaration,
+                                               parent_scope);
+                break;
+            }
         }
     }
 
