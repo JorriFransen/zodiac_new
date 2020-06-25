@@ -5,6 +5,7 @@
 #include "c_allocator.h"
 #include "ast.h"
 #include "scope.h"
+#include "resolver.h"
 
 #include <stdio.h>
 #include <cassert>
@@ -47,6 +48,15 @@ int main(int argc, char** argv)
 
     printf("\nSCOPE DUMP:\n");
     ast_print_scope(ca, ast_root);
+
+    Resolver resolver = {};
+
+    resolver_init(ca, &resolver);
+    
+    Resolve_Job *rj = start_resolving(ca, &resolver, ast_root);
+    Resolve_Result rr = finish_resolving(&resolver, rj);
+
+    resolver_report_errors(&resolver, &rr, ca);
 
     return 0;
 }

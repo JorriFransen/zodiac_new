@@ -29,15 +29,21 @@ struct Array
     {
         return data[index];
     }
+
+    Array() {}
 };
 
 template <typename Element_Type>
 void array_init(Allocator* allocator, Array<Element_Type>* array, int64_t capacity)
 {
-    array->data = alloc_array<Element_Type>(allocator, capacity);
-    array->count = 0;
-    array->capacity = DEFAULT_ARRAY_CAPACITY;
-    array->allocator = allocator;
+    if (capacity > 0)
+    {
+        array->data = alloc_array<Element_Type>(allocator, capacity);
+        array->count = 0;
+        array->capacity = capacity;
+        array->allocator = allocator;
+    }
+    else assert(capacity == 0);
 }
 
 template <typename Element_Type>

@@ -24,6 +24,7 @@ namespace Zodiac
 
     struct AST_Node;
     struct AST_Module;
+    struct AST_Identifier;
     struct AST_Declaration;
     struct AST_Statement;
     struct AST_Expression;
