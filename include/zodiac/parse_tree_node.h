@@ -2,6 +2,7 @@
 
 #include "array.h"
 #include "atom.h"
+#include "file_pos.h"
 #include "operator.h"
 
 #include <cstdio>
@@ -34,6 +35,9 @@ typedef PT_Node_Kind PTN_Kind;
 struct PT_Node
 {
     PT_Node_Kind kind = PT_Node_Kind::INVALID;
+
+    File_Pos begin_file_pos = {};
+    File_Pos end_file_pos = {};
 };
 
 typedef PT_Node PTN;
@@ -273,84 +277,113 @@ struct Expression_PTN
     Expression_PTN() {}
 };
 
-void init_ptn(PTN* ptn, PTN_Kind kind);
+void init_ptn(PTN* ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const File_Pos &end_file_pos);
 
 template <typename T>
-T* new_ptn(Allocator* allocator)
+T* new_ptn(Allocator* allocator, const File_Pos &begin_file_pos, const File_Pos &end_file_pos)
 {
     T* result = alloc_type<T>(allocator);
-    init_ptn(&result->self, T::_kind);
+    init_ptn(&result->self, T::_kind, begin_file_pos, end_file_pos);
     return result;
 }
 
-Statement_PTN* new_statement(Allocator* allocator, Statement_PTN_Kind kind);
+Statement_PTN* new_statement(Allocator* allocator, Statement_PTN_Kind kind, const File_Pos &begin_fp,                              const File_Pos &end_fp);
 
-Identifier_PTN* new_identifier_ptn(Allocator* allocator, const Atom& atom);
+Identifier_PTN* new_identifier_ptn(Allocator* allocator, const Atom& atom, const File_Pos &begin_fp,
+                                   const File_Pos &end_fp);
 
-Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN*> statements);
-Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
-                                            Expression_PTN* expr);
-Statement_PTN* new_declaration_statement_ptn(Allocator* allocator, Declaration_PTN* decl);
-Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* expr);
-Statement_PTN* new_assignment_statement_ptn(Allocator* allocator,
-                                            Expression_PTN* ident_expression,
-                                            Expression_PTN* rhs_expression);
+Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN*> statements, 
+                                       const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN* new_expression_statement_ptn(Allocator* allocator, Expression_PTN* expr, 
+                                            const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN* new_declaration_statement_ptn(Allocator* allocator, Declaration_PTN* decl,
+                                             const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* expr,
+                                        const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN* new_assignment_statement_ptn(Allocator* allocator, Expression_PTN* ident_expression,
+                                            Expression_PTN* rhs_expression, const File_Pos &begin_fp,
+                                            const File_Pos &end_fp);
 
-Function_Proto_PTN* new_function_prototype_parse_tree_node(
-    Allocator* allocator,
-    Array<Parameter_PTN*> parameters,
-    Expression_PTN* return_type_expr
-);
+Function_Proto_PTN* new_function_prototype_parse_tree_node(Allocator* allocator,
+                                                           Array<Parameter_PTN*> parameters,
+                                                           Expression_PTN* return_type_expr,
+                                                           const File_Pos &begin_fp,
+                                                           const File_Pos &end_fp);
 
 Declaration_PTN* new_import_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                            Expression_PTN* module_ident_expr);
+                                            Expression_PTN* module_ident_expr,
+                                              const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                              Function_Proto_PTN* prototype, Statement_PTN* body);
+                                              Function_Proto_PTN* prototype, Statement_PTN* body,
+                                              const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                               Expression_PTN* type_expression,
-                                              Expression_PTN* init_expression);
+                                              Expression_PTN* init_expression,
+                                              const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                             Array<Declaration_PTN*> members,
-                                            Array<Parameter_PTN*> parameters);
+                                            Array<Parameter_PTN*> parameters,
+                                            const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
                                               Expression_PTN* type_expr,
-                                              Expression_PTN* init_expr);
-
-Statement_PTN* new_expression_statement_ptn(Allocator* allocator,
-                                            Expression_PTN* expression);
+                                              Expression_PTN* init_expr,
+                                              const File_Pos &begin_fp, const File_Pos &enf_fp);
 
 Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
-                                             Array<Expression_PTN*> expressions);
+                                             Array<Expression_PTN*> expressions,
+                                             const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
-                                        Expression_PTN* ident_expr, Expression_List_PTN* arg_list);
+                                        Expression_PTN* ident_expr, Expression_List_PTN* arg_list,
+                                        const File_Pos &begin_file_pos, const File_Pos &end_file_pos);
 
-Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_PTN* identifier);
+Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_PTN* identifier,
+                                              const File_Pos &begin_file_pos,
+                                              const File_Pos &end_file_pos);
 
 Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator op,
-                                          Expression_PTN* lhs, Expression_PTN* rhs);
-Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op,
-                                         Expression_PTN* operand_expression);
+                                          Expression_PTN* lhs, Expression_PTN* rhs,
+                                          const File_Pos &begin_file_pos,
+                                          const File_Pos &end_file_pos);
 
-Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom);
-Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom);
+Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op,
+                                         Expression_PTN* operand_expression,
+                                         const File_Pos &begin_file_pos,
+                                         const File_Pos &end_file_pos);
+
+Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom,
+                                                  const File_Pos &begin_file_pos,
+                                                  const File_Pos &end_file_pos);
+Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom,
+                                                  const File_Pos &begin_file_pos,
+                                                  const File_Pos &end_file_pos);
 Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
-                                       Identifier_PTN* child_ident);
+                                       Identifier_PTN* child_ident, const File_Pos &begin_file_pos,
+                                       const File_Pos &end_file_pos);
 Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list,
-                                            Expression_PTN* type_expression);
+                                            Expression_PTN* type_expression,
+                                            const File_Pos &begin_file_pos,
+                                            const File_Pos &end_file_pos);
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
-                                              Expression_PTN* element_type_expression);
+                                              Expression_PTN* element_type_expression,
+                                              const File_Pos &begin_file_pos,
+                                              const File_Pos &end_file_pos);
 Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
-                                                Expression_PTN* pointee_type_expression);
+                                                Expression_PTN* pointee_type_expression,
+                                                const File_Pos &begin_file_pos,
+                                                const File_Pos &end_file_pos);
 Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                             Identifier_PTN* specification_identifier);
+                                             Identifier_PTN* specification_identifier,
+                                             const File_Pos &begin_file_pos,
+                                             const File_Pos &end_file_pos);
 
 Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                 Expression_PTN* type_expression);
+                                 Expression_PTN* type_expression,
+                                 const File_Pos &begin_file_pos, const File_Pos &end_file_pos);
 
 typedef uint64_t PTN_Copy_Flags;
 enum PTN_Copy_Flag__ : PTN_Copy_Flags
