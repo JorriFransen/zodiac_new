@@ -87,6 +87,13 @@ void array_append(Array<Element_Type>* array, const Element_Type& element)
 }
 
 template <typename Element_Type>
+Element_Type array_first(Array<Element_Type>* array)
+{
+    assert(array->count >= 1);
+    return array->data[0];
+}
+
+template <typename Element_Type>
 Element_Type array_last(Array<Element_Type>* array)
 {
     assert(array->count >= 1);
