@@ -720,6 +720,7 @@ namespace Zodiac
         auto result = ast_node_new<AST_Identifier>(allocator, begin_fp, end_fp);
 
         result->atom = atom;
+        result->declaration = nullptr;
 
         return result;
     }

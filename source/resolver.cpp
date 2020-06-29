@@ -1,5 +1,7 @@
 #include "resolver.h"
 
+#include "builtin.h"
+#include "scope.h"
 #include "string_builder.h"
 #include "ast.h"
 
@@ -96,7 +98,8 @@ namespace Zodiac
                 Resolve_Job *body_rj = nullptr;
                 if (decl->function.body)
                 {
-                    body_rj = start_resolving_statement(allocator, resolver, decl->function.body);
+                    body_rj = start_resolving_statement(allocator, resolver, decl->function.body,
+                                                        nullptr);
                     assert(body_rj);
                 }
 
@@ -113,7 +116,7 @@ namespace Zodiac
     }
 
     Resolve_Job *start_resolving_statement(Allocator *allocator, Resolver *resolver,
-                                           AST_Statement *statement)
+                                           AST_Statement *statement, Scope *scope)
     {
         assert(allocator);
         assert(resolver);
@@ -133,7 +136,8 @@ namespace Zodiac
                     for (int64_t i = 0; i < statement->block.statements.count; i++)
                     {
                         auto st_rj = start_resolving_statement(allocator, resolver,
-                                                               statement->block.statements[i]);
+                                                               statement->block.statements[i],
+                                                               statement->block.scope);
                         assert(st_rj);
                         array_append(&block_rjs, st_rj);
                     }
@@ -151,7 +155,8 @@ namespace Zodiac
 
             case AST_Statement_Kind::EXPRESSION:
             {
-                return start_resolving_expression(allocator, resolver, statement->expression);
+                return start_resolving_expression(allocator, resolver, statement->expression,
+                                                  scope);
                 break;
             }
         }
@@ -160,7 +165,7 @@ namespace Zodiac
     }
 
     Resolve_Job *start_resolving_expression(Allocator *allocator, Resolver *resolver,
-                                            AST_Expression *expression)
+                                            AST_Expression *expression, Scope* scope)
     {
         switch (expression->kind)
         {
@@ -168,7 +173,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER:
             {
-                return resolve_job_identifier_new(allocator, expression->identifier);
+                return resolve_job_identifier_new(allocator, expression->identifier, scope);
                 break;
             }
 
@@ -179,44 +184,93 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL:
             {
+                Resolve_Job *ident_rj = nullptr;
+                Array<Resolve_Job*> arg_expr_rjs = {};
+
+                if (expression->call.arg_expressions.count)
+                {
+                    array_init(allocator, &arg_expr_rjs,
+                            expression->call.arg_expressions.count);
+                }
+
                 if (expression->call.is_builtin)
                 {
-                    assert(false);
-                }
-                else
-                {
-                    auto ident_rj = start_resolving_expression(allocator, resolver,
-                                                               expression->call.ident_expression);
+                    ident_rj =
+                        start_resolving_builtin_identifier(allocator, resolver,
+                                                           expression->call.ident_expression);
                     assert(ident_rj);
 
-                    Array<Resolve_Job*> arg_expr_rjs = {};
                     if (expression->call.arg_expressions.count)
                     {
-                        array_init(allocator, &arg_expr_rjs,
-                                   expression->call.arg_expressions.count);
-
                         for (int64_t i = 0; i < expression->call.arg_expressions.count; i++)
                         {
                             auto arg_expr_rj =
                                 start_resolving_expression(allocator, resolver,
-                                                           expression->call.arg_expressions[i]);
+                                                           expression->call.arg_expressions[i],
+                                                           scope);
+                            assert(arg_expr_rj);
+                            array_append(&arg_expr_rjs, arg_expr_rj);
+                        }
+                    }
+                }
+                else
+                {
+                    ident_rj = start_resolving_expression(allocator, resolver,
+                                                          expression->call.ident_expression,
+                                                          scope);
+                    assert(ident_rj);
+
+                    if (expression->call.arg_expressions.count)
+                    {
+                        for (int64_t i = 0; i < expression->call.arg_expressions.count; i++)
+                        {
+                            auto arg_expr_rj =
+                                start_resolving_expression(allocator, resolver,
+                                                           expression->call.arg_expressions[i],
+                                                           scope);
                             assert(arg_expr_rj);
                             array_append(&arg_expr_rjs, arg_expr_rj);
                         }
                     }
 
-                    return resolve_job_call_expression_new(allocator, ident_rj, arg_expr_rjs);
                 }
+
+                return resolve_job_call_expression_new(allocator, ident_rj, arg_expr_rjs,
+                                                       expression->call.is_builtin, expression);
+
                 break;
             }
 
             case AST_Expression_Kind::COMPOUND: assert(false);
-            case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
+
+            case AST_Expression_Kind::NUMBER_LITERAL:
+            {
+                return resolve_job_number_literal_new(allocator, expression->number_literal);
+                break;
+            }
+
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }
 
         assert(allocator);
         assert(resolver);
+        assert(false);
+    }
+
+    Resolve_Job *start_resolving_builtin_identifier(Allocator *allocator, Resolver *resolver,
+                                                    AST_Expression *ident_expr)
+    {
+        assert(allocator);
+        assert(resolver);
+        assert(ident_expr);
+        assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
+
+        auto ident = ident_expr->identifier;
+        if (ident->atom == Builtin::atom_exit)
+        {
+            return resolve_job_builtin_identifier_new(allocator, ident);
+        }
+
         assert(false);
     }
 
@@ -272,15 +326,246 @@ namespace Zodiac
         }
     }
 
-    Resolve_Result finish_resolving(Resolver *resolver, Resolve_Job *resolve_job)
+    Resolve_Result finish_resolving(Resolver *resolver, Resolve_Job *resolve_job, bool blocking)
     {
         assert(resolver);
         assert(resolve_job);
 
-        assert(false);
+        assert(blocking);
 
-        Resolve_Result result = {};
-        return result;
+        switch (resolve_job->kind)
+        {
+            case Resolve_Job_Kind::INVALID: assert(false);
+
+            case Resolve_Job_Kind::MODULE:
+            {
+                if (blocking)
+                {
+                    Resolve_Result module_res = {};
+
+                    for (int64_t i = 0; i < resolve_job->module_jobs.count; i++)
+                    {
+                        auto decl_res = finish_resolving(resolver, resolve_job->module_jobs[i],
+                                                         true);
+                        module_res.error_count += decl_res.error_count;
+                    }
+
+                    return module_res;
+                }
+                else
+                {
+                    assert(false);
+                }
+
+                break;
+            }
+
+            case Resolve_Job_Kind::FUNCTION_DECL:
+            {
+                if (blocking)
+                {
+                    Resolve_Result function_res = {};
+
+                    auto type_spec_res = finish_resolving(resolver,
+                                                          resolve_job->function_decl.type_spec_rj,
+                                                          true);
+                    function_res.error_count += type_spec_res.error_count;
+
+                    for (int64_t i = 0; i < resolve_job->function_decl.parameter_jobs.count; i++)
+                    {
+                        auto param_res =
+                            finish_resolving(resolver, resolve_job->function_decl.parameter_jobs[i],
+                                             true);
+                        function_res.error_count += param_res.error_count;
+                    }
+
+                    auto body_res = finish_resolving(resolver, resolve_job->function_decl.body_rj,
+                                                     true);
+
+                    function_res.error_count += body_res.error_count;
+
+                    return function_res;
+                }
+                else
+                {
+                    assert(false);
+                }
+
+                break;
+            }
+
+            case Resolve_Job_Kind::BLOCK_STATEMENT:
+            {
+                if (blocking)
+                {
+                    Resolve_Result block_res = {};
+
+                    for (int64_t i = 0; i < resolve_job->block_jobs.count; i++)
+                    {
+                        auto stmt_res = finish_resolving(resolver, resolve_job->block_jobs[i],
+                                                         true);
+                        block_res.error_count += stmt_res.error_count;
+                    }
+
+                    return block_res;
+                }
+                else
+                {
+                    assert(false);
+                }
+                break;
+            }
+
+            case Resolve_Job_Kind::IDENTIFIER:
+            {
+                assert(resolve_job->identifier.scope);
+
+                auto id = resolve_job->identifier.identifier;
+
+                Resolve_Result id_res = {};
+
+                if (id->declaration) return id_res; 
+
+                auto decl = scope_find_declaration(resolve_job->identifier.scope,
+                                                   resolve_job->identifier.identifier);
+
+                if (!decl)
+                {
+                    assert(false);
+                    id_res.error_count += 1;
+                }
+
+                return id_res;
+
+                break;
+            }
+
+            case Resolve_Job_Kind::BUILTIN_IDENTIFIER: assert(false);
+
+            case Resolve_Job_Kind::CALL_EXPRESSION:
+            {
+                if (blocking)
+                {
+                    Resolve_Result call_expr_res = {};
+                    
+                   if (resolve_job->call_expression.is_builtin)
+                   {
+                       return finish_resolving_builtin_call(resolver, resolve_job, true);
+                   } 
+                   else
+                   {
+                       auto ident_res =
+                           finish_resolving(resolver, resolve_job->call_expression.identifier_rj,
+                                            true);
+
+                       call_expr_res.error_count += ident_res.error_count;
+
+                       for (int64_t i = 0; i < resolve_job->call_expression.arg_jobs.count; i++)
+                       {
+                           auto arg_res = finish_resolving(resolver,
+                                                           resolve_job->call_expression.arg_jobs[i],
+                                                           false);
+                           call_expr_res.error_count += arg_res.error_count;
+                       }
+                   }
+
+                   return call_expr_res;
+                }
+                else
+                {
+                    assert(false);
+                }
+                break;
+            }
+
+            case Resolve_Job_Kind::NUMBER_LITERAL:
+            {
+                return {};
+                break;
+            }
+
+            case Resolve_Job_Kind::FUNCTION_TYPE_SPEC:
+            {
+                if (blocking)
+                {
+                    Resolve_Result function_ts_res = {};
+            
+                    for (int64_t i = 0;
+                         i < resolve_job->function_type_spec.param_ts_jobs.count;
+                         i++)
+                    {
+                        auto param_res =
+                            finish_resolving(resolver,
+                                             resolve_job->function_type_spec.param_ts_jobs[i],
+                                             true);
+
+                        function_ts_res.error_count += param_res.error_count;
+                    }
+
+                    if (resolve_job->function_type_spec.return_ts_job)
+                    {
+                        auto return_ts_res =
+                            finish_resolving(resolver,
+                                             resolve_job->function_type_spec.return_ts_job,
+                                             true);
+
+                        function_ts_res.error_count += return_ts_res.error_count;
+                    }
+
+                    return function_ts_res;
+                }
+                else
+                {
+                    assert(false);
+                }
+                break;
+            }
+        }
+
+        assert(false);
+    }
+
+    Resolve_Result finish_resolving_builtin_call(Resolver *resolver, Resolve_Job *rj, bool blocking)
+    {
+        assert(resolver);
+        assert(rj);
+        assert(rj->kind == Resolve_Job_Kind::CALL_EXPRESSION);
+        assert(rj->call_expression.is_builtin);
+
+        assert(rj->origin.expression);
+
+        auto expr = rj->origin.expression;
+
+        if (blocking)
+        {
+            auto ident = expr->call.ident_expression;
+            auto atom = ident->identifier->atom;
+
+            if (atom == Builtin::atom_exit)
+            {
+                assert(expr->call.arg_expressions.count == 1);
+                assert(rj->call_expression.arg_jobs.count == 1);
+
+                Resolve_Result res = {};
+
+                auto arg_res = finish_resolving(resolver, rj->call_expression.arg_jobs[0], true);
+
+                res.error_count += arg_res.error_count;
+
+                return res;
+
+            }
+            else
+            {
+                assert(false);
+            }
+        }
+        else
+        {
+            assert(false);
+        }
+
+        assert(false);
     }
     
     Resolve_Job *resolve_job_module_new(Allocator *allocator, Array<Resolve_Job*> module_jobs)
@@ -288,7 +573,11 @@ namespace Zodiac
         assert(allocator);
         assert(module_jobs.count);
         assert(module_jobs.data);
-        assert(false);
+
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::MODULE);
+        result->module_jobs = module_jobs;
+
+        return result;
     }
 
     Resolve_Job *resolve_job_function_declaration_new(Allocator *allocator,
@@ -316,23 +605,47 @@ namespace Zodiac
         return result;
     }
 
-    Resolve_Job *resolve_job_identifier_new(Allocator *allocator, AST_Identifier *identifier)
+    Resolve_Job *resolve_job_identifier_new(Allocator *allocator, AST_Identifier *identifier,
+                                            Scope* scope)
     {
         assert(allocator);
         assert(identifier);
 
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER);
-        result->identifier = identifier;
+        result->identifier.identifier = identifier;
+        result->identifier.scope = scope;
+
+        return result;
+    }
+
+    Resolve_Job *resolve_job_builtin_identifier_new(Allocator *allocator,
+                                                    AST_Identifier *identifier)
+    {
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::BUILTIN_IDENTIFIER);
+        result->identifier.identifier = identifier;
+        result->identifier.scope = nullptr;
 
         return result;
     }
 
     Resolve_Job *resolve_job_call_expression_new(Allocator *allocator, Resolve_Job *ident_rj,
-                                                 Array<Resolve_Job*> arg_rjs)
+                                                 Array<Resolve_Job*> arg_rjs, bool is_builtin,
+                                                 AST_Expression *origin)
     {
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::CALL_EXPRESSION);
+        result->origin.expression = origin;
+
         result->call_expression.identifier_rj = ident_rj;
         result->call_expression.arg_jobs = arg_rjs;
+        result->call_expression.is_builtin = is_builtin;
+
+        return result;
+    }
+
+    Resolve_Job *resolve_job_number_literal_new(Allocator *allocator, Number_Literal number_literal)
+    {
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::NUMBER_LITERAL);
+        result->number_literal = number_literal;
 
         return result;
     }
@@ -370,7 +683,11 @@ namespace Zodiac
         assert(resolver);
         assert(resolve_result);
         assert(sb);
-        assert(false);
+
+        if (resolve_result->error_count != 0)
+        {
+            assert(false);
+        }
     }
 
     void resolver_report_errors(Resolver* resolver, Resolve_Result *resolve_result, 

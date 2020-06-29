@@ -29,5 +29,10 @@ namespace Zodiac
     struct AST_Statement;
     struct AST_Expression;
     struct AST_Type_Spec;
+
+    struct Number_Literal
+    {
+        int64_t s64 = 0;
+    };
 }
 

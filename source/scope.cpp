@@ -6,6 +6,37 @@
 
 namespace Zodiac
 {
+    AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier)
+    {
+        assert(scope);
+        assert(identifier);
+
+        if (identifier->declaration) return identifier->declaration;
+
+        auto scope_block = &scope->first_block;                 
+        while (scope_block)
+        {
+            for (int64_t i = 0; i < scope_block->decl_count; i++)
+            {
+                AST_Declaration *decl = scope_block->declarations[i];
+                if (decl->identifier->atom == identifier->atom)
+                {
+                    identifier->declaration = decl;
+                    return decl;
+                }
+            }
+
+            scope_block = scope_block->next_block;
+        }
+
+        if (scope->parent)
+        {
+            return scope_find_declaration(scope->parent, identifier);
+        }
+
+        return nullptr;
+    }
+
     void scope_populate_ast(Allocator* allocator, AST_Node* anode, Scope *parent_scope)
     {
         assert(allocator);

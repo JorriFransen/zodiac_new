@@ -33,6 +33,8 @@ namespace Zodiac
         Allocator *allocator = nullptr;
     };
 
+    AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier);
+
     void scope_populate_ast(Allocator *allocator, AST_Node *anode, Scope *parent_scope);
     void scope_populate_declaration_ast(Allocator *allocator, AST_Declaration *ast_decl,
                                         Scope *parent_scope);

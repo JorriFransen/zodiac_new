@@ -54,7 +54,7 @@ int main(int argc, char** argv)
     resolver_init(ca, &resolver);
     
     Resolve_Job *rj = start_resolving(ca, &resolver, ast_root);
-    Resolve_Result rr = finish_resolving(&resolver, rj);
+    Resolve_Result rr = finish_resolving(&resolver, rj, true);
 
     resolver_report_errors(&resolver, &rr, ca);
 

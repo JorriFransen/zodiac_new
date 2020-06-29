@@ -6,6 +6,7 @@ namespace Zodiac
 {
     struct Builtin
     {
+        static Atom atom_exit;
         static Atom atom_naked;
     };
 

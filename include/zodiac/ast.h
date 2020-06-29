@@ -34,6 +34,7 @@ namespace Zodiac
         static AST_Node_Kind _kind;
 
         Atom atom = {};
+        AST_Declaration *declaration = nullptr;
     };
 
     struct AST_Module : public AST_Node
@@ -228,10 +229,7 @@ namespace Zodiac
                 AST_Type_Spec* type_spec;
             } compound;
 
-            struct
-            {
-                int64_t s64;
-            } number_literal;
+            Number_Literal number_literal;
 
             struct
             {
