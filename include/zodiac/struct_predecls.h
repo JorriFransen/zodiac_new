@@ -29,6 +29,7 @@ namespace Zodiac
     struct AST_Statement;
     struct AST_Expression;
     struct AST_Type_Spec;
+    struct AST_Type;
 
     struct Number_Literal
     {

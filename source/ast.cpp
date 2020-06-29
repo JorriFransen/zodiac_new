@@ -1146,6 +1146,22 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type* ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size)
+    {
+        auto result = alloc_type<AST_Type>(allocator);
+        assert(result);
+        result->kind = kind;
+        result->bit_size = bit_size;
+        return result;
+    }
+
+    AST_Type* ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::INTEGER, bit_size);
+        result->integer.sign = sign;
+        return result;
+    }
+
     void ast_print_indent(uint64_t indent)
     {
         for (uint64_t i = 0; i < indent; i++)

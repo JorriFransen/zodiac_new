@@ -29,6 +29,8 @@ namespace Zodiac
     {
         Resolve_Job_Kind kind = Resolve_Job_Kind::INVALID;
 
+        AST_Type *expected_type = nullptr;
+
         union
         {
             AST_Expression *expression; 
@@ -111,7 +113,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_call_expression_new(Allocator *allocator, Resolve_Job *ident_rj,
                                                  Array<Resolve_Job*> arg_rjs, bool is_builtin, 
                                                  AST_Expression *origin);
-    Resolve_Job *resolve_job_number_literal_new(Allocator *allocator, Number_Literal number_literal);
+    Resolve_Job *resolve_job_number_literal_new(Allocator *allocator, AST_Expression *origin_expr);
     Resolve_Job *resolve_job_function_type_spec_new(Allocator *allocator,
                                                     Array<Resolve_Job*> param_ts_jobs,
                                                     Resolve_Job *return_ts_job);

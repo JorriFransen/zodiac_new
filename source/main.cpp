@@ -25,6 +25,7 @@ int main(int argc, char** argv)
     Build_Data build_data = {};
     build_data_init(ca, &build_data);
     builtin_initialize_atoms(&build_data.atom_table);
+    builtin_initialize_types(ca);
 
     Lexer lexer = lexer_create(ca, &build_data);
     String file_path = string_ref(argv[1]);

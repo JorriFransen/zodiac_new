@@ -186,7 +186,8 @@ namespace Zodiac
         AST_Expression() {};
         static AST_Node_Kind _kind;
 
-        AST_Expression_Kind kind;
+        AST_Expression_Kind kind = AST_Expression_Kind::INVALID;
+        AST_Type *type = nullptr;
 
         union
         {
@@ -288,6 +289,32 @@ namespace Zodiac
                 AST_Declaration *declaration;
                 AST_Identifier *specification_identifier;
             } poly_identifier;
+        };
+    };
+
+    enum AST_Type_Kind
+    {
+        INVALID,
+
+        INTEGER,
+    };
+
+    struct AST_Type :  public AST_Node
+    {
+        AST_Type() {}
+
+        static AST_Node_Kind _kind;
+
+        AST_Type_Kind kind = AST_Type_Kind::INVALID;
+
+        uint64_t bit_size = 0;
+
+        union
+        {
+            struct
+            {
+                bool sign;
+            } integer;
         };
     };
 
@@ -418,6 +445,9 @@ namespace Zodiac
                                                      AST_Identifier* spec_ident,
                                                      const File_Pos & begin_fp,
                                                      const File_Pos &end_fp);
+
+    AST_Type* ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
+    AST_Type* ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);

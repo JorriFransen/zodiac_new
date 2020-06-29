@@ -245,7 +245,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
-                return resolve_job_number_literal_new(allocator, expression->number_literal);
+                return resolve_job_number_literal_new(allocator, expression);
                 break;
             }
 
@@ -480,7 +480,20 @@ namespace Zodiac
 
             case Resolve_Job_Kind::NUMBER_LITERAL:
             {
+                assert(resolve_job->expected_type);
+                auto et = resolve_job->expected_type;
+                assert(et->kind == INTEGER);
+
+                assert(et->integer.sign);
+
+                assert(resolve_job->number_literal.s64 <= INT64_MAX);
+                assert(resolve_job->number_literal.s64 >= INT64_MIN);
+
+                assert(resolve_job->origin.expression);
+                resolve_job->origin.expression->type = et;
+
                 return {};
+
                 break;
             }
 
@@ -543,12 +556,19 @@ namespace Zodiac
 
             if (atom == Builtin::atom_exit)
             {
+                Resolve_Result res = {};
+
                 assert(expr->call.arg_expressions.count == 1);
                 assert(rj->call_expression.arg_jobs.count == 1);
 
-                Resolve_Result res = {};
+                auto arg_rj = rj->call_expression.arg_jobs[0];
+                arg_rj->expected_type = Builtin::type_s64;
+                auto arg_expr = expr->call.arg_expressions[0];
 
-                auto arg_res = finish_resolving(resolver, rj->call_expression.arg_jobs[0], true);
+                auto arg_res = finish_resolving(resolver, arg_rj, true);
+
+                assert(arg_expr->type);
+                assert(arg_expr->type == Builtin::type_s64);
 
                 res.error_count += arg_res.error_count;
 
@@ -642,10 +662,14 @@ namespace Zodiac
         return result;
     }
 
-    Resolve_Job *resolve_job_number_literal_new(Allocator *allocator, Number_Literal number_literal)
+    Resolve_Job *resolve_job_number_literal_new(Allocator *allocator, AST_Expression *origin_expr)
     {
+        assert(origin_expr->kind == AST_Expression_Kind::NUMBER_LITERAL);
+
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::NUMBER_LITERAL);
-        result->number_literal = number_literal;
+        result->origin.expression = origin_expr;
+
+        result->number_literal = origin_expr->number_literal;
 
         return result;
     }
