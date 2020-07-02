@@ -21,10 +21,14 @@ namespace Zodiac
         TYPE_SPEC,
     };
 
-    enum AST_Node_Flags
+    typedef uint64_t AST_Node_Flags;
+
+    enum AST_Node_Flags_ : AST_Node_Flags
     {
-        AST_NODE_FLAG_NONE     = 0x00,
-        AST_NODE_FLAG_RESOLVED = 0x01,
+        AST_NODE_FLAG_NONE        = 0x00,
+        AST_NODE_FLAG_RESOLVED_ID = 0x01,
+        AST_NODE_FLAG_TYPED       = 0x02,
+        AST_NODE_FLAG_SIZED       = 0x04,
     };
 
     struct AST_Node
@@ -84,7 +88,7 @@ namespace Zodiac
         static AST_Node_Kind _kind;
 
         AST_Declaration_Kind kind = AST_Declaration_Kind::INVALID;
-        AST_Declaration_Flag flags = AST_DECL_FLAG_NONE;
+        AST_Declaration_Flag decl_flags = AST_DECL_FLAG_NONE;
 
         AST_Identifier* identifier = nullptr;
 

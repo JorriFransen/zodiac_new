@@ -818,7 +818,7 @@ namespace Zodiac
 
         if (is_naked)
         {
-            result->flags |= AST_DECL_FLAG_IS_NAKED;
+            result->decl_flags |= AST_DECL_FLAG_IS_NAKED;
         }
 
         return result;
@@ -1218,7 +1218,7 @@ namespace Zodiac
 
         ast_print_indent(indent);
 
-        if (ast_decl->flags & AST_DECL_FLAG_IS_NAKED)
+        if (ast_decl->decl_flags & AST_DECL_FLAG_IS_NAKED)
         {
             printf("#naked ");
         }
