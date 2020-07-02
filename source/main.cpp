@@ -51,13 +51,11 @@ int main(int argc, char** argv)
     ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
-
     resolver_init(ca, &resolver);
-    
-    Resolve_Job *rj = start_resolving(ca, &resolver, ast_root);
-    Resolve_Result rr = finish_resolving(&resolver, rj, true);
 
-    resolver_report_errors(&resolver, &rr, ca);
+    start_resolving(&resolver, ast_root, true);
+    Resolve_Result rr = finish_resolving(&resolver);
+    assert(rr.error_count == 0);
 
     return 0;
 }

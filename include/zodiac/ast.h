@@ -21,9 +21,16 @@ namespace Zodiac
         TYPE_SPEC,
     };
 
+    enum AST_Node_Flags
+    {
+        AST_NODE_FLAG_NONE     = 0x00,
+        AST_NODE_FLAG_RESOLVED = 0x01,
+    };
+
     struct AST_Node
     {
         AST_Node_Kind kind = AST_Node_Kind::INVALID;
+        AST_Node_Flags flags = AST_NODE_FLAG_NONE;
 
         File_Pos begin_file_pos = {};
         File_Pos end_file_pos = {};
