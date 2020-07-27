@@ -7,9 +7,12 @@ namespace Zodiac
 {
     struct Builtin
     {
+        static uint64_t pointer_size;
+
         static Atom atom_exit;
         static Atom atom_naked;
 
+        static AST_Type *type_void;
         static AST_Type *type_s64;
         static AST_Type *type_u64;
     };

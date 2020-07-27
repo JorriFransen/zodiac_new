@@ -176,8 +176,13 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
                 {
-                    scope_populate_statement_ast(allocator, ast_stmt->block.statements[i],
-                                                 ast_stmt->block.scope);
+                    auto node = ast_stmt->block.statements[i];
+                    //if (node->kind == AST_Node_Kind::STATEMENT)
+                    //{
+                        auto stmt = static_cast<AST_Statement*>(node);
+                        scope_populate_statement_ast(allocator, stmt, ast_stmt->block.scope);
+                    //}
+                    //else assert(false);
                 }
                 break;
             }

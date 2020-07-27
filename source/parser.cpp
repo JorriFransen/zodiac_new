@@ -11,16 +11,17 @@
 namespace Zodiac
 {
 
-Parser parser_create(Allocator* allocator)
+Parser parser_create(Allocator* allocator, Build_Data *build_data)
 {
     Parser result = {};
-    parser_init(allocator, &result);
+    parser_init(allocator, &result, build_data);
     return result;
 }
 
-void parser_init(Allocator* allocator, Parser* parser)
+void parser_init(Allocator* allocator, Parser* parser, Build_Data *build_data)
 {
     parser->allocator = allocator;
+    parser->build_data = build_data;
 }
 
 Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts)

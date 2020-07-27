@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allocator.h"
+#include "build_data.h"
 #include "parse_tree_node.h"
 #include "token_stream.h"
 #include "operator.h"
@@ -11,11 +12,12 @@ namespace Zodiac
 
 struct Parser
 {
-    Allocator* allocator = nullptr;
+    Allocator *allocator = nullptr;
+    Build_Data *build_data = nullptr;
 };
 
-Parser parser_create(Allocator* allocator);
-void parser_init(Allocator* allocator, Parser* parser);
+Parser parser_create(Allocator* allocator, Build_Data *build_data);
+void parser_init(Allocator* allocator, Parser* parser, Build_Data *build_data);
 
 Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts);
 

@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
     Token_Stream* token_stream = lexer_new_token_stream(ca, &lexed_file);
 
-    Parser parser = parser_create(ca);
+    Parser parser = parser_create(ca, &build_data);
     Parsed_File parsed_file = parser_parse_file(&parser, token_stream);
 
     //parsed_file_print(&parsed_file);
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
-    resolver_init(ca, &resolver);
+    resolver_init(ca, &resolver, &build_data);
 
     start_resolving(&resolver, ast_root, true);
     Resolve_Result rr = finish_resolving(&resolver);

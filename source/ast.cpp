@@ -1,6 +1,7 @@
 
 #include "ast.h"
 
+#include "builtin.h"
 #include "parse_tree_node.h"
 #include "string_builder.h"
 #include "scope.h"
@@ -1051,6 +1052,7 @@ namespace Zodiac
     {
         AST_Type_Spec* result = ast_node_new<AST_Type_Spec>(allocator, begin_fp, end_fp);
 
+        result->type = nullptr;
         result->kind = kind;
 
         return result;
@@ -1159,6 +1161,17 @@ namespace Zodiac
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::INTEGER, bit_size);
         result->integer.sign = sign;
+        return result;
+    }
+
+    AST_Type* ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
+                                    AST_Type *return_type)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::FUNCTION, Builtin::pointer_size);
+
+        result->function.param_types = param_types;
+        result->function.return_type = return_type;
+
         return result;
     }
 

@@ -90,7 +90,8 @@ namespace Zodiac
         AST_Declaration_Kind kind = AST_Declaration_Kind::INVALID;
         AST_Declaration_Flag decl_flags = AST_DECL_FLAG_NONE;
 
-        AST_Identifier* identifier = nullptr;
+        AST_Identifier *identifier = nullptr;
+        AST_Type *type = nullptr;
 
         union
         {
@@ -271,6 +272,7 @@ namespace Zodiac
         static AST_Node_Kind _kind;
 
         AST_Type_Spec_Kind kind = AST_Type_Spec_Kind::INVALID;
+        AST_Type *type = nullptr;
 
         union
         {
@@ -303,11 +305,14 @@ namespace Zodiac
         };
     };
 
-    enum AST_Type_Kind
+    enum class AST_Type_Kind
     {
         INVALID,
 
+        VOID,
         INTEGER,
+
+        FUNCTION,
     };
 
     struct AST_Type :  public AST_Node
@@ -326,6 +331,12 @@ namespace Zodiac
             {
                 bool sign;
             } integer;
+
+            struct
+            {
+                Array<AST_Type*> param_types;
+                AST_Type* return_type;
+            } function;
         };
     };
 
@@ -459,6 +470,8 @@ namespace Zodiac
 
     AST_Type* ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type* ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
+    AST_Type* ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
+                                    AST_Type *return_type);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);
