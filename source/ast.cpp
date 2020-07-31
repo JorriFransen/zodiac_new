@@ -193,7 +193,8 @@ namespace Zodiac
                 Array<AST_Declaration*> ast_member_decls = {};
                 if (ptn->structure.member_declarations.count)
                 {
-                    array_init(allocator, &ast_member_decls);
+                    array_init(allocator, &ast_member_decls,
+                               ptn->structure.member_declarations.count);
 
                     for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++)
                     {
@@ -209,7 +210,7 @@ namespace Zodiac
                 Array<AST_Declaration*> ast_parameters = {};
                 if (ptn->structure.parameters.count)
                 {
-                    array_init(allocator, &ast_parameters, 4);
+                    array_init(allocator, &ast_parameters, ptn->structure.parameters.count);
 
                     for (int64_t i = 0; i < ptn->structure.parameters.count; i++)
                     {
@@ -223,7 +224,7 @@ namespace Zodiac
                 }
 
                 assert(ast_parameters.count >= 0);
-                auto end_fp = array_last(&ast_parameters)->end_file_pos;
+                auto end_fp = ptn->self.end_file_pos;
 
                 return ast_structure_declaration_new(allocator, ast_ident, ast_member_decls,
                                                      ast_parameters, begin_fp, end_fp);

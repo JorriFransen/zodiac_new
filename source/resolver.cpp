@@ -5,20 +5,26 @@
 #include "scope.h"
 
 #include <cassert>
+#include <stdio.h>
+#include <stdarg.h>
 
 namespace Zodiac
 {
-    void resolver_init(Allocator *allocator, Resolver *resolver, Build_Data *build_data)
+    void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
+                       Build_Data *build_data)
     {
         assert(allocator);
         assert(resolver);
 
         resolver->allocator = allocator;
+        resolver->err_allocator = err_allocator;
         resolver->build_data = build_data;
 
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
         queue_init(allocator, &resolver->size_job_queue);
+
+        array_init(err_allocator, &resolver->errors);
     }
 
     void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking)
@@ -67,7 +73,8 @@ namespace Zodiac
 
         while (!done)
         {
-            while (queue_count(&resolver->ident_job_queue))
+            auto ident_job_count = queue_count(&resolver->ident_job_queue);
+            while (ident_job_count--)
             {
                 auto job = queue_dequeue(&resolver->ident_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
@@ -83,7 +90,8 @@ namespace Zodiac
                 }
             }
 
-            while (queue_count(&resolver->type_job_queue))
+            auto type_job_count = queue_count(&resolver->type_job_queue);
+            while (type_job_count--)
             {
                 auto job = queue_dequeue(&resolver->type_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
@@ -99,7 +107,8 @@ namespace Zodiac
                 }
             }
 
-            while (queue_count(&resolver->size_job_queue))
+            auto size_job_count = queue_count(&resolver->size_job_queue);
+            while (size_job_count--)
             {
                 auto job = queue_dequeue(&resolver->size_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
@@ -119,6 +128,12 @@ namespace Zodiac
                 queue_count(&resolver->size_job_queue) == 0)
 
             {
+                done = true;
+            }
+
+            if (resolver->errors.count)
+            {
+                resolver_report_errors(resolver);
                 done = true;
             }
         }
@@ -183,7 +198,13 @@ namespace Zodiac
         {
             case AST_Node_Kind::INVALID: assert(false);
             case AST_Node_Kind::MODULE: assert(false);
-            case AST_Node_Kind::IDENTIFIER: assert(false);
+
+            case AST_Node_Kind::IDENTIFIER:
+            {
+                auto ident = static_cast<AST_Identifier*>(ast_node);
+                result = try_resolve_identifiers(resolver, ident, scope);
+                break;
+            }
 
             case AST_Node_Kind::DECLARATION:
             {
@@ -220,21 +241,43 @@ namespace Zodiac
         assert(resolver);
         assert(ast_decl);
 
-        bool result = false;
+        bool result = true;
 
         switch (ast_decl->kind)
         {
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false);
-            case AST_Declaration_Kind::VARIABLE: assert(false);
+
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                if (ast_decl->variable.type_spec)
+                {
+                    if (!try_resolve_identifiers(resolver, ast_decl->variable.type_spec, scope))
+                    {
+                        assert(false);
+                    }
+                }
+
+                if (ast_decl->variable.init_expression)
+                {
+                    if (!try_resolve_identifiers(resolver, ast_decl->variable.init_expression,
+                                                 scope))
+                    {
+                        assert(false);
+                    }
+                }
+
+                break;
+            }
+
             case AST_Declaration_Kind::CONSTANT: assert(false);
             case AST_Declaration_Kind::PARAMETER: assert(false);
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                if (!try_resolve_identifiers(resolver, ast_decl->function.type_spec))
+                if (!try_resolve_identifiers(resolver, ast_decl->function.type_spec, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
@@ -252,7 +295,6 @@ namespace Zodiac
                     assert(false);
                 }
 
-                result = true;
                 break;
             }
 
@@ -267,6 +309,8 @@ namespace Zodiac
     bool try_resolve_identifiers(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope)
     {
         bool result = false;
+
+        if (ast_stmt->flags & AST_NODE_FLAG_RESOLVED_ID) return true;
 
         switch (ast_stmt->kind)
         {
@@ -288,8 +332,18 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::ASSIGNMENT: assert(false);
-            case AST_Statement_Kind::RETURN: assert(false);
-            case AST_Statement_Kind::DECLARATION: assert(false);
+
+            case AST_Statement_Kind::RETURN:
+            {
+                result = try_resolve_identifiers(resolver, ast_stmt->expression, scope);
+                break;
+            }
+
+            case AST_Statement_Kind::DECLARATION:
+            {
+                result = try_resolve_identifiers(resolver, ast_stmt->declaration, scope);
+                break;
+            }
 
             case AST_Statement_Kind::EXPRESSION:
             {
@@ -381,14 +435,30 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts)
+    bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts, Scope *scope)
     {
-        bool result = false;
+        bool result = true;
         
         switch (ast_ts->kind)
         {
             case AST_Type_Spec_Kind::INVALID: assert(false);
-            case AST_Type_Spec_Kind::IDENTIFIER: assert(false);
+
+            case AST_Type_Spec_Kind::IDENTIFIER:
+            {
+                auto decl = scope_find_declaration(scope, ast_ts->identifier);
+                if (!decl)
+                {
+                    resolver_report_undeclared_identifier(resolver, ast_ts->identifier);
+                    result = false;
+                    break;
+                }
+
+                assert(decl);
+                assert(false);
+
+                break;
+            }
+
             case AST_Type_Spec_Kind::POINTER: assert(false);
             case AST_Type_Spec_Kind::DOT: assert(false);
 
@@ -397,7 +467,7 @@ namespace Zodiac
                 for (int64_t i = 0; i < ast_ts->function.parameter_type_specs.count; i++)
                 {
                     auto param_ts = ast_ts->function.parameter_type_specs[i];
-                    if (!try_resolve_identifiers(resolver, param_ts))
+                    if (!try_resolve_identifiers(resolver, param_ts, scope))
                     {
                         assert(false);
                     }
@@ -406,13 +476,13 @@ namespace Zodiac
                 if (ast_ts->function.return_type_spec)
                 {
                     if (!try_resolve_identifiers(resolver,
-                                                 ast_ts->function.return_type_spec))
+                                                 ast_ts->function.return_type_spec,
+                                                 scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
-                result = true;
                 break;
             }
 
@@ -484,7 +554,29 @@ namespace Zodiac
         {
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false);
-            case AST_Declaration_Kind::VARIABLE: assert(false);
+
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                AST_Type *ts_type = nullptr;
+                if (ast_decl->variable.type_spec)
+                {
+                    if (!try_resolve_types(resolver, ast_decl->variable.type_spec, scope,
+                                           &ts_type))
+                    {
+                        assert(false);
+                    }
+                }
+
+                if (ast_decl->variable.init_expression)
+                {
+                    if (!try_resolve_types(resolver, ast_decl->variable.init_expression, scope))
+                    {
+                        result = false;
+                    }
+                }
+                break;
+            }
+
             case AST_Declaration_Kind::CONSTANT: assert(false);
             case AST_Declaration_Kind::PARAMETER: assert(false);
 
@@ -589,7 +681,17 @@ namespace Zodiac
 
             case AST_Statement_Kind::ASSIGNMENT: assert(false);
             case AST_Statement_Kind::RETURN: assert(false);
-            case AST_Statement_Kind::DECLARATION: assert(false);
+
+            case AST_Statement_Kind::DECLARATION:
+            {
+                auto decl = ast_stmt->declaration;
+                result = try_resolve_types(resolver, decl, scope);
+                if (result && (decl->flags & AST_NODE_FLAG_TYPED))
+                {
+                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                }
+                break;
+            }
 
             case AST_Statement_Kind::EXPRESSION:
             {
@@ -1010,4 +1112,61 @@ namespace Zodiac
         free(resolver->allocator, job);  
     }
 
+    void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier)
+    {
+        assert(resolver);
+        assert(identifier);
+
+        auto atom = identifier->atom;
+
+        resolver_report_error(resolver,
+                              Resolve_Error_Kind::UNDECLARED_IDENTIFIER,
+                              identifier->begin_file_pos, identifier->end_file_pos,
+                              "Reference to undeclared identifier: '%.*s'",
+                              (int)atom.length, atom.data);
+    }
+
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
+                               File_Pos end_fp, const char *fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        resolver_report_error(resolver, kind, begin_fp, end_fp, fmt, args);
+        va_end(args);
+    }
+
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
+                               File_Pos end_fp, const char *fmt, va_list args)
+    {
+        auto allocator = resolver->err_allocator;
+
+        va_list args_copy;
+        va_copy(args_copy, args);
+        auto size = vsnprintf(nullptr, 0, fmt, args_copy);
+        va_end(args_copy);
+
+        char *buf = alloc_array<char>(allocator, size + 1);
+        assert(buf);
+
+        auto written_size = vsnprintf(buf, size + 1, fmt, args);
+        assert(written_size <= size); 
+
+        Resolve_Error err = resolver_make_error(kind, buf, written_size, begin_fp, end_fp);
+        array_append(&resolver->errors, err);
+    }
+
+    void resolver_report_errors(Resolver *resolver)
+    {
+        for (int64_t i = 0; i < resolver->errors.count; i++)
+        {
+            auto &err = resolver->errors[i];
+            fprintf(stderr, "%.*s\n", (int)err.message_size, err.message);
+        }
+    }
+
+    Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
+                                      int64_t message_size, File_Pos begin_fp, File_Pos end_fp)
+    {
+        return { kind, message, message_size, begin_fp, end_fp };
+    }
 }

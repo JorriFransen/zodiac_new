@@ -51,7 +51,7 @@ int main(int argc, char** argv)
     ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
-    resolver_init(ca, &resolver, &build_data);
+    resolver_init(ca, ca, &resolver, &build_data);
 
     start_resolving(&resolver, ast_root, true);
     Resolve_Result rr = finish_resolving(&resolver);

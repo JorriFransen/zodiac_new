@@ -4,18 +4,40 @@
 #include "struct_predecls.h"
 #include "queue.h"
 
+#include <cstdarg>
+
 namespace Zodiac
 {
     struct Resolve_Job;
+
+    enum class Resolve_Error_Kind
+    {
+        INVALID,
+        UNDECLARED_IDENTIFIER,
+    };
+
+    struct Resolve_Error
+    {
+        Resolve_Error_Kind kind = Resolve_Error_Kind::INVALID;
+
+        const char *message = nullptr;
+        int64_t message_size = -1;
+        File_Pos begin_fp = {};
+        File_Pos end_fp = {};
+    };
+
     struct Resolver
     {
         Allocator *allocator = nullptr;
+        Allocator *err_allocator = nullptr;
         Build_Data *build_data = nullptr;
         AST_Node *root_node = nullptr;
 
         Queue<Resolve_Job*> ident_job_queue = {};
         Queue<Resolve_Job*> type_job_queue = {};
         Queue<Resolve_Job*> size_job_queue = {};
+
+        Array<Resolve_Error> errors = {};
     };
 
     struct Resolve_Result
@@ -47,7 +69,8 @@ namespace Zodiac
         Scope *node_scope = nullptr;
     };
 
-    void resolver_init(Allocator *allocator, Resolver *resolver, Build_Data *build_data);
+    void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
+                       Build_Data *build_data);
 
     void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking);
     Resolve_Result finish_resolving(Resolver *resolver);
@@ -60,7 +83,7 @@ namespace Zodiac
     bool try_resolve_identifiers(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Expression* ast_expr, Scope *scope);
-    bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts);
+    bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts, Scope *scope);
 
     bool try_resolve_types(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
@@ -87,4 +110,15 @@ namespace Zodiac
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
 
     void free_job(Resolver *resolver, Resolve_Job *job);
+
+    void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier);
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
+                               File_Pos end_fp, const char *fmt, ...);
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
+                               File_Pos end_fp, const char *fmt, va_list args);
+
+    void resolver_report_errors(Resolver *resolver);
+
+    Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
+                                      int64_t message_size, File_Pos begin_fp, File_Pos end_fp);
 }
