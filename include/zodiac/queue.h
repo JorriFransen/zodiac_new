@@ -58,7 +58,19 @@ namespace Zodiac
     {
         if (queue->used >= queue->capacity)
         {
-            assert(false);
+            assert(queue->front >= 0);
+
+            auto new_cap = queue->capacity * 2;
+            assert(new_cap);
+
+            Element_Type *new_buffer = alloc_array<Element_Type>(queue->allocator, new_cap);
+            assert(new_buffer);
+
+            memcpy(new_buffer + queue->front, queue->buffer + queue->front, queue->used);
+
+            queue->capacity = new_cap;
+            free(queue->allocator, queue->buffer);
+            queue->buffer = new_buffer;
         }
     }
 
