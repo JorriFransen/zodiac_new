@@ -1,3 +1,6 @@
 
+Should identifiers contain the type of the declaration they point to after they have been typed?
+
 Allocate arrays with the correct size if its known:
     - function body statements
+

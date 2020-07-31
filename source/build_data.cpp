@@ -39,9 +39,9 @@ namespace Zodiac
                     r_type->function.param_types.count == param_types.count)
                 {
                     bool param_match = true;
-                    assert(false);
                     for (int64_t j = 0; j < param_types.count; j++)
                     {
+                        assert(false);
                         if (r_type->function.param_types[j] != param_types[j])
                         {
                             param_match = false;
