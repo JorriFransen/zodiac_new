@@ -67,11 +67,12 @@ namespace Zodiac
     bool try_resolve_types(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
     bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr, Scope *scope);
-    bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, AST_Type **type_target);
+    bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,
+                           AST_Type **type_target);
 
 
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
-                                           AST_Type *return_type);
+                                           AST_Type *return_type, Scope *scope);
 
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);

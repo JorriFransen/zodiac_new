@@ -94,7 +94,7 @@ namespace Zodiac
                 }
                 else
                 {
-                    queue_size_job(resolver, job->declaration, job->node_scope);
+                    // Size jobs are queued when types are first created
                     free_job(resolver, job);
                 }
             }
@@ -106,7 +106,7 @@ namespace Zodiac
 
             if (queue_count(&resolver->ident_job_queue) == 0 &&
                 queue_count(&resolver->type_job_queue) == 0 &&
-                queue_count(&resolver->size_job_queue))
+                queue_count(&resolver->size_job_queue) == 0)
 
             {
                 done = true;
@@ -429,9 +429,12 @@ namespace Zodiac
             case AST_Node_Kind::DECLARATION:
             {
                 auto decl = static_cast<AST_Declaration*>(ast_node);
-                assert(decl->type == nullptr);
-                result = try_resolve_types(resolver, decl, scope);
-                if (result) assert(decl->type);
+                //assert(decl->type == nullptr);
+                if (!(decl->flags & AST_NODE_FLAG_TYPED))
+                {
+                    result = try_resolve_types(resolver, decl, scope);
+                    if (result) assert(decl->type);
+                }
                 break;
             }
 
@@ -453,7 +456,7 @@ namespace Zodiac
 
         assert(ast_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(!(ast_decl->flags & AST_NODE_FLAG_TYPED));
-        assert(ast_decl->type == nullptr);
+        //assert(ast_decl->type == nullptr);
 
         bool result = true;
 
@@ -467,11 +470,16 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                if (!try_resolve_types(resolver, ast_decl->function.type_spec,
+                if (!ast_decl->function.type_spec->type &&
+                    !try_resolve_types(resolver, ast_decl->function.type_spec, scope,
                                        &ast_decl->type))
                 {
                     result = false;
                     break;
+                }
+                else
+                {
+                    assert(ast_decl->type);
                 }
 
                 int param_fail_count = 0;
@@ -608,6 +616,7 @@ namespace Zodiac
                 if (ident->declaration->flags & AST_NODE_FLAG_TYPED)
                 {
                     assert(ident->declaration->type);
+                    ast_expr->type = ident->declaration->type;
                     result = true;
                 }
                 else
@@ -637,6 +646,9 @@ namespace Zodiac
                     }
                     else
                     {
+                        auto func_type = ast_expr->call.ident_expression->type;
+                        assert(func_type->kind == AST_Type_Kind::FUNCTION);
+
                         for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
                         {
                             auto arg_expr = ast_expr->call.arg_expressions[i];
@@ -646,8 +658,14 @@ namespace Zodiac
                             }
                         }
 
+                        ast_expr->type = func_type->function.return_type;
                         result = true;
                     }
+                }
+
+                if (result)
+                {
+                    assert(ast_expr->type);
                 }
                 
                 break;
@@ -667,8 +685,8 @@ namespace Zodiac
 
         if (result)
         {
-            ast_expr->flags |= AST_NODE_FLAG_TYPED;
             assert(ast_expr->type);
+            ast_expr->flags |= AST_NODE_FLAG_TYPED;
         }
 
         return result;
@@ -702,10 +720,13 @@ namespace Zodiac
 
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Type_Spec* ts, AST_Type **type_target)
+    bool try_resolve_types(Resolver *resolver, AST_Type_Spec* ts, Scope* scope,
+                           AST_Type **type_target)
     {
         assert(resolver);
         assert(ts);
+        assert(ts->type == nullptr);
+        assert(scope);
         assert(type_target);
         assert(*type_target == nullptr);
 
@@ -736,7 +757,7 @@ namespace Zodiac
                 {
                     auto param_ts = ts->function.parameter_type_specs[i];
                     AST_Type *param_type = nullptr;
-                    if (!try_resolve_types(resolver, param_ts, &param_type))
+                    if (!try_resolve_types(resolver, param_ts, scope, &param_type))
                     {
                         assert(false);
                     }
@@ -759,7 +780,8 @@ namespace Zodiac
                 AST_Type *return_type = nullptr;
                 if (ts->function.return_type_spec)
                 {
-                    if (!try_resolve_types(resolver, ts->function.return_type_spec, &return_type))
+                    if (!try_resolve_types(resolver, ts->function.return_type_spec, scope,
+                                           &return_type))
                     {
                         assert(false);
                     }
@@ -771,7 +793,8 @@ namespace Zodiac
                     return_type = Builtin::type_void; 
                 }
 
-                auto func_type = find_or_create_function_type(resolver, param_types, return_type);
+                auto func_type = find_or_create_function_type(resolver, param_types, return_type,
+                                                              scope);
                 assert(func_type);
                 result = true;
                 ts->type = func_type;
@@ -795,14 +818,26 @@ namespace Zodiac
     }
 
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
-                                           AST_Type *return_type)
+                                           AST_Type *return_type, Scope *scope)
     {
         assert(resolver);
         assert(return_type);
         assert(param_types.count >= 0);
+        assert(scope);
 
-        return build_data_find_or_create_function_type(resolver->allocator, resolver->build_data,
-                                                       param_types, return_type);
+        AST_Type *func_type = build_data_find_function_type(resolver->build_data, param_types,
+                                                            return_type);
+
+        if (!func_type)
+        {
+            func_type = ast_function_type_new(resolver->allocator, param_types, return_type);
+            array_append(&resolver->build_data->type_table, func_type);
+            queue_size_job(resolver, func_type, scope);
+        }
+
+        assert(func_type);
+
+        return func_type;
     }
 
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)

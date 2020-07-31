@@ -17,8 +17,6 @@ namespace Zodiac
 
     void build_data_init(Allocator* allocator, Build_Data* build_data);
 
-    AST_Type* build_data_find_or_create_function_type(Allocator *allocator, 
-                                                      Build_Data *build_data,
-                                                      Array<AST_Type*> param_types,
-                                                      AST_Type *return_type);
+    AST_Type* build_data_find_function_type(Build_Data *build_data, Array<AST_Type*> param_types,
+                                            AST_Type *return_type);
 }
