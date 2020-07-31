@@ -70,6 +70,8 @@ namespace Zodiac
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,
                            AST_Type **type_target);
 
+    bool try_resolve_sizes(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+    bool try_resolve_sizes(Resolver *resolver, AST_Type *ast_type, Scope *scope);
 
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope);

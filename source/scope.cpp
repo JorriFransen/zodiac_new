@@ -77,6 +77,7 @@ namespace Zodiac
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
+            case AST_Node_Kind::TYPE: assert(false);
         }
     }
 

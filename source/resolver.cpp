@@ -58,7 +58,7 @@ namespace Zodiac
         assert(queue_count(&resolver->type_job_queue) == 0);
         assert(queue_count(&resolver->size_job_queue) == 0);
 
-        assert(false);
+        return Resolve_Result {};
     }
 
     void start_resolve_pump(Resolver *resolver)
@@ -101,7 +101,17 @@ namespace Zodiac
 
             while (queue_count(&resolver->size_job_queue))
             {
-                assert(false);
+                auto job = queue_dequeue(&resolver->size_job_queue);
+                bool job_done = try_resolve_job(resolver, job);
+
+                if (!job_done)
+                {
+                    queue_enqueue(&resolver->size_job_queue, job);
+                }
+                else
+                {
+                    free_job(resolver, job);
+                }
             }
 
             if (queue_count(&resolver->ident_job_queue) == 0 &&
@@ -145,7 +155,15 @@ namespace Zodiac
                 break;
             }
 
-            case Resolve_Job_Kind::SIZE: assert(false);
+            case Resolve_Job_Kind::SIZE:
+            {
+                result = try_resolve_sizes(resolver, job->ast_node, job->node_scope);
+                if (result)
+                {
+                    assert(job->ast_node->flags & AST_NODE_FLAG_SIZED);
+                }
+                break;
+            }
         }
 
         return result;
@@ -189,6 +207,7 @@ namespace Zodiac
             }
 
             case AST_Node_Kind::TYPE_SPEC: assert(false);
+            case AST_Node_Kind::TYPE: assert(false);
         }
 
         if (result) assert(ast_node->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -441,6 +460,7 @@ namespace Zodiac
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
+            case AST_Node_Kind::TYPE: assert(false);
         }
 
         if (result) assert(ast_node->flags & AST_NODE_FLAG_TYPED);
@@ -812,6 +832,82 @@ namespace Zodiac
             assert(ts->type);
             assert(*type_target);
             ts->flags |= AST_NODE_FLAG_TYPED;
+        }
+
+        return result;
+    }
+
+    bool try_resolve_sizes(Resolver *resolver, AST_Node *ast_node, Scope *scope)
+    {
+        assert(resolver);
+        assert(ast_node);
+        assert(scope);
+
+        if (ast_node->flags & AST_NODE_FLAG_SIZED) return  true;
+
+        bool result = true;
+
+        assert(ast_node->kind == AST_Node_Kind::TYPE);
+
+        switch (ast_node->kind)
+        {
+            case AST_Node_Kind::INVALID: assert(false);
+            case AST_Node_Kind::MODULE: assert(false);
+            case AST_Node_Kind::IDENTIFIER: assert(false);
+            case AST_Node_Kind::DECLARATION: assert(false);
+            case AST_Node_Kind::STATEMENT: assert(false);
+            case AST_Node_Kind::EXPRESSION: assert(false);
+            case AST_Node_Kind::TYPE_SPEC: assert(false);
+
+            case AST_Node_Kind::TYPE:
+            {
+                result = try_resolve_sizes(resolver, static_cast<AST_Type*>(ast_node), scope);
+                break;
+            }
+        }
+
+        if (result)
+        {
+            assert(ast_node->flags & AST_NODE_FLAG_SIZED);
+        }
+
+        return result;
+    }
+
+    bool try_resolve_sizes(Resolver *resolver, AST_Type *ast_type, Scope *scope)
+    {
+        assert(resolver);
+        assert(ast_type);
+        assert(scope);
+
+        if (ast_type->flags & AST_NODE_FLAG_SIZED)
+        {
+            assert(ast_type->flags & AST_NODE_FLAG_SIZED);
+            assert(ast_type->bit_size > 0);
+            return true;
+        }
+
+        bool result = true;
+
+        switch (ast_type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+            case AST_Type_Kind::INTEGER: assert(false);
+
+            case AST_Type_Kind::FUNCTION:
+            {
+                assert(ast_type->bit_size == Builtin::pointer_size);
+                ast_type->flags |= AST_NODE_FLAG_SIZED;
+                result = true;
+                break;
+            }
+        }
+
+        if (result)
+        {
+            assert(ast_type->flags & AST_NODE_FLAG_SIZED);
+            assert(ast_type->bit_size > 0);
         }
 
         return result;

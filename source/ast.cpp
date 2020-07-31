@@ -17,6 +17,7 @@ namespace Zodiac
     AST_Node_Kind AST_Statement::_kind = AST_Node_Kind::STATEMENT;
     AST_Node_Kind AST_Expression::_kind = AST_Node_Kind::EXPRESSION;
     AST_Node_Kind AST_Type_Spec::_kind = AST_Node_Kind::TYPE_SPEC;
+    AST_Node_Kind AST_Type::_kind = AST_Node_Kind::TYPE;
 
     void ast_node_init(AST_Node* ast_node, AST_Node_Kind kind, const File_Pos &begin_fp,
                        const File_Pos &end_fp)
@@ -1151,6 +1152,7 @@ namespace Zodiac
     AST_Type* ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size)
     {
         auto result = alloc_type<AST_Type>(allocator);
+        static_cast<AST_Node*>(result)->kind = AST_Type::_kind;
         assert(result);
         result->kind = kind;
         result->bit_size = bit_size;
@@ -1218,6 +1220,7 @@ namespace Zodiac
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
+            case AST_Node_Kind::TYPE: assert(false);
         }
     }
 
@@ -1627,6 +1630,7 @@ namespace Zodiac
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
+            case AST_Node_Kind::TYPE: assert(false);
         }
     }
 

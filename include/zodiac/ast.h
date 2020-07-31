@@ -19,6 +19,7 @@ namespace Zodiac
         STATEMENT,
         EXPRESSION,
         TYPE_SPEC,
+        TYPE,
     };
 
     typedef uint64_t AST_Node_Flags;
