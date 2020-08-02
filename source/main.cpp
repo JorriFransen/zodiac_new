@@ -43,12 +43,12 @@ int main(int argc, char** argv)
 
     AST_Node* ast_root = ast_create_from_parsed_file(ca, &parsed_file);
     assert(ast_root);
-    ast_print(ast_root);
+    //ast_print(ast_root);
 
     scope_populate_ast(ca, ast_root, nullptr);
 
-    printf("\nSCOPE DUMP:\n");
-    ast_print_scope(ca, ast_root);
+    //printf("\nSCOPE DUMP:\n");
+    //ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
     resolver_init(ca, ca, &resolver, &build_data);

@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include <inttypes.h>
+
 namespace Zodiac
 {
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
@@ -60,9 +62,13 @@ namespace Zodiac
     {
         assert(resolver);
 
-        assert(queue_count(&resolver->ident_job_queue) == 0);
-        assert(queue_count(&resolver->type_job_queue) == 0);
-        assert(queue_count(&resolver->size_job_queue) == 0);
+        if (resolver->errors.count == 0)
+        {
+            assert(queue_count(&resolver->ident_job_queue) == 0);
+            assert(queue_count(&resolver->type_job_queue) == 0);
+            assert(queue_count(&resolver->size_job_queue) == 0);
+
+        }
 
         return Resolve_Result {};
     }
@@ -1157,11 +1163,18 @@ namespace Zodiac
 
     void resolver_report_errors(Resolver *resolver)
     {
+        fprintf(stderr, "\n");
         for (int64_t i = 0; i < resolver->errors.count; i++)
         {
             auto &err = resolver->errors[i];
-            fprintf(stderr, "%.*s\n", (int)err.message_size, err.message);
+            auto &bfp = err.begin_fp;
+
+            fprintf(stderr, "Error:%.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
+                    (int)bfp.file_name.length, bfp.file_name.data,
+                    bfp.line, bfp.column,
+                    (int)err.message_size, err.message);
         }
+        fprintf(stderr, "\n");
     }
 
     Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
