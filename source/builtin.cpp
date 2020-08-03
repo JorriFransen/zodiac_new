@@ -54,6 +54,9 @@ AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, 
         case Builtin_Type_Kind::INTEGER: 
             return ast_integer_type_new(allocator, size, sign);
     }
+
+    assert(false);
+    return nullptr;
 }
 
 void builtin_populate_scope(Allocator *allocator, Scope *global_scope)
