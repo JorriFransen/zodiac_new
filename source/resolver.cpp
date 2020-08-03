@@ -25,6 +25,7 @@ namespace Zodiac
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
         queue_init(allocator, &resolver->size_job_queue);
+        queue_init(allocator, &resolver->emit_bytecode_job_queue);
 
         array_init(err_allocator, &resolver->errors);
     }
@@ -41,12 +42,25 @@ namespace Zodiac
 
         assert(ast_node->kind == AST_Node_Kind::MODULE);
 
+        AST_Declaration *entry_decl = nullptr;
+
         auto ast_module = static_cast<AST_Module*>(ast_node);
         for (int64_t i = 0; i < ast_module->declarations.count; i++)
         {
             AST_Declaration *decl = ast_module->declarations[i];
             queue_ident_job(resolver, decl, ast_module->module_scope);
+
+            if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                decl->identifier->atom == Builtin::atom__start &&
+                (decl->decl_flags & AST_DECL_FLAG_IS_NAKED))
+            {
+                assert(!entry_decl);
+                entry_decl = decl;
+            }
         }
+
+        assert(entry_decl);
+        queue_emit_bytecode_job(resolver, entry_decl, ast_module->module_scope);
 
         if (blocking)
         {
@@ -67,6 +81,7 @@ namespace Zodiac
             assert(queue_count(&resolver->ident_job_queue) == 0);
             assert(queue_count(&resolver->type_job_queue) == 0);
             assert(queue_count(&resolver->size_job_queue) == 0);
+            assert(queue_count(&resolver->emit_bytecode_job_queue) == 0);
 
         }
 
@@ -129,9 +144,26 @@ namespace Zodiac
                 }
             }
 
+            auto bytecode_job_count = queue_count(&resolver->emit_bytecode_job_queue);
+            while (bytecode_job_count--)
+            {
+                auto job = queue_dequeue(&resolver->emit_bytecode_job_queue);
+                bool job_done = try_resolve_job(resolver, job);
+
+                if (!job_done)
+                {
+                    queue_enqueue(&resolver->emit_bytecode_job_queue, job);
+                }
+                else
+                {
+                    free_job(resolver, job);
+                }
+            }
+
             if (queue_count(&resolver->ident_job_queue) == 0 &&
                 queue_count(&resolver->type_job_queue) == 0 &&
-                queue_count(&resolver->size_job_queue) == 0)
+                queue_count(&resolver->size_job_queue) == 0 &&
+                queue_count(&resolver->emit_bytecode_job_queue) == 0)
 
             {
                 done = true;
@@ -183,6 +215,23 @@ namespace Zodiac
                 {
                     assert(job->ast_node->flags & AST_NODE_FLAG_SIZED);
                 }
+                break;
+            }
+
+            case Resolve_Job_Kind::EMIT_BYTECODE:
+            {
+                auto node = job->ast_node;
+                if (node->kind == AST_Node_Kind::TYPE &&
+                    !(node->flags & AST_NODE_FLAG_SIZED))
+                {
+                    result = false;
+                    assert(false);
+                }
+                else if (!(node->flags & AST_NODE_FLAG_TYPED))
+                {
+                    result = false;
+                }
+                else assert(false);
                 break;
             }
         }
@@ -1157,6 +1206,15 @@ namespace Zodiac
 
     }
 
+    void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
+    {
+        assert(resolver->allocator);
+
+        auto job = resolve_job_emit_bytecode_new(resolver->allocator, ast_node, scope);
+        queue_enqueue(&resolver->emit_bytecode_job_queue, job);
+        assert(job);
+    }
+    
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node, 
                                  Scope *scope)
     {
@@ -1181,6 +1239,12 @@ namespace Zodiac
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope)
     {
         return resolve_job_new(allocator, Resolve_Job_Kind::SIZE, ast_node, scope);
+    }
+
+    Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
+                                               Scope *scope)
+    {
+        return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope);
     }
 
     void free_job(Resolver *resolver, Resolve_Job *job)

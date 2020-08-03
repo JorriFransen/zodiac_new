@@ -17,8 +17,8 @@ posix_call_main_and_exit :: func ()
     //return echo(40);
 //}
 
-echo :: func (val: s64) -> s64
-{
-    result := val;
-    return result;
-}
+//echo :: func (val: s64) -> s64
+//{
+    //result := val;
+    //return result;
+//}

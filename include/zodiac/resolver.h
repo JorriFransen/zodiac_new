@@ -35,6 +35,7 @@ namespace Zodiac
         Queue<Resolve_Job*> ident_job_queue = {};
         Queue<Resolve_Job*> type_job_queue = {};
         Queue<Resolve_Job*> size_job_queue = {};
+        Queue<Resolve_Job*> emit_bytecode_job_queue = {};
 
         Array<Resolve_Error> errors = {};
     };
@@ -50,6 +51,7 @@ namespace Zodiac
         IDENTIFIER,
         TYPE,
         SIZE,
+        EMIT_BYTECODE,
     };
 
     struct Resolve_Job
@@ -101,12 +103,15 @@ namespace Zodiac
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+    void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
 
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
                                  Scope *scope);
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
+    Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
+                                               Scope *scope);
 
     void free_job(Resolver *resolver, Resolve_Job *job);
 

@@ -17,6 +17,7 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_TYPE(u64, INTEGER, 64, false) \
 
 #define BUILTIN_ATOM_LIST      \
+    DEFINE_BUILTIN_ATOM(_start)  \
     DEFINE_BUILTIN_ATOM(exit)  \
     DEFINE_BUILTIN_ATOM(naked) \
 
