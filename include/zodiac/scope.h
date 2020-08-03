@@ -7,6 +7,7 @@ namespace Zodiac
     enum class Scope_Kind
     {
         INVALID,
+        GLOBAL,
         MODULE,
         PARAMETER,
         BLOCK,

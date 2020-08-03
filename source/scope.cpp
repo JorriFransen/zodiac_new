@@ -41,7 +41,8 @@ namespace Zodiac
     {
         assert(allocator);
 
-        if (parent_scope) assert(anode->kind != AST_Node_Kind::MODULE);
+        if (parent_scope) assert(anode->kind != AST_Node_Kind::MODULE ||
+                                 parent_scope->kind == Scope_Kind::GLOBAL);
         else assert(anode->kind == AST_Node_Kind::MODULE);
 
         switch (anode->kind)
@@ -53,7 +54,9 @@ namespace Zodiac
                 auto ast_module = static_cast<AST_Module*>(anode);
                 assert(ast_module->module_scope == nullptr);
 
-                ast_module->module_scope = scope_new(allocator, Scope_Kind::MODULE, nullptr,
+                assert(parent_scope);
+                assert(parent_scope->kind == Scope_Kind::GLOBAL);
+                ast_module->module_scope = scope_new(allocator, Scope_Kind::MODULE, parent_scope,
                                                      ast_module->declarations.count);
 
                 for (int64_t i = 0; i < ast_module->declarations.count; i++)
@@ -125,6 +128,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::TYPE: assert(false);
+                                              
             case AST_Declaration_Kind::STRUCTURE:
             {
                 assert(ast_decl->structure.parameter_scope == nullptr);
@@ -373,7 +378,7 @@ namespace Zodiac
                                    sizeof(Scope) + (initial_cap * sizeof(AST_Declaration*)));
         assert(mem);
 
-        if (parent == nullptr) assert(kind == Scope_Kind::MODULE);
+        if (parent == nullptr) assert(kind == Scope_Kind::GLOBAL);
 
         Scope *result = (Scope*)mem;
         result->kind = kind;
@@ -407,6 +412,12 @@ namespace Zodiac
         switch (scope->kind)
         {
             case Scope_Kind::INVALID: assert(false);
+
+            case Scope_Kind::GLOBAL:
+            {
+                string_builder_append(sb, "GLOBAL:\n");
+                break;
+            }
 
             case Scope_Kind::MODULE:
             {

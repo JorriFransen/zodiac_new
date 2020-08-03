@@ -41,11 +41,15 @@ int main(int argc, char** argv)
 
     //parsed_file_print(&parsed_file);
 
+    //@TODO: initialize with builtin global count
+    Scope *global_scope = scope_new(ca, Scope_Kind::GLOBAL, nullptr);
+
     AST_Node* ast_root = ast_create_from_parsed_file(ca, &parsed_file);
     assert(ast_root);
-    //ast_print(ast_root);
+    ast_print(ast_root);
 
-    scope_populate_ast(ca, ast_root, nullptr);
+    builtin_populate_scope(ca, global_scope);
+    scope_populate_ast(ca, ast_root, global_scope);
 
     //printf("\nSCOPE DUMP:\n");
     //ast_print_scope(ca, ast_root);

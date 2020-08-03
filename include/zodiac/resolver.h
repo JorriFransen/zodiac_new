@@ -22,8 +22,7 @@ namespace Zodiac
 
         const char *message = nullptr;
         int64_t message_size = -1;
-        File_Pos begin_fp = {};
-        File_Pos end_fp = {};
+        AST_Node *ast_node = nullptr;
     };
 
     struct Resolver
@@ -112,13 +111,13 @@ namespace Zodiac
     void free_job(Resolver *resolver, Resolve_Job *job);
 
     void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier);
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
-                               File_Pos end_fp, const char *fmt, ...);
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
-                               File_Pos end_fp, const char *fmt, va_list args);
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
+                               const char *fmt, ...);
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
+                               const char *fmt, va_list args);
 
     void resolver_report_errors(Resolver *resolver);
 
     Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
-                                      int64_t message_size, File_Pos begin_fp, File_Pos end_fp);
+                                      int64_t message_size, AST_Node *ast_node);
 }

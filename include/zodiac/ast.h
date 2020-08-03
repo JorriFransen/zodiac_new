@@ -69,6 +69,7 @@ namespace Zodiac
 
         PARAMETER,
         FUNCTION,
+        TYPE,
         STRUCTURE,
 
         POLY_TYPE,
@@ -103,8 +104,8 @@ namespace Zodiac
 
             struct
             {
-                AST_Type_Spec* type_spec;
-                AST_Expression* init_expression;
+                AST_Type_Spec *type_spec;
+                AST_Expression *init_expression;
             } variable, constant;
 
             struct
@@ -354,7 +355,8 @@ namespace Zodiac
 
     AST_Node* ast_create_from_parsed_file(Allocator* allocator, Parsed_File* parsed_file);
     AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Declaration_PTN* ptn);
-    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Parameter_PTN* ptn);
+    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Parameter_PTN* ptn,
+                                                     AST_Type_Spec *type_spec);
     AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn);
     AST_Expression* ast_create_expression_from_ptn(Allocator* allocator, Expression_PTN* ptn);
     AST_Type_Spec* ast_create_type_spec_from_ptn(Allocator* allocator, PT_Node* ptn);
@@ -363,7 +365,7 @@ namespace Zodiac
 
     AST_Identifier* ast_identifier_new(Allocator* allocator, Atom& atom,
                                        const File_Pos & begin_fp, const File_Pos &end_fp);
-    AST_Module* ast_module_new(Allocator* allocator, Array<AST_Declaration*> decls,
+    AST_Module* ast_module_new(Allocator* allocator, Array<AST_Declaration*> decls, 
                                const File_Pos & begin_fp, const File_Pos &end_fp);
 
     AST_Declaration* ast_declaration_new(Allocator* allocator, AST_Declaration_Kind kind, 
@@ -389,6 +391,8 @@ namespace Zodiac
                                                   AST_Statement* body,
                                                   bool is_naked, const File_Pos & begin_fp,
                                                   const File_Pos &end_fp);
+    AST_Declaration* ast_type_declaration_new(Allocator *allocator, AST_Type *type,
+                                              AST_Identifier *identifier);
     AST_Declaration* ast_structure_declaration_new(Allocator* allocator,
                                                    AST_Identifier* identifier,
                                                    Array<AST_Declaration*> member_decls,

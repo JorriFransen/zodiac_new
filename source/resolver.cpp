@@ -277,7 +277,12 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::CONSTANT: assert(false);
-            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER:
+            {
+                result = try_resolve_identifiers(resolver, ast_decl->parameter.type_spec, scope);
+                break;
+            };
 
             case AST_Declaration_Kind::FUNCTION:
             {
@@ -292,7 +297,7 @@ namespace Zodiac
                     if (!try_resolve_identifiers(resolver, param_decl,
                                                  ast_decl->function.parameter_scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
@@ -304,6 +309,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
@@ -460,7 +466,7 @@ namespace Zodiac
                 }
 
                 assert(decl);
-                assert(false);
+                assert(decl->kind == AST_Declaration_Kind::TYPE);
 
                 break;
             }
@@ -475,7 +481,7 @@ namespace Zodiac
                     auto param_ts = ast_ts->function.parameter_type_specs[i];
                     if (!try_resolve_identifiers(resolver, param_ts, scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
@@ -580,11 +586,53 @@ namespace Zodiac
                         result = false;
                     }
                 }
+
+                if (result)
+                {
+                    if (ts_type && ast_decl->variable.init_expression)
+                    {
+                        assert(ts_type == ast_decl->variable.init_expression->type);
+                    }
+
+                    AST_Type *var_type = ts_type;
+                    if (var_type == nullptr && ast_decl->variable.init_expression)
+                    {
+                        var_type = ast_decl->variable.init_expression->type;
+                    }
+
+                    assert(var_type);
+
+                    ast_decl->type = var_type;
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
                 break;
             }
 
             case AST_Declaration_Kind::CONSTANT: assert(false);
-            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER:
+            {
+                if (ast_decl->parameter.type_spec->type &&
+                    !ast_decl->type)
+                {
+                    // Was already resolved when resolving the function type spec
+                    ast_decl->type = ast_decl->parameter.type_spec->type;
+                }
+                else if (!ast_decl->parameter.type_spec->type)
+                {
+                    result = try_resolve_types(resolver, ast_decl->parameter.type_spec, scope,
+                                               &ast_decl->type);
+                    assert(ast_decl->type);
+                } else assert(false);
+
+                if (result)
+                {
+                    assert(ast_decl->type);
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
+                break;
+            }
+
 
             case AST_Declaration_Kind::FUNCTION:
             {
@@ -634,6 +682,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
@@ -686,7 +735,17 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::ASSIGNMENT: assert(false);
-            case AST_Statement_Kind::RETURN: assert(false);
+
+            case AST_Statement_Kind::RETURN:
+            {
+                result = try_resolve_types(resolver, ast_stmt->expression, scope);
+                if (result && (ast_stmt->expression->flags & AST_NODE_FLAG_TYPED))
+                {
+                    assert(ast_stmt->expression->type);
+                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                }
+                break;
+            }
 
             case AST_Statement_Kind::DECLARATION:
             {
@@ -867,7 +926,19 @@ namespace Zodiac
         switch (ts->kind)
         {
             case AST_Type_Spec_Kind::INVALID: assert(false);
-            case AST_Type_Spec_Kind::IDENTIFIER: assert(false);
+
+            case AST_Type_Spec_Kind::IDENTIFIER:
+            {
+                auto decl = ts->identifier->declaration;
+                assert(decl);
+                assert(decl->kind == AST_Declaration_Kind::TYPE);
+                assert(decl->type);
+                *type_target = decl->type;
+                ts->type = decl->type;
+                result = true;
+                break;
+            }
+
             case AST_Type_Spec_Kind::POINTER: assert(false);
             case AST_Type_Spec_Kind::DOT: assert(false);
 
@@ -1125,24 +1196,34 @@ namespace Zodiac
 
         auto atom = identifier->atom;
 
+        for (int64_t i = 0; i < resolver->errors.count; i++)
+        {
+            auto &err = resolver->errors[i];
+            if (err.kind == Resolve_Error_Kind::UNDECLARED_IDENTIFIER &&
+                    err.ast_node == identifier)
+            {
+                return;
+            }
+        }
+
         resolver_report_error(resolver,
                               Resolve_Error_Kind::UNDECLARED_IDENTIFIER,
-                              identifier->begin_file_pos, identifier->end_file_pos,
+                              identifier,
                               "Reference to undeclared identifier: '%.*s'",
                               (int)atom.length, atom.data);
     }
 
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
-                               File_Pos end_fp, const char *fmt, ...)
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
+                               const char *fmt, ...)
     {
         va_list args;
         va_start(args, fmt);
-        resolver_report_error(resolver, kind, begin_fp, end_fp, fmt, args);
+        resolver_report_error(resolver, kind, ast_node, fmt, args);
         va_end(args);
     }
 
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, File_Pos begin_fp,
-                               File_Pos end_fp, const char *fmt, va_list args)
+    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
+                               const char *fmt, va_list args)
     {
         auto allocator = resolver->err_allocator;
 
@@ -1157,7 +1238,7 @@ namespace Zodiac
         auto written_size = vsnprintf(buf, size + 1, fmt, args);
         assert(written_size <= size); 
 
-        Resolve_Error err = resolver_make_error(kind, buf, written_size, begin_fp, end_fp);
+        Resolve_Error err = resolver_make_error(kind, buf, written_size, ast_node);
         array_append(&resolver->errors, err);
     }
 
@@ -1167,7 +1248,8 @@ namespace Zodiac
         for (int64_t i = 0; i < resolver->errors.count; i++)
         {
             auto &err = resolver->errors[i];
-            auto &bfp = err.begin_fp;
+            auto node = err.ast_node;
+            auto &bfp = node->begin_file_pos;
 
             fprintf(stderr, "Error:%.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
                     (int)bfp.file_name.length, bfp.file_name.data,
@@ -1178,8 +1260,8 @@ namespace Zodiac
     }
 
     Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
-                                      int64_t message_size, File_Pos begin_fp, File_Pos end_fp)
+                                      int64_t message_size, AST_Node *ast_node)
     {
-        return { kind, message, message_size, begin_fp, end_fp };
+        return { kind, message, message_size, ast_node };
     }
 }
