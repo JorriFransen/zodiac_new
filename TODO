@@ -1,5 +1,5 @@
 
-Should identifiers contain the type of the declaration they point to after they have been typed?
+Dont't store File Positions on ast nodes.
 
 Allocate arrays with the correct size if its known:
     - function body statements
