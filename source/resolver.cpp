@@ -20,7 +20,9 @@ namespace Zodiac
 
         resolver->allocator = allocator;
         resolver->err_allocator = err_allocator;
+
         resolver->build_data = build_data;
+        bytecode_builder_init(allocator, &resolver->bytecode_builder);
 
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
@@ -59,12 +61,9 @@ namespace Zodiac
             }
         }
 
-        assert(entry_decl);
-        queue_emit_bytecode_job(resolver, entry_decl, ast_module->module_scope);
-
         if (blocking)
         {
-             start_resolve_pump(resolver);
+             start_resolve_pump(resolver, entry_decl);
         }
         else
         {
@@ -88,8 +87,10 @@ namespace Zodiac
         return Resolve_Result {};
     }
 
-    void start_resolve_pump(Resolver *resolver)
+    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl)
     {
+        assert(entry_decl->kind == AST_Declaration_Kind::FUNCTION);
+
         bool done = false;
 
         while (!done)
@@ -107,6 +108,13 @@ namespace Zodiac
                 else
                 {
                     queue_type_job(resolver, job->declaration, job->node_scope);
+
+                    if (job->declaration == entry_decl)
+                    {
+                        queue_emit_bytecode_jobs_from_declaration(resolver, entry_decl,
+                                                                  job->node_scope);
+                    }
+
                     free_job(resolver, job);
                 }
             }
@@ -231,7 +239,11 @@ namespace Zodiac
                 {
                     result = false;
                 }
-                else assert(false);
+                else
+                {
+                    bytecode_emit_node(&resolver->bytecode_builder, job->ast_node);
+                    result = true;
+                }
                 break;
             }
         }
@@ -453,6 +465,12 @@ namespace Zodiac
                     {
                         assert(false);
                     }
+
+                    auto ident_expr = ast_expr->call.ident_expression;
+                    assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
+                    assert(ident_expr->identifier->declaration);
+                    ast_expr->call.callee_declaration = ident_expr->identifier->declaration;
+                    
                 }
                 else
                 {
@@ -1210,11 +1228,94 @@ namespace Zodiac
     {
         assert(resolver->allocator);
 
+        if (ast_node->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION)
+            return;
+
         auto job = resolve_job_emit_bytecode_new(resolver->allocator, ast_node, scope);
         queue_enqueue(&resolver->emit_bytecode_job_queue, job);
         assert(job);
+
+        ast_node->flags |= AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION;
     }
     
+    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
+                                                   Scope *scope)
+    {
+        assert(entry_decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        auto body = entry_decl->function.body;
+        assert(body);
+
+        for (int64_t i = 0; i < body->block.statements.count; i++)
+        {
+            queue_emit_bytecode_jobs_from_statement(resolver, body->block.statements[i],
+                                                    body->block.scope);
+        }
+
+        queue_emit_bytecode_job(resolver, entry_decl, scope);
+    }
+    
+    void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
+                                                 Scope *scope)
+    {
+        switch (stmt->kind)
+        {
+            case AST_Statement_Kind::INVALID: assert(false);
+            case AST_Statement_Kind::BLOCK: assert(false);
+            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+            case AST_Statement_Kind::RETURN: assert(false);
+            case AST_Statement_Kind::DECLARATION: assert(false);
+
+            case AST_Statement_Kind::EXPRESSION:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
+                break;
+            }
+
+        }
+    }
+
+    void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
+                                                  Scope *scope)
+    {
+        assert(resolver);
+        assert(scope);
+
+        switch (expr->kind)
+        {
+            case AST_Expression_Kind::INVALID: assert(false);
+            case AST_Expression_Kind::IDENTIFIER: assert(false);
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Expression_Kind::DOT: assert(false);
+            case AST_Expression_Kind::BINARY: assert(false);
+            case AST_Expression_Kind::UNARY: assert(false);
+
+            case AST_Expression_Kind::CALL:
+            {
+                if (expr->call.is_builtin)
+                {
+                    //assert(false);
+                }
+                else
+                {
+                    auto callee_decl = expr->call.callee_declaration;
+                    assert(callee_decl);
+                    assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+                    if (!(callee_decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
+                    {
+                        queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl, scope);
+                        queue_emit_bytecode_job(resolver, callee_decl, scope);
+                    }
+                }
+                break;
+            }
+
+            case AST_Expression_Kind::COMPOUND: assert(false);
+            case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+        }
+    }
+
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node, 
                                  Scope *scope)
     {

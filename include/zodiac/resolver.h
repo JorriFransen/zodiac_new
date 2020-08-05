@@ -1,6 +1,7 @@
 #pragma once
 
 #include "build_data.h"
+#include "bytecode.h"
 #include "struct_predecls.h"
 #include "queue.h"
 
@@ -29,7 +30,10 @@ namespace Zodiac
     {
         Allocator *allocator = nullptr;
         Allocator *err_allocator = nullptr;
+
         Build_Data *build_data = nullptr;
+        Bytecode_Builder bytecode_builder = {};
+
         AST_Node *root_node = nullptr;
 
         Queue<Resolve_Job*> ident_job_queue = {};
@@ -76,7 +80,7 @@ namespace Zodiac
     void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking);
     Resolve_Result finish_resolving(Resolver *resolver);
 
-    void start_resolve_pump(Resolver *resolver);
+    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl);
 
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
 
@@ -104,6 +108,13 @@ namespace Zodiac
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+
+    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
+                                                   Scope *scope);
+    void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
+                                                 Scope *scope);
+    void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
+                                                  Scope *scope);
 
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
                                  Scope *scope);

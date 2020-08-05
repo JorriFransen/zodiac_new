@@ -26,10 +26,11 @@ namespace Zodiac
 
     enum AST_Node_Flags_ : AST_Node_Flags
     {
-        AST_NODE_FLAG_NONE        = 0x00,
-        AST_NODE_FLAG_RESOLVED_ID = 0x01,
-        AST_NODE_FLAG_TYPED       = 0x02,
-        AST_NODE_FLAG_SIZED       = 0x04,
+        AST_NODE_FLAG_NONE                     = 0x00,
+        AST_NODE_FLAG_RESOLVED_ID              = 0x01,
+        AST_NODE_FLAG_TYPED                    = 0x02,
+        AST_NODE_FLAG_SIZED                    = 0x04,
+        AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION = 0x08
     };
 
     struct AST_Node
@@ -233,9 +234,11 @@ namespace Zodiac
 
             struct
             {
-                AST_Expression* ident_expression;
+                AST_Expression *ident_expression;
                 Array<AST_Expression*> arg_expressions;
                 bool is_builtin;
+
+                AST_Declaration *callee_declaration;
             } call;
 
             struct

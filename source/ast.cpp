@@ -1027,6 +1027,7 @@ namespace Zodiac
         result->call.ident_expression = ident_expr;
         result->call.arg_expressions = arg_expressions;
         result->call.is_builtin = is_builtin;
+        result->call.callee_declaration = nullptr;
 
         return result;
     }

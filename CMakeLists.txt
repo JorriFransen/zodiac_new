@@ -10,6 +10,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/atom.cpp
     source/build_data.cpp
     source/builtin.cpp
+    source/bytecode.cpp
     source/c_allocator.cpp
     source/file_pos.cpp
     source/hash_table.cpp

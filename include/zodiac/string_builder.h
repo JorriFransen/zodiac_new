@@ -3,6 +3,8 @@
 #include "allocator.h"
 #include "struct_predecls.h"
 
+#include <cstdarg>
+
 namespace Zodiac
 {
     
@@ -33,6 +35,8 @@ namespace Zodiac
 
     void string_builder_append(String_Builder *sb, const char *cstr);
     void string_builder_append(String_Builder *sb, const char *cstr, uint64_t length);
+    void string_builder_appendf(String_Builder *sb, const char *fmt ...);
+    void string_builder_appendf(String_Builder *sb, const char *fmt, va_list args);
     void string_builder_append_to_block(String_Builder_Block *sbb, const char *cstr, uint64_t length);
 
     String string_builder_to_string(Allocator* allocator, String_Builder* sb);

@@ -4,6 +4,7 @@
 #include "common.h"
 
 #include <cassert>
+#include <stdio.h>
 
 namespace Zodiac
 {
@@ -91,6 +92,36 @@ namespace Zodiac
             string_builder_push_new_block(sb, new_block_cap);
             string_builder_append_to_block(sb->current_block, cstr + size_for_cur_block, rem);
         }
+    }
+
+    void string_builder_appendf(String_Builder *sb, const char *fmt ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+
+        string_builder_appendf(sb, fmt, args);
+
+        va_end(args);
+    }
+
+    void string_builder_appendf(String_Builder *sb, const char *fmt, va_list args)
+    {
+        auto allocator = sb->allocator;
+
+        va_list args_copy;
+        va_copy(args_copy, args);
+        auto size = vsnprintf(nullptr, 0, fmt, args_copy);
+        va_end(args_copy);
+
+        char *buf = alloc_array<char>(allocator, size + 1);
+        assert(buf);
+
+        auto written_size = vsnprintf(buf, size + 1, fmt, args);
+        assert(written_size <= size);
+
+        string_builder_append(sb, buf, written_size);
+
+        free(allocator, buf);
     }
 
     void string_builder_append_to_block(String_Builder_Block *sbb, const char* cstr, uint64_t length)

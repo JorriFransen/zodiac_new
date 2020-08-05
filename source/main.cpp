@@ -61,5 +61,7 @@ int main(int argc, char** argv)
     Resolve_Result rr = finish_resolving(&resolver);
     assert(rr.error_count == 0);
 
+    bytecode_print(ca, &resolver.bytecode_builder);
+
     return 0;
 }
