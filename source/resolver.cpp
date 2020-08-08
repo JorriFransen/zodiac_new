@@ -108,13 +108,6 @@ namespace Zodiac
                 else
                 {
                     queue_type_job(resolver, job->declaration, job->node_scope);
-
-                    if (job->declaration == entry_decl)
-                    {
-                        queue_emit_bytecode_jobs_from_declaration(resolver, entry_decl,
-                                                                  job->node_scope);
-                    }
-
                     free_job(resolver, job);
                 }
             }
@@ -131,6 +124,12 @@ namespace Zodiac
                 }
                 else
                 {
+                    if (job->declaration == entry_decl)
+                    {
+                        queue_emit_bytecode_jobs_from_declaration(resolver, entry_decl,
+                                                                  job->node_scope);
+                    }
+
                     // Size jobs are queued when types are first created
                     free_job(resolver, job);
                 }
@@ -963,8 +962,10 @@ namespace Zodiac
             assert(call_expr->call.arg_expressions.count == 1);
             auto arg = call_expr->call.arg_expressions[0];
             
-            bool arg_res = try_resolve_types(resolver, arg, scope);
-            if (!arg_res) { assert(false); return false; }
+            if (!try_resolve_types(resolver, arg, scope))
+            {
+                return false;
+            }
 
             call_expr->type = Builtin::type_void;
 
@@ -1241,18 +1242,47 @@ namespace Zodiac
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
                                                    Scope *scope)
     {
-        assert(entry_decl->kind == AST_Declaration_Kind::FUNCTION);
-
-        auto body = entry_decl->function.body;
-        assert(body);
-
-        for (int64_t i = 0; i < body->block.statements.count; i++)
+        switch (entry_decl->kind)
         {
-            queue_emit_bytecode_jobs_from_statement(resolver, body->block.statements[i],
-                                                    body->block.scope);
-        }
+            case AST_Declaration_Kind::INVALID: assert(false);
+            case AST_Declaration_Kind::IMPORT: assert(false);
 
-        queue_emit_bytecode_job(resolver, entry_decl, scope);
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                //queue_emit_bytecode_job(resolver, entry_decl, scope);                
+                if (entry_decl->variable.init_expression)
+                {
+                    queue_emit_bytecode_jobs_from_expression(resolver,
+                                                             entry_decl->variable.init_expression,
+                                                             scope);
+                }
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::FUNCTION:
+            {
+                assert(scope->kind == Scope_Kind::MODULE);
+
+                auto body = entry_decl->function.body;
+                assert(body);
+
+                for (int64_t i = 0; i < body->block.statements.count; i++)
+                {
+                    queue_emit_bytecode_jobs_from_statement(resolver, body->block.statements[i],
+                                                            body->block.scope);
+                }
+
+                queue_emit_bytecode_job(resolver, entry_decl, scope);
+                break;
+            }
+
+            case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::STRUCTURE: assert(false);
+            case AST_Declaration_Kind::POLY_TYPE: assert(false);
+        }
     }
     
     void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
@@ -1263,8 +1293,21 @@ namespace Zodiac
             case AST_Statement_Kind::INVALID: assert(false);
             case AST_Statement_Kind::BLOCK: assert(false);
             case AST_Statement_Kind::ASSIGNMENT: assert(false);
-            case AST_Statement_Kind::RETURN: assert(false);
-            case AST_Statement_Kind::DECLARATION: assert(false);
+
+            case AST_Statement_Kind::RETURN:
+            {
+                if (stmt->expression)
+                {
+                    queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
+                }
+                break;
+            }
+
+            case AST_Statement_Kind::DECLARATION:
+            {
+                queue_emit_bytecode_jobs_from_declaration(resolver, stmt->declaration, scope);
+                break;
+            }
 
             case AST_Statement_Kind::EXPRESSION:
             {
@@ -1292,6 +1335,12 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL:
             {
+                for (int64_t i = 0; i < expr->call.arg_expressions.count; i++)
+                {
+                    auto arg_expr = expr->call.arg_expressions[i];
+                    queue_emit_bytecode_jobs_from_expression(resolver, arg_expr, scope);
+                }
+
                 if (expr->call.is_builtin)
                 {
                     //assert(false);
@@ -1303,7 +1352,10 @@ namespace Zodiac
                     assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
                     if (!(callee_decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
                     {
-                        queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl, scope);
+                        auto func_parent_scope = callee_decl->function.parameter_scope->parent;
+                        assert(func_parent_scope);
+                        queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl,
+                                                                  func_parent_scope);
                         queue_emit_bytecode_job(resolver, callee_decl, scope);
                     }
                 }
@@ -1311,7 +1363,10 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::COMPOUND: assert(false);
-            case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
+            case AST_Expression_Kind::NUMBER_LITERAL:
+            {
+                break;
+            }
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }
     }

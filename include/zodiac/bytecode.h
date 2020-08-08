@@ -11,7 +11,8 @@ namespace Zodiac
 
         EXIT     = 0x01,
         CALL     = 0x02,
-        LOAD_IM  = 0x03,
+        RETURN   = 0x03,
+        LOAD_IM  = 0x04,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -38,6 +39,7 @@ namespace Zodiac
         INVALID,
 
         NUMBER_LITERAL,
+        TEMPORARY,
     };
 
     struct Bytecode_Value
@@ -79,13 +81,24 @@ namespace Zodiac
         Bytecode_Function *current_function = nullptr;
     };
 
+    struct Bytecode_Iterator
+    {
+        Bytecode_Builder *builder = nullptr;
+
+        int64_t function_index    = -1;
+        int64_t block_index       = -1;
+        int64_t instruction_index = -1;
+    };
+
     void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder);
 
     void bytecode_emit_node(Bytecode_Builder *builder, AST_Node *node);
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_emit_function_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
+    void bytecode_emit_variable_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement);
+    void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression);
     Bytecode_Value *bytecode_emit_call_expression(Bytecode_Builder *builder,
                                                   AST_Expression *expression);
@@ -93,7 +106,6 @@ namespace Zodiac
                                                           AST_Expression *expression);
 
     void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value);
-    void bytecode_emit_local_temp(Bytecode_Builder *builder, uint32_t index); 
 
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
 
@@ -120,12 +132,22 @@ namespace Zodiac
                                        AST_Type *type);
     Bytecode_Value *bytecode_new_integer_literal(Bytecode_Builder *builder, AST_Type *type);
 
+    Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder);
+    void bytecode_iterator_advance_function(Bytecode_Iterator *bci);
+    Bytecode_Function *bytecode_iterator_get_function(Bytecode_Iterator *bci);
+    void bytecode_iterator_advance_block(Bytecode_Iterator *bci);
+    Bytecode_Block *bytecode_iterator_get_block(Bytecode_Iterator *bci);
+    void bytecode_iterator_advance_ip(Bytecode_Iterator *bci, int64_t adv = 1);
+    uint8_t bytecode_iterator_fetch_byte(Bytecode_Iterator *bci);
+    uint32_t bytecode_iterator_fetch_32(Bytecode_Iterator *bci);
+    uint64_t bytecode_iterator_fetch_64(Bytecode_Iterator *bci);
+
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print(String_Builder *sb, Bytecode_Builder *builder);
-    void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);
-    void bytecode_print_block(String_Builder *sb, Bytecode_Block *block, int64_t *local_indexp);
-    void bytecode_print_instruction(String_Builder *sb, Bytecode_Block *block, 
-                                    Bytecode_Instruction inst, int64_t *ipp, int64_t *local_indexp);
-    void bytecode_print_im(String_Builder *sb, Bytecode_Block *block, int64_t *ipp);
+    void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci);
+    void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci, int64_t *local_indexp);
+    void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci,
+                                    int64_t *local_indexp);
+    void bytecode_print_im(String_Builder *sb, Bytecode_Iterator *bci);
     
 }
