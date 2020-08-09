@@ -57,7 +57,7 @@ namespace Zodiac
                                                              decl->variable.init_expression);
                     assert(init_val);
 
-                    auto allocl_val = bytecode_find_value_for_decl(builder, decl);
+                    auto allocl_val = bytecode_find_value_for_variable(builder, decl);
                     assert(allocl_val);
                     bytecode_emit_storel(builder, allocl_val, init_val);
                 }
@@ -96,6 +96,16 @@ namespace Zodiac
         func->index = func_index;
         builder->current_function = func;
         bytecode_builder_set_insert_point(builder, func);
+
+        for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
+        {
+            auto param = decl->function.parameter_declarations[i];
+            auto param_val = bytecode_new_value(builder, Bytecode_Value_Kind::PARAMETER, 
+                                                param->type);
+            array_append(&func->parameters, { param_val, param });
+            param_val->param_index = i;
+            param_val->name = param->identifier->atom;
+        }
 
         for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
         {
@@ -217,16 +227,20 @@ namespace Zodiac
         }
         else
         {
-            assert(expression->call.arg_expressions.count == 0);
-
             assert(expression->call.callee_declaration);
             Bytecode_Function *func =
                 bytecode_find_function_for_decl(builder, expression->call.callee_declaration);
 
             assert(func);
 
+            for (int64_t i = 0; i < expression->call.arg_expressions.count; i++)
+            {
+                bytecode_emit_call_arg(builder, expression->call.arg_expressions[i]);
+            }
+
             bytecode_emit_instruction(builder, Bytecode_Instruction::CALL);
             bytecode_emit_32(builder, func->index);
+            bytecode_emit_32(builder, expression->call.arg_expressions.count);
 
             auto ret_type = func->ast_decl->type->function.return_type;
             if (ret_type != Builtin::type_void)
@@ -280,7 +294,33 @@ namespace Zodiac
         assert(ident->declaration);
 
         auto decl = ident->declaration;
-        auto decl_val = bytecode_find_value_for_decl(builder, decl);
+        Bytecode_Value *decl_val = nullptr;
+        
+        switch (ident->declaration->kind)
+        {
+            case AST_Declaration_Kind::INVALID: assert(false);
+            case AST_Declaration_Kind::IMPORT: assert(false);
+
+            case AST_Declaration_Kind::VARIABLE: 
+            {
+                decl_val = bytecode_find_value_for_variable(builder, decl);
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER:
+            {
+                decl_val = bytecode_find_value_for_parameter(builder, decl);
+                break;
+            }
+
+            case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::FUNCTION: assert(false);
+            case AST_Declaration_Kind::STRUCTURE: assert(false);
+            case AST_Declaration_Kind::POLY_TYPE: assert(false);
+        }
+
         assert(decl_val);
 
         switch (decl_val->kind)
@@ -292,6 +332,17 @@ namespace Zodiac
             case Bytecode_Value_Kind::ALLOCL:
             {
                 bytecode_emit_loadl(builder, decl_val);
+                auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                                 decl->type);
+                assert(result);
+                bytecode_push_local_temporary(builder, result);
+                return result;
+                break;
+            }
+
+            case Bytecode_Value_Kind::PARAMETER:
+            {
+                bytecode_emit_load_param(builder, decl_val);
                 auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
                                                  decl->type);
                 assert(result);
@@ -314,6 +365,13 @@ namespace Zodiac
         result->name = name;
 
         return result;
+    }
+
+    void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)
+    {
+        auto arg_val = bytecode_emit_expression(builder, arg_expr);
+        bytecode_emit_instruction(builder, Bytecode_Instruction::PUSH_ARG);
+        bytecode_emit_32(builder, arg_val->local_index);
     }
 
     void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value)
@@ -378,6 +436,14 @@ namespace Zodiac
         bytecode_emit_32(builder, allocl->alloc_index);
     }
 
+    void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param)
+    {
+        assert(param->kind == Bytecode_Value_Kind::PARAMETER);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_PARAM);
+        bytecode_emit_32(builder, param->param_index);
+    }
+
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value)
     {
@@ -406,7 +472,7 @@ namespace Zodiac
             default: assert(false);
         }
 
-        auto result = bytecode_new_integer_literal(builder, expr->type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, expr->type);
         bytecode_push_local_temporary(builder, result);
 
         return result;
@@ -514,9 +580,31 @@ namespace Zodiac
         assert(false);
     }
 
-    Bytecode_Value *bytecode_find_value_for_decl(Bytecode_Builder *builder,
-                                                 AST_Declaration *decl)
+    Bytecode_Value *bytecode_find_value_for_parameter(Bytecode_Builder *builder,
+                                                      AST_Declaration *decl)
     {
+        assert(decl->kind == AST_Declaration_Kind::PARAMETER);
+
+        assert(builder->current_function);
+        auto func = builder->current_function;
+
+        for (int64_t i = 0; i < func->parameters.count; i++)
+        {
+            if (func->parameters[i].ast_decl == decl)
+            {
+                return func->parameters[i].value;
+            }
+        }
+
+        assert(false);
+        return nullptr;
+    }
+
+    Bytecode_Value *bytecode_find_value_for_variable(Bytecode_Builder *builder,
+                                                     AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+
         assert(builder->current_function);
         auto func = builder->current_function;
 
@@ -540,6 +628,7 @@ namespace Zodiac
         auto allocator = builder->allocator;
 
         auto result = alloc_type<Bytecode_Function>(allocator);
+        array_init(allocator, &result->parameters);
         array_init(allocator, &result->local_temps);
         array_init(allocator, &result->local_allocs);
         array_init(allocator, &result->blocks);
@@ -585,6 +674,8 @@ namespace Zodiac
 
         Bytecode_Iterator result = {};
         result.builder = builder;
+
+        stack_init(builder->allocator, &result.arg_stack);
         
         assert(builder->functions.count >= 1);
         result.function_index = 0;
@@ -601,10 +692,17 @@ namespace Zodiac
         return result;
     }
 
+    void bytecode_iterator_free(Bytecode_Iterator *bci)
+    {
+        stack_free(&bci->arg_stack);
+    }
+
     void bytecode_iterator_advance_function(Bytecode_Iterator *bci)
     {
         assert(bci);
         assert(bci->builder);
+
+        bci->arg_stack.sp = 0;
 
         bci->function_index++;
         bci->block_index = 0;
@@ -711,14 +809,24 @@ namespace Zodiac
 
             bytecode_iterator_advance_function(&bci);
         }
+
+        bytecode_iterator_free(&bci);
     }
 
     void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci)
     {
         auto func = bytecode_iterator_get_function(bci);
 
-        string_builder_append(sb, func->ast_decl->identifier->atom.data);
-        string_builder_append(sb, ":\n");
+        string_builder_appendf(sb, "%s(", func->ast_decl->identifier->atom.data);
+
+        for (int64_t i = 0; i < func->ast_decl->function.parameter_declarations.count; i++)
+        {
+            if (i) string_builder_append(sb, ", ");
+            auto param_decl =  func->ast_decl->function.parameter_declarations[i];
+            string_builder_appendf(sb, "%%%s", param_decl->identifier->atom.data);
+        }
+
+        string_builder_append(sb, "):\n");
 
         while (bci->block_index < func->blocks.count)
         {
@@ -767,6 +875,7 @@ namespace Zodiac
             {
 
                 uint32_t func_index = bytecode_iterator_fetch_32(bci);
+                uint32_t arg_count = bytecode_iterator_fetch_32(bci);
                 auto func = bci->builder->functions[func_index];
 
                 auto func_decl = func->ast_decl;
@@ -779,7 +888,22 @@ namespace Zodiac
                     bci->local_temp_index += 1;
                 }
 
-                string_builder_appendf(sb, "CALL %s()", func_name);
+                string_builder_appendf(sb, "CALL %s(", func_name);
+                for (uint64_t i = 0; i < arg_count; i++)
+                {
+                    if (i) string_builder_append(sb, ", ");
+                    auto arg_val = stack_peek(&bci->arg_stack, (arg_count - 1) - i);
+
+                    assert(arg_val->kind == Bytecode_Value_Kind::TEMPORARY);
+                    string_builder_appendf(sb, "%%%" PRIu32, arg_val->local_index);
+                }
+                string_builder_append(sb, ")");
+
+                for (uint64_t i = 0; i < arg_count; i++)
+                {
+                    stack_pop(&bci->arg_stack);
+                }
+
                 break;
             }
 
@@ -822,6 +946,20 @@ namespace Zodiac
 
                 string_builder_appendf(sb, "%%%" PRId64 " = LOADL %%%s", bci->local_temp_index,
                                        name.data);
+                bci->local_temp_index += 1;
+                break; 
+            }
+
+            case Bytecode_Instruction::LOAD_PARAM:
+            {
+                uint32_t param_index = bytecode_iterator_fetch_32(bci);
+
+                auto func = bci->builder->functions[bci->function_index];
+                auto name = func->parameters[param_index].value->name;
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_PARAM %%%s", bci->local_temp_index,
+                                       name.data);
+                bci->local_temp_index += 1;
                 break; 
             }
 
@@ -836,6 +974,16 @@ namespace Zodiac
                 string_builder_appendf(sb, "STOREL %%%s %%%" PRIu32, name.data, val_index);
                 break;
             }
+
+            case Bytecode_Instruction::PUSH_ARG:
+            {
+                uint32_t val_index = bytecode_iterator_fetch_32(bci);
+                string_builder_appendf(sb, "PUSH_ARG %%%" PRIu32, val_index);
+                auto func = bci->builder->functions[bci->function_index];
+                stack_push(&bci->arg_stack, func->local_temps[val_index]);
+                break;
+            }
+
         }
 
         string_builder_append(sb, "\n");

@@ -8,19 +8,15 @@ posix_call_main_and_exit :: func ()
 {
     exit_code := main();
     @exit(exit_code);
-    //@exit(main());
-
-    //@exit(42);
 }
 
 main :: func () -> s64
 {
-    return 4;
-    //return echo(40);
+    return echo(40);
 }
 
-//echo :: func (val: s64) -> s64
-//{
-    //result := val;
-    //return result;
-//}
+echo :: func (val: s64) -> s64
+{
+    result := val;
+    return result;
+}

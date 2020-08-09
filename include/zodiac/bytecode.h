@@ -1,21 +1,26 @@
 #pragma once
 
 #include "build_data.h"
+#include "common.h"
+#include "stack.h"
 #include "string_builder.h"
 
 namespace Zodiac
 {
     enum class Bytecode_Instruction : uint8_t
     {
-        NOP      = 0x00,
+        NOP        = 0x00,
 
-        EXIT     = 0x01,
-        CALL     = 0x02,
-        RETURN   = 0x03,
-        ALLOCL   = 0x04,
-        LOAD_IM  = 0x05,
-        LOADL    = 0x06,
-        STOREL   = 0x07,
+        EXIT       = 0x01,
+        CALL       = 0x02,
+        RETURN     = 0x03,
+        ALLOCL     = 0x04,
+        LOAD_IM    = 0x05,
+        LOADL      = 0x06,
+        LOAD_PARAM = 0x07,
+        STOREL     = 0x08,
+
+        PUSH_ARG   = 0x09,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -44,6 +49,7 @@ namespace Zodiac
         NUMBER_LITERAL,
         TEMPORARY,
         ALLOCL,
+        PARAMETER,
     };
 
     struct Bytecode_Value
@@ -56,6 +62,7 @@ namespace Zodiac
         {
             uint32_t local_index = 0;
             uint32_t alloc_index;
+            uint32_t param_index;
         };
 
         AST_Type *type = nullptr;
@@ -72,6 +79,12 @@ namespace Zodiac
         Array<uint8_t> instructions = {};
     };
 
+    struct Bytecode_Parameter
+    {
+        Bytecode_Value *value = nullptr;
+        AST_Declaration *ast_decl = nullptr;
+    };
+
     struct Bytecode_Local_Alloc
     {
         Bytecode_Value *value = nullptr;
@@ -81,6 +94,7 @@ namespace Zodiac
     struct Bytecode_Function
     {
         uint32_t index = 0;
+        Array<Bytecode_Parameter> parameters = {};
         Array<Bytecode_Value*> local_temps = {};
         Array<Bytecode_Local_Alloc> local_allocs = {};
         Array<Bytecode_Block*> blocks = {};
@@ -102,6 +116,7 @@ namespace Zodiac
     struct Bytecode_Iterator
     {
         Bytecode_Builder *builder = nullptr;
+        Stack<Bytecode_Value*> arg_stack = {};
 
         int64_t function_index    = -1;
         int64_t block_index       = -1;
@@ -126,6 +141,8 @@ namespace Zodiac
                                                           AST_Expression *expression);
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
     Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl, Atom name);
+    
+    void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr);
 
     void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value);
     void bytecode_push_local_alloc(Bytecode_Builder *builder, Bytecode_Value *value,
@@ -133,6 +150,7 @@ namespace Zodiac
 
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
     void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
+    void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest, Bytecode_Value *value);
 
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr);
@@ -151,8 +169,10 @@ namespace Zodiac
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
                                                        AST_Declaration *decl);
-    Bytecode_Value *bytecode_find_value_for_decl(Bytecode_Builder *builder,
-                                                 AST_Declaration *decl);
+    Bytecode_Value *bytecode_find_value_for_parameter(Bytecode_Builder *builder,
+                                                      AST_Declaration *decl);
+    Bytecode_Value *bytecode_find_value_for_variable(Bytecode_Builder *builder,
+                                                     AST_Declaration *decl);
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration* decl);
     Bytecode_Block *bytecode_new_block(Allocator *allocator, const char* name);
@@ -162,6 +182,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_new_integer_literal(Bytecode_Builder *builder, AST_Type *type);
 
     Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder);
+    void bytecode_iterator_free(Bytecode_Iterator *bci);
     void bytecode_iterator_advance_function(Bytecode_Iterator *bci);
     Bytecode_Function *bytecode_iterator_get_function(Bytecode_Iterator *bci);
     void bytecode_iterator_advance_block(Bytecode_Iterator *bci);

@@ -24,6 +24,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/token.cpp
     source/token_stream.cpp
     source/scope.cpp
+    source/stack.cpp
     source/string_builder.cpp
     source/zodiac_string.cpp
 )

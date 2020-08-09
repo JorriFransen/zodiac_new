@@ -1333,7 +1333,8 @@ namespace Zodiac
                 auto ident = expr->identifier;
                 assert(ident->declaration);
 
-                if (ident->declaration->kind != AST_Declaration_Kind::VARIABLE)
+                if (ident->declaration->kind != AST_Declaration_Kind::VARIABLE &&
+                    ident->declaration->kind != AST_Declaration_Kind::PARAMETER)
                 {
                     assert(false); 
                 }
