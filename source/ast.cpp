@@ -7,6 +7,7 @@
 #include "scope.h"
 
 #include <cassert>
+#include <inttypes.h>
 
 namespace Zodiac
 {
@@ -39,7 +40,7 @@ namespace Zodiac
         for (int64_t i = 0; i < parsed_file->declarations.count; i++)
         {
             AST_Declaration* ast_decl =
-                ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i]);
+                ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i], nullptr);
             assert(ast_decl);
             array_append(&global_decls, ast_decl);
         }
@@ -54,7 +55,8 @@ namespace Zodiac
         return ast_module;
     }
 
-    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Declaration_PTN* ptn)
+    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Declaration_PTN* ptn,
+                                                     Array<AST_Declaration*> *var_decls)
     {
         assert(allocator);
 
@@ -111,8 +113,11 @@ namespace Zodiac
                 if (init_expr) end_fp = init_expr->end_file_pos;
                 else end_fp = type_expr->end_file_pos;
                 
-                return ast_variable_declaration_new(allocator, ast_ident, type_expr, init_expr,
-                                                    begin_fp, end_fp);
+                auto result = ast_variable_declaration_new(allocator, ast_ident, type_expr,
+                                                           init_expr, begin_fp, end_fp);
+                array_append(var_decls, result);
+
+                return result;
                 break; 
             }
 
@@ -159,7 +164,8 @@ namespace Zodiac
                 Array<AST_Declaration*> ast_param_decls = {};
                 if (ast_type->function.parameter_type_specs.count)
                 {
-                    array_init(allocator, &ast_param_decls);
+                    array_init(allocator, &ast_param_decls,
+                               ast_type->function.parameter_type_specs.count);
                     
                     auto& ptn_params = ptn->function.prototype->parameters;
 
@@ -176,8 +182,12 @@ namespace Zodiac
 
                 }
 
+                Array<AST_Declaration*> ast_var_decls = {};
+                array_init(allocator, &ast_var_decls);
+
                 AST_Statement* ast_body = ast_create_statement_from_ptn(allocator,
-                                                                        ptn->function.body);
+                                                                        ptn->function.body,
+                                                                        &ast_var_decls);
                 assert(ast_body);
 
                 auto end_fp = ast_body->end_file_pos;
@@ -185,8 +195,8 @@ namespace Zodiac
                 bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
 
                 return ast_function_declaration_new(allocator, ast_ident, ast_type,
-                                                    ast_param_decls, ast_body, is_naked, begin_fp,
-                                                    end_fp);
+                                                    ast_param_decls, ast_var_decls, ast_body,
+                                                    is_naked, begin_fp, end_fp);
                 break;
             }
 
@@ -202,7 +212,8 @@ namespace Zodiac
                     {
                         auto ast_mem_decl =
                             ast_create_declaration_from_ptn(allocator,
-                                                            ptn->structure.member_declarations[i]);
+                                                            ptn->structure.member_declarations[i],
+                                                            nullptr);
                         assert(ast_mem_decl);
 
                         array_append(&ast_member_decls, ast_mem_decl);
@@ -246,6 +257,7 @@ namespace Zodiac
             }
         }
 
+        assert(false);
         return nullptr;
     }
 
@@ -268,7 +280,8 @@ namespace Zodiac
         return result;
     }
 
-    AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn)
+    AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn, 
+                                                 Array<AST_Declaration*> *var_decls)
     {
         auto begin_fp = ptn->self.begin_file_pos;
         auto end_fp = ptn->self.end_file_pos;
@@ -287,7 +300,8 @@ namespace Zodiac
                     for (int64_t i = 0; i < ptn->block.statements.count; i++)
                     {
                         AST_Statement* ast_block_stmt =
-                            ast_create_statement_from_ptn(allocator, ptn->block.statements[i]);
+                            ast_create_statement_from_ptn(allocator,
+                                                          ptn->block.statements[i], var_decls);
                         assert(ast_block_stmt);
 
                         array_append(&ast_block_stmts, ast_block_stmt);
@@ -301,7 +315,8 @@ namespace Zodiac
             case Statement_PTN_Kind::DECLARATION:
             {
                 auto ast_declaration = ast_create_declaration_from_ptn(allocator,
-                                                                       ptn->declaration);
+                                                                       ptn->declaration,
+                                                                       var_decls);
                 assert(ast_declaration);
                 return ast_declaration_statement_new(allocator, ast_declaration, begin_fp, end_fp);
                 break;
@@ -812,6 +827,7 @@ namespace Zodiac
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
                                                   AST_Type_Spec* type_spec, 
                                                   Array<AST_Declaration*> parameter_declarations,
+                                                  Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement* body,
                                                   bool is_naked, const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
@@ -823,6 +839,7 @@ namespace Zodiac
 
         result->function.type_spec = type_spec;
         result->function.parameter_declarations = parameter_declarations;
+        result->function.variable_declarations = variable_declarations;
         result->function.body = body;
         result->function.parameter_scope = nullptr;
 
@@ -1719,6 +1736,31 @@ namespace Zodiac
                 string_builder_append(sb, " (poly_param)");
                 break;
             }
+        }
+    }
+
+    void ast_print_type(String_Builder *sb, AST_Type *type)
+    {
+        switch (type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                if (type->integer.sign) string_builder_append(sb, "s");
+                else string_builder_append(sb, "u");
+
+                string_builder_appendf(sb, "%" PRIu64, type->bit_size);
+                break;
+            }
+
+            case AST_Type_Kind::VOID:
+            {
+                string_builder_append(sb, "void");
+                break;
+            }
+
+            case AST_Type_Kind::FUNCTION: assert(false);
         }
     }
 

@@ -6,9 +6,9 @@
 
 posix_call_main_and_exit :: func ()
 {
-    //exit_code := main();
-    //@exit(exit_code);
-    @exit(main());
+    exit_code := main();
+    @exit(exit_code);
+    //@exit(main());
 
     //@exit(42);
 }

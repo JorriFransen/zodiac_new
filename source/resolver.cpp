@@ -1327,7 +1327,20 @@ namespace Zodiac
         switch (expr->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
-            case AST_Expression_Kind::IDENTIFIER: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER:
+            {
+                auto ident = expr->identifier;
+                assert(ident->declaration);
+
+                if (ident->declaration->kind != AST_Declaration_Kind::VARIABLE)
+                {
+                    assert(false); 
+                }
+
+                break;
+            }
+
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
             case AST_Expression_Kind::BINARY: assert(false);

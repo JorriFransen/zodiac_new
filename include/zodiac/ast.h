@@ -118,6 +118,7 @@ namespace Zodiac
             {
                 AST_Type_Spec *type_spec;
                 Array<AST_Declaration*> parameter_declarations; 
+                Array<AST_Declaration*> variable_declarations;
                 AST_Statement *body;
 
                 Scope *parameter_scope;
@@ -357,10 +358,12 @@ namespace Zodiac
     }
 
     AST_Node* ast_create_from_parsed_file(Allocator* allocator, Parsed_File* parsed_file);
-    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Declaration_PTN* ptn);
+    AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Declaration_PTN* ptn,
+                                                     Array<AST_Declaration*> *var_decls);
     AST_Declaration* ast_create_declaration_from_ptn(Allocator* allocator, Parameter_PTN* ptn,
                                                      AST_Type_Spec *type_spec);
-    AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn);
+    AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn, 
+                                                 Array<AST_Declaration*> *var_decls);
     AST_Expression* ast_create_expression_from_ptn(Allocator* allocator, Expression_PTN* ptn);
     AST_Type_Spec* ast_create_type_spec_from_ptn(Allocator* allocator, PT_Node* ptn);
     AST_Type_Spec* ast_create_type_spec_from_expression_ptn(Allocator* allocator,
@@ -391,6 +394,7 @@ namespace Zodiac
     AST_Declaration* ast_function_declaration_new(Allocator* allocator, AST_Identifier* identifier,
                                                   AST_Type_Spec* type_spec, 
                                                   Array<AST_Declaration*> parameter_declarations,
+                                                  Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement* body,
                                                   bool is_naked, const File_Pos & begin_fp,
                                                   const File_Pos &end_fp);
@@ -491,4 +495,6 @@ namespace Zodiac
     void ast_print_scope(Allocator *allocator, AST_Node *anode);
     void ast_print_scope(String_Builder* sb, AST_Node *anode, int64_t indent = 0);
     void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl, int64_t indent);
+
+    void ast_print_type(String_Builder *sb, AST_Type *type);
 }

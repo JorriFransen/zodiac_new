@@ -16,6 +16,7 @@ namespace Zodiac
         builder->allocator = allocator;
 
         array_init(allocator, &builder->functions);
+        array_init(allocator, &builder->emitted_types);
 
         builder->insert_block = nullptr;
     }
@@ -50,7 +51,16 @@ namespace Zodiac
 
             case AST_Declaration_Kind::VARIABLE:
             {
-                bytecode_emit_variable_declaration(builder, decl);
+                if (decl->variable.init_expression)
+                {
+                    auto init_val = bytecode_emit_expression(builder,
+                                                             decl->variable.init_expression);
+                    assert(init_val);
+
+                    auto allocl_val = bytecode_find_value_for_decl(builder, decl);
+                    assert(allocl_val);
+                    bytecode_emit_storel(builder, allocl_val, init_val);
+                }
                 break;
             }
 
@@ -87,28 +97,14 @@ namespace Zodiac
         builder->current_function = func;
         bytecode_builder_set_insert_point(builder, func);
 
+        for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
+        {
+            auto var = decl->function.variable_declarations[i];
+            bytecode_emit_allocl(builder, var, var->identifier->atom);
+        }
+
         assert(decl->function.body);
         bytecode_emit_statement(builder, decl->function.body);
-    }
-
-    void bytecode_emit_variable_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
-    {
-        assert(builder);
-        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
-
-        assert(decl->type->kind == AST_Type_Kind::INTEGER);
-
-        assert(builder->current_function);
-        assert(builder->insert_block);
-
-
-        Bytecode_Value *init_value = nullptr;
-        if (decl->variable.init_expression)
-        {
-            init_value = bytecode_emit_expression(builder, decl->variable.init_expression);
-            assert(init_value);
-        }
-        else assert(false);
     }
 
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement)
@@ -176,7 +172,13 @@ namespace Zodiac
         switch (expression->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
-            case AST_Expression_Kind::IDENTIFIER: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER:
+            {
+                return bytecode_emit_identifier(builder, expression->identifier);
+                break;
+            }
+
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
             case AST_Expression_Kind::BINARY: assert(false);
@@ -271,6 +273,49 @@ namespace Zodiac
         return return_value;
     }
 
+    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident)
+    {
+        assert(builder);
+        assert(ident);
+        assert(ident->declaration);
+
+        auto decl = ident->declaration;
+        auto decl_val = bytecode_find_value_for_decl(builder, decl);
+        assert(decl_val);
+
+        switch (decl_val->kind)
+        {
+            case Bytecode_Value_Kind::INVALID: assert(false);
+            case Bytecode_Value_Kind::NUMBER_LITERAL: assert(false);
+            case Bytecode_Value_Kind::TEMPORARY: assert(false);
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                bytecode_emit_loadl(builder, decl_val);
+                auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                                 decl->type);
+                assert(result);
+                bytecode_push_local_temporary(builder, result);
+                return result;
+                break;
+            }
+        }
+    }
+
+    Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
+                                         Atom name)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::ALLOCL);
+        bytecode_emit_type_index(builder, decl->type);
+
+        Bytecode_Value *result = bytecode_new_value(builder, Bytecode_Value_Kind::ALLOCL,
+                                                    decl->type);
+        bytecode_push_local_alloc(builder, result, decl);
+        result->name = name;
+
+        return result;
+    }
+
     void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value)
     {
         assert(builder);
@@ -278,12 +323,27 @@ namespace Zodiac
 
         assert(builder->current_function);
 
-        int64_t local_index = builder->current_function->local_values.count;
+        int64_t local_index = builder->current_function->local_temps.count;
 
         assert(value->local_index == 0);
 
-        array_append(&builder->current_function->local_values, value);
+        array_append(&builder->current_function->local_temps, value);
         value->local_index = local_index;
+    }
+
+    void bytecode_push_local_alloc(Bytecode_Builder *builder, Bytecode_Value *value,
+                                   AST_Declaration *decl)
+    {
+        assert(value->kind == Bytecode_Value_Kind::ALLOCL);
+
+        assert(builder->current_function);
+
+        int64_t alloc_index = builder->current_function->local_allocs.count;
+
+        assert(value->alloc_index == 0);
+
+        array_append(&builder->current_function->local_allocs, { value, decl });
+        value->alloc_index = alloc_index;
     }
 
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size)
@@ -310,6 +370,25 @@ namespace Zodiac
         bytecode_emit_byte(builder, (uint8_t)size_spec);
     }
 
+    void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
+    {
+        assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
+        bytecode_emit_32(builder, allocl->alloc_index);
+    }
+
+    void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value)
+    {
+        assert(dest->kind == Bytecode_Value_Kind::ALLOCL);
+        assert(value->kind == Bytecode_Value_Kind::TEMPORARY);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::STOREL);
+        bytecode_emit_32(builder, dest->alloc_index);
+        bytecode_emit_32(builder, value->local_index);
+    }
+
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr)
     {
         assert(expr->kind == AST_Expression_Kind::NUMBER_LITERAL);
@@ -331,6 +410,35 @@ namespace Zodiac
         bytecode_push_local_temporary(builder, result);
 
         return result;
+    }
+
+    void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type)
+    {
+        assert(builder);
+        assert(type);
+
+        int64_t index;
+        bool found = false;
+
+        for (int64_t i = 0; i < builder->emitted_types.count; i++)
+        {
+            auto emitted_type = builder->emitted_types[i];
+            if (emitted_type == type)
+            {
+                index = i;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            index = builder->emitted_types.count;
+            array_append(&builder->emitted_types, type);
+        }
+
+        assert(index >= 0);
+        bytecode_emit_32(builder, (uint32_t)index);
     }
 
     void bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Instruction op)
@@ -406,6 +514,24 @@ namespace Zodiac
         assert(false);
     }
 
+    Bytecode_Value *bytecode_find_value_for_decl(Bytecode_Builder *builder,
+                                                 AST_Declaration *decl)
+    {
+        assert(builder->current_function);
+        auto func = builder->current_function;
+
+        for (int64_t i = 0; i < func->local_temps.count; i++)
+        {
+            if (func->local_allocs[i].ast_decl == decl)
+            {
+                return func->local_allocs[i].value;
+            }
+        }
+
+        assert(false);
+        return nullptr;
+    }
+
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration *decl)
     {
         assert(decl);
@@ -414,7 +540,8 @@ namespace Zodiac
         auto allocator = builder->allocator;
 
         auto result = alloc_type<Bytecode_Function>(allocator);
-        array_init(allocator, &result->local_values);
+        array_init(allocator, &result->local_temps);
+        array_init(allocator, &result->local_allocs);
         array_init(allocator, &result->blocks);
         
         bytecode_builder_append_block(builder, result, "entry");
@@ -468,6 +595,9 @@ namespace Zodiac
         assert(builder->functions[0]->blocks[0]->instructions.count >= 0);
         result.instruction_index = 0;
 
+        result.local_temp_index = 0;
+        result.local_alloc_index = 0;
+
         return result;
     }
 
@@ -480,6 +610,8 @@ namespace Zodiac
         bci->block_index = 0;
         bci->instruction_index = 0;
 
+        bci->local_temp_index = 0;
+        bci->local_alloc_index = 0;
         //assert(bci->function_index < bci->builder->functions.count);
     }
 
@@ -588,16 +720,14 @@ namespace Zodiac
         string_builder_append(sb, func->ast_decl->identifier->atom.data);
         string_builder_append(sb, ":\n");
 
-        int64_t local_index = 0;
-
         while (bci->block_index < func->blocks.count)
         {
-            bytecode_print_block(sb, bci, &local_index);
+            bytecode_print_block(sb, bci);
             bytecode_iterator_advance_block(bci);
         }
     }
 
-    void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci, int64_t *local_indexp)
+    void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci)
     {
         auto block = bytecode_iterator_get_block(bci);
 
@@ -607,12 +737,11 @@ namespace Zodiac
 
         while (bci->instruction_index < block->instructions.count)
         {
-            bytecode_print_instruction(sb, bci, local_indexp);
+            bytecode_print_instruction(sb, bci);
         }
     }
 
-    void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci,
-                                    int64_t *local_indexp)
+    void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci)
     {
         auto inst = bytecode_iterator_get_ip(bci);
         bytecode_iterator_advance_ip(bci);
@@ -646,8 +775,8 @@ namespace Zodiac
 
                 if (ret_type != Builtin::type_void)
                 {
-                    string_builder_appendf(sb, "%%%" PRId64 " = ", *local_indexp);
-                    *local_indexp += 1;
+                    string_builder_appendf(sb, "%%%" PRId64 " = ", bci->local_temp_index);
+                    bci->local_temp_index += 1;
                 }
 
                 string_builder_appendf(sb, "CALL %s()", func_name);
@@ -661,14 +790,50 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::ALLOCL:
+            {
+                uint32_t type_index = bytecode_iterator_fetch_32(bci);
+                auto type = bci->builder->emitted_types[type_index];
+                auto func = bci->builder->functions[bci->function_index];
+                auto name = func->local_allocs[bci->local_alloc_index++].value->name;
+                string_builder_appendf(sb, "%%%s = ALLOCL ", name.data);
+                bci->local_alloc_index += 1;
+                ast_print_type(sb, type);
+                break;
+            }
+
             case Bytecode_Instruction::LOAD_IM:
             {
-                string_builder_appendf(sb, "%%%" PRId64, *local_indexp);
-                *local_indexp += 1;
+                string_builder_appendf(sb, "%%%" PRId64, bci->local_temp_index);
+                bci->local_temp_index += 1;
 
 
                 string_builder_append(sb, " = LOAD_IM ");
                 bytecode_print_im(sb, bci);
+                break;
+            }
+
+            case Bytecode_Instruction::LOADL:
+            {
+                uint32_t allocl_index = bytecode_iterator_fetch_32(bci);
+
+                auto func = bci->builder->functions[bci->function_index];
+                auto name = func->local_allocs[allocl_index].value->name;
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOADL %%%s", bci->local_temp_index,
+                                       name.data);
+                break; 
+            }
+
+            case Bytecode_Instruction::STOREL:
+            {
+                uint32_t dest_index = bytecode_iterator_fetch_32(bci);
+                uint32_t val_index = bytecode_iterator_fetch_32(bci);
+
+                auto func = bci->builder->functions[bci->function_index];
+                auto name = func->local_allocs[dest_index].value->name;
+
+                string_builder_appendf(sb, "STOREL %%%s %%%" PRIu32, name.data, val_index);
                 break;
             }
         }
