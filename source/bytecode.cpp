@@ -191,7 +191,13 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY:
+            {
+                return bytecode_emit_binary_expression(builder, expression);
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL:
@@ -210,6 +216,9 @@ namespace Zodiac
 
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_emit_call_expression(Bytecode_Builder *builder,
@@ -287,6 +296,47 @@ namespace Zodiac
         return return_value;
     }
 
+    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder, AST_Expression *expr)
+    {
+        assert(builder);
+        assert(expr);
+        assert(expr->kind == AST_Expression_Kind::BINARY);
+
+        auto lhs = expr->binary.lhs;
+        auto rhs = expr->binary.rhs;
+
+        assert(lhs->type == rhs->type);
+        assert(lhs->type->kind == AST_Type_Kind::INTEGER);
+
+        auto lhs_val = bytecode_emit_expression(builder, lhs);
+        assert(lhs_val);
+        auto rhs_val = bytecode_emit_expression(builder, rhs);
+        assert(rhs_val);
+
+        switch (expr->binary.op)
+        {
+            case BINOP_INVALID: assert(false);
+
+            case BINOP_ADD: 
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::ADD);
+                break;
+            }
+
+            case BINOP_SUB: assert(false);
+        }    
+
+        auto type = lhs->type;
+        bytecode_emit_size_spec(builder, type->integer.sign, type->bit_size);
+
+        bytecode_emit_32(builder, lhs_val->local_index);
+        bytecode_emit_32(builder, rhs_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident)
     {
         assert(builder);
@@ -351,6 +401,9 @@ namespace Zodiac
                 break;
             }
         }
+
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
@@ -404,10 +457,8 @@ namespace Zodiac
         value->alloc_index = alloc_index;
     }
 
-    void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size)
+    void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, uint8_t size)
     {
-        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_IM);
-
         Bytecode_Size_Specifier size_spec = Bytecode_Size_Specifier::INVALID;
 
         switch (size)
@@ -426,6 +477,12 @@ namespace Zodiac
         }
 
         bytecode_emit_byte(builder, (uint8_t)size_spec);
+    }
+
+    void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_IM);
+        bytecode_emit_size_spec(builder, sign, size);
     }
 
     void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
@@ -986,9 +1043,45 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::ADD:
+            {
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+
+                uint32_t lhs_idx = bytecode_iterator_fetch_32(bci);
+                uint32_t rhs_idx = bytecode_iterator_fetch_32(bci);
+                assert(size_spec);
+                string_builder_appendf(sb, "%%%" PRIu64 " = ADD ", bci->local_temp_index);
+                bytecode_print_size_spec(sb, size_spec);
+                string_builder_appendf(sb, " %%%" PRIu32 " %%%" PRIu32, lhs_idx, rhs_idx);
+                bci->local_temp_index += 1;
+                break;
+            }
         }
 
         if (newline) string_builder_append(sb, "\n");
+    }
+
+    void bytecode_print_size_spec(String_Builder *sb, Bytecode_Size_Specifier size_spec)
+    {
+        switch (size_spec)
+        {
+            case Bytecode_Size_Specifier::INVALID: assert(false);
+            case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+            case Bytecode_Size_Specifier::U8: assert(false);
+            case Bytecode_Size_Specifier::S8: assert(false);
+            case Bytecode_Size_Specifier::U16: assert(false);
+            case Bytecode_Size_Specifier::S16: assert(false);
+            case Bytecode_Size_Specifier::U32: assert(false);
+            case Bytecode_Size_Specifier::S32: assert(false);
+            case Bytecode_Size_Specifier::U64: assert(false);
+            case Bytecode_Size_Specifier::S64:
+            {
+                string_builder_append(sb, "S64");
+                break;
+            }
+            default: assert(false);
+        }
     }
 
     void bytecode_print_im(String_Builder *sb, Bytecode_Iterator *bci)
@@ -997,6 +1090,8 @@ namespace Zodiac
 
         auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
         bytecode_iterator_advance_ip(bci);
+
+        bytecode_print_size_spec(sb, size_spec); 
 
         switch (size_spec)
         {
@@ -1012,7 +1107,7 @@ namespace Zodiac
             case Bytecode_Size_Specifier::S64:
             {
                 int64_t val = bytecode_iterator_fetch_64(bci);
-                string_builder_appendf(sb, "S64 %" PRId64, val);
+                string_builder_appendf(sb, " %" PRId64, val);
                 break;
             }
             default: assert(false);

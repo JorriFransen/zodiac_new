@@ -453,7 +453,22 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY:
+            {
+                if (!try_resolve_identifiers(resolver, ast_expr->binary.lhs, scope))
+                {
+                    assert(false);
+                }
+                if (!try_resolve_identifiers(resolver, ast_expr->binary.rhs, scope))
+                {
+                    assert(false);
+                }
+
+                result = true;
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL:
@@ -881,7 +896,27 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY:
+            {
+                auto lhs = ast_expr->binary.lhs;
+                auto rhs = ast_expr->binary.rhs;
+
+                if (!try_resolve_types(resolver, lhs, scope))
+                {
+                    assert(false);
+                }
+                if (!try_resolve_types(resolver, rhs, scope))
+                {
+                    assert(false);
+                }
+
+                result = true;
+                assert(lhs->type == rhs->type);
+                ast_expr->type = lhs->type;
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL:
@@ -1344,7 +1379,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->binary.lhs, scope);
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->binary.rhs, scope);
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL:

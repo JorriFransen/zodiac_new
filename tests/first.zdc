@@ -12,12 +12,17 @@ posix_call_main_and_exit :: func ()
 
 main :: func () -> s64
 {
-    second_val := echo(20); 
-    return echo(40);
+    return 40 + 2;
+    //return echo(40);
 }
 
-echo :: func (val: s64) -> s64
-{
-    result := val;
-    return result;
-}
+//add :: func (a: s64, b: s64) -> s64
+//{
+    //return a + b;
+//}
+
+//echo :: func (val: s64) -> s64
+//{
+    //result := val;
+    //return result;
+//}

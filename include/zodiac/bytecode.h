@@ -21,6 +21,8 @@ namespace Zodiac
         STOREL     = 0x08,
 
         PUSH_ARG   = 0x09,
+
+        ADD        = 0x0A,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -139,6 +141,7 @@ namespace Zodiac
                                                   AST_Expression *expression);
     Bytecode_Value *bytecode_emit_builtin_call_expression(Bytecode_Builder *builder,
                                                           AST_Expression *expression);
+    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
     Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl, Atom name);
     
@@ -147,6 +150,8 @@ namespace Zodiac
     void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value);
     void bytecode_push_local_alloc(Bytecode_Builder *builder, Bytecode_Value *value,
                                    AST_Declaration *decl);
+
+    void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, uint8_t size);
 
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
     void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
@@ -197,6 +202,7 @@ namespace Zodiac
     void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci);
     void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci);
     void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci);
+    void bytecode_print_size_spec(String_Builder *sb, Bytecode_Size_Specifier size_spec);
     void bytecode_print_im(String_Builder *sb, Bytecode_Iterator *bci);
     
 }
