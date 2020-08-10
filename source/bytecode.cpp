@@ -854,7 +854,9 @@ namespace Zodiac
         auto inst = bytecode_iterator_get_ip(bci);
         bytecode_iterator_advance_ip(bci);
         
-        string_builder_append(sb, "    ");
+        if (inst != Bytecode_Instruction::PUSH_ARG) string_builder_append(sb, "    ");
+
+        bool newline = true;
 
         switch (inst)
         {
@@ -978,15 +980,15 @@ namespace Zodiac
             case Bytecode_Instruction::PUSH_ARG:
             {
                 uint32_t val_index = bytecode_iterator_fetch_32(bci);
-                string_builder_appendf(sb, "PUSH_ARG %%%" PRIu32, val_index);
                 auto func = bci->builder->functions[bci->function_index];
                 stack_push(&bci->arg_stack, func->local_temps[val_index]);
+                newline = false;
                 break;
             }
 
         }
 
-        string_builder_append(sb, "\n");
+        if (newline) string_builder_append(sb, "\n");
     }
 
     void bytecode_print_im(String_Builder *sb, Bytecode_Iterator *bci)

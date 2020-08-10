@@ -12,6 +12,7 @@ posix_call_main_and_exit :: func ()
 
 main :: func () -> s64
 {
+    second_val := echo(20); 
     return echo(40);
 }
 
