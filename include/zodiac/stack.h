@@ -72,6 +72,23 @@ namespace Zodiac
     }
 
     template <typename Element_Type>
+    Element_Type *stack_peek_ptr(Stack<Element_Type> *stack, int64_t offset = 0)
+    {
+        assert(stack);
+        assert(stack->sp >= 1);
+
+        assert(stack->sp > offset);
+
+        return &stack->buffer[(stack->sp - 1) - offset];
+    }
+
+    template <typename Element_Type>
+    Element_Type *stack_top_ptr(Stack<Element_Type> *stack)
+    {
+        return stack_peek_ptr(stack);
+    }
+
+    template <typename Element_Type>
     Element_Type stack_pop(Stack<Element_Type> *stack)
     {
         assert(stack->sp >= 1);
@@ -80,5 +97,11 @@ namespace Zodiac
         stack->sp -= 1;
 
         return result;
+    }
+
+    template <typename Element_Type>
+    int64_t stack_count(Stack<Element_Type> *stack)
+    {
+        return stack->sp;
     }
 }

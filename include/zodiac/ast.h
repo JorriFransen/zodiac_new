@@ -82,6 +82,7 @@ namespace Zodiac
     {
         AST_DECL_FLAG_NONE     = 0x00,
         AST_DECL_FLAG_IS_NAKED = 0x01,
+        AST_DECL_FLAG_IS_ENTRY = 0x02,
     };
 
     struct AST_Declaration : public AST_Node

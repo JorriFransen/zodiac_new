@@ -58,6 +58,7 @@ namespace Zodiac
             {
                 assert(!entry_decl);
                 entry_decl = decl;
+                decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
             }
         }
 
@@ -785,7 +786,11 @@ namespace Zodiac
         bool result = false;
 
         assert(ast_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
-        assert(!(ast_stmt->flags & AST_NODE_FLAG_TYPED));
+
+        if ((ast_stmt->flags & AST_NODE_FLAG_TYPED))
+        {
+            return true;
+        }
 
         switch (ast_stmt->kind)
         {

@@ -15,10 +15,13 @@ namespace Zodiac
 
         builder->allocator = allocator;
 
-        array_init(allocator, &builder->functions);
+        array_init(allocator, &builder->program.functions);
+        builder->program.entry_function = nullptr;
+
         array_init(allocator, &builder->emitted_types);
 
         builder->insert_block = nullptr;
+        builder->current_function = nullptr;
     }
 
     void bytecode_emit_node(Bytecode_Builder *builder, AST_Node *node)
@@ -84,15 +87,21 @@ namespace Zodiac
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        for (int64_t i = 0; i < builder->functions.count; i++)
+        for (int64_t i = 0; i < builder->program.functions.count; i++)
         {
-            if (builder->functions[i]->ast_decl == decl) assert(false);
+            if (builder->program.functions[i]->ast_decl == decl) assert(false);
         }
 
         Bytecode_Function *func = bytecode_new_function(builder, decl);        
 
-        auto func_index = builder->functions.count;
-        array_append(&builder->functions, func);
+        if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
+        {
+            assert(!builder->program.entry_function);
+            builder->program.entry_function = func;
+        }
+
+        auto func_index = builder->program.functions.count;
+        array_append(&builder->program.functions, func);
         func->index = func_index;
         builder->current_function = func;
         bytecode_builder_set_insert_point(builder, func);
@@ -626,11 +635,11 @@ namespace Zodiac
 
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        for (int64_t i = 0; i < builder->functions.count; i++)
+        for (int64_t i = 0; i < builder->program.functions.count; i++)
         {
-            if (builder->functions[i]->ast_decl == decl)
+            if (builder->program.functions[i]->ast_decl == decl)
             {
-                return builder->functions[i];
+                return builder->program.functions[i];
             }
         }
 
@@ -734,13 +743,13 @@ namespace Zodiac
 
         stack_init(builder->allocator, &result.arg_stack);
         
-        assert(builder->functions.count >= 1);
+        assert(builder->program.functions.count >= 1);
         result.function_index = 0;
 
-        assert(builder->functions[0]->blocks.count >= 0);
+        assert(builder->program.functions[0]->blocks.count >= 0);
         result.block_index = 0;
 
-        assert(builder->functions[0]->blocks[0]->instructions.count >= 0);
+        assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
         result.instruction_index = 0;
 
         result.local_temp_index = 0;
@@ -772,8 +781,8 @@ namespace Zodiac
 
     Bytecode_Function *bytecode_iterator_get_function(Bytecode_Iterator *bci)
     {
-        assert(bci->function_index < bci->builder->functions.count);
-        return bci->builder->functions[bci->function_index];
+        assert(bci->function_index < bci->builder->program.functions.count);
+        return bci->builder->program.functions[bci->function_index];
     }
 
     void bytecode_iterator_advance_block(Bytecode_Iterator *bci)
@@ -859,7 +868,7 @@ namespace Zodiac
 
         auto bci = bytecode_iterator_create(builder);
 
-        while (bci.function_index < builder->functions.count)
+        while (bci.function_index < builder->program.functions.count)
         {
             bytecode_print_function(sb, &bci);
             string_builder_append(sb, "\n");
@@ -935,7 +944,7 @@ namespace Zodiac
 
                 uint32_t func_index = bytecode_iterator_fetch_32(bci);
                 uint32_t arg_count = bytecode_iterator_fetch_32(bci);
-                auto func = bci->builder->functions[func_index];
+                auto func = bci->builder->program.functions[func_index];
 
                 auto func_decl = func->ast_decl;
                 auto func_name = func_decl->identifier->atom.data;
@@ -977,7 +986,7 @@ namespace Zodiac
             {
                 uint32_t type_index = bytecode_iterator_fetch_32(bci);
                 auto type = bci->builder->emitted_types[type_index];
-                auto func = bci->builder->functions[bci->function_index];
+                auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->local_allocs[bci->local_alloc_index++].value->name;
                 string_builder_appendf(sb, "%%%s = ALLOCL ", name.data);
                 bci->local_alloc_index += 1;
@@ -1000,7 +1009,7 @@ namespace Zodiac
             {
                 uint32_t allocl_index = bytecode_iterator_fetch_32(bci);
 
-                auto func = bci->builder->functions[bci->function_index];
+                auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->local_allocs[allocl_index].value->name;
 
                 string_builder_appendf(sb, "%%%" PRId64 " = LOADL %%%s", bci->local_temp_index,
@@ -1013,11 +1022,11 @@ namespace Zodiac
             {
                 uint32_t param_index = bytecode_iterator_fetch_32(bci);
 
-                auto func = bci->builder->functions[bci->function_index];
+                auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->parameters[param_index].value->name;
 
-                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_PARAM %%%s", bci->local_temp_index,
-                                       name.data);
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_PARAM %%%s",
+                                       bci->local_temp_index, name.data);
                 bci->local_temp_index += 1;
                 break; 
             }
@@ -1027,7 +1036,7 @@ namespace Zodiac
                 uint32_t dest_index = bytecode_iterator_fetch_32(bci);
                 uint32_t val_index = bytecode_iterator_fetch_32(bci);
 
-                auto func = bci->builder->functions[bci->function_index];
+                auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->local_allocs[dest_index].value->name;
 
                 string_builder_appendf(sb, "STOREL %%%s %%%" PRIu32, name.data, val_index);
@@ -1037,7 +1046,7 @@ namespace Zodiac
             case Bytecode_Instruction::PUSH_ARG:
             {
                 uint32_t val_index = bytecode_iterator_fetch_32(bci);
-                auto func = bci->builder->functions[bci->function_index];
+                auto func = bci->builder->program.functions[bci->function_index];
                 stack_push(&bci->arg_stack, func->local_temps[val_index]);
                 newline = false;
                 break;

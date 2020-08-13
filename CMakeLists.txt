@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13.5)
+
 
 project(zodiac)
 
@@ -14,6 +14,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/c_allocator.cpp
     source/file_pos.cpp
     source/hash_table.cpp
+    source/interpreter.cpp
     source/lexer.cpp
     source/os.cpp
     source/os_linux.cpp

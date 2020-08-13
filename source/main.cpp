@@ -6,6 +6,7 @@
 #include "ast.h"
 #include "scope.h"
 #include "resolver.h"
+#include "interpreter.h"
 
 #include <stdio.h>
 #include <cassert>
@@ -62,6 +63,16 @@ int main(int argc, char** argv)
     assert(rr.error_count == 0);
 
     bytecode_print(ca, &resolver.bytecode_builder);
+    assert(resolver.bytecode_builder.program.entry_function);
+
+    Interpreter interp;
+    interpreter_init(ca, &interp);
+
+    interpreter_execute_entry(&interp, &resolver.bytecode_builder.program);
+    printf("Interpreter exited with code: %" PRId64 "\n",
+           interp.exit_code_value.integer_literal.value);
+
+    interpreter_free(&interp);
 
     return 0;
 }

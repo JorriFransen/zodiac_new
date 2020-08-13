@@ -105,10 +105,18 @@ namespace Zodiac
         AST_Declaration *ast_decl = nullptr;
     };
 
+    struct Bytecode_Program
+    {
+        Array<Bytecode_Function*> functions = {};
+        Bytecode_Function *entry_function = nullptr;
+    };
+
     struct Bytecode_Builder
     {
         Allocator *allocator = nullptr;
-        Array<Bytecode_Function*> functions = {};
+
+        Bytecode_Program program = {};
+
         Array<AST_Type*> emitted_types = {};
 
         Bytecode_Block *insert_block = nullptr;
