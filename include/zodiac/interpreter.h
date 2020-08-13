@@ -14,6 +14,8 @@ namespace Zodiac
         bool returned = false;
         Bytecode_Function *func = nullptr;
         Bytecode_Value return_value = {};
+
+        Array<Bytecode_Value> parameters = {};
     };
 
     struct Interpreter
@@ -27,6 +29,7 @@ namespace Zodiac
 
         Stack<Stack_Frame> stack_frames = {};
         Stack<Bytecode_Value> temp_stack = {};
+        Stack<Bytecode_Value> arg_stack = {};
 
         Bytecode_Value exit_code_value = {};
     };
@@ -35,10 +38,11 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp);
 
     void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program);
-    void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func);
+    void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
+                                      int64_t arg_count);
     void interpreter_execute_block(Interpreter *interp, Bytecode_Block *block);
 
-    Stack_Frame interpreter_create_stack_frame(Bytecode_Function *func);
+    Stack_Frame interpreter_create_stack_frame(Allocator *allocator, Bytecode_Function *func);
 
     Stack_Frame *interpreter_current_frame(Interpreter *interp);
     Bytecode_Block *interpreter_current_block(Interpreter *interp);

@@ -17,6 +17,7 @@ namespace Zodiac
 
         stack_init(allocator, &interp->stack_frames);
         stack_init(allocator, &interp->temp_stack);
+        stack_init(allocator, &interp->arg_stack);
     }
 
     void interpreter_free(Interpreter *interp)
@@ -24,6 +25,8 @@ namespace Zodiac
         assert(interp);
 
         stack_free(&interp->stack_frames);
+        stack_free(&interp->temp_stack);
+        stack_free(&interp->arg_stack);
     }
 
     void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program)
@@ -37,30 +40,41 @@ namespace Zodiac
         interp->running = true;
         interp->program = program;
 
-        interpreter_execute_function(interp, program->entry_function);
+        interpreter_execute_function(interp, program->entry_function, 0);
     }
 
-    void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func)
+    void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
+                                      int64_t arg_count)
     {
         assert(interp);
         assert(func);
         assert(func->blocks.count);
 
-        Stack_Frame frame = interpreter_create_stack_frame(func);
+        Stack_Frame frame = interpreter_create_stack_frame(interp->allocator, func);
         stack_push(&interp->stack_frames, frame);
+        auto frame_p = interpreter_current_frame(interp);
 
-        auto framep = interpreter_current_frame(interp);
-        Bytecode_Block *current_block = interpreter_current_block(interp, framep);
-        while (!framep->returned && interp->running && current_block)
+        for (int64_t i = 0; i < arg_count; i++)
+        {
+            array_append(&frame_p->parameters, stack_peek(&interp->arg_stack, (arg_count - 1) - i));
+        }
+
+        for (int64_t i = 0; i < arg_count; i++)
+        {
+            stack_pop(&interp->arg_stack);
+        }
+
+        Bytecode_Block *current_block = interpreter_current_block(interp, frame_p);
+        while (!frame_p->returned && interp->running && current_block)
         {
             interpreter_execute_block(interp, current_block); 
-            framep = interpreter_current_frame(interp);
-            current_block = interpreter_current_block(interp, framep);
+            frame_p = interpreter_current_frame(interp);
+            current_block = interpreter_current_block(interp, frame_p);
         }
 
         if (interp->running)
         {
-            assert(framep->returned);
+            assert(frame_p->returned);
         }
     }
 
@@ -100,13 +114,17 @@ namespace Zodiac
                     uint32_t func_index = interpreter_fetch<uint32_t>(interp);
                     uint32_t arg_count = interpreter_fetch<uint32_t>(interp);
 
-                    assert(arg_count == 0);
-
                     auto func = interp->program->functions[func_index];
                     assert(func);
 
-                    interpreter_execute_function(interp, func);
+                    interpreter_execute_function(interp, func, arg_count);
                     auto return_frame = stack_pop(&interp->stack_frames);
+
+                    if (return_frame.parameters.count)
+                    {
+                        array_free(&return_frame.parameters);
+                    }
+
                     if (interp->running)
                     {
                         assert(return_frame.return_value.type);
@@ -163,9 +181,29 @@ namespace Zodiac
                 }
 
                 case Bytecode_Instruction::LOADL: assert(false);
-                case Bytecode_Instruction::LOAD_PARAM: assert(false);
+
+                case Bytecode_Instruction::LOAD_PARAM:
+                {
+                    auto param_index = interpreter_fetch<uint32_t>(interp);
+                    assert(param_index < frame->parameters.count);
+
+                    auto& param = frame->parameters[param_index];
+                    assert(param.type);
+
+                    auto result_value = interpreter_push_temporary(interp, param.type);
+                    *result_value = param;
+                    break;
+                }
+
                 case Bytecode_Instruction::STOREL: assert(false);
-                case Bytecode_Instruction::PUSH_ARG: assert(false);
+
+                case Bytecode_Instruction::PUSH_ARG:
+                {
+                    auto temp_index = interpreter_fetch<int32_t>(interp);
+                    auto arg_val = interpreter_load_temporary(interp, temp_index);
+                    stack_push(&interp->arg_stack, *arg_val);
+                    break;
+                }
 
                 case Bytecode_Instruction::ADD:
                 {
@@ -206,7 +244,7 @@ namespace Zodiac
         }
     }
 
-    Stack_Frame interpreter_create_stack_frame(Bytecode_Function *func)
+    Stack_Frame interpreter_create_stack_frame(Allocator *allocator, Bytecode_Function *func)
     {
         assert(func);
         assert(func->blocks.count);
@@ -218,6 +256,8 @@ namespace Zodiac
         result.local_count = 0;
         result.returned = false;
         result.func = func;
+
+        array_init(allocator, &result.parameters, func->parameters.count);
 
         return result;
     }
