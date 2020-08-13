@@ -49,16 +49,18 @@ namespace Zodiac
         Stack_Frame frame = interpreter_create_stack_frame(func);
         stack_push(&interp->stack_frames, frame);
 
-        Bytecode_Block *current_block = interpreter_current_block(interp);
-        while (interp->running && current_block)
+        auto framep = interpreter_current_frame(interp);
+        Bytecode_Block *current_block = interpreter_current_block(interp, framep);
+        while (!framep->returned && interp->running && current_block)
         {
             interpreter_execute_block(interp, current_block); 
-            current_block = interpreter_current_block(interp);
+            framep = interpreter_current_frame(interp);
+            current_block = interpreter_current_block(interp, framep);
         }
 
         if (interp->running)
         {
-            assert(false);
+            assert(framep->returned);
         }
     }
 
@@ -72,7 +74,8 @@ namespace Zodiac
 
         frame->instruction_index = 0;
 
-        while (interp->running && 
+        while (!frame->returned &&
+               interp->running && 
                frame->instruction_index < block->instructions.count)
         {
             Bytecode_Instruction inst = interpreter_fetch_instruction(interp);
@@ -103,12 +106,33 @@ namespace Zodiac
                     assert(func);
 
                     interpreter_execute_function(interp, func);
-                    stack_pop(&interp->stack_frames);
+                    auto return_frame = stack_pop(&interp->stack_frames);
+                    if (interp->running)
+                    {
+                        assert(return_frame.return_value.type);
 
+                        Bytecode_Value *return_value =
+                            interpreter_push_temporary(interp, return_frame.return_value.type);
+
+                        *return_value = return_frame.return_value;
+
+                    }
                     break;
                 }
 
-                case Bytecode_Instruction::RETURN: assert(false);
+                case Bytecode_Instruction::RETURN:
+                {
+                    uint32_t temp_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto ret_val = interpreter_load_temporary(interp, temp_index);
+                    assert(ret_val);
+
+                    frame->return_value = *ret_val;
+
+                    frame->returned = true;
+                    break;
+                }
+
                 case Bytecode_Instruction::ALLOCL: assert(false);
 
                 case Bytecode_Instruction::LOAD_IM:
@@ -192,6 +216,7 @@ namespace Zodiac
         result.instruction_index = 0;
         result.block_index = 0;
         result.local_count = 0;
+        result.returned = false;
         result.func = func;
 
         return result;
@@ -221,7 +246,6 @@ namespace Zodiac
     Bytecode_Block *interpreter_current_block(Interpreter *interp, Stack_Frame *frame)
     {
         assert(interp);
-        assert(interp->running);
         assert(frame);
 
         assert(frame->block_index >= 0);

@@ -11,7 +11,9 @@ namespace Zodiac
         int64_t instruction_index = -1;
         int64_t block_index = -1;
         int32_t local_count = -1;
+        bool returned = false;
         Bytecode_Function *func = nullptr;
+        Bytecode_Value return_value = {};
     };
 
     struct Interpreter
