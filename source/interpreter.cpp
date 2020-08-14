@@ -13,10 +13,10 @@ namespace Zodiac
         interp->program = nullptr;
 
         interp->running = false;
-        interp->temp_offset = 0;
 
         stack_init(allocator, &interp->stack_frames);
         stack_init(allocator, &interp->temp_stack);
+        stack_init(allocator, &interp->allocl_stack);
         stack_init(allocator, &interp->arg_stack);
     }
 
@@ -26,6 +26,7 @@ namespace Zodiac
 
         stack_free(&interp->stack_frames);
         stack_free(&interp->temp_stack);
+        stack_free(&interp->allocl_stack);
         stack_free(&interp->arg_stack);
     }
 
@@ -64,12 +65,29 @@ namespace Zodiac
             stack_pop(&interp->arg_stack);
         }
 
+        for (int64_t i = 0; i < func->local_allocs.count; i++)
+        {
+            Bytecode_Value allocl_val = {};
+            allocl_val.kind = Bytecode_Value_Kind::ALLOCL;
+            allocl_val.type = func->local_allocs[i].value->type;
+            assert(allocl_val.type);
+
+            stack_push(&interp->allocl_stack, allocl_val);
+        }
+
         Bytecode_Block *current_block = interpreter_current_block(interp, frame_p);
         while (!frame_p->returned && interp->running && current_block)
         {
             interpreter_execute_block(interp, current_block); 
             frame_p = interpreter_current_frame(interp);
-            current_block = interpreter_current_block(interp, frame_p);
+            auto next_block = interpreter_current_block(interp, frame_p);
+            if (next_block == current_block) break;
+            current_block = next_block;
+        }
+
+        for (int64_t i = 0; i < func->local_allocs.count; i++)
+        {
+            stack_pop(&interp->allocl_stack);
         }
 
         if (interp->running)
@@ -151,7 +169,12 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::ALLOCL: assert(false);
+                case Bytecode_Instruction::ALLOCL:
+                {
+                    interpreter_fetch<uint32_t>(interp);
+                    // Do nothing, handled on function call.
+                    break;
+                }
 
                 case Bytecode_Instruction::LOAD_IM:
                 {
@@ -180,7 +203,19 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::LOADL: assert(false);
+                case Bytecode_Instruction::LOADL:
+                {
+                    auto allocl_index = interpreter_fetch<uint32_t>(interp);
+                    assert(allocl_index >= 0);
+
+                    auto offset = (frame->alloc_count - 1) - allocl_index;
+                    auto source_allocl = stack_peek_ptr(&interp->allocl_stack, offset);
+                    assert(source_allocl);
+
+                    auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
+                    *dest_val = *source_allocl;
+                    break;
+                }
 
                 case Bytecode_Instruction::LOAD_PARAM:
                 {
@@ -195,12 +230,29 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::STOREL: assert(false);
+                case Bytecode_Instruction::STOREL:
+                {
+                    auto allocl_index = interpreter_fetch<uint32_t>(interp);
+                    auto val_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto source_val = interpreter_load_temporary(interp, val_index);
+
+                    auto offset = (frame->alloc_count - 1) - allocl_index;
+                    assert(offset < frame->alloc_count);
+                    
+                    auto dest_allocl = stack_peek_ptr(&interp->allocl_stack, offset);
+
+                    assert(source_val);
+                    assert(dest_allocl);
+                    *dest_allocl = *source_val;
+                    break;
+                }
 
                 case Bytecode_Instruction::PUSH_ARG:
                 {
                     auto temp_index = interpreter_fetch<int32_t>(interp);
                     auto arg_val = interpreter_load_temporary(interp, temp_index);
+                    assert(arg_val->type);
                     stack_push(&interp->arg_stack, *arg_val);
                     break;
                 }
@@ -254,6 +306,7 @@ namespace Zodiac
         result.instruction_index = 0;
         result.block_index = 0;
         result.local_count = 0;
+        result.alloc_count = func->local_allocs.count;
         result.returned = false;
         result.func = func;
 
@@ -303,9 +356,8 @@ namespace Zodiac
         value.type = type;
         
         stack_push(&interp->temp_stack, value);
-
         auto frame = interpreter_current_frame(interp);
-        frame->local_count++;
+        frame->local_count += 1;
 
         return stack_top_ptr(&interp->temp_stack);
     }
@@ -315,12 +367,11 @@ namespace Zodiac
         assert(interp);
         assert(interp->running);
 
-        auto index = local_index + interp->temp_offset;
-        assert(index < stack_count(&interp->temp_stack));
-
         auto frame = interpreter_current_frame(interp);
+        auto offset = (frame->local_count - 1) - local_index;
+        assert(offset >= 0 && offset < frame->local_count);
 
-        return stack_peek_ptr(&interp->temp_stack, (frame->local_count - 1) - index);
+        return stack_peek_ptr(&interp->temp_stack, offset);
     }
 
     Bytecode_Instruction interpreter_fetch_instruction(Interpreter *interp)

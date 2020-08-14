@@ -989,7 +989,6 @@ namespace Zodiac
                 auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->local_allocs[bci->local_alloc_index++].value->name;
                 string_builder_appendf(sb, "%%%s = ALLOCL ", name.data);
-                bci->local_alloc_index += 1;
                 ast_print_type(sb, type);
                 break;
             }

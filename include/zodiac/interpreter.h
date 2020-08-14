@@ -10,8 +10,9 @@ namespace Zodiac
     {
         int64_t instruction_index = -1;
         int64_t block_index = -1;
-        int32_t local_count = -1;
         bool returned = false;
+        int64_t local_count = 0;
+        int64_t alloc_count = 0;
         Bytecode_Function *func = nullptr;
         Bytecode_Value return_value = {};
 
@@ -25,10 +26,10 @@ namespace Zodiac
         Bytecode_Program *program = nullptr;
 
         bool running = false;
-        int64_t temp_offset = 0;
 
         Stack<Stack_Frame> stack_frames = {};
         Stack<Bytecode_Value> temp_stack = {};
+        Stack<Bytecode_Value> allocl_stack = {};
         Stack<Bytecode_Value> arg_stack = {};
 
         Bytecode_Value exit_code_value = {};

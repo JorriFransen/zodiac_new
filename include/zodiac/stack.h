@@ -76,6 +76,7 @@ namespace Zodiac
     {
         assert(stack);
         assert(stack->sp >= 1);
+        assert(offset >= 0);
 
         assert(stack->sp > offset);
 

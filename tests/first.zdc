@@ -6,9 +6,8 @@
 
 posix_call_main_and_exit :: func ()
 {
-    @exit(echo(add(echo(40), echo(2))));
-    //exit_code := main();
-    //@exit(exit_code);
+    exit_code := main();
+    @exit(exit_code);
 }
 
 ret_42 :: func() -> s64
@@ -16,19 +15,20 @@ ret_42 :: func() -> s64
     return 42;
 }
 
-//main :: func () -> s64
-//{
-    //return echo(add(40, 2));
-//}
+main :: func () -> s64
+{
+    return echo(add(40, 2));
+}
 
 add :: func (a: s64, b: s64) -> s64
 {
-    return a + b;
+    aa := a;
+    bb := b;
+    return aa + bb;
 }
 
 echo :: func (val: s64) -> s64
 {
-    return val;
-    //result := val;
-    //return result;
+    result := val;
+    return result;
 }
