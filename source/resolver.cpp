@@ -270,6 +270,7 @@ namespace Zodiac
             {
                 auto bc_func = job->bc_func;
                 llvm_emit_function(&resolver->llvm_builder, bc_func);
+                result = true;
                 break;
             }
         }
