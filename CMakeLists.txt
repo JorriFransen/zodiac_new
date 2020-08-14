@@ -1,6 +1,8 @@
-
+cmake_minimum_required(VERSION 3.18)
 
 project(zodiac)
+
+find_package(LLVM REQUIRED CONFIG)
 
 set (ZODIAC_COMPILER_SOURCE
     source/main.cpp
