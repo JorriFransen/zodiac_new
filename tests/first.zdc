@@ -19,9 +19,7 @@ main :: func () -> s64
 
 add :: func (a: s64, b: s64) -> s64
 {
-    aa := a;
-    bb := b;
-    return aa + bb;
+    return a + b;
 }
 
 echo :: func (val: s64) -> s64

@@ -41,6 +41,7 @@ namespace Zodiac
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val);
 
     LLVMTypeRef llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
+    LLVMTypeRef llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
                                                        LLVMBasicBlockRef llvm_bock,

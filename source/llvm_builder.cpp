@@ -1,5 +1,7 @@
 #include "llvm_builder.h"
 
+#include "builtin.h"
+
 #include <llvm/IR/Module.h>
 
 #include <cassert>
@@ -30,6 +32,7 @@ namespace Zodiac
         auto func_decl = bc_func->ast_decl;
 
         builder->temps.count = 0;
+        builder->allocas.count = 0;
 
         LLVMTypeRef llvm_func_type = llvm_type_from_ast(builder, func_decl->type);
 
@@ -95,8 +98,36 @@ namespace Zodiac
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
                 LLVMValueRef val = builder->temps[val_idx];
-                assert(false);
-               a 
+
+                auto asm_string = string_ref("syscall");
+
+                String_Builder sb = {};
+                string_builder_init(builder->allocator, &sb);
+
+                string_builder_append(&sb, "=r,{rax},{rdi}");
+
+                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 1);
+
+                auto constraint_string = string_builder_to_string(sb.allocator, &sb);
+                string_builder_free(&sb);
+
+                LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
+                                                        asm_string.data,
+                                                        asm_string.length,
+                                                        constraint_string.data,
+                                                        constraint_string.length,
+                                                        true,
+                                                        false,
+                                                        LLVMInlineAsmDialectATT);
+
+                LLVMTypeRef arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
+                LLVMValueRef syscall_num = LLVMConstInt(arg_type, 60, true);
+                LLVMValueRef args[2] = { syscall_num, val };
+                LLVMBuildCall(builder->llvm_builder, asm_val, args, 2, "");
+
+
+                free(sb.allocator, constraint_string.data);
+
                 break;
             }
 
@@ -297,8 +328,8 @@ namespace Zodiac
                                ast_type->function.param_types.count);
                     for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
                     {
-                        LLVMTypeRef arg_type = llvm_type_from_ast(builder,
-                                                                  ast_type->function.param_types[i]);
+                        LLVMTypeRef arg_type =
+                            llvm_type_from_ast(builder, ast_type->function.param_types[i]);
                         array_append(&llvm_arg_types, arg_type);
                     }
                 }
@@ -319,6 +350,20 @@ namespace Zodiac
 
         assert(false);
         return {};
+    }
+
+    LLVMTypeRef llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)
+    {
+        assert(builder);
+        assert(arg_count >= 0);
+        assert(arg_count < 6);
+
+        LLVMTypeRef ret_type = llvm_type_from_ast(builder, Builtin::type_s64);
+        LLVMTypeRef param_types[7] = { ret_type, ret_type, ret_type, ret_type,
+                                       ret_type, ret_type, ret_type };
+        LLVMTypeRef result = LLVMFunctionType(ret_type, param_types, arg_count + 1, false);
+
+        return result;
     }
 
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
