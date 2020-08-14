@@ -141,7 +141,24 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+            case AST_Statement_Kind::ASSIGNMENT:
+            {
+                auto rhs_value = bytecode_emit_expression(builder,
+                                                          statement->assignment.rhs_expression);
+                assert(rhs_value);
+                assert(rhs_value->kind == Bytecode_Value_Kind::TEMPORARY);
+
+                auto lvalue = bytecode_emit_lvalue(builder,
+                                                   statement->assignment.identifier_expression);
+                assert(lvalue);
+                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+
+                assert(lvalue->type == rhs_value->type);
+
+                bytecode_emit_storel(builder, lvalue, rhs_value);
+
+                break;
+            }
 
             case AST_Statement_Kind::RETURN:
             {
@@ -409,6 +426,42 @@ namespace Zodiac
                 return result;
                 break;
             }
+        }
+
+        assert(false);
+        return nullptr;
+    }
+
+    Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *lvalue_expr)
+    {
+        assert(builder);
+
+        switch (lvalue_expr->kind)
+        {
+            case AST_Expression_Kind::INVALID: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER:
+            {
+                auto ident = lvalue_expr->identifier;
+                assert(ident->declaration);
+                auto idecl = ident->declaration;
+                assert(idecl->kind == AST_Declaration_Kind::VARIABLE);
+
+                auto result = bytecode_find_value_for_variable(builder, idecl);
+                assert(result);
+                assert(result->kind == Bytecode_Value_Kind::ALLOCL);
+                return result;
+                break;
+            }
+
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Expression_Kind::DOT: assert(false);
+            case AST_Expression_Kind::BINARY: assert(false);
+            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::COMPOUND: assert(false);
+            case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }
 
         assert(false);

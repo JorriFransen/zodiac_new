@@ -352,19 +352,25 @@ namespace Zodiac
                     result = false;
                 }
 
-                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
+                if (result)
                 {
-                    auto param_decl = ast_decl->function.parameter_declarations[i];
-                    if (!try_resolve_identifiers(resolver, param_decl,
-                                                 ast_decl->function.parameter_scope))
+                    for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
                     {
-                        result = false;
+                        auto param_decl = ast_decl->function.parameter_declarations[i];
+                        if (!try_resolve_identifiers(resolver, param_decl,
+                                                     ast_decl->function.parameter_scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
 
-                if (!try_resolve_identifiers(resolver, ast_decl->function.body, scope))
+                if (result)
                 {
-                    assert(false);
+                    if (!try_resolve_identifiers(resolver, ast_decl->function.body, scope))
+                    {
+                        result = false;
+                    }
                 }
 
                 break;
@@ -392,19 +398,36 @@ namespace Zodiac
             case AST_Statement_Kind::BLOCK:
             {
                 auto nodes = ast_stmt->block.statements;
+
+                bool block_res = true;
                 for (int64_t i = 0; i < nodes.count; i++)
                 {
                     if (!try_resolve_identifiers(resolver, nodes[i], ast_stmt->block.scope))
                     {
-                        assert(false);
+                        block_res = false;
+                        break;
                     }
                 }
 
-                result = true;
+                result = block_res;
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+            case AST_Statement_Kind::ASSIGNMENT:
+            {
+                if (!try_resolve_identifiers(resolver,
+                                             ast_stmt->assignment.identifier_expression, scope))
+                {
+                    assert(false);
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->assignment.rhs_expression, scope))
+                {
+                    assert(false);
+                }
+                result = true;
+                break;
+            }
 
             case AST_Statement_Kind::RETURN:
             {
@@ -436,7 +459,10 @@ namespace Zodiac
     {
         bool result = false;
 
-        assert(!(ast_expr->flags & AST_NODE_FLAG_RESOLVED_ID));
+        if (ast_expr->flags & AST_NODE_FLAG_RESOLVED_ID)
+        {
+            return true;
+        }
 
         switch (ast_expr->kind)
         {
@@ -820,7 +846,23 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+            case AST_Statement_Kind::ASSIGNMENT:
+            {
+                if (!try_resolve_types(resolver,
+                                       ast_stmt->assignment.identifier_expression, scope))
+                {
+                    assert(false);
+                }
+
+                if (!try_resolve_types(resolver, ast_stmt->assignment.rhs_expression, scope))
+                {
+                    assert(false);
+                }
+
+                result = true;
+                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
 
             case AST_Statement_Kind::RETURN:
             {
@@ -1332,7 +1374,16 @@ namespace Zodiac
         {
             case AST_Statement_Kind::INVALID: assert(false);
             case AST_Statement_Kind::BLOCK: assert(false);
-            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+
+            case AST_Statement_Kind::ASSIGNMENT:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         stmt->assignment.identifier_expression,
+                                                         scope);
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         stmt->assignment.rhs_expression, scope);
+                break;
+            }
 
             case AST_Statement_Kind::RETURN:
             {

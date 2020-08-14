@@ -10,14 +10,11 @@ posix_call_main_and_exit :: func ()
     @exit(exit_code);
 }
 
-ret_42 :: func() -> s64
-{
-    return 42;
-}
-
 main :: func () -> s64
 {
-    return echo(add(40, 2));
+    result := echo(add(40, 1));
+    result = result + 1;
+    return result;
 }
 
 add :: func (a: s64, b: s64) -> s64
