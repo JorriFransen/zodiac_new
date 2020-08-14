@@ -206,7 +206,6 @@ namespace Zodiac
                 case Bytecode_Instruction::LOADL:
                 {
                     auto allocl_index = interpreter_fetch<uint32_t>(interp);
-                    assert(allocl_index >= 0);
 
                     auto offset = (frame->alloc_count - 1) - allocl_index;
                     auto source_allocl = stack_peek_ptr(&interp->allocl_stack, offset);

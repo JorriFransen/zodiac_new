@@ -16,6 +16,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/hash_table.cpp
     source/interpreter.cpp
     source/lexer.cpp
+    source/llvm_builder.cpp
     source/os.cpp
     source/os_linux.cpp
     source/parser.cpp

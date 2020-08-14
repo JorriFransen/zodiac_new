@@ -24,27 +24,6 @@ namespace Zodiac
         builder->current_function = nullptr;
     }
 
-    void bytecode_emit_node(Bytecode_Builder *builder, AST_Node *node)
-    {
-        switch (node->kind)
-        {
-            case AST_Node_Kind::INVALID: assert(false);
-            case AST_Node_Kind::MODULE: assert(false);
-            case AST_Node_Kind::IDENTIFIER: assert(false);
-
-            case AST_Node_Kind::DECLARATION:
-            {
-                bytecode_emit_declaration(builder, static_cast<AST_Declaration*>(node));
-                break;
-            }
-
-            case AST_Node_Kind::STATEMENT: assert(false);
-            case AST_Node_Kind::EXPRESSION: assert(false);
-            case AST_Node_Kind::TYPE_SPEC: assert(false);
-            case AST_Node_Kind::TYPE: assert(false);
-        }
-    }
-
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
     {
         switch (decl->kind)
@@ -82,7 +61,8 @@ namespace Zodiac
         }
     }
 
-    void bytecode_emit_function_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
+    Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
+                                                          AST_Declaration *decl)
     {
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
@@ -124,6 +104,8 @@ namespace Zodiac
 
         assert(decl->function.body);
         bytecode_emit_statement(builder, decl->function.body);
+
+        return func;
     }
 
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement)

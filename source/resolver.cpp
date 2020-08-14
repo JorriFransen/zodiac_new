@@ -23,11 +23,13 @@ namespace Zodiac
 
         resolver->build_data = build_data;
         bytecode_builder_init(allocator, &resolver->bytecode_builder);
+        llvm_builder_init(allocator, &resolver->llvm_builder);
 
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
         queue_init(allocator, &resolver->size_job_queue);
         queue_init(allocator, &resolver->emit_bytecode_job_queue);
+        queue_init(allocator, &resolver->emit_llvm_job_queue);
 
         array_init(err_allocator, &resolver->errors);
     }
@@ -82,6 +84,7 @@ namespace Zodiac
             assert(queue_count(&resolver->type_job_queue) == 0);
             assert(queue_count(&resolver->size_job_queue) == 0);
             assert(queue_count(&resolver->emit_bytecode_job_queue) == 0);
+            assert(queue_count(&resolver->emit_llvm_job_queue) == 0);
 
         }
 
@@ -164,6 +167,8 @@ namespace Zodiac
                 }
                 else
                 {
+                    assert(job->result);
+                    queue_emit_llvm_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -175,6 +180,15 @@ namespace Zodiac
 
             {
                 done = true;
+            }
+
+            auto llvm_job_count = queue_count(&resolver->emit_llvm_job_queue);
+            while (llvm_job_count--)
+            {
+                auto job = queue_dequeue(&resolver->emit_llvm_job_queue);
+                bool job_done = try_resolve_job(resolver, job);
+                assert(job_done);
+                free_job(resolver, job);
             }
 
             if (resolver->errors.count)
@@ -241,9 +255,21 @@ namespace Zodiac
                 }
                 else
                 {
-                    bytecode_emit_node(&resolver->bytecode_builder, job->ast_node);
+                    assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
+                    auto decl = static_cast<AST_Declaration*>(job->ast_node);
+                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                    auto bc_func = bytecode_emit_function_declaration(&resolver->bytecode_builder,
+                                                                      decl);
+                    job->result = bc_func;
                     result = true;
                 }
+                break;
+            }
+
+            case Resolve_Job_Kind::EMIT_LLVM:
+            {
+                auto bc_func = job->bc_func;
+                llvm_emit_function(&resolver->llvm_builder, bc_func);
                 break;
             }
         }
@@ -1321,6 +1347,15 @@ namespace Zodiac
         ast_node->flags |= AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION;
     }
     
+    void queue_emit_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
+    {
+        assert(resolver->allocator);
+
+        auto job = resolve_job_emit_llvm_new(resolver->allocator, bc_func);
+        queue_enqueue(&resolver->emit_llvm_job_queue, job);
+        assert(job);
+    }
+
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
                                                    Scope *scope)
     {
@@ -1483,14 +1518,28 @@ namespace Zodiac
         }
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node, 
-                                 Scope *scope)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind)
     {
         auto result = alloc_type<Resolve_Job>(allocator);
         assert(result);
         result->kind = kind;
+        result->result = nullptr;
+        return result;
+    }
+
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node, 
+                                 Scope *scope)
+    {
+        auto result = resolve_job_new(allocator, kind);
         result->ast_node = ast_node;
         result->node_scope = scope;
+        return result;
+    }
+
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func)
+    {
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM);
+        result->bc_func = bc_func;
         return result;
     }
 
@@ -1513,6 +1562,11 @@ namespace Zodiac
                                                Scope *scope)
     {
         return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope);
+    }
+
+    Resolve_Job *resolve_job_emit_llvm_new(Allocator *allocator, Bytecode_Function *bc_func)
+    {
+        return resolve_job_new(allocator, bc_func);
     }
 
     void free_job(Resolver *resolver, Resolve_Job *job)
