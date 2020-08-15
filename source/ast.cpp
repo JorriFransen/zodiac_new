@@ -193,10 +193,11 @@ namespace Zodiac
                 auto end_fp = ast_body->end_file_pos;
 
                 bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
+                bool is_noreturn = ptn->flags & DPTN_FLAG_NORETURN;
 
                 return ast_function_declaration_new(allocator, ast_ident, ast_type,
                                                     ast_param_decls, ast_var_decls, ast_body,
-                                                    is_naked, begin_fp, end_fp);
+                                                    is_naked, is_noreturn, begin_fp, end_fp);
                 break;
             }
 
@@ -829,7 +830,8 @@ namespace Zodiac
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement* body,
-                                                  bool is_naked, const File_Pos &begin_fp,
+                                                  bool is_naked, bool is_noreturn,
+                                                  const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
     {
         assert(body->kind == AST_Statement_Kind::BLOCK);
@@ -846,6 +848,11 @@ namespace Zodiac
         if (is_naked)
         {
             result->decl_flags |= AST_DECL_FLAG_IS_NAKED;
+        }
+
+        if (is_noreturn)
+        {
+            result->decl_flags |= AST_DECL_FLAG_NORETURN;
         }
 
         return result;

@@ -93,8 +93,18 @@ namespace Zodiac
         AST_Declaration *ast_decl = nullptr;
     };
 
+    typedef uint64_t Bytecode_Function_Flag;
+
+    enum Bytecode_Function_Flag__ : Bytecode_Function_Flag
+    {
+        BYTECODE_FUNC_FLAG_INVALID     = 0x00,
+        BYTECODE_FUNC_FLAG_NAKED       = 0x01,
+        BYTECODE_FUNC_FLAG_NORETURN    = 0x02,
+    };
+
     struct Bytecode_Function
     {
+        Bytecode_Function_Flag flags = BYTECODE_FUNC_FLAG_INVALID;
         uint32_t index = 0;
         Array<Bytecode_Parameter> parameters = {};
         Array<Bytecode_Value*> local_temps = {};

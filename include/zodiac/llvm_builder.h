@@ -7,13 +7,19 @@
 
 namespace Zodiac
 {
+    struct LLVM_Function
+    {
+        LLVMValueRef llvm_func = {};
+        Bytecode_Function *bc_func = nullptr;
+    };
+
     struct LLVM_Builder
     {
         Allocator *allocator = nullptr;
         LLVMModuleRef llvm_module;
         LLVMBuilderRef llvm_builder;
 
-        Array<LLVMValueRef> functions = {};
+        Array<LLVM_Function> functions = {};
 
         Array<LLVMValueRef> temps = {};
         Array<LLVMValueRef> allocas = {};
@@ -26,6 +32,7 @@ namespace Zodiac
         LLVMValueRef llvm_function = {};
         LLVMBasicBlockRef llvm_block = {};
 
+        Bytecode_Function *bc_func = nullptr;
         Bytecode_Block *bc_block = nullptr;
 
         int64_t ip = 0;
@@ -43,7 +50,10 @@ namespace Zodiac
     LLVMTypeRef llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
     LLVMTypeRef llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 
+    bool llvm_block_ends_with_terminator(LLVMBasicBlockRef llvm_block);
+
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
+                                                       Bytecode_Function *bc_func,
                                                        LLVMBasicBlockRef llvm_bock,
                                                        Bytecode_Block *bc_block);
 

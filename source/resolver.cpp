@@ -808,6 +808,10 @@ namespace Zodiac
 
                 if (result)
                 {
+                    if (ast_decl->decl_flags & AST_DECL_FLAG_NORETURN)
+                    {
+                        assert(ast_decl->type->function.return_type == Builtin::type_void);
+                    }
                     assert(ast_decl->type);
                     assert(ast_decl->function.type_spec->type);
                     assert(ast_decl->function.body->flags & AST_NODE_FLAG_TYPED);

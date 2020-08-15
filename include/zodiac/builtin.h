@@ -20,6 +20,7 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(_start)  \
     DEFINE_BUILTIN_ATOM(exit)  \
     DEFINE_BUILTIN_ATOM(naked) \
+    DEFINE_BUILTIN_ATOM(noreturn) \
 
 #undef DEFINE_BUILTIN_TYPE
 

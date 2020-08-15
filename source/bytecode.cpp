@@ -76,6 +76,7 @@ namespace Zodiac
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
         {
+            assert(decl->decl_flags & AST_DECL_FLAG_IS_NAKED);
             assert(!builder->program.entry_function);
             builder->program.entry_function = func;
         }
@@ -737,6 +738,12 @@ namespace Zodiac
         bytecode_builder_append_block(builder, result, "entry");
 
         result->ast_decl = decl;        
+
+        if (decl->decl_flags & AST_DECL_FLAG_IS_NAKED)
+            result->flags |= BYTECODE_FUNC_FLAG_NAKED;
+
+        if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
+            result->flags |= BYTECODE_FUNC_FLAG_NORETURN;
 
         return result;
     }

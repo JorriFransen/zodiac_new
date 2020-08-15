@@ -119,6 +119,7 @@ enum Declaration_PTN_FLAG : Declaration_PTN_Flag
 {
     DPTN_FLAG_NONE =     0x00,
     DPTN_FLAG_IS_NAKED = 0x01,
+    DPTN_FLAG_NORETURN = 0x02,
 };
 
 struct Declaration_PTN

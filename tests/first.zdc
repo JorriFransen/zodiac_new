@@ -1,13 +1,13 @@
 
-#naked _start :: func ()
+#naked #noreturn _start :: func ()
 {
     posix_call_main_and_exit();
 }
 
-posix_call_main_and_exit :: func ()
+#noreturn posix_call_main_and_exit :: func ()
 {
     exit_code := main();
-    @exit(exit_code);
+    @exit(exit_code + 1);
 }
 
 main :: func () -> s64

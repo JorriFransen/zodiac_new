@@ -44,6 +44,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
     assert(ts);
 
     bool is_naked = false;
+    bool is_noreturn = false;
 
     while (ts->current_token().kind == TOK_POUND)
     {
@@ -52,6 +53,10 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
         {
             is_naked = true;
         }
+        else if (directive_tok.atom == Builtin::atom_noreturn)
+        {
+            is_noreturn = true;
+        }
         else assert(false);
         ts->next_token();
     }
@@ -59,12 +64,13 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
     auto identifier = parser_parse_identifier(parser, ts);
     if (!identifier) return nullptr;
 
-    return parser_parse_declaration(parser, ts, identifier, is_naked);
+    return parser_parse_declaration(parser, ts, identifier, is_naked, is_noreturn);
 }
 
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
                                           Identifier_PTN* identifier,
-                                          bool is_naked /*= false*/)
+                                          bool is_naked /*= false*/,
+                                          bool is_noreturn /*= false*/)
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
@@ -155,6 +161,11 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
     {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
         result->flags |= DPTN_FLAG_IS_NAKED;
+    }
+    if (is_noreturn)
+    {
+        assert(result->kind == Declaration_PTN_Kind::FUNCTION);
+        result->flags |= DPTN_FLAG_NORETURN;
     }
     return result;
 }

@@ -40,7 +40,7 @@ namespace Zodiac
                                                      func_decl->identifier->atom.data,
                                                      llvm_func_type);
         assert(llvm_func_val);
-        array_append(&builder->functions, llvm_func_val);
+        array_append(&builder->functions, { llvm_func_val, bc_func });
 
         for (int64_t i = 0; i < bc_func->blocks.count; i++)
         {
@@ -64,6 +64,7 @@ namespace Zodiac
         for (int64_t i = 0; i < bc_func->blocks.count; i++)
         {
             LLVM_Function_Context func_context = llvm_create_function_context(llvm_func_val,
+                                                                              bc_func,
                                                                               llvm_block,
                                                                               bc_func->blocks[i]);
             llvm_emit_block(builder, &func_context);
@@ -83,6 +84,17 @@ namespace Zodiac
             auto inst =
                 (Bytecode_Instruction)func_context->bc_block->instructions[func_context->ip++];
             llvm_emit_instruction(builder, inst, func_context);
+        }
+
+        if (!llvm_block_ends_with_terminator(func_context->llvm_block))
+        {
+            auto func = func_context->bc_func;
+
+            if (func->flags & BYTECODE_FUNC_FLAG_NORETURN)
+            {
+                LLVMBuildUnreachable(builder->llvm_builder);
+            }
+            else assert(false);
         }
     }
 
@@ -125,6 +137,7 @@ namespace Zodiac
                 LLVMValueRef args[2] = { syscall_num, val };
                 LLVMBuildCall(builder->llvm_builder, asm_val, args, 2, "");
 
+                LLVMBuildUnreachable(builder->llvm_builder);
 
                 free(sb.allocator, constraint_string.data);
 
@@ -150,10 +163,16 @@ namespace Zodiac
                     }
                 }
 
-                LLVMValueRef func_val = builder->functions[func_idx];
+                auto func = builder->functions[func_idx];
+                LLVMValueRef func_val = func.llvm_func;
                 LLVMValueRef ret_val = LLVMBuildCall(builder->llvm_builder, func_val,
                                                      args.data, args.count, "");
                 llvm_push_temporary(builder, ret_val);
+
+                if (func.bc_func->flags & BYTECODE_FUNC_FLAG_NORETURN)
+                {
+                    LLVMBuildUnreachable(builder->llvm_builder);
+                }
 
                 if (arg_count)
                 {
@@ -366,13 +385,25 @@ namespace Zodiac
         return result;
     }
 
+    bool llvm_block_ends_with_terminator(LLVMBasicBlockRef llvm_block)
+    {
+        assert(llvm_block);
+
+        LLVMValueRef term_val = LLVMGetBasicBlockTerminator(llvm_block);
+        
+        if (term_val == nullptr) return false;
+        return true;
+    }
+
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
+                                                       Bytecode_Function *bc_func,
                                                        LLVMBasicBlockRef llvm_block,
                                                        Bytecode_Block *bc_block)
     {
         LLVM_Function_Context result = {};
         result.llvm_function = llvm_func;
         result.llvm_block = llvm_block;
+        result.bc_func = bc_func;
         result.bc_block = bc_block;
         result.ip = 0;
 
