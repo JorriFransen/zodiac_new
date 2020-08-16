@@ -42,7 +42,8 @@ namespace Zodiac
         Queue<Resolve_Job*> type_job_queue = {};
         Queue<Resolve_Job*> size_job_queue = {};
         Queue<Resolve_Job*> emit_bytecode_job_queue = {};
-        Queue<Resolve_Job*> emit_llvm_job_queue = {};
+        Queue<Resolve_Job*> emit_llvm_func_job_queue = {};
+        Queue<Resolve_Job*> emit_llvm_binary_job_queue = {};
 
         Array<Resolve_Error> errors = {};
     };
@@ -59,7 +60,8 @@ namespace Zodiac
         TYPE,
         SIZE,
         EMIT_BYTECODE,
-        EMIT_LLVM,
+        EMIT_LLVM_FUNC,
+        EMIT_LLVM_BINARY,
     };
 
     struct Resolve_Job
@@ -115,7 +117,8 @@ namespace Zodiac
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
-    void queue_emit_llvm_job(Resolver *resolver, Bytecode_Function *bc_func);
+    void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func);
+    void queue_emit_llvm_binary_job(Resolver *resolver);
 
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
                                                    Scope *scope);
@@ -133,7 +136,8 @@ namespace Zodiac
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope);
-    Resolve_Job *resolve_job_emit_llvm_new(Allocator *allocator, Bytecode_Function *bc_func);
+    Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
+    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator);
 
     void free_job(Resolver *resolver, Resolve_Job *job);
 

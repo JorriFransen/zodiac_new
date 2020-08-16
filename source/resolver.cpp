@@ -29,7 +29,8 @@ namespace Zodiac
         queue_init(allocator, &resolver->type_job_queue);
         queue_init(allocator, &resolver->size_job_queue);
         queue_init(allocator, &resolver->emit_bytecode_job_queue);
-        queue_init(allocator, &resolver->emit_llvm_job_queue);
+        queue_init(allocator, &resolver->emit_llvm_func_job_queue);
+        queue_init(allocator, &resolver->emit_llvm_binary_job_queue);
 
         array_init(err_allocator, &resolver->errors);
     }
@@ -84,7 +85,8 @@ namespace Zodiac
             assert(queue_count(&resolver->type_job_queue) == 0);
             assert(queue_count(&resolver->size_job_queue) == 0);
             assert(queue_count(&resolver->emit_bytecode_job_queue) == 0);
-            assert(queue_count(&resolver->emit_llvm_job_queue) == 0);
+            assert(queue_count(&resolver->emit_llvm_func_job_queue) == 0);
+            assert(queue_count(&resolver->emit_llvm_binary_job_queue) == 0);
 
         }
 
@@ -168,28 +170,44 @@ namespace Zodiac
                 else
                 {
                     assert(job->result);
-                    queue_emit_llvm_job(resolver, job->result);
+                    if (job->ast_node == entry_decl)
+                    {
+                        queue_emit_llvm_binary_job(resolver);
+                    }
+                    queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
+            }
+
+            auto llvm_job_count = queue_count(&resolver->emit_llvm_func_job_queue);
+            while (llvm_job_count--)
+            {
+                auto job = queue_dequeue(&resolver->emit_llvm_func_job_queue);
+                bool job_done = try_resolve_job(resolver, job);
+                assert(job_done);
+                free_job(resolver, job);
+            }
+
+            auto llvm_binary_job_count = queue_count(&resolver->emit_llvm_binary_job_queue);
+            while (llvm_binary_job_count--)
+            {
+                auto job = queue_dequeue(&resolver->emit_llvm_binary_job_queue);
+                bool job_done = try_resolve_job(resolver, job);
+                assert(job_done);
+                free_job(resolver, job);
             }
 
             if (queue_count(&resolver->ident_job_queue) == 0 &&
                 queue_count(&resolver->type_job_queue) == 0 &&
                 queue_count(&resolver->size_job_queue) == 0 &&
-                queue_count(&resolver->emit_bytecode_job_queue) == 0)
+                queue_count(&resolver->emit_bytecode_job_queue) == 0 &&
+                queue_count(&resolver->emit_llvm_func_job_queue) == 0 &&
+                queue_count(&resolver->emit_llvm_binary_job_queue) == 0)
 
             {
                 done = true;
             }
 
-            auto llvm_job_count = queue_count(&resolver->emit_llvm_job_queue);
-            while (llvm_job_count--)
-            {
-                auto job = queue_dequeue(&resolver->emit_llvm_job_queue);
-                bool job_done = try_resolve_job(resolver, job);
-                assert(job_done);
-                free_job(resolver, job);
-            }
 
             if (resolver->errors.count)
             {
@@ -266,10 +284,17 @@ namespace Zodiac
                 break;
             }
 
-            case Resolve_Job_Kind::EMIT_LLVM:
+            case Resolve_Job_Kind::EMIT_LLVM_FUNC:
             {
                 auto bc_func = job->bc_func;
                 llvm_emit_function(&resolver->llvm_builder, bc_func);
+                result = true;
+                break;
+            }
+
+            case Resolve_Job_Kind::EMIT_LLVM_BINARY:
+            {
+                llvm_emit_binary(&resolver->llvm_builder);
                 result = true;
                 break;
             }
@@ -1352,12 +1377,21 @@ namespace Zodiac
         ast_node->flags |= AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION;
     }
     
-    void queue_emit_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
+    void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func)
     {
         assert(resolver->allocator);
 
-        auto job = resolve_job_emit_llvm_new(resolver->allocator, bc_func);
-        queue_enqueue(&resolver->emit_llvm_job_queue, job);
+        auto job = resolve_job_emit_llvm_func_new(resolver->allocator, bc_func);
+        queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
+        assert(job);
+    }
+
+    void queue_emit_llvm_binary_job(Resolver *resolver)
+    {
+        assert(resolver->allocator);
+
+        auto job = resolve_job_emit_llvm_binary_new(resolver->allocator);
+        queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
         assert(job);
     }
 
@@ -1543,7 +1577,7 @@ namespace Zodiac
 
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_FUNC);
         result->bc_func = bc_func;
         return result;
     }
@@ -1569,9 +1603,14 @@ namespace Zodiac
         return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope);
     }
 
-    Resolve_Job *resolve_job_emit_llvm_new(Allocator *allocator, Bytecode_Function *bc_func)
+    Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func)
     {
         return resolve_job_new(allocator, bc_func);
+    }
+
+    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator)
+    {
+        return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY);
     }
 
     void free_job(Resolver *resolver, Resolve_Job *job)

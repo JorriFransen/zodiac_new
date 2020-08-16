@@ -2,7 +2,9 @@
 
 #include "builtin.h"
 
+#include <llvm-c/Analysis.h>
 #include <llvm/IR/Module.h>
+#include <llvm-c/TargetMachine.h>
 
 #include <cassert>
 
@@ -22,6 +24,27 @@ namespace Zodiac
         array_init(allocator, &llvm_builder->allocas);
 
         stack_init(allocator, &llvm_builder->arg_stack);
+
+        LLVMInitializeNativeTarget();
+        LLVMInitializeNativeAsmPrinter();
+        LLVMInitializeNativeAsmParser();
+    }
+
+    void llvm_emit_binary(LLVM_Builder *builder)
+    {
+        assert(builder);
+
+        char *error = nullptr;
+        bool verify_error = LLVMVerifyModule(builder->llvm_module, LLVMAbortProcessAction, &error);
+        
+        if (verify_error)
+        {
+            fprintf(stderr, "%s\n", error);
+            assert(false);
+        }
+        LLVMDisposeMessage(error);
+
+        assert(false);
     }
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
