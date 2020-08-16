@@ -7,6 +7,7 @@
 #include <llvm-c/TargetMachine.h>
 
 #include <cassert>
+#include <stdio.h>
 
 namespace Zodiac
 { 
@@ -43,8 +44,86 @@ namespace Zodiac
             assert(false);
         }
         LLVMDisposeMessage(error);
+        error = nullptr;
 
-        assert(false);
+        auto target_triple = LLVMGetDefaultTargetTriple();
+        LLVMSetTarget(builder->llvm_module, target_triple);
+        LLVMTargetRef llvm_target = nullptr;
+        bool target_error = LLVMGetTargetFromTriple(target_triple, &llvm_target, &error);
+        if (target_error)
+        {
+            fprintf(stderr, "%s\n", error);
+        }
+        LLVMDisposeMessage(error);
+        error = nullptr;
+
+        auto cpu = "generic";
+        auto features = "";
+
+        LLVMTargetMachineRef llvm_target_machine = LLVMCreateTargetMachine(
+                llvm_target,
+                target_triple,
+                cpu,
+                features,
+                LLVMCodeGenLevelNone,
+                LLVMRelocPIC,
+                LLVMCodeModelDefault
+            );
+
+        auto obj_file_name = "module.o";
+
+        bool obj_emit_failed = LLVMTargetMachineEmitToFile(
+                llvm_target_machine,
+                builder->llvm_module,
+                (char*)obj_file_name,
+                LLVMObjectFile,
+                &error
+            );
+
+        if (obj_emit_failed)
+        {
+            fprintf(stderr, "%s\n", error);
+        }
+        LLVMDisposeMessage(error);
+        error = nullptr;
+
+        LLVMDisposeTargetMachine(llvm_target_machine);
+
+        llvm_run_linker(builder->allocator);
+    }
+
+    void llvm_run_linker(Allocator *allocator)
+    {
+        assert(allocator);
+
+        String_Builder _sb = {};
+        auto sb = &_sb;
+        string_builder_init(allocator, sb);
+
+        string_builder_append(sb, "ld -static module.o");
+
+        auto link_cmd = string_builder_to_string(allocator, sb);
+        char out_buf[1024];
+        FILE *link_process_handle = popen(link_cmd.data, "r");
+        assert(link_process_handle);
+
+        while (fgets(out_buf, sizeof(out_buf), link_process_handle) != nullptr)
+        {
+            fprintf(stderr, "%s", out_buf);
+        }
+        assert(feof(link_process_handle));
+        int close_ret = pclose(link_process_handle);
+        close_ret = WEXITSTATUS(close_ret);
+        assert(close_ret >= 0);
+        if (close_ret != 0)
+        {
+            fprintf(stderr, "Link command failed with exit code: %d\n", close_ret);
+        }
+
+        free(allocator, link_cmd.data);
+
+        string_builder_free(sb);
+
     }
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
