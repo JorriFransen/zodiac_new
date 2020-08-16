@@ -32,6 +32,9 @@ namespace Zodiac
         Allocator *allocator = nullptr;
         Allocator *err_allocator = nullptr;
 
+        String first_file_path = {}; 
+        String first_file_name = {}; // File name without extension
+
         Build_Data *build_data = nullptr;
         Bytecode_Builder bytecode_builder = {};
         LLVM_Builder llvm_builder = {};
@@ -45,12 +48,14 @@ namespace Zodiac
         Queue<Resolve_Job*> emit_llvm_func_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_binary_job_queue = {};
 
+        bool llvm_error = false;
         Array<Resolve_Error> errors = {};
     };
 
     struct Resolve_Result
     {
         uint64_t error_count = 0;
+        bool llvm_error = false;
     };
 
     enum class Resolve_Job_Kind
@@ -76,6 +81,11 @@ namespace Zodiac
             AST_Expression *expression;
             AST_Identifier *identifier;
             Bytecode_Function *bc_func;
+
+            struct
+            {
+                const char *output_file_name;
+            } llvm_bin;
         };
 
         Bytecode_Function *result = nullptr;
@@ -84,7 +94,7 @@ namespace Zodiac
     };
 
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
-                       Build_Data *build_data);
+                       Build_Data *build_data, String first_file_path);
 
     void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking);
     Resolve_Result finish_resolving(Resolver *resolver);
@@ -118,7 +128,7 @@ namespace Zodiac
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func);
-    void queue_emit_llvm_binary_job(Resolver *resolver);
+    void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name);
 
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
                                                    Scope *scope);
@@ -131,13 +141,15 @@ namespace Zodiac
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
                                  Scope *scope);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
+    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope);
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
-    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator);
+    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
+                                                  const char *output_file_name);
 
     void free_job(Resolver *resolver, Resolve_Job *job);
 

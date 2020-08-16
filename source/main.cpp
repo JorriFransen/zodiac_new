@@ -47,7 +47,6 @@ int main(int argc, char** argv)
 
     AST_Node* ast_root = ast_create_from_parsed_file(ca, &parsed_file);
     assert(ast_root);
-    ast_print(ast_root);
 
     builtin_populate_scope(ca, global_scope);
     scope_populate_ast(ca, ast_root, global_scope);
@@ -56,13 +55,14 @@ int main(int argc, char** argv)
     //ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
-    resolver_init(ca, ca, &resolver, &build_data);
+    resolver_init(ca, ca, &resolver, &build_data, file_path);
 
     start_resolving(&resolver, ast_root, true);
     Resolve_Result rr = finish_resolving(&resolver);
     assert(rr.error_count == 0);
+    if (rr.llvm_error) return 1;
 
-    bytecode_print(ca, &resolver.bytecode_builder);
+    //bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
 
     Interpreter interp;
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 
     interpreter_free(&interp);
 
-    llvm_print(ca, &resolver.llvm_builder);
+    //llvm_print(ca, &resolver.llvm_builder);
 
     return 0;
 }

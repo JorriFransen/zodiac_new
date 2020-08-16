@@ -40,8 +40,8 @@ namespace Zodiac
 
     void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder);
 
-    void llvm_emit_binary(LLVM_Builder *builder);
-    void llvm_run_linker(Allocator *allocator);
+    bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name);
+    bool llvm_run_linker(Allocator *allocator, const char *output_file_name);
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context);

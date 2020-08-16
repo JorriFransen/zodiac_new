@@ -22,6 +22,15 @@ const String get_absolute_path(Allocator* allocator, const String& path)
     return os_get_absolute_path(allocator, path);
 }
 
+const String get_file_name(Allocator *allocator, const String &path)
+{
+    auto start_idx = string_last_index_of(path, '/');
+    if (start_idx == -1) return string_copy(allocator, path);
+    start_idx += 1;
+
+    return string_copy(allocator, path, start_idx, path.length - start_idx);
+}
+
 bool is_regular_file(const String& file_path)
 {
     struct stat statbuf;

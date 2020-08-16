@@ -43,7 +43,7 @@ Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
     auto file_size = string_length(file_data);
     Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
 
-    result.path = copy_string(lexer->allocator, file_path);
+    result.path = string_copy(lexer->allocator, file_path);
     array_init(lexer->allocator, &result.tokens);
     hash_table_init(lexer->allocator, &result.file_positions, *token_equal);
 

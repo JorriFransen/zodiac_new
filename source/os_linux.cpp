@@ -5,6 +5,8 @@
 #include <cassert>
 #include <cstring>
 #include <unistd.h>
+#include <limits.h>
+#include <stdlib.h>
 
 namespace Zodiac
 {
@@ -13,7 +15,7 @@ bool os_is_relative_path(const String& path)
 {
     assert(path.data);
 
-    return path[0] != '/';
+    return path[0] != '/' || string_contains(path, "../") || string_contains(path, "./");
 }
 
 const String os_get_absolute_path(Allocator* allocator, const String& path)
@@ -26,13 +28,23 @@ const String os_get_absolute_path(Allocator* allocator, const String& path)
     auto path_len = path.length;
     auto total_len = cwd_len + path_len + 1;
 
-    String result = { alloc_array<char>(allocator, total_len + 1), (int64_t)total_len };
+    String result = { alloc_array<char>(ta, total_len + 1), (int64_t)total_len };
 
     memcpy(result.data, cwd, cwd_len);
     result[cwd_len] = '/';
     memcpy(result.data + cwd_len + 1, path.data, path_len);
     result.data[total_len] = '\0';
 
+    return os_normalize_path(allocator, result);
+}
+
+const String os_normalize_path(Allocator *allocator, const String &path)
+{
+    char *_result = realpath(path.data, nullptr);
+    assert(_result);
+
+    String result = string_copy(allocator, _result);
+    ::free(_result);
     return result;
 }
 

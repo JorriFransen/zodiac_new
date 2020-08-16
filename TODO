@@ -1,6 +1,25 @@
 
-UNREACHABLE instruction in our own bytecode.
+Build setup script
+  - Build llvm in debug and release
+  - Clang and gcc build (when both available)
+  - Release and debug build
+  - make/clean all scripts
 
+Windows build
+Linking with c runtime (entry point main instead of _start)
+
+Command line option parsing
+  - general verbose option
+  - output file name
+  - -cruntime
+  - -print-llvm-ir
+  - -print-bytecode
+  - -print-ast
+  - -print-scope
+  - -print-parse_tree
+  - -print-link-command
+
+UNREACHABLE instruction in our own bytecode.
 Dont't store File Positions on ast nodes.
 
 Allocate arrays with the correct size if its known:

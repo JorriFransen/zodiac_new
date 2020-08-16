@@ -18,7 +18,7 @@ Atom atom_get(Atom_Table* at, const String& str, uint64_t length)
 
     if (!found)
     {
-        auto str_copy = copy_string(at->allocator, str);
+        auto str_copy = string_copy(at->allocator, str);
         atom = { str_copy.data, length };
         hash_table_add(&at->atoms, str_copy, atom);
 

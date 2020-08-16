@@ -3,6 +3,8 @@
 #include "ast.h"
 #include "builtin.h"
 #include "scope.h"
+#include "os.h"
+#include "temp_allocator.h"
 
 #include <cassert>
 #include <stdio.h>
@@ -13,13 +15,25 @@
 namespace Zodiac
 {
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
-                       Build_Data *build_data)
+                       Build_Data *build_data, String first_file_path)
     {
         assert(allocator);
         assert(resolver);
 
         resolver->allocator = allocator;
         resolver->err_allocator = err_allocator;
+
+        if (is_relative_path(first_file_path))
+        {
+            first_file_path = get_absolute_path(allocator, first_file_path);
+        }
+        resolver->first_file_path = first_file_path;
+
+        auto ta = temp_allocator_get();
+
+        auto file_name = get_file_name(ta, first_file_path);
+        assert(string_ends_with(first_file_path, ".zdc"));
+        resolver->first_file_name = string_copy(allocator, file_name, file_name.length - 4);
 
         resolver->build_data = build_data;
         bytecode_builder_init(allocator, &resolver->bytecode_builder);
@@ -32,6 +46,7 @@ namespace Zodiac
         queue_init(allocator, &resolver->emit_llvm_func_job_queue);
         queue_init(allocator, &resolver->emit_llvm_binary_job_queue);
 
+        resolver->llvm_error = false;
         array_init(err_allocator, &resolver->errors);
     }
 
@@ -90,7 +105,10 @@ namespace Zodiac
 
         }
 
-        return Resolve_Result {};
+        Resolve_Result result = {};
+        result.error_count = resolver->errors.count;
+        result.llvm_error = resolver->llvm_error;
+        return result;
     }
 
     void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl)
@@ -172,7 +190,7 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver);
+                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
                     queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
@@ -193,8 +211,13 @@ namespace Zodiac
             {
                 auto job = queue_dequeue(&resolver->emit_llvm_binary_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
-                assert(job_done);
                 free_job(resolver, job);
+
+                if (!job_done)
+                {
+                    resolver->llvm_error = true;
+                    done = true;
+                }
             }
 
             if (queue_count(&resolver->ident_job_queue) == 0 &&
@@ -294,8 +317,10 @@ namespace Zodiac
 
             case Resolve_Job_Kind::EMIT_LLVM_BINARY:
             {
-                llvm_emit_binary(&resolver->llvm_builder);
-                result = true;
+                if (llvm_emit_binary(&resolver->llvm_builder, job->llvm_bin.output_file_name))
+                {
+                    result = true;
+                }
                 break;
             }
         }
@@ -1386,11 +1411,11 @@ namespace Zodiac
         assert(job);
     }
 
-    void queue_emit_llvm_binary_job(Resolver *resolver)
+    void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name)
     {
         assert(resolver->allocator);
 
-        auto job = resolve_job_emit_llvm_binary_new(resolver->allocator);
+        auto job = resolve_job_emit_llvm_binary_new(resolver->allocator, output_file_name);
         queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
         assert(job);
     }
@@ -1582,6 +1607,13 @@ namespace Zodiac
         return result;
     }
 
+    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name)
+    {
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY);
+        result->llvm_bin.output_file_name = output_file_name;
+        return result;
+    }
+
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope)
     {
         return resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER, ast_node, scope);
@@ -1608,9 +1640,10 @@ namespace Zodiac
         return resolve_job_new(allocator, bc_func);
     }
 
-    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator)
+    Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
+                                                  const char *output_file_name)
     {
-        return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY);
+        return resolve_job_new(allocator,  output_file_name);
     }
 
     void free_job(Resolver *resolver, Resolve_Job *job)
