@@ -1,8 +1,4 @@
 
-Build setup script
-  - Build llvm in debug and release
-  - make/clean all scripts
-
 Windows build
 Linking with c runtime (entry point main instead of _start)
 
@@ -23,3 +19,6 @@ Dont't store File Positions on ast nodes.
 Allocate arrays with the correct size if its known:
     - function body statements
 
+Build setup script
+  - make/clean all scripts
+  - Build llvm in debug and release (CC=clang CXX=clang++ cmake ../llvm-10.0.1.src -G Ninja -DCMAKE_BUILD_TYPE=Release -DLLVM_PARALLEL_LINK_JOBS=4)
