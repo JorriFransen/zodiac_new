@@ -62,7 +62,7 @@ String read_file_string(Allocator* allocator, const String& file_path)
 
     fclose(file);
 
-    result.data[length] = '\0';
+    result.data[read_res] = '\0';
 
     return result;
 }

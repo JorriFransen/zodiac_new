@@ -202,7 +202,11 @@ namespace Zodiac
             {
                 auto job = queue_dequeue(&resolver->emit_llvm_func_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
-                assert(job_done);
+                if (!job_done)
+                {
+                    resolver->llvm_error = true;
+                    done = true;
+                }
                 free_job(resolver, job);
             }
 
@@ -552,7 +556,10 @@ namespace Zodiac
                 assert(decl);
                 assert(ast_expr->identifier->declaration);
 
-                result = true;
+                if (decl != nullptr)
+                {
+                    result = true;
+                }
                 break;
             }
 
@@ -1136,6 +1143,8 @@ namespace Zodiac
         }
         else assert(false);
 
+        assert(false);
+        return false;
     }
 
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec* ts, Scope* scope,

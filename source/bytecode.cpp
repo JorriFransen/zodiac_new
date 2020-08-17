@@ -680,6 +680,7 @@ namespace Zodiac
         }
 
         assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_find_value_for_parameter(Bytecode_Builder *builder,
@@ -848,8 +849,10 @@ namespace Zodiac
 
         bci->instruction_index += adv;
 
+#if DEBUG
         auto block = bytecode_iterator_get_block(bci);
         assert(bci->instruction_index <= block->instructions.count);
+#endif
     }
 
     Bytecode_Instruction bytecode_iterator_get_ip(Bytecode_Iterator *bci)

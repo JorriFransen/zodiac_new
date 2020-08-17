@@ -361,6 +361,7 @@ namespace Zodiac
         }
 
         assert(false);
+        return nullptr;
     }
 
     AST_Expression* ast_create_expression_from_ptn(Allocator* allocator, Expression_PTN* ptn)
@@ -544,6 +545,7 @@ namespace Zodiac
         }
 
         assert(false);
+        return nullptr;
     }
 
     AST_Type_Spec* ast_create_type_spec_from_ptn(Allocator* allocator, PT_Node* ptn)
@@ -610,6 +612,7 @@ namespace Zodiac
         }
 
         assert(false);
+        return nullptr;
     }
 
     AST_Type_Spec* ast_create_type_spec_from_expression_ptn(Allocator* allocator,

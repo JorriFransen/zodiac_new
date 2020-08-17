@@ -56,9 +56,9 @@ const char* os_get_cwd(Allocator* allocator)
     auto ret = getcwd(buf, BUF_SIZE);
     assert(ret == buf);
 
-    auto result_len = strlen(buf);
+    auto result_len = strlen(ret);
     char* result = alloc_array<char>(allocator, result_len + 1);
-    memcpy(result, buf, result_len);
+    memcpy(result, ret, result_len);
     result[result_len] = '\0';
 
     return result;
