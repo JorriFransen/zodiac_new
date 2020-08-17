@@ -1,8 +1,6 @@
 
 Build setup script
   - Build llvm in debug and release
-  - Clang and gcc build (when both available)
-  - Release and debug build
   - make/clean all scripts
 
 Windows build
