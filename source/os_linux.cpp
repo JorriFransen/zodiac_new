@@ -1,3 +1,5 @@
+
+#ifdef linux
 #include "os_linux.h"
 
 #include "temp_allocator.h"
@@ -16,6 +18,27 @@ bool os_is_relative_path(const String& path)
     assert(path.data);
 
     return path[0] != '/' || string_contains(path, "../") || string_contains(path, "./");
+}
+
+bool os_is_regular_file(const String& path)
+{
+    struct stat statbuf;
+    auto stat_res = stat(file_path.data, &statbuf);
+    if (stat_res != 0)
+    {
+        return false;
+    }
+
+    return S_ISREG(statbuf.st_mode);
+}
+
+const String os_get_file_name(Allocator *allocator, const String &path)
+{
+    auto start_idx = string_last_index_of(path, '/');
+    if (start_idx == -1) return string_copy(allocator, path);
+    start_idx += 1;
+
+    return string_copy(allocator, path, start_idx, path.length - start_idx);
 }
 
 const String os_get_absolute_path(Allocator* allocator, const String& path)
@@ -65,3 +88,4 @@ const char* os_get_cwd(Allocator* allocator)
 }
 
 }
+#endif // #ifdef linux

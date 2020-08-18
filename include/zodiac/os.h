@@ -14,4 +14,11 @@ bool is_regular_file(const String& file_path);
 
 String read_file_string(Allocator* allocator, const String& file_path);
 
+struct Process_Info
+{
+    bool success = false; 
+};
+
+Process_Info execute_process(Allocator *allocator, const String &command, const String &args);
+
 }

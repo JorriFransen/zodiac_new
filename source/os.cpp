@@ -1,9 +1,12 @@
 #include "os.h"
 
+#include <stdio.h>
+
 #ifdef linux
 #include "os_linux.h"
-#include "sys/stat.h"
-#include <stdio.h>
+//#include "sys/stat.h"
+#elif WIN32
+#include "os_windows.h"
 #endif
 
 #include <cassert>
@@ -24,23 +27,12 @@ const String get_absolute_path(Allocator* allocator, const String& path)
 
 const String get_file_name(Allocator *allocator, const String &path)
 {
-    auto start_idx = string_last_index_of(path, '/');
-    if (start_idx == -1) return string_copy(allocator, path);
-    start_idx += 1;
-
-    return string_copy(allocator, path, start_idx, path.length - start_idx);
+    return os_get_file_name(allocator, path);
 }
 
 bool is_regular_file(const String& file_path)
 {
-    struct stat statbuf;
-    auto stat_res = stat(file_path.data, &statbuf);
-    if (stat_res != 0)
-    {
-        return false;
-    }
-
-    return S_ISREG(statbuf.st_mode);
+    return os_is_regular_file(file_path);
 }
 
 String read_file_string(Allocator* allocator, const String& file_path)
@@ -65,6 +57,11 @@ String read_file_string(Allocator* allocator, const String& file_path)
     result.data[read_res] = '\0';
 
     return result;
+}
+
+Process_Info execute_process(Allocator *allocator, const String &command, const String &args)
+{
+    return os_execute_process(allocator, command, args);
 }
 
 }

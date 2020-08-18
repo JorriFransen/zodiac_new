@@ -1,5 +1,23 @@
 
+Use main as entry for bytecode
+Use mainCRTStartup as entry on windows
+
 Windows build
+  - Create msvc build
+  - Document ninja/clang-cl build
+     - Build ninja
+     - Build llvm 
+         - Start msvc 64 bit dev shell
+         - Invoke cmake with -G Ninja and -DCMAKE_C[XX]_COMPILER=path/to/clang-cl
+           Make sure to use linux compatible paths for the compiler path
+           Make sure to use the 64 bit version of clang-cl
+           Choose between Debug and Release for -DCMAKE_BUILD_TYPE=
+     - Build zodiac
+       - Start msvc 64 bit dev shell
+       - Invoke cmake with -G ninja and the path to clan-cl like with the llvm build
+       - Match the -DCMAKE_BUILD_TYPE= option with the llvm build
+         (check if mismatch is possible like on linux)
+
 Linking with c runtime (entry point main instead of _start)
 
 Command line option parsing

@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <cassert>
 #include <cstdarg>
+#include <inttypes.h>
 
 namespace Zodiac
 {
@@ -928,7 +929,7 @@ bool parser_expect_token(Parser* parser, Token_Stream* ts, Token_Kind kind)
     {
         auto ct = ts->current_token();
         auto fp = ct.begin_file_pos;
-        fprintf(stderr, "%s:%lu:%lu: ", fp.file_name.data, fp.line, fp.column);
+        fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": ", fp.file_name.data, fp.line, fp.column);
         fprintf(stderr, "Error: Expected token: \"%s\", got: \"%s\"\n",
                 token_kind_name(kind), token_kind_name(ct.kind));
         assert(false); // report error
@@ -1013,7 +1014,8 @@ void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, v
     auto ct = ts->current_token();
     auto bfp = ct.begin_file_pos;
 
-    fprintf(stderr, "%s:%lu:%lu: Error: ", bfp.file_name.data, bfp.line, bfp.column);
+    fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: ",
+            bfp.file_name.data, bfp.line, bfp.column);
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
 }

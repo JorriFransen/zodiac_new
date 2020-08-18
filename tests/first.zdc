@@ -1,7 +1,17 @@
 
+//#foreign ExitProcess :: func(exit_code: u32) -> void;
+
+mainCRTStartup :: func ()
+{
+    exit_code := main();
+    //ExitProcess(exit_code);
+    @exit(exit_code + 1);
+}
+
 #naked #noreturn _start :: func ()
 {
-    posix_call_main_and_exit();
+    mainCRTStartup();
+    //posix_call_main_and_exit();
 }
 
 #noreturn posix_call_main_and_exit :: func ()

@@ -263,11 +263,15 @@ namespace Zodiac
                     auto rhs_index = interpreter_fetch<uint32_t>(interp);
 
                     auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    // Reload, since the push before might have invalidated the pointer.
+                    lhs_val = interpreter_load_temporary(interp, lhs_index); 
                     auto rhs_val = interpreter_load_temporary(interp, rhs_index);
 
                     assert(lhs_val->type == rhs_val->type);
-
-                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
                     
                     switch (size_spec)
                     {

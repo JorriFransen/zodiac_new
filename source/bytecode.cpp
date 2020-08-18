@@ -1103,7 +1103,7 @@ namespace Zodiac
 
                 uint32_t lhs_idx = bytecode_iterator_fetch_32(bci);
                 uint32_t rhs_idx = bytecode_iterator_fetch_32(bci);
-                assert(size_spec);
+
                 string_builder_appendf(sb, "%%%" PRIu64 " = ADD ", bci->local_temp_index);
                 bytecode_print_size_spec(sb, size_spec);
                 string_builder_appendf(sb, " %%%" PRIu32 " %%%" PRIu32, lhs_idx, rhs_idx);

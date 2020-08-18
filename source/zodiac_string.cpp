@@ -18,7 +18,7 @@ const String string_copy(Allocator *allocator, const String& string, int64_t off
 
     String new_str = { alloc_array<char>(allocator, length + 1), length };
     memcpy(new_str.data, string.data + offset, length);
-    new_str.data[string.length] = '\0';
+    new_str.data[new_str.length] = '\0';
 
     return new_str;
 }

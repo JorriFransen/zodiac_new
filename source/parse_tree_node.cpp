@@ -1,5 +1,7 @@
 #include "parse_tree_node.h"
 
+#include <inttypes.h>
+
 namespace Zodiac
 {
 
@@ -759,7 +761,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         case Expression_PTN_Kind::NUMBER_LITERAL:
         {
             print_indent(indent);
-            printf("%ld", expression->number_literal.value.s64);
+            printf("%" PRId64, expression->number_literal.value.s64);
             break;
         }
 

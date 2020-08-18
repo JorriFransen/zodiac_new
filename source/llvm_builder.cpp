@@ -1,6 +1,7 @@
 #include "llvm_builder.h"
 
 #include "builtin.h"
+#include "os.h"
 
 #include <llvm-c/Analysis.h>
 #include <llvm/IR/Module.h>
@@ -108,6 +109,7 @@ namespace Zodiac
         auto sb = &_sb;
         string_builder_init(allocator, sb);
 
+#if linux
         string_builder_appendf(sb, "ld -static %s.o -o %s", output_file_name, output_file_name);
 
         auto link_cmd = string_builder_to_string(allocator, sb);
@@ -137,6 +139,20 @@ namespace Zodiac
         string_builder_free(sb);
 
         return result;
+#elif WIN32
+
+        string_builder_append(sb, "link.exe ");
+
+        string_builder_append(sb, "first.o");
+
+        auto arg_str = string_builder_to_string(allocator, sb);
+        auto result = execute_process(allocator, string_ref("link.exe"), arg_str);
+        free(allocator, arg_str.data);
+
+        string_builder_free(sb);
+        
+        return result.success;
+#endif
 
     }
 

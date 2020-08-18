@@ -1627,7 +1627,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
-                printf("%ld", ast_expr->number_literal.s64);
+                printf("%" PRId64, ast_expr->number_literal.s64);
                 break;
             }
 

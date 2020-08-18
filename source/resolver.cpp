@@ -553,11 +553,14 @@ namespace Zodiac
             case AST_Expression_Kind::IDENTIFIER:
             {
                 auto decl = scope_find_declaration(scope, ast_expr->identifier);
-                assert(decl);
-                assert(ast_expr->identifier->declaration);
-
-                if (decl != nullptr)
+                if (!decl)
                 {
+                    resolver_report_undeclared_identifier(resolver, ast_expr->identifier);
+                   result = false; 
+                }
+                else
+                {
+                    assert(ast_expr->identifier->declaration);
                     result = true;
                 }
                 break;
@@ -586,16 +589,17 @@ namespace Zodiac
             {
                 if (!ast_expr->call.is_builtin)
                 {
-                    if (!try_resolve_identifiers(resolver, ast_expr->call.ident_expression, scope))
+                    if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression, scope))
                     {
-                        assert(false);
+                        auto ident_expr = ast_expr->call.ident_expression;
+                        assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
+                        assert(ident_expr->identifier->declaration);
+                        ast_expr->call.callee_declaration = ident_expr->identifier->declaration;
+                    } 
+                    else
+                    {
+                        result = false;
                     }
-
-                    auto ident_expr = ast_expr->call.ident_expression;
-                    assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
-                    assert(ident_expr->identifier->declaration);
-                    ast_expr->call.callee_declaration = ident_expr->identifier->declaration;
-                    
                 }
                 else
                 {

@@ -28,6 +28,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/llvm_builder.cpp
     source/os.cpp
     source/os_linux.cpp
+    source/os_windows.cpp
     source/parser.cpp
     source/parse_tree_node.cpp
     source/resolver.cpp
@@ -49,10 +50,13 @@ llvm_map_components_to_libnames(llvm_libs support core irreader analysis x86code
 target_link_libraries(zodiac ${llvm_libs})
 
 if(MSVC)
-    target_compile_options(zodiac PRIVATE /W4 /WX)
+    target_compile_options(zodiac PRIVATE /W3 /WX)
+
+    set(platform_libs Shlwapi.lib)
 else()
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -pedantic -Werror)
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -Werror)
    target_compile_options(zodiac PRIVATE  -Wall -Werror)
 endif()
 
+target_link_libraries(zodiac ${platform_libs})

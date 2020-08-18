@@ -60,7 +60,7 @@ int main(int argc, char** argv)
     start_resolving(&resolver, ast_root, true);
     Resolve_Result rr = finish_resolving(&resolver);
     assert(rr.error_count == 0);
-    if (rr.llvm_error) return 1;
+    //if (rr.llvm_error) return 1;
 
     //bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
