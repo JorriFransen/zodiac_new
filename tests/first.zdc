@@ -15,7 +15,7 @@ mainCRTStartup :: func () -> s32
 #noreturn posix_call_main_and_exit :: func ()
 {
     exit_code := main();
-    @exit(exit_code + 1);
+    @exit(exit_code);
 }
 
 main :: func () -> s64

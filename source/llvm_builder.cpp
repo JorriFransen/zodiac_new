@@ -37,7 +37,12 @@ namespace Zodiac
         if (string_contains(target_triple, "windows"))
         {
             llvm_builder->target_platform = Zodiac_Target_Platform::WINDOWS;
-        } else assert(false);
+        }
+        else if (string_contains(target_triple, "linux"))
+        {
+            llvm_builder->target_platform = Zodiac_Target_Platform::LINUX;
+        }
+        else assert(false);
     }
 
     bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name)

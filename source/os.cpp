@@ -1,7 +1,5 @@
 #include "os.h"
 
-#include <stdio.h>
-
 #ifdef linux
 #include "os_linux.h"
 #elif WIN32
