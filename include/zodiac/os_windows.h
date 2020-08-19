@@ -1,5 +1,8 @@
 #pragma once
 
+
+#ifdef WIN32
+
 #include "zodiac_string.h"
 #include "os.h"
 
@@ -15,3 +18,5 @@ const char* os_get_cwd(Allocator* allocator);
 
 Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args);
 }
+
+#endif // #ifdef WIN32

@@ -100,7 +100,7 @@ namespace Zodiac
 
         union
         {
-            struct
+            struct 
             {
                 AST_Expression* ident_expression;                
             } import;

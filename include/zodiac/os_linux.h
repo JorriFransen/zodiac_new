@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include "os.h"
 #include "allocator.h"
 #include "zodiac_string.h"
 
@@ -14,4 +15,5 @@ const String os_get_absolute_path(Allocator* allocator, const String& path);
 const String os_normalize_path(Allocator *allocator, const String &path);
 const char* os_get_cwd(Allocator* allocator);
 
+Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args);
 }

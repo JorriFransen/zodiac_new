@@ -4,7 +4,6 @@
 
 #ifdef linux
 #include "os_linux.h"
-//#include "sys/stat.h"
 #elif WIN32
 #include "os_windows.h"
 #endif

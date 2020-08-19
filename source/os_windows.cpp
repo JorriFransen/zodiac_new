@@ -1,5 +1,7 @@
 #include "os_windows.h"
 
+#ifdef WIN32
+
 #include "windows.h"
 #include "shlwapi.h"
 
@@ -57,3 +59,5 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
     return result;
 }
 }
+
+#endif // #ifdef WIN32

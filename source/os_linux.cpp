@@ -4,6 +4,8 @@
 
 #include "temp_allocator.h"
 
+#include "sys/stat.h"
+
 #include <cassert>
 #include <cstring>
 #include <unistd.h>
@@ -23,7 +25,7 @@ bool os_is_relative_path(const String& path)
 bool os_is_regular_file(const String& path)
 {
     struct stat statbuf;
-    auto stat_res = stat(file_path.data, &statbuf);
+    auto stat_res = stat(path.data, &statbuf);
     if (stat_res != 0)
     {
         return false;
@@ -87,5 +89,12 @@ const char* os_get_cwd(Allocator* allocator)
     return result;
 }
 
+Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args)
+{
+    assert(allocator);
+    assert(command.length);
+    assert(args.length); 
+    assert(false);
+}
 }
 #endif // #ifdef linux
