@@ -29,6 +29,7 @@ namespace Zodiac
     template <typename Element_Type>
     void queue_enqueue(Queue<Element_Type> *queue, Element_Type value)
     {
+        assert(value);
         queue_ensure_capacity(queue);
 
         int64_t target_index = -1;
@@ -66,7 +67,8 @@ namespace Zodiac
             Element_Type *new_buffer = alloc_array<Element_Type>(queue->allocator, new_cap);
             assert(new_buffer);
 
-            memcpy(new_buffer + queue->front, queue->buffer + queue->front, queue->used);
+            memcpy(new_buffer + queue->front, queue->buffer + queue->front,
+                   queue->used * sizeof(Element_Type));
 
             queue->capacity = new_cap;
             free(queue->allocator, queue->buffer);

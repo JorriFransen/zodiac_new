@@ -323,6 +323,7 @@ namespace Zodiac
         INTEGER,
 
         FUNCTION,
+        STRUCTURE,
     };
 
     struct AST_Type :  public AST_Node
@@ -347,6 +348,12 @@ namespace Zodiac
                 Array<AST_Type*> param_types;
                 AST_Type* return_type;
             } function;
+
+            struct
+            {
+                Array<AST_Type*> member_types;
+                Scope *member_scope;
+            } structure;
         };
     };
 
@@ -489,6 +496,8 @@ namespace Zodiac
     AST_Type* ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
     AST_Type* ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
                                     AST_Type *return_type);
+    AST_Type* ast_structure_type_new(Allocator *allocator, Array<AST_Type*> member_types,
+                                     Scope *member_scope);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);

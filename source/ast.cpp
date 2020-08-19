@@ -115,7 +115,10 @@ namespace Zodiac
                 
                 auto result = ast_variable_declaration_new(allocator, ast_ident, type_expr,
                                                            init_expr, begin_fp, end_fp);
-                array_append(var_decls, result);
+                if (var_decls)
+                {
+                    array_append(var_decls, result);
+                }
 
                 return result;
                 break; 
@@ -1236,6 +1239,16 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type* ast_structure_type_new(Allocator *allocator, Array<AST_Type*> member_types,
+                                     Scope *member_scope)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::STRUCTURE, 0);
+        result->structure.member_types = member_types;
+        result->structure.member_scope = member_scope;
+
+        return result;
+    }
+
     void ast_print_indent(uint64_t indent)
     {
         for (uint64_t i = 0; i < indent; i++)
@@ -1783,6 +1796,7 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
         }
     }
 

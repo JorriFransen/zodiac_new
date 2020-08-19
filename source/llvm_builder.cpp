@@ -551,6 +551,8 @@ namespace Zodiac
                 return result;
                 break;
             }
+
+            case AST_Type_Kind::STRUCTURE: assert(false);
         }
 
         assert(false);

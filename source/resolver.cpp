@@ -166,6 +166,7 @@ namespace Zodiac
             while (type_job_count--)
             {
                 auto job = queue_dequeue(&resolver->type_job_queue);
+                assert(job);
                 bool job_done = try_resolve_job(resolver, job);
 
                 if (!job_done)
@@ -421,6 +422,8 @@ namespace Zodiac
         assert(resolver);
         assert(ast_decl);
 
+        if (ast_decl->flags & AST_NODE_FLAG_RESOLVED_ID) return true;
+
         bool result = true;
 
         switch (ast_decl->kind)
@@ -446,6 +449,8 @@ namespace Zodiac
                         assert(false);
                     }
                 }
+
+                queue_type_job(resolver, ast_decl, scope);   
 
                 break;
             }
@@ -491,7 +496,27 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+
+            case AST_Declaration_Kind::STRUCTURE:
+            {
+                assert(ast_decl->structure.parameters.count == 0);
+
+                bool mem_res = true;
+
+                for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
+                {
+                    if (!try_resolve_identifiers(resolver,
+                                                 ast_decl->structure.member_declarations[i],
+                                                 ast_decl->structure.member_scope))
+                    {
+                        mem_res = false;
+                    }
+                } 
+
+                result = mem_res;
+                break;
+            }
+
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
 
@@ -532,14 +557,19 @@ namespace Zodiac
                 if (!try_resolve_identifiers(resolver,
                                              ast_stmt->assignment.identifier_expression, scope))
                 {
-                    assert(false);
+                    result = false;
+                }
+                else
+                {
+                    if (!try_resolve_identifiers(resolver, ast_stmt->assignment.rhs_expression,
+                                                 scope))
+                    {
+                        assert(false);
+                    }
+
+                    result = true;
                 }
 
-                if (!try_resolve_identifiers(resolver, ast_stmt->assignment.rhs_expression, scope))
-                {
-                    assert(false);
-                }
-                result = true;
                 break;
             }
 
@@ -581,7 +611,47 @@ namespace Zodiac
         switch (ast_expr->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT:
+            {
+                auto parent_expr = ast_expr->dot.parent_expression;
+                if (try_resolve_identifiers(resolver, parent_expr, scope))
+                {
+                    AST_Declaration *parent_decl = nullptr;
+
+                    if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                    {
+                        parent_decl = parent_expr->identifier->declaration;
+                    }
+                    else assert(false);
+
+                    assert(parent_decl);
+                    assert(parent_decl->kind == AST_Declaration_Kind::VARIABLE);
+                    if (parent_decl->type)
+                    {
+                        AST_Type *var_type = parent_decl->type;
+                        assert(var_type);
+                        assert(var_type->kind == AST_Type_Kind::STRUCTURE);
+
+                        assert(var_type->structure.member_scope);
+                        auto mem_scope = var_type->structure.member_scope;
+                        assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+                        auto member_expr = ast_expr->dot.parent_expression;
+                        if (try_resolve_identifiers(resolver, member_expr, mem_scope))
+                        {
+                            result = true;
+                        }
+                        else result = false;
+                    }
+                    else result = false;
+                }
+                else
+                {
+                    result = false;
+                }
+                break;
+            }
 
             case AST_Expression_Kind::IDENTIFIER:
             {
@@ -695,7 +765,8 @@ namespace Zodiac
                 }
 
                 assert(decl);
-                assert(decl->kind == AST_Declaration_Kind::TYPE);
+                assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                       decl->kind == AST_Declaration_Kind::TYPE);
 
                 break;
             }
@@ -786,8 +857,12 @@ namespace Zodiac
         assert(scope);
 
         assert(ast_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-        assert(!(ast_decl->flags & AST_NODE_FLAG_TYPED));
-        //assert(ast_decl->type == nullptr);
+
+        if (ast_decl->flags & AST_NODE_FLAG_TYPED)
+        {
+            assert(ast_decl->type != nullptr);
+            return true;
+        }
 
         bool result = true;
 
@@ -917,7 +992,45 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+
+            case AST_Declaration_Kind::STRUCTURE:
+            {
+                assert(ast_decl->structure.parameters.count == 0);
+                
+                auto member_count = ast_decl->structure.member_declarations.count;
+                Array<AST_Type*> member_types = {};
+                array_init(resolver->allocator, &member_types, member_count);
+                for (int64_t i = 0; i < member_count; i++)
+                {
+
+                    auto mem_decl = ast_decl->structure.member_declarations[i];
+                    bool mem_res = try_resolve_types(resolver,
+                                                     mem_decl, ast_decl->structure.member_scope);
+                    if (!mem_res)
+                    {
+                        result = false;
+                    } 
+                    else if (result)
+                    {
+                        auto mem_type = mem_decl->type;
+                        assert(mem_type);
+                        array_append(&member_types, mem_type);
+                    }
+                }
+                
+                if (result)
+                {
+                    ast_decl->type = ast_structure_type_new(resolver->allocator, member_types, 
+                                                            ast_decl->structure.member_scope);
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
+                else
+                {
+                    array_free(&member_types);
+                }
+                break;
+            }
+
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
 
@@ -1068,6 +1181,7 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+
             case AST_Expression_Kind::DOT: assert(false);
 
             case AST_Expression_Kind::BINARY:
@@ -1209,7 +1323,8 @@ namespace Zodiac
             {
                 auto decl = ts->identifier->declaration;
                 assert(decl);
-                assert(decl->kind == AST_Declaration_Kind::TYPE);
+                assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                       decl->kind == AST_Declaration_Kind::TYPE);
                 assert(decl->type);
                 *type_target = decl->type;
                 ts->type = decl->type;
@@ -1300,18 +1415,50 @@ namespace Zodiac
         assert(ast_node);
         assert(scope);
 
+        assert(ast_node->flags & AST_NODE_FLAG_TYPED);
+
         if (ast_node->flags & AST_NODE_FLAG_SIZED) return  true;
 
         bool result = true;
-
-        assert(ast_node->kind == AST_Node_Kind::TYPE);
 
         switch (ast_node->kind)
         {
             case AST_Node_Kind::INVALID: assert(false);
             case AST_Node_Kind::MODULE: assert(false);
             case AST_Node_Kind::IDENTIFIER: assert(false);
-            case AST_Node_Kind::DECLARATION: assert(false);
+
+            case AST_Node_Kind::DECLARATION:
+            {
+                auto decl = static_cast<AST_Declaration*>(ast_node);
+                switch (decl->kind)
+                {
+                    case AST_Declaration_Kind::INVALID: assert(false);
+                    case AST_Declaration_Kind::IMPORT: assert(false);
+
+                    case AST_Declaration_Kind::VARIABLE:
+                    {
+                        result = try_resolve_sizes(resolver, decl->type, scope);
+                        if (result && decl->variable.init_expression)
+                        {
+                            result = try_resolve_sizes(resolver, decl->variable.init_expression,
+                                                       scope);
+                        }
+
+                        if (result)
+                            ast_node->flags |= AST_NODE_FLAG_SIZED;
+                        break;
+                    }
+
+                    case AST_Declaration_Kind::CONSTANT: assert(false);
+                    case AST_Declaration_Kind::PARAMETER: assert(false);
+                    case AST_Declaration_Kind::FUNCTION: assert(false);
+                    case AST_Declaration_Kind::TYPE: assert(false);
+                    case AST_Declaration_Kind::STRUCTURE: assert(false);
+                    case AST_Declaration_Kind::POLY_TYPE: assert(false);
+                }
+                break;
+            }
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
@@ -1350,7 +1497,13 @@ namespace Zodiac
         {
             case AST_Type_Kind::INVALID: assert(false);
             case AST_Type_Kind::VOID: assert(false);
-            case AST_Type_Kind::INTEGER: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                assert(ast_type->bit_size > 0);
+                ast_type->flags |= AST_NODE_FLAG_SIZED;
+                result = true;
+            }
 
             case AST_Type_Kind::FUNCTION:
             {
@@ -1359,6 +1512,8 @@ namespace Zodiac
                 result = true;
                 break;
             }
+            
+            case AST_Type_Kind::STRUCTURE: assert(false);
         }
 
         if (result)
@@ -1384,6 +1539,7 @@ namespace Zodiac
         if (!func_type)
         {
             func_type = ast_function_type_new(resolver->allocator, param_types, return_type);
+            func_type->flags |= AST_NODE_FLAG_TYPED;
             array_append(&resolver->build_data->type_table, func_type);
             queue_size_job(resolver, func_type, scope);
         }
@@ -1402,8 +1558,8 @@ namespace Zodiac
         assert(allocator);
 
         auto job = resolve_job_ident_new(allocator, ast_node, scope);
-        queue_enqueue(&resolver->ident_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->ident_job_queue, job);
     }
 
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
@@ -1416,8 +1572,8 @@ namespace Zodiac
         assert(allocator);
 
         auto job = resolve_job_type_new(allocator, ast_node, scope);
-        queue_enqueue(&resolver->type_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->type_job_queue, job);
     }
 
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
@@ -1430,8 +1586,8 @@ namespace Zodiac
         assert(allocator);
 
         auto job = resolve_job_size_new(allocator, ast_node, scope);
-        queue_enqueue(&resolver->size_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->size_job_queue, job);
 
     }
 
@@ -1443,8 +1599,8 @@ namespace Zodiac
             return;
 
         auto job = resolve_job_emit_bytecode_new(resolver->allocator, ast_node, scope);
-        queue_enqueue(&resolver->emit_bytecode_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->emit_bytecode_job_queue, job);
 
         ast_node->flags |= AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION;
     }
@@ -1454,8 +1610,8 @@ namespace Zodiac
         assert(resolver->allocator);
 
         auto job = resolve_job_emit_llvm_func_new(resolver->allocator, bc_func);
-        queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
     }
 
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name)
@@ -1463,8 +1619,8 @@ namespace Zodiac
         assert(resolver->allocator);
 
         auto job = resolve_job_emit_llvm_binary_new(resolver->allocator, output_file_name);
-        queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
         assert(job);
+        queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
     }
 
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,

@@ -1,4 +1,19 @@
 
+Vec2 :: struct 
+{
+    x : s64;
+    y : s64;
+}
+
+main :: func () -> s64
+{
+    p1 : Vec2;
+    p1.x = 1;
+    p1.y = 2;
+
+    return p1.x + p1.y;
+}
+
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
 mainCRTStartup :: func () -> s32
@@ -16,22 +31,4 @@ mainCRTStartup :: func () -> s32
 {
     exit_code := main();
     @exit(exit_code);
-}
-
-main :: func () -> s64
-{
-    result := echo(add(40, 1));
-    result = result + 1;
-    return result;
-}
-
-add :: func (a: s64, b: s64) -> s64
-{
-    return a + b;
-}
-
-echo :: func (val: s64) -> s64
-{
-    result := val;
-    return result;
 }
