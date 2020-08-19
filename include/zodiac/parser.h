@@ -25,7 +25,8 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts);
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
                                           Identifier_PTN* identifier,
                                           bool is_naked = false,
-                                          bool is_noreturn = false);
+                                          bool is_noreturn = false,
+                                          bool is_foreign = false);
 
 Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
                                                  Identifier_PTN* identifier);

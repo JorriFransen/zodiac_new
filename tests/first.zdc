@@ -1,17 +1,15 @@
 
-//#foreign ExitProcess :: func(exit_code: u32) -> void;
+#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
-mainCRTStartup :: func ()
+mainCRTStartup :: func () -> s32
 {
     exit_code := main();
-    //ExitProcess(exit_code);
-    @exit(exit_code + 1);
+    @exit(exit_code);
 }
 
 #naked #noreturn _start :: func ()
 {
-    mainCRTStartup();
-    //posix_call_main_and_exit();
+    posix_call_main_and_exit();
 }
 
 #noreturn posix_call_main_and_exit :: func ()

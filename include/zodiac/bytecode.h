@@ -100,6 +100,7 @@ namespace Zodiac
         BYTECODE_FUNC_FLAG_INVALID     = 0x00,
         BYTECODE_FUNC_FLAG_NAKED       = 0x01,
         BYTECODE_FUNC_FLAG_NORETURN    = 0x02,
+        BYTECODE_FUNC_FLAG_FOREIGN     = 0x04,
     };
 
     struct Bytecode_Function
@@ -119,6 +120,7 @@ namespace Zodiac
     {
         Array<Bytecode_Function*> functions = {};
         Bytecode_Function *entry_function = nullptr;
+        Bytecode_Function *bytecode_entry_function = nullptr;
     };
 
     struct Bytecode_Builder

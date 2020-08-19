@@ -62,7 +62,7 @@ int main(int argc, char** argv)
     assert(rr.error_count == 0);
     //if (rr.llvm_error) return 1;
 
-    //bytecode_print(ca, &resolver.bytecode_builder);
+    bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
 
     Interpreter interp;
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 
     interpreter_free(&interp);
 
-    //llvm_print(ca, &resolver.llvm_builder);
+    llvm_print(ca, &resolver.llvm_builder);
 
     return 0;
 }

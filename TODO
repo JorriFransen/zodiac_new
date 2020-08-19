@@ -1,6 +1,6 @@
 
-Use main as entry for bytecode
-Use mainCRTStartup as entry on windows
+Optional semicolon at the end of foreign function declarations.
+Print parameter types in bytecode printer
 
 Windows build
   - Create msvc build

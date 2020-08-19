@@ -185,19 +185,24 @@ namespace Zodiac
                 Array<AST_Declaration*> ast_var_decls = {};
                 array_init(allocator, &ast_var_decls);
 
-                AST_Statement* ast_body = ast_create_statement_from_ptn(allocator,
-                                                                        ptn->function.body,
-                                                                        &ast_var_decls);
-                assert(ast_body);
-
-                auto end_fp = ast_body->end_file_pos;
+                AST_Statement *ast_body = nullptr;
+                if (ptn->function.body)
+                {
+                    ast_body = ast_create_statement_from_ptn(allocator, ptn->function.body,
+                                                             &ast_var_decls);
+                    assert(ast_body);
+                }
 
                 bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
                 bool is_noreturn = ptn->flags & DPTN_FLAG_NORETURN;
+                bool is_foreign = ptn->flags & DPTN_FLAG_FOREIGN;
+
+                auto end_fp = ptn->self.end_file_pos;
 
                 return ast_function_declaration_new(allocator, ast_ident, ast_type,
                                                     ast_param_decls, ast_var_decls, ast_body,
-                                                    is_naked, is_noreturn, begin_fp, end_fp);
+                                                    is_naked, is_noreturn, is_foreign,
+                                                    begin_fp, end_fp);
                 break;
             }
 
@@ -284,6 +289,7 @@ namespace Zodiac
     AST_Statement* ast_create_statement_from_ptn(Allocator* allocator, Statement_PTN* ptn, 
                                                  Array<AST_Declaration*> *var_decls)
     {
+        assert(ptn);
         auto begin_fp = ptn->self.begin_file_pos;
         auto end_fp = ptn->self.end_file_pos;
 
@@ -833,11 +839,11 @@ namespace Zodiac
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement* body,
-                                                  bool is_naked, bool is_noreturn,
+                                                  bool is_naked, bool is_noreturn, bool is_foreign,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
     {
-        assert(body->kind == AST_Statement_Kind::BLOCK);
+        if (body) assert(body->kind == AST_Statement_Kind::BLOCK);
 
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::FUNCTION, identifier,
                                           begin_fp, end_fp);
@@ -856,6 +862,11 @@ namespace Zodiac
         if (is_noreturn)
         {
             result->decl_flags |= AST_DECL_FLAG_NORETURN;
+        }
+
+        if (is_foreign)
+        {
+            result->decl_flags |= AST_DECL_FLAG_FOREIGN;
         }
 
         return result;
@@ -1359,7 +1370,8 @@ namespace Zodiac
                 }
                    
                 //ast_print_type_spec(ast_decl->function.type_spec);
-                ast_print_statement(ast_decl->function.body, indent);
+                if (ast_decl->function.body)
+                    ast_print_statement(ast_decl->function.body, indent);
                 break;
             }
 

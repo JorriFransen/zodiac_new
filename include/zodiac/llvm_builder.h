@@ -13,6 +13,13 @@ namespace Zodiac
         Bytecode_Function *bc_func = nullptr;
     };
 
+    enum class Zodiac_Target_Platform
+    {
+        INVALID,
+        LINUX,
+        WINDOWS,
+    };
+
     struct LLVM_Builder
     {
         Allocator *allocator = nullptr;
@@ -25,6 +32,9 @@ namespace Zodiac
         Array<LLVMValueRef> allocas = {};
 
         Stack<LLVMValueRef> arg_stack = {};
+
+        String target_triple = {};
+        Zodiac_Target_Platform target_platform = Zodiac_Target_Platform::INVALID;
     };
 
     struct LLVM_Function_Context
@@ -47,6 +57,8 @@ namespace Zodiac
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context);
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction inst,
                                LLVM_Function_Context *func_context);
+
+    void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context);
 
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val);
 

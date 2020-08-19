@@ -33,6 +33,7 @@ namespace Zodiac
         Stack<Bytecode_Value> arg_stack = {};
 
         Bytecode_Value exit_code_value = {};
+        bool exited = false;
     };
 
     void interpreter_init(Allocator *allocator, Interpreter *interp);

@@ -63,6 +63,7 @@ namespace Zodiac
         assert(ast_node->kind == AST_Node_Kind::MODULE);
 
         AST_Declaration *entry_decl = nullptr;
+        AST_Declaration *bytecode_entry_decl = nullptr;;
 
         auto ast_module = static_cast<AST_Module*>(ast_node);
         for (int64_t i = 0; i < ast_module->declarations.count; i++)
@@ -70,19 +71,43 @@ namespace Zodiac
             AST_Declaration *decl = ast_module->declarations[i];
             queue_ident_job(resolver, decl, ast_module->module_scope);
 
-            if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                decl->identifier->atom == Builtin::atom__start &&
-                (decl->decl_flags & AST_DECL_FLAG_IS_NAKED))
+            if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::LINUX)
             {
-                assert(!entry_decl);
-                entry_decl = decl;
-                decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                    decl->identifier->atom == Builtin::atom__start &&
+                    (decl->decl_flags & AST_DECL_FLAG_IS_NAKED))
+                {
+                    assert(!entry_decl);
+                    entry_decl = decl;
+                    decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                }
+            }
+            else if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::WINDOWS)
+            {
+                if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                    decl->identifier->atom == Builtin::atom_mainCRTStartup)
+                {
+                    assert(!entry_decl);
+                    entry_decl = decl;
+                    decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                }
+            }
+            else assert(false);
+            if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                decl->identifier->atom == Builtin::atom_main)
+            {
+                assert(!bytecode_entry_decl);
+                bytecode_entry_decl = decl;
+                decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
             }
         }
 
+        assert(entry_decl);
+        assert(bytecode_entry_decl);
+
         if (blocking)
         {
-             start_resolve_pump(resolver, entry_decl);
+             start_resolve_pump(resolver, entry_decl, bytecode_entry_decl);
         }
         else
         {
@@ -111,7 +136,8 @@ namespace Zodiac
         return result;
     }
 
-    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl)
+    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl,
+                            AST_Declaration *bytecode_entry_decl)
     {
         assert(entry_decl->kind == AST_Declaration_Kind::FUNCTION);
 
@@ -148,10 +174,16 @@ namespace Zodiac
                 }
                 else
                 {
-                    if (job->declaration == entry_decl)
+                    auto decl = job->declaration;
+                    if (decl == entry_decl)
                     {
                         queue_emit_bytecode_jobs_from_declaration(resolver, entry_decl,
                                                                   job->node_scope);
+                    }
+                    else if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                             (decl->decl_flags & AST_DECL_FLAG_FOREIGN))
+                    {
+                        queue_emit_bytecode_job(resolver, decl, job->node_scope);
                     }
 
                     // Size jobs are queued when types are first created
@@ -448,7 +480,8 @@ namespace Zodiac
 
                 if (result)
                 {
-                    if (!try_resolve_identifiers(resolver, ast_decl->function.body, scope))
+                    auto body = ast_decl->function.body;
+                    if (body && !try_resolve_identifiers(resolver, body, scope))
                     {
                         result = false;
                     }
@@ -861,7 +894,8 @@ namespace Zodiac
                 }
 
                 // Passing a null scope since the block holds it's own scope
-                if (!try_resolve_types(resolver, ast_decl->function.body, nullptr))
+                auto body = ast_decl->function.body;
+                if (body && !try_resolve_types(resolver, body, nullptr))
                 {
                     result = false;
                     break;
@@ -875,7 +909,7 @@ namespace Zodiac
                     }
                     assert(ast_decl->type);
                     assert(ast_decl->function.type_spec->type);
-                    assert(ast_decl->function.body->flags & AST_NODE_FLAG_TYPED);
+                    if (body) assert(body->flags & AST_NODE_FLAG_TYPED);
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
 

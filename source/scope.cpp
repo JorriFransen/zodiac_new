@@ -123,8 +123,11 @@ namespace Zodiac
                                        ast_decl->function.parameter_scope);
                 }
 
-                scope_populate_statement_ast(allocator, ast_decl->function.body,
-                                             ast_decl->function.parameter_scope);
+                if (ast_decl->function.body)
+                {
+                    scope_populate_statement_ast(allocator, ast_decl->function.body,
+                                                 ast_decl->function.parameter_scope);
+                }
                 break;
             }
 

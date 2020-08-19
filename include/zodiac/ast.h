@@ -80,10 +80,12 @@ namespace Zodiac
 
     enum AST_Declaration_Flag__ : AST_Declaration_Flag
     {
-        AST_DECL_FLAG_NONE     = 0x00,
-        AST_DECL_FLAG_IS_NAKED = 0x01,
-        AST_DECL_FLAG_IS_ENTRY = 0x02,
-        AST_DECL_FLAG_NORETURN = 0x04,
+        AST_DECL_FLAG_NONE              = 0x00,
+        AST_DECL_FLAG_IS_NAKED          = 0x01,
+        AST_DECL_FLAG_IS_ENTRY          = 0x02,
+        AST_DECL_FLAG_IS_BYTECODE_ENTRY = 0x04,
+        AST_DECL_FLAG_NORETURN          = 0x08,
+        AST_DECL_FLAG_FOREIGN           = 0x10,
     };
 
     struct AST_Declaration : public AST_Node
@@ -398,7 +400,7 @@ namespace Zodiac
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement* body,
-                                                  bool is_naked, bool is_noreturn,
+                                                  bool is_naked, bool is_noreturn, bool is_foreign,
                                                   const File_Pos & begin_fp,
                                                   const File_Pos &end_fp);
     AST_Declaration* ast_type_declaration_new(Allocator *allocator, AST_Type *type,

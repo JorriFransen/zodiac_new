@@ -17,6 +17,7 @@ namespace Zodiac
 
         array_init(allocator, &builder->program.functions);
         builder->program.entry_function = nullptr;
+        builder->program.bytecode_entry_function = nullptr;
 
         array_init(allocator, &builder->emitted_types);
 
@@ -76,35 +77,50 @@ namespace Zodiac
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
         {
-            assert(decl->decl_flags & AST_DECL_FLAG_IS_NAKED);
+            //assert(decl->decl_flags & AST_DECL_FLAG_IS_NAKED);
             assert(!builder->program.entry_function);
             builder->program.entry_function = func;
+        }
+        if (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY)
+        {
+            assert(!builder->program.bytecode_entry_function);
+            builder->program.bytecode_entry_function = func;
         }
 
         auto func_index = builder->program.functions.count;
         array_append(&builder->program.functions, func);
         func->index = func_index;
-        builder->current_function = func;
-        bytecode_builder_set_insert_point(builder, func);
 
-        for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
+        if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
         {
-            auto param = decl->function.parameter_declarations[i];
-            auto param_val = bytecode_new_value(builder, Bytecode_Value_Kind::PARAMETER, 
-                                                param->type);
-            array_append(&func->parameters, { param_val, param });
-            param_val->param_index = i;
-            param_val->name = param->identifier->atom;
+            func->flags |= BYTECODE_FUNC_FLAG_FOREIGN;
+            //assert(false);
         }
-
-        for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
+        else
         {
-            auto var = decl->function.variable_declarations[i];
-            bytecode_emit_allocl(builder, var, var->identifier->atom);
-        }
+            builder->current_function = func;
+            bytecode_builder_append_block(builder, func, "entry");
+            bytecode_builder_set_insert_point(builder, func);
 
-        assert(decl->function.body);
-        bytecode_emit_statement(builder, decl->function.body);
+            for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
+            {
+                auto param = decl->function.parameter_declarations[i];
+                auto param_val = bytecode_new_value(builder, Bytecode_Value_Kind::PARAMETER, 
+                                                    param->type);
+                array_append(&func->parameters, { param_val, param });
+                param_val->param_index = i;
+                param_val->name = param->identifier->atom;
+            }
+
+            for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
+            {
+                auto var = decl->function.variable_declarations[i];
+                bytecode_emit_allocl(builder, var, var->identifier->atom);
+            }
+
+            assert(decl->function.body);
+            bytecode_emit_statement(builder, decl->function.body);
+        }
 
         return func;
     }
@@ -736,8 +752,6 @@ namespace Zodiac
         array_init(allocator, &result->local_allocs);
         array_init(allocator, &result->blocks);
         
-        bytecode_builder_append_block(builder, result, "entry");
-
         result->ast_decl = decl;        
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_NAKED)
@@ -792,7 +806,7 @@ namespace Zodiac
         assert(builder->program.functions[0]->blocks.count >= 0);
         result.block_index = 0;
 
-        assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
+        //assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
         result.instruction_index = 0;
 
         result.local_temp_index = 0;
@@ -928,6 +942,12 @@ namespace Zodiac
     {
         auto func = bytecode_iterator_get_function(bci);
 
+        bool is_foreign = func->flags & BYTECODE_FUNC_FLAG_FOREIGN;
+        if (is_foreign)
+        {
+            string_builder_append(sb, "#foreign ");
+        }
+
         string_builder_appendf(sb, "%s(", func->ast_decl->identifier->atom.data);
 
         for (int64_t i = 0; i < func->ast_decl->function.parameter_declarations.count; i++)
@@ -937,13 +957,18 @@ namespace Zodiac
             string_builder_appendf(sb, "%%%s", param_decl->identifier->atom.data);
         }
 
-        string_builder_append(sb, "):\n");
+        string_builder_append(sb, ")");
 
-        while (bci->block_index < func->blocks.count)
+        if (!is_foreign)
         {
-            bytecode_print_block(sb, bci);
-            bytecode_iterator_advance_block(bci);
+            string_builder_append(sb, ":\n");
+            while (bci->block_index < func->blocks.count)
+            {
+                bytecode_print_block(sb, bci);
+                bytecode_iterator_advance_block(bci);
+            }
         }
+        else string_builder_append(sb, "\n");
     }
 
     void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci)

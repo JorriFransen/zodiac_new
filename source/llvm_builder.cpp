@@ -30,6 +30,14 @@ namespace Zodiac
         LLVMInitializeNativeTarget();
         LLVMInitializeNativeAsmPrinter();
         LLVMInitializeNativeAsmParser();
+
+        auto target_triple = string_ref(LLVMGetDefaultTargetTriple());
+        llvm_builder->target_triple = target_triple;
+
+        if (string_contains(target_triple, "windows"))
+        {
+            llvm_builder->target_platform = Zodiac_Target_Platform::WINDOWS;
+        } else assert(false);
     }
 
     bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name)
@@ -48,10 +56,10 @@ namespace Zodiac
         LLVMDisposeMessage(error);
         error = nullptr;
 
-        auto target_triple = LLVMGetDefaultTargetTriple();
-        LLVMSetTarget(builder->llvm_module, target_triple);
+        LLVMSetTarget(builder->llvm_module, builder->target_triple.data);
         LLVMTargetRef llvm_target = nullptr;
-        bool target_error = LLVMGetTargetFromTriple(target_triple, &llvm_target, &error);
+        bool target_error = LLVMGetTargetFromTriple(builder->target_triple.data,
+                                                    &llvm_target, &error);
         if (target_error)
         {
             fprintf(stderr, "%s\n", error);
@@ -64,7 +72,7 @@ namespace Zodiac
 
         LLVMTargetMachineRef llvm_target_machine = LLVMCreateTargetMachine(
                 llvm_target,
-                target_triple,
+                builder->target_triple.data,
                 cpu,
                 features,
                 LLVMCodeGenLevelNone,
@@ -144,7 +152,10 @@ namespace Zodiac
         auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/bin/Hostx64/x64/link.exe");
 
         string_builder_append(sb, linker_path.data);
-        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /nodefaultlib");
+        //string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
+        string_builder_append(sb, " kernel32.lib");
+        string_builder_append(sb, " msvcrtd.lib");
         string_builder_appendf(sb, " %s.o", output_file_name);
 
         auto arg_str = string_builder_to_string(allocator, sb);
@@ -177,33 +188,39 @@ namespace Zodiac
         assert(llvm_func_val);
         array_append(&builder->functions, { llvm_func_val, bc_func });
 
-        for (int64_t i = 0; i < bc_func->blocks.count; i++)
+        if (bc_func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
         {
-            auto bc_block = bc_func->blocks[i];
-            LLVMAppendBasicBlock(llvm_func_val, bc_block->name.data);
+            //assert(false);
         }
-
-        LLVMPositionBuilderAtEnd(builder->llvm_builder, LLVMGetFirstBasicBlock(llvm_func_val));
-
-        for (int64_t i = 0; i < bc_func->local_allocs.count; i++)
+        else
         {
-            auto decl = bc_func->local_allocs[i].ast_decl;
-            assert(decl->kind == AST_Declaration_Kind::VARIABLE);
-            LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
-            LLVMValueRef alloca_val = LLVMBuildAlloca(builder->llvm_builder, llvm_type,
-                                                      decl->identifier->atom.data);
-            array_append(&builder->allocas, alloca_val);
-        }
+            for (int64_t i = 0; i < bc_func->blocks.count; i++)
+            {
+                auto bc_block = bc_func->blocks[i];
+                LLVMAppendBasicBlock(llvm_func_val, bc_block->name.data);
+            }
 
-        auto llvm_block = LLVMGetFirstBasicBlock(llvm_func_val);
-        for (int64_t i = 0; i < bc_func->blocks.count; i++)
-        {
-            LLVM_Function_Context func_context = llvm_create_function_context(llvm_func_val,
-                                                                              bc_func,
-                                                                              llvm_block,
-                                                                              bc_func->blocks[i]);
-            llvm_emit_block(builder, &func_context);
-            llvm_block = LLVMGetNextBasicBlock(llvm_block);
+            LLVMPositionBuilderAtEnd(builder->llvm_builder, LLVMGetFirstBasicBlock(llvm_func_val));
+
+            for (int64_t i = 0; i < bc_func->local_allocs.count; i++)
+            {
+                auto decl = bc_func->local_allocs[i].ast_decl;
+                assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+                LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
+                LLVMValueRef alloca_val = LLVMBuildAlloca(builder->llvm_builder, llvm_type,
+                                                          decl->identifier->atom.data);
+                array_append(&builder->allocas, alloca_val);
+            }
+
+            auto llvm_block = LLVMGetFirstBasicBlock(llvm_func_val);
+            for (int64_t i = 0; i < bc_func->blocks.count; i++)
+            {
+                LLVM_Function_Context func_context =
+                    llvm_create_function_context(llvm_func_val, bc_func, llvm_block,
+                                                 bc_func->blocks[i]);
+                llvm_emit_block(builder, &func_context);
+                llvm_block = LLVMGetNextBasicBlock(llvm_block);
+            }
         }
     }
 
@@ -229,6 +246,10 @@ namespace Zodiac
             {
                 LLVMBuildUnreachable(builder->llvm_builder);
             }
+            else if (func->ast_decl->type->function.return_type == Builtin::type_void)
+            {
+                LLVMBuildRetVoid(builder->llvm_builder);
+            }
             else assert(false);
         }
     }
@@ -242,40 +263,7 @@ namespace Zodiac
 
             case Bytecode_Instruction::EXIT:
             {
-                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
-                                                                  &func_context->ip);
-                LLVMValueRef val = builder->temps[val_idx];
-
-                auto asm_string = string_ref("syscall");
-
-                String_Builder sb = {};
-                string_builder_init(builder->allocator, &sb);
-
-                string_builder_append(&sb, "=r,{rax},{rdi}");
-
-                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 1);
-
-                auto constraint_string = string_builder_to_string(sb.allocator, &sb);
-                string_builder_free(&sb);
-
-                LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
-                                                        asm_string.data,
-                                                        asm_string.length,
-                                                        constraint_string.data,
-                                                        constraint_string.length,
-                                                        true,
-                                                        false,
-                                                        LLVMInlineAsmDialectATT);
-
-                LLVMTypeRef arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
-                LLVMValueRef syscall_num = LLVMConstInt(arg_type, 60, true);
-                LLVMValueRef args[2] = { syscall_num, val };
-                LLVMBuildCall(builder->llvm_builder, asm_val, args, 2, "");
-
-                LLVMBuildUnreachable(builder->llvm_builder);
-
-                free(sb.allocator, constraint_string.data);
-
+                llvm_emit_exit(builder, func_context);
                 break;
             }
 
@@ -440,6 +428,64 @@ namespace Zodiac
                 break;
             }
         }
+    }
+
+    void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context)
+    {
+        auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                          &func_context->ip);
+        LLVMValueRef val = builder->temps[val_idx];
+
+        switch (builder->target_platform)
+        {
+            case Zodiac_Target_Platform::INVALID: assert(false);
+
+            case Zodiac_Target_Platform::LINUX:
+            {
+                auto asm_string = string_ref("syscall");
+
+                String_Builder sb = {};
+                string_builder_init(builder->allocator, &sb);
+
+                string_builder_append(&sb, "=r,{rax},{rdi}");
+
+                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 1);
+
+                auto constraint_string = string_builder_to_string(sb.allocator, &sb);
+                string_builder_free(&sb);
+
+                LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
+                                                        asm_string.data,
+                                                        asm_string.length,
+                                                        constraint_string.data,
+                                                        constraint_string.length,
+                                                        true,
+                                                        false,
+                                                        LLVMInlineAsmDialectATT);
+
+                LLVMTypeRef arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
+                LLVMValueRef syscall_num = LLVMConstInt(arg_type, 60, true);
+                LLVMValueRef args[2] = { syscall_num, val };
+                LLVMBuildCall(builder->llvm_builder, asm_val, args, 2, "");
+
+                LLVMBuildUnreachable(builder->llvm_builder);
+
+                free(sb.allocator, constraint_string.data);
+                break;
+            }
+
+            case Zodiac_Target_Platform::WINDOWS:
+            {
+                LLVMValueRef exitprocess_func = LLVMGetNamedFunction(builder->llvm_module,
+                                                                     "ExitProcess"); 
+                assert(exitprocess_func);
+
+                LLVMBuildCall(builder->llvm_builder, exitprocess_func, &val, 1, "");
+                LLVMBuildUnreachable(builder->llvm_builder);
+                break;
+            }
+        }
+
     }
 
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val)

@@ -13,6 +13,7 @@ namespace Zodiac
         interp->program = nullptr;
 
         interp->running = false;
+        interp->exited = false;
 
         stack_init(allocator, &interp->stack_frames);
         stack_init(allocator, &interp->temp_stack);
@@ -34,14 +35,22 @@ namespace Zodiac
     {
         assert(interp);
         assert(program);
-        assert(program->entry_function);
+        assert(program->bytecode_entry_function);
 
         assert(interp->program == nullptr);
         assert(interp->running == false);
         interp->running = true;
         interp->program = program;
 
-        interpreter_execute_function(interp, program->entry_function, 0);
+        interpreter_execute_function(interp, program->bytecode_entry_function, 0);
+
+        if (!interp->exited)
+        {
+            assert(stack_count(&interp->stack_frames));
+            auto frame = stack_pop(&interp->stack_frames);
+            assert(frame.returned);
+            interp->exit_code_value = frame.return_value;
+        }
     }
 
     void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
@@ -123,6 +132,7 @@ namespace Zodiac
                     assert(exit_code);
                     
                     interp->running = false;
+                    interp->exited = true;
                     interp->exit_code_value = *exit_code;
                     break;
                 }

@@ -99,7 +99,8 @@ namespace Zodiac
     void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking);
     Resolve_Result finish_resolving(Resolver *resolver);
 
-    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl);
+    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl,
+                            AST_Declaration *bytecode_entry_decl);
 
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
 
