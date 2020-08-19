@@ -1,4 +1,17 @@
 
+Linking with c runtime (entry point main instead of _start)
+
+Command line option parsing
+  - general verbose option
+  - output file name
+  - -cruntime
+  - -print-llvm-ir
+  - -print-bytecode
+  - -print-ast
+  - -print-scope
+  - -print-parse_tree
+  - -print-link-command
+
 Optional semicolon at the end of foreign function declarations.
 Print parameter types in bytecode printer
 
@@ -17,19 +30,6 @@ Windows build
        - Invoke cmake with -G ninja and the path to clan-cl like with the llvm build
        - Match the -DCMAKE_BUILD_TYPE= option with the llvm build
          (check if mismatch is possible like on linux)
-
-Linking with c runtime (entry point main instead of _start)
-
-Command line option parsing
-  - general verbose option
-  - output file name
-  - -cruntime
-  - -print-llvm-ir
-  - -print-bytecode
-  - -print-ast
-  - -print-scope
-  - -print-parse_tree
-  - -print-link-command
 
 UNREACHABLE instruction in our own bytecode.
 Dont't store File Positions on ast nodes.
