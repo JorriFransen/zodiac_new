@@ -89,6 +89,30 @@ const char* os_get_cwd(Allocator* allocator)
     return result;
 }
 
+const String os_read_file_string(Allocator *allocator, const String &path)
+{
+    assert(false);
+    return {};
+    //auto file = fopen(file_path.data, "rb");
+    //assert(file);
+
+    //int64_t length = 0;
+    //fseek(file, 0, SEEK_END);
+    //length = ftell(file);
+    //fseek(file, 0, SEEK_SET);
+
+    //String result = { alloc_array<char>(allocator, length + 1), length };
+
+    //auto read_res = fread(result.data, 1, length, file);
+    //assert((int64_t)read_res == length);
+
+    //fclose(file);
+
+    //result.data[read_res] = '\0';
+
+    //return result;
+}
+
 Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args)
 {
     assert(allocator);

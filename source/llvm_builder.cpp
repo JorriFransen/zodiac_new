@@ -139,14 +139,17 @@ namespace Zodiac
         string_builder_free(sb);
 
         return result;
-#elif WIN32
+#elif _WIN32
 
-        string_builder_append(sb, "link.exe ");
+        auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/bin/Hostx64/x64/link.exe");
 
-        string_builder_append(sb, "first.o");
+        string_builder_append(sb, linker_path.data);
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /nodefaultlib");
+        string_builder_appendf(sb, " %s.o", output_file_name);
 
         auto arg_str = string_builder_to_string(allocator, sb);
-        auto result = execute_process(allocator, string_ref("link.exe"), arg_str);
+        printf("Running link command: %s\n", arg_str.data);
+        auto result = execute_process(allocator, {}, arg_str);
         free(allocator, arg_str.data);
 
         string_builder_free(sb);

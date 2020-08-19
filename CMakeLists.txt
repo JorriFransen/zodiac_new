@@ -52,7 +52,7 @@ target_link_libraries(zodiac ${llvm_libs})
 if(MSVC)
     target_compile_options(zodiac PRIVATE /W3 /WX)
 
-    set(platform_libs Shlwapi.lib)
+    set(platform_libs shlwapi.lib)
 else()
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -pedantic -Werror)
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -Werror)

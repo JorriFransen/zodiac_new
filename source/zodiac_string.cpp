@@ -112,4 +112,12 @@ bool string_ends_with(const String &a, const String &b)
     return true;
 }
 
+const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count)
+{
+    Unicode_String result = {};
+    result.wchars = (wchar_t*)utf16_str;
+    result.length = char_count;
+    return result;
+}
+
 }

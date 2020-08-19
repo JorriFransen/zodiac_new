@@ -32,6 +32,22 @@ struct String
     }
 };
 
+struct Unicode_String
+{
+    union
+    {
+        char *data = nullptr;
+        wchar_t *wchars;
+    };
+
+    int64_t length = 0;
+
+    const wchar_t *c_str() const
+    {
+        return (wchar_t*)data;
+    }
+};
+
 int64_t string_length(String string);
 const String string_copy(Allocator *allocator, const String& string, int64_t offset, int64_t length);
 const String string_copy(Allocator *allocator, const String& string, int64_t length);
@@ -48,4 +64,6 @@ bool string_contains(const String &str, const String &sub_str);
 
 bool string_ends_with(const String &a, const char *b);
 bool string_ends_with(const String &a, const String &b);
+
+const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count);
 }

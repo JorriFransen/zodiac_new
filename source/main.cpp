@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 
     interpreter_free(&interp);
 
-    llvm_print(ca, &resolver.llvm_builder);
+    //llvm_print(ca, &resolver.llvm_builder);
 
     return 0;
 }

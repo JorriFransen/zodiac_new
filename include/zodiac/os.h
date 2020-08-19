@@ -16,6 +16,7 @@ String read_file_string(Allocator* allocator, const String& file_path);
 
 struct Process_Info
 {
+    int64_t exit_code = 0;
     bool success = false; 
 };
 
