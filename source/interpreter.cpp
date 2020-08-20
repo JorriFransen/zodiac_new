@@ -221,7 +221,7 @@ namespace Zodiac
                         {
                             int64_t val = interpreter_fetch<int64_t>(interp);
                             auto bc_val = interpreter_push_temporary(interp, Builtin::type_s64); 
-                            bc_val->value.integer_literal = val;
+                            bc_val->value.int_literal.s64 = val;
                             break;
                         }
                         default: assert(false);
@@ -243,7 +243,52 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::LOADP: assert(false);
+                case Bytecode_Instruction::LOADP:
+                {
+                    auto ptr_idx = interpreter_fetch<int32_t>(interp);
+
+                    auto ptr_val = interpreter_load_temporary(interp, ptr_idx);
+                    assert(ptr_val->type->kind == AST_Type_Kind::POINTER);
+
+                    auto result_val = interpreter_push_temporary(interp,
+                                                                 ptr_val->type->pointer.base);
+                    assert(result_val->type->bit_size % 8 == 0);
+                    
+                    switch (result_val->type->bit_size)
+                    {
+                        case 8:
+                        {
+                            result_val->value.int_literal.s8 =
+                                *((int8_t*)ptr_val->value.pointer);
+                            break;
+                        }
+
+                        case 16:
+                        {
+                            result_val->value.int_literal.s16 =
+                                *((int16_t*)ptr_val->value.pointer);
+                            break;
+                        }
+
+                        case 32:
+                        {
+                            result_val->value.int_literal.s32 =
+                                *((int32_t*)ptr_val->value.pointer);
+                            break;
+                        }
+
+                        case 64: 
+                        {
+                            result_val->value.int_literal.s64 =
+                                *((int64_t*)ptr_val->value.pointer);
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
+                    
+                    break;
+                }
 
                 case Bytecode_Instruction::LOAD_PARAM:
                 {
@@ -272,7 +317,56 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::STOREP: assert(false);
+                case Bytecode_Instruction::STOREP:
+                {
+                    auto ptr_idx = interpreter_fetch<uint32_t>(interp);
+                    auto val_idx = interpreter_fetch<uint32_t>(interp);
+
+                    auto ptr_val = interpreter_load_temporary(interp, ptr_idx);
+                    auto new_val = interpreter_load_temporary(interp, val_idx);
+
+                    assert(ptr_val->type->kind == AST_Type_Kind::POINTER);
+                    assert(ptr_val->type->pointer.base == new_val->type);
+
+                    auto bit_size = new_val->type->bit_size;
+                    assert(bit_size % 8 == 0);
+
+                    assert(new_val->type->kind == AST_Type_Kind::INTEGER);
+
+                    switch (bit_size)
+                    {
+                        case 8:
+                        {
+                            auto ptr = (int8_t*)ptr_val->value.pointer;
+                            *ptr = new_val->value.int_literal.s8;
+                            break;
+                        }
+
+                        case 16:
+                        {
+                            auto ptr = (int16_t*)ptr_val->value.pointer;
+                            *ptr = new_val->value.int_literal.s16;
+                            break;
+                        }
+
+                        case 32:
+                        {
+                            auto ptr = (int32_t*)ptr_val->value.pointer;
+                            *ptr = new_val->value.int_literal.s32;
+                            break;
+                        }
+
+                        case 64: 
+                        {
+                            auto ptr = (int64_t*)ptr_val->value.pointer;
+                            *ptr = new_val->value.int_literal.s64;
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
+                    break;
+                }
 
                 case Bytecode_Instruction::PUSH_ARG:
                 {
@@ -313,8 +407,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->value.integer_literal =
-                                lhs_val->value.integer_literal + rhs_val->value.integer_literal;
+                            result_val->value.int_literal.s64 =
+                                lhs_val->value.int_literal.s64 + rhs_val->value.int_literal.s64;
                             break;
                         }
                         default: assert(false);
@@ -323,7 +417,7 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::OFFSET_PTR:
+               case Bytecode_Instruction::OFFSET_PTR:
                {
                    auto store_idx = interpreter_fetch<uint32_t>(interp);
                    auto offset_val = interpreter_fetch<uint32_t>(interp);
@@ -335,7 +429,9 @@ namespace Zodiac
                    auto mem_types = store_val->type->structure.member_types;
                    assert(offset_val < mem_types.count);
 
-                   auto result = interpreter_push_temporary(interp, mem_types[offset_val]);
+                   auto ptr_type = ast_find_or_create_pointer_type(interp->allocator,
+                                                                   mem_types[offset_val]);
+                   auto result = interpreter_push_temporary(interp, ptr_type);
                    assert(result);
 
                    auto byte_offset = 0;

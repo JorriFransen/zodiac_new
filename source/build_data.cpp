@@ -36,7 +36,8 @@ namespace Zodiac
             } 
         }
 
-        AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
+        //AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
+        AST_Type *ptr_type = ast_find_or_create_pointer_type(allocator, base_type);
         assert(ptr_type);
         array_append(&build_data->type_table, ptr_type);
         return ptr_type;

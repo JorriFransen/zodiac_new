@@ -75,10 +75,20 @@ namespace Zodiac
 
         union 
         {
-            uint64_t integer_literal = 0;
-            void *struct_pointer;
+            void *struct_pointer = nullptr;
             void *pointer;
+
+            union 
+            {
+                int64_t s64;
+                int32_t s32;
+                int16_t s16;
+                int8_t s8;
+
+            } int_literal;
+
         } value;
+
     };
 
     struct Bytecode_Block

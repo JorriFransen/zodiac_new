@@ -1219,6 +1219,7 @@ namespace Zodiac
         assert(result);
         result->kind = kind;
         result->bit_size = bit_size;
+        result->pointer_to = nullptr;
         return result;
     }
 
@@ -1256,6 +1257,15 @@ namespace Zodiac
         result->structure.member_scope = member_scope;
         result->structure.declaration = declaration;
 
+        return result;
+    }
+
+    AST_Type* ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type)
+    {
+        if (base_type->pointer_to) return base_type->pointer_to;
+
+        auto result = ast_pointer_type_new(allocator, base_type);
+        base_type->pointer_to = result;
         return result;
     }
 

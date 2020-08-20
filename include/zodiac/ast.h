@@ -337,6 +337,7 @@ namespace Zodiac
         AST_Type_Kind kind = AST_Type_Kind::INVALID;
 
         uint64_t bit_size = 0;
+        AST_Type *pointer_to = nullptr;
 
         union
         {
@@ -507,6 +508,8 @@ namespace Zodiac
                                     AST_Type *return_type);
     AST_Type* ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
                                      Array<AST_Type*> member_types, Scope *member_scope);
+
+    AST_Type* ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);
