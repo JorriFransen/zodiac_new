@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
     interpreter_execute_entry(&interp, &resolver.bytecode_builder.program);
     printf("Interpreter exited with code: %" PRId64 "\n",
-           interp.exit_code_value.integer_literal.value);
+           interp.exit_code_value.value.integer_literal);
 
     interpreter_free(&interp);
 

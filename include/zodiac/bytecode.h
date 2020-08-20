@@ -73,10 +73,12 @@ namespace Zodiac
 
         AST_Type *type = nullptr;
 
-        struct 
+        union 
         {
-            uint64_t value = 0;
-        } integer_literal;
+            uint64_t integer_literal = 0;
+            void *struct_pointer;
+            void *pointer;
+        } value;
     };
 
     struct Bytecode_Block
@@ -165,10 +167,12 @@ namespace Zodiac
                                                   AST_Expression *expression);
     Bytecode_Value *bytecode_emit_builtin_call_expression(Bytecode_Builder *builder,
                                                           AST_Expression *expression);
-    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder, AST_Expression *expr);
+    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder,
+                                                    AST_Expression *expr);
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *lvalue_expr);
-    Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl, Atom name);
+    Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
+                                         Atom name);
     
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr);
 

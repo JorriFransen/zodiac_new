@@ -123,6 +123,9 @@ namespace Zodiac
 
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope);
+    AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
+                                    Array<AST_Type*> mem_types, Scope *mem_scope,
+                                    Scope *current_scope);
 
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);

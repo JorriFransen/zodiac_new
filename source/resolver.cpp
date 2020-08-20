@@ -1052,9 +1052,9 @@ namespace Zodiac
                 {
                     auto ident = ast_decl->identifier;
                     assert(ident);
-                    ast_decl->type = ast_structure_type_new(resolver->allocator,
-                                                            ast_decl, member_types, 
-                                                            ast_decl->structure.member_scope);
+                    ast_decl->type = create_structure_type(resolver, ast_decl, member_types, 
+                                                           ast_decl->structure.member_scope,
+                                                           scope);
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
                 else
@@ -1577,7 +1577,25 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::STRUCTURE:
+            {
+                //@TODO: Padding etc...
+                uint64_t bit_size = 0;
+                for (int64_t i = 0; i < ast_type->structure.member_types.count; i++)
+                {
+                    auto mem_type = ast_type->structure.member_types[i];
+                    assert(mem_type->flags & AST_NODE_FLAG_SIZED);
+                    assert(mem_type->bit_size);
+                    assert(mem_type->bit_size % 8 == 0);
+                    bit_size += mem_type->bit_size;
+                    assert(bit_size % 8 == 0);
+                }
+
+                assert(bit_size);
+                ast_type->bit_size = bit_size;
+                ast_type->flags |= AST_NODE_FLAG_SIZED;
+                break;
+            }
         }
 
         if (result)
@@ -1611,6 +1629,24 @@ namespace Zodiac
         assert(func_type);
 
         return func_type;
+    }
+
+    AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
+                                    Array<AST_Type*> mem_types, Scope *mem_scope,
+                                    Scope *current_scope)
+    {
+        assert(resolver);
+        assert(struct_decl);
+        assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+        assert(mem_types.count);
+        assert(mem_scope);
+
+        auto result =  ast_structure_type_new(resolver->allocator, struct_decl, mem_types,
+                                              mem_scope);
+        result->flags |= AST_NODE_FLAG_TYPED;
+        array_append(&resolver->build_data->type_table, result);
+        queue_size_job(resolver, result, current_scope);
+        return result;
     }
 
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)

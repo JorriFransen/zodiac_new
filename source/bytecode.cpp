@@ -1260,13 +1260,13 @@ namespace Zodiac
             case Bytecode_Instruction::OFFSET_PTR:
             {
                 auto store_idx = bytecode_iterator_fetch_32(bci);
-                auto offset_idx = bytecode_iterator_fetch_32(bci);
+                auto offset = bytecode_iterator_fetch_32(bci);
 
                 auto func = bci->builder->program.functions[bci->function_index];
                 auto name = func->local_allocs[store_idx].value->name;
 
                 string_builder_appendf(sb, "%%%" PRIu64 "  = OFFSET_PTR %%%s, %" PRIu32,
-                                       bci->local_temp_index, name.data, offset_idx);
+                                       bci->local_temp_index, name.data, offset);
                 bci->local_temp_index += 1;
                 break;
             }

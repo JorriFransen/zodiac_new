@@ -66,7 +66,8 @@ namespace Zodiac
 
         for (int64_t i = 0; i < arg_count; i++)
         {
-            array_append(&frame_p->parameters, stack_peek(&interp->arg_stack, (arg_count - 1) - i));
+            array_append(&frame_p->parameters,
+                         stack_peek(&interp->arg_stack, (arg_count - 1) - i));
         }
 
         for (int64_t i = 0; i < arg_count; i++)
@@ -80,6 +81,18 @@ namespace Zodiac
             allocl_val.kind = Bytecode_Value_Kind::ALLOCL;
             allocl_val.type = func->local_allocs[i].value->type;
             assert(allocl_val.type);
+
+            if (allocl_val.kind == Bytecode_Value_Kind::ALLOCL &&
+                allocl_val.type->kind == AST_Type_Kind::STRUCTURE)
+            {
+                auto bit_size = allocl_val.type->bit_size;
+                assert(bit_size);
+                auto size = bit_size / 8;
+                assert(size);
+
+                //@TODO: Custom allocator for this
+                allocl_val.value.struct_pointer = alloc(interp->allocator, size);
+            }
 
             stack_push(&interp->allocl_stack, allocl_val);
         }
@@ -96,7 +109,11 @@ namespace Zodiac
 
         for (int64_t i = 0; i < func->local_allocs.count; i++)
         {
-            stack_pop(&interp->allocl_stack);
+            auto val = stack_pop(&interp->allocl_stack);
+            if (val.kind == Bytecode_Value_Kind::ALLOCL)
+            {
+                free(interp->allocator, val.value.struct_pointer);
+            }
         }
 
         if (interp->running)
@@ -204,7 +221,7 @@ namespace Zodiac
                         {
                             int64_t val = interpreter_fetch<int64_t>(interp);
                             auto bc_val = interpreter_push_temporary(interp, Builtin::type_s64); 
-                            bc_val->integer_literal.value = val;
+                            bc_val->value.integer_literal = val;
                             break;
                         }
                         default: assert(false);
@@ -217,9 +234,9 @@ namespace Zodiac
                 {
                     auto allocl_index = interpreter_fetch<uint32_t>(interp);
 
-                    auto offset = (frame->alloc_count - 1) - allocl_index;
-                    auto source_allocl = stack_peek_ptr(&interp->allocl_stack, offset);
+                    auto source_allocl = interpreter_load_allocl(interp, allocl_index);
                     assert(source_allocl);
+                    assert(source_allocl->type->kind == AST_Type_Kind::INTEGER);
 
                     auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
                     *dest_val = *source_allocl;
@@ -247,11 +264,7 @@ namespace Zodiac
                     auto val_index = interpreter_fetch<uint32_t>(interp);
 
                     auto source_val = interpreter_load_temporary(interp, val_index);
-
-                    auto offset = (frame->alloc_count - 1) - allocl_index;
-                    assert(offset < frame->alloc_count);
-                    
-                    auto dest_allocl = stack_peek_ptr(&interp->allocl_stack, offset);
+                    auto dest_allocl = interpreter_load_allocl(interp, allocl_index);
 
                     assert(source_val);
                     assert(dest_allocl);
@@ -300,8 +313,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->integer_literal.value =
-                                lhs_val->integer_literal.value + rhs_val->integer_literal.value;
+                            result_val->value.integer_literal =
+                                lhs_val->value.integer_literal + rhs_val->value.integer_literal;
                             break;
                         }
                         default: assert(false);
@@ -310,7 +323,36 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::OFFSET_PTR: assert(false);
+                case Bytecode_Instruction::OFFSET_PTR:
+               {
+                   auto store_idx = interpreter_fetch<uint32_t>(interp);
+                   auto offset_val = interpreter_fetch<uint32_t>(interp);
+
+                   auto store_val = interpreter_load_allocl(interp, store_idx);
+                   assert(store_val->kind == Bytecode_Value_Kind::ALLOCL);
+                   assert(store_val->type->kind == AST_Type_Kind::STRUCTURE);
+
+                   auto mem_types = store_val->type->structure.member_types;
+                   assert(offset_val < mem_types.count);
+
+                   auto result = interpreter_push_temporary(interp, mem_types[offset_val]);
+                   assert(result);
+
+                   auto byte_offset = 0;
+
+                   for (int64_t i = 0; i < offset_val; i++)
+                   {
+                       byte_offset += (mem_types[i]->bit_size / 8);
+                   }
+                   //@TODO: When we do padding/alignment this byte_offset will need to change
+                   //       accordingly 
+
+                   assert(store_val->value.struct_pointer);
+
+                   char *result_p = (char*)store_val->value.struct_pointer;
+                   result->value.pointer = &result_p[byte_offset];
+                   break;
+               }
             }
         }
     }
@@ -391,6 +433,19 @@ namespace Zodiac
         assert(offset >= 0 && offset < frame->local_count);
 
         return stack_peek_ptr(&interp->temp_stack, offset);
+    }
+
+    Bytecode_Value *interpreter_load_allocl(Interpreter *interp, int32_t allocl_index)
+    {
+        assert(interp);
+
+        auto frame = interpreter_current_frame(interp);
+        auto offset = (frame->alloc_count - 1) - allocl_index;
+        auto allocl = stack_peek_ptr(&interp->allocl_stack, offset);
+        assert(allocl);
+
+        assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
+        return allocl;
     }
 
     Bytecode_Instruction interpreter_fetch_instruction(Interpreter *interp)
