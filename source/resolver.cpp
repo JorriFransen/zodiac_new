@@ -382,8 +382,11 @@ namespace Zodiac
 
             case AST_Node_Kind::IDENTIFIER:
             {
-                auto ident = static_cast<AST_Identifier*>(ast_node);
-                result = try_resolve_identifiers(resolver, ident, scope);
+                assert(false);
+                // Should be handled in place when encountered
+                
+                //auto ident = static_cast<AST_Identifier*>(ast_node);
+                //result = try_resolve_identifiers(resolver, ident, scope);
                 break;
             }
 
@@ -637,12 +640,15 @@ namespace Zodiac
                         auto mem_scope = var_type->structure.member_scope;
                         assert(mem_scope->kind == Scope_Kind::AGGREGATE);
 
-                        auto member_expr = ast_expr->dot.parent_expression;
-                        if (try_resolve_identifiers(resolver, member_expr, mem_scope))
+                        auto child_ident = ast_expr->dot.child_identifier;
+                        if (!child_ident->declaration)
                         {
-                            result = true;
+                            auto child_decl = scope_find_declaration(mem_scope, child_ident);
+                            assert(child_decl);
+                            assert(child_ident->declaration);
                         }
-                        else result = false;
+
+                        result = true;
                     }
                     else result = false;
                 }
@@ -1087,19 +1093,25 @@ namespace Zodiac
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                if (!try_resolve_types(resolver,
-                                       ast_stmt->assignment.identifier_expression, scope))
+                if (try_resolve_types(resolver, ast_stmt->assignment.identifier_expression,
+                                      scope))
                 {
-                    assert(false);
+                    if (try_resolve_types(resolver, ast_stmt->assignment.rhs_expression, scope))
+                    {
+                        result = true;
+                    }
+                    else result = false;
+                }
+                else
+                {
+                    result = false;
                 }
 
-                if (!try_resolve_types(resolver, ast_stmt->assignment.rhs_expression, scope))
-                {
-                    assert(false);
-                }
 
-                result = true;
-                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                if (result)
+                {
+                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                }
                 break;
             }
 
@@ -1154,7 +1166,8 @@ namespace Zodiac
         assert(scope);
 
         assert(ast_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
-        assert(!(ast_expr->flags & AST_NODE_FLAG_TYPED));
+
+        if (ast_expr->flags & AST_NODE_FLAG_TYPED) return true;
         assert(ast_expr->type == nullptr);
 
         bool result = false;
@@ -1182,7 +1195,28 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
-            case AST_Expression_Kind::DOT: assert(false);
+            case AST_Expression_Kind::DOT:
+            {
+                auto parent_expr = ast_expr->dot.parent_expression;
+                bool parent_res = try_resolve_types(resolver, parent_expr, scope);
+                assert(parent_res);
+
+                auto parent_type = parent_expr->type;
+                assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
+
+                auto member_ident = ast_expr->dot.child_identifier;
+                assert(member_ident);
+                assert(member_ident->declaration);
+                auto mem_decl = member_ident->declaration;
+
+                assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
+                assert(mem_decl->type);
+                //assert(mem_decl->type->kind == AST_Type_Kind::STRUCTURE);
+
+                ast_expr->type = mem_decl->type;
+                result = true;
+                break;
+            }
 
             case AST_Expression_Kind::BINARY:
             {
@@ -1503,6 +1537,7 @@ namespace Zodiac
                 assert(ast_type->bit_size > 0);
                 ast_type->flags |= AST_NODE_FLAG_SIZED;
                 result = true;
+                break;
             }
 
             case AST_Type_Kind::FUNCTION:
@@ -1736,7 +1771,13 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->dot.parent_expression,
+                                                         scope); 
+                break;
+            }
 
             case AST_Expression_Kind::BINARY:
             {
