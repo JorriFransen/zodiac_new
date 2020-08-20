@@ -226,6 +226,8 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::LOADP: assert(false);
+
                 case Bytecode_Instruction::LOAD_PARAM:
                 {
                     auto param_index = interpreter_fetch<uint32_t>(interp);

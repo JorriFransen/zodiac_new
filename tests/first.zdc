@@ -8,11 +8,11 @@ Vec2 :: struct
 main :: func () -> s64
 {
     p1 : Vec2;
-    p1.x = 1;
-    //p1.y = 2;
+    p1.x = 33;
+    p1.y = 44;
 
-    //return p1.x + p1.y;
-     return 33;
+    return p1.x + p1.y;
+     //return 33;
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

@@ -364,6 +364,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::LOADP: assert(false);
+
             case Bytecode_Instruction::LOAD_PARAM:
             {
                 auto param_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

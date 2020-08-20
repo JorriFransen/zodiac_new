@@ -17,15 +17,16 @@ namespace Zodiac
         ALLOCL     = 0x04,
         LOAD_IM    = 0x05,
         LOADL      = 0x06,
-        LOAD_PARAM = 0x07,
-        STOREL     = 0x08,
-        STOREP     = 0x09,
+        LOADP      = 0x07,
+        LOAD_PARAM = 0x08,
+        STOREL     = 0x09,
+        STOREP     = 0x0A,
 
-        PUSH_ARG   = 0x0A,
+        PUSH_ARG   = 0x0B,
 
-        ADD        = 0x0B,
+        ADD        = 0x0C,
 
-        OFFSET_PTR = 0x0C,
+        OFFSET_PTR = 0x0D,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -178,7 +179,8 @@ namespace Zodiac
     void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, uint8_t size);
 
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
-    void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
+    Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
+    Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);

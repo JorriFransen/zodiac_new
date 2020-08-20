@@ -224,7 +224,25 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT:
+            {
+                auto lvalue = bytecode_emit_lvalue(builder, expression->dot.parent_expression);
+                assert(lvalue);
+                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+
+                assert(lvalue->type->kind == AST_Type_Kind::STRUCTURE);
+
+                auto index = expression->dot.child_index;
+                assert(index >= 0);
+
+                auto ptr = bytecode_emit_offset_pointer(builder, lvalue, index);
+                auto value = bytecode_emit_loadp(builder, ptr);
+                assert(value);
+                return value;
+
+                break;
+            }
 
             case AST_Expression_Kind::BINARY:
             {
@@ -415,11 +433,8 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::ALLOCL:
             {
-                bytecode_emit_loadl(builder, decl_val);
-                auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
-                                                 decl->type);
+                auto result = bytecode_emit_loadl(builder, decl_val);
                 assert(result);
-                bytecode_push_local_temporary(builder, result);
                 return result;
                 break;
             }
@@ -570,12 +585,34 @@ namespace Zodiac
         bytecode_emit_size_spec(builder, sign, size);
     }
 
-    void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
+    Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
     {
         assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
+        assert(allocl->type);
+        assert(allocl->type->kind == AST_Type_Kind::INTEGER);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
         bytecode_emit_32(builder, allocl->alloc_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         allocl->type);
+        bytecode_push_local_temporary(builder, result);
+
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr)
+    {
+        assert(ptr->kind == Bytecode_Value_Kind::TEMPORARY);
+        assert(ptr->type->kind == AST_Type_Kind::POINTER);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOADP);
+        bytecode_emit_32(builder, ptr->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         ptr->type->pointer.base);
+        bytecode_push_local_temporary(builder, result);
+        return result;
     }
 
     void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param)
@@ -1151,6 +1188,16 @@ namespace Zodiac
                 break; 
             }
 
+            case Bytecode_Instruction::LOADP:
+            {
+                uint32_t val_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOADP %%%" PRIu32,
+                                       bci->local_temp_index, val_idx);
+                bci->local_temp_index += 1;
+                break;
+            }
+
             case Bytecode_Instruction::LOAD_PARAM:
             {
                 uint32_t param_index = bytecode_iterator_fetch_32(bci);
@@ -1176,7 +1223,15 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::STOREP: assert(false);
+            case Bytecode_Instruction::STOREP:
+            {
+                uint32_t dest_idx = bytecode_iterator_fetch_32(bci);
+                uint32_t value_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "STOREP %%%" PRIu32 " %%% " PRIu32,
+                                       dest_idx, value_idx);
+                break;
+            }
 
             case Bytecode_Instruction::PUSH_ARG:
             {
@@ -1202,7 +1257,19 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::OFFSET_PTR: assert(false);
+            case Bytecode_Instruction::OFFSET_PTR:
+            {
+                auto store_idx = bytecode_iterator_fetch_32(bci);
+                auto offset_idx = bytecode_iterator_fetch_32(bci);
+
+                auto func = bci->builder->program.functions[bci->function_index];
+                auto name = func->local_allocs[store_idx].value->name;
+
+                string_builder_appendf(sb, "%%%" PRIu64 "  = OFFSET_PTR %%%s, %" PRIu32,
+                                       bci->local_temp_index, name.data, offset_idx);
+                bci->local_temp_index += 1;
+                break;
+            }
         }
 
         if (newline) string_builder_append(sb, "\n");
