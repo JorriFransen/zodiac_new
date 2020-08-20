@@ -11,6 +11,9 @@ main :: func () -> s64
     p1.x = 33;
     p1.y = 44;
 
+    p2 : Vec2;
+    //p2 = p1;
+
     return p1.x + p1.y;
      //return 33;
 }

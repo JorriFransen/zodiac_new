@@ -82,8 +82,7 @@ namespace Zodiac
             allocl_val.type = func->local_allocs[i].value->type;
             assert(allocl_val.type);
 
-            if (allocl_val.kind == Bytecode_Value_Kind::ALLOCL &&
-                allocl_val.type->kind == AST_Type_Kind::STRUCTURE)
+            if (allocl_val.type->kind == AST_Type_Kind::STRUCTURE)
             {
                 auto bit_size = allocl_val.type->bit_size;
                 assert(bit_size);
@@ -110,7 +109,7 @@ namespace Zodiac
         for (int64_t i = 0; i < func->local_allocs.count; i++)
         {
             auto val = stack_pop(&interp->allocl_stack);
-            if (val.kind == Bytecode_Value_Kind::ALLOCL)
+            if (val.type->kind == AST_Type_Kind::STRUCTURE)
             {
                 free(interp->allocator, val.value.struct_pointer);
             }
@@ -313,7 +312,8 @@ namespace Zodiac
 
                     assert(source_val);
                     assert(dest_allocl);
-                    *dest_allocl = *source_val;
+                    
+                    dest_allocl->value = source_val->value;
                     break;
                 }
 
