@@ -257,6 +257,8 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::STOREP: assert(false);
+
                 case Bytecode_Instruction::PUSH_ARG:
                 {
                     auto temp_index = interpreter_fetch<int32_t>(interp);
@@ -305,6 +307,8 @@ namespace Zodiac
                     }
                     break;
                 }
+
+                case Bytecode_Instruction::OFFSET_PTR: assert(false);
             }
         }
     }

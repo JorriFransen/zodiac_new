@@ -1013,8 +1013,8 @@ namespace Zodiac
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::POLY_IDENTIFIER, begin_fp,
-                                         end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::POLY_IDENTIFIER,
+                                         begin_fp, end_fp);
 
         result->poly_identifier.poly_type_decl = poly_type_decl;
 
@@ -1029,6 +1029,7 @@ namespace Zodiac
 
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
+        result->dot.child_index = -1;
 
         return result;
     }
@@ -1228,6 +1229,13 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type* ast_pointer_type_new(Allocator *allocator, AST_Type *base_type)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::POINTER, Builtin::pointer_size);
+        result->pointer.base = base_type;
+        return result;
+    }
+
     AST_Type* ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
                                     AST_Type *return_type)
     {
@@ -1239,12 +1247,14 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type* ast_structure_type_new(Allocator *allocator, Array<AST_Type*> member_types,
+    AST_Type* ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                     Array<AST_Type*> member_types,
                                      Scope *member_scope)
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::STRUCTURE, 0);
         result->structure.member_types = member_types;
         result->structure.member_scope = member_scope;
+        result->structure.declaration = declaration;
 
         return result;
     }
@@ -1789,6 +1799,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::POINTER: assert(false);
+
             case AST_Type_Kind::VOID:
             {
                 string_builder_append(sb, "void");
@@ -1796,7 +1808,13 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FUNCTION: assert(false);
-            case AST_Type_Kind::STRUCTURE: assert(false);
+
+            case AST_Type_Kind::STRUCTURE: 
+            {
+                auto decl = type->structure.declaration;
+                string_builder_appendf(sb, "struct(%s)", decl->identifier->atom.data);
+                break;
+            }
         }
     }
 

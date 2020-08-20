@@ -368,7 +368,8 @@ namespace Zodiac
             {
                 auto param_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                       &func_context->ip);
-                LLVMValueRef llvm_param_val = LLVMGetParam(func_context->llvm_function, param_index);
+                LLVMValueRef llvm_param_val = LLVMGetParam(func_context->llvm_function,
+                                                           param_index);
                 llvm_push_temporary(builder, llvm_param_val);
                 break;
             }
@@ -386,6 +387,8 @@ namespace Zodiac
                 LLVMBuildStore(builder->llvm_builder, source_val, dest_val);
                 break;
             }
+
+            case Bytecode_Instruction::STOREP: assert(false);
 
             case Bytecode_Instruction::PUSH_ARG:
             {
@@ -432,6 +435,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case Bytecode_Instruction::OFFSET_PTR: assert(false);
         }
     }
 
@@ -521,6 +526,8 @@ namespace Zodiac
                 return LLVMIntType(ast_type->bit_size);
                 break;
             }
+
+            case AST_Type_Kind::POINTER: assert(false);
 
             case AST_Type_Kind::FUNCTION:
             {

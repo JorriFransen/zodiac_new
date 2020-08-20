@@ -20,6 +20,28 @@ namespace Zodiac
         array_init(allocator, &build_data->type_table);
     }
 
+    AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator, Build_Data *build_data,
+                                                     AST_Type *base_type)
+    {
+        assert(build_data);
+
+        for (int64_t i = 0; i < build_data->type_table.count; i++)
+        {
+
+            auto r_type = build_data->type_table[i];
+            if (r_type->kind == AST_Type_Kind::POINTER &&
+                r_type->pointer.base == base_type)
+            {
+                return r_type; 
+            } 
+        }
+
+        AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
+        assert(ptr_type);
+        array_append(&build_data->type_table, ptr_type);
+        return ptr_type;
+    }
+
     AST_Type* build_data_find_function_type(Build_Data *build_data, Array<AST_Type*> param_types,
                                             AST_Type *return_type)
     {
@@ -53,9 +75,5 @@ namespace Zodiac
         }
 
         return nullptr;
-
-        //auto result = ast_function_type_new(allocator, param_types, return_type);
-        //array_append(&build_data->type_table, result);
-        //return result;
     }
 }

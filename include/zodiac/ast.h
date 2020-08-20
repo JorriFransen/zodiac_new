@@ -222,6 +222,7 @@ namespace Zodiac
             {
                 AST_Expression* parent_expression;
                 AST_Identifier* child_identifier;
+                int64_t child_index;
             } dot;
 
             struct
@@ -321,6 +322,7 @@ namespace Zodiac
 
         VOID,
         INTEGER,
+        POINTER,
 
         FUNCTION,
         STRUCTURE,
@@ -345,6 +347,11 @@ namespace Zodiac
 
             struct
             {
+                AST_Type *base;
+            } pointer;
+
+            struct
+            {
                 Array<AST_Type*> param_types;
                 AST_Type* return_type;
             } function;
@@ -353,6 +360,7 @@ namespace Zodiac
             {
                 Array<AST_Type*> member_types;
                 Scope *member_scope;
+                AST_Declaration *declaration;
             } structure;
         };
     };
@@ -494,10 +502,11 @@ namespace Zodiac
 
     AST_Type* ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type* ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
+    AST_Type* ast_pointer_type_new(Allocator *allocator, AST_Type *base_type);
     AST_Type* ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
                                     AST_Type *return_type);
-    AST_Type* ast_structure_type_new(Allocator *allocator, Array<AST_Type*> member_types,
-                                     Scope *member_scope);
+    AST_Type* ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                     Array<AST_Type*> member_types, Scope *member_scope);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);

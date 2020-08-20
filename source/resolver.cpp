@@ -36,7 +36,8 @@ namespace Zodiac
         resolver->first_file_name = string_copy(allocator, file_name, file_name.length - 4);
 
         resolver->build_data = build_data;
-        bytecode_builder_init(allocator, &resolver->bytecode_builder);
+        assert(build_data);
+        bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
         llvm_builder_init(allocator, &resolver->llvm_builder);
 
         queue_init(allocator, &resolver->ident_job_queue);
@@ -223,9 +224,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -464,7 +465,7 @@ namespace Zodiac
             {
                 result = try_resolve_identifiers(resolver, ast_decl->parameter.type_spec, scope);
                 break;
-            };
+            }
 
             case AST_Declaration_Kind::FUNCTION:
             {
@@ -646,6 +647,29 @@ namespace Zodiac
                             auto child_decl = scope_find_declaration(mem_scope, child_ident);
                             assert(child_decl);
                             assert(child_ident->declaration);
+
+                            auto struct_decl = var_type->structure.declaration;
+                            assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                            bool index_found = false;
+                            int64_t index = -1;
+                            for (int64_t i = 0;
+                                 i < struct_decl->structure.member_declarations.count;
+                                 i++)
+                            {
+                                if (child_decl == struct_decl->structure.member_declarations[i]) 
+                                {
+                                    assert(!index_found);
+                                    index_found = true;
+                                    index = i;
+                                    break;
+                                }
+                            }
+
+                            assert(index_found);
+                            assert(index >= 0);
+                            
+                            ast_expr->dot.child_index = index;
                         }
 
                         result = true;
@@ -1026,7 +1050,10 @@ namespace Zodiac
                 
                 if (result)
                 {
-                    ast_decl->type = ast_structure_type_new(resolver->allocator, member_types, 
+                    auto ident = ast_decl->identifier;
+                    assert(ident);
+                    ast_decl->type = ast_structure_type_new(resolver->allocator,
+                                                            ast_decl, member_types, 
                                                             ast_decl->structure.member_scope);
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
@@ -1539,6 +1566,8 @@ namespace Zodiac
                 result = true;
                 break;
             }
+
+            case AST_Type_Kind::POINTER: assert(false);
 
             case AST_Type_Kind::FUNCTION:
             {

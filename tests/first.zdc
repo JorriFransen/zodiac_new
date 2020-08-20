@@ -7,8 +7,8 @@ Vec2 :: struct
 
 main :: func () -> s64
 {
-    //p1 : Vec2;
-    //p1.x = 1;
+    p1 : Vec2;
+    p1.x = 1;
     //p1.y = 2;
 
     //return p1.x + p1.y;

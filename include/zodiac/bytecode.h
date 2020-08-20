@@ -19,10 +19,13 @@ namespace Zodiac
         LOADL      = 0x06,
         LOAD_PARAM = 0x07,
         STOREL     = 0x08,
+        STOREP     = 0x09,
 
-        PUSH_ARG   = 0x09,
+        PUSH_ARG   = 0x0A,
 
-        ADD        = 0x0A,
+        ADD        = 0x0B,
+
+        OFFSET_PTR = 0x0C,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -126,6 +129,7 @@ namespace Zodiac
     struct Bytecode_Builder
     {
         Allocator *allocator = nullptr;
+        Build_Data *build_data = nullptr;
 
         Bytecode_Program program = {};
 
@@ -148,7 +152,7 @@ namespace Zodiac
         int32_t local_alloc_index = -1;
     };
 
-    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder);
+    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder, Build_Data *bd);
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
@@ -176,7 +180,13 @@ namespace Zodiac
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
     void bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
     void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
-    void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest, Bytecode_Value *value);
+    void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value);
+    void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value);
+
+    Bytecode_Value *bytecode_emit_offset_pointer(Bytecode_Builder *builder, Bytecode_Value *lvalue,
+                                                 int64_t index);
 
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr);
     void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type);

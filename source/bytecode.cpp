@@ -8,12 +8,14 @@
 namespace Zodiac
 {
 
-    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder)
+    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder, Build_Data *bd)
     {
         assert(allocator);
         assert(builder);
+        assert(bd);
 
         builder->allocator = allocator;
+        builder->build_data = bd;
 
         array_init(allocator, &builder->program.functions);
         builder->program.entry_function = nullptr;
@@ -150,11 +152,18 @@ namespace Zodiac
                 auto lvalue = bytecode_emit_lvalue(builder,
                                                    statement->assignment.identifier_expression);
                 assert(lvalue);
-                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
-
-                assert(lvalue->type == rhs_value->type);
-
-                bytecode_emit_storel(builder, lvalue, rhs_value);
+                if (lvalue->kind == Bytecode_Value_Kind::ALLOCL)
+                {
+                    assert(lvalue->type == rhs_value->type);
+                    bytecode_emit_storel(builder, lvalue, rhs_value);
+                }
+                else if (lvalue->kind == Bytecode_Value_Kind::TEMPORARY &&
+                         lvalue->type->kind == AST_Type_Kind::POINTER &&
+                         lvalue->type->pointer.base == rhs_value->type)
+                {
+                    bytecode_emit_storep(builder, lvalue, rhs_value);
+                }
+                else assert(false);
 
                 break;
             }
@@ -454,7 +463,22 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT:
+            {
+                auto parent_lvalue = bytecode_emit_lvalue(builder,
+                                                          lvalue_expr->dot.parent_expression);
+                assert(parent_lvalue);
+                assert(parent_lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+
+                assert(lvalue_expr->dot.child_index >= 0);
+
+                auto pointer_val = bytecode_emit_offset_pointer(builder, parent_lvalue,
+                                                                lvalue_expr->dot.child_index);
+                return pointer_val;
+                break;
+            }
+
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
@@ -571,6 +595,46 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::STOREL);
         bytecode_emit_32(builder, dest->alloc_index);
         bytecode_emit_32(builder, value->local_index);
+    }
+
+    void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value)
+    {
+        assert(dest->kind == Bytecode_Value_Kind::TEMPORARY);
+        assert(dest->type->kind == AST_Type_Kind::POINTER);
+        assert(value->kind == Bytecode_Value_Kind::TEMPORARY);
+        assert(value->type == dest->type->pointer.base);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::STOREP);
+        bytecode_emit_32(builder, dest->local_index);
+        bytecode_emit_32(builder, value->local_index);
+
+    }
+
+    Bytecode_Value *bytecode_emit_offset_pointer(Bytecode_Builder *builder,
+                                                 Bytecode_Value *lvalue, int64_t index)
+    {
+        assert(builder);
+        assert(lvalue);
+        assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+        assert(index >= 0);
+
+        auto lval_type = lvalue->type;
+        assert(lval_type->kind == AST_Type_Kind::STRUCTURE);
+
+        assert(lval_type->structure.member_types.count > index);
+        auto mem_type = lval_type->structure.member_types[index];
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::OFFSET_PTR);
+        bytecode_emit_32(builder, lvalue->alloc_index);
+        bytecode_emit_32(builder, index);
+
+        auto mem_ptr_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                   builder->build_data,
+                                                                   mem_type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, mem_ptr_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
     }
 
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr)
@@ -1112,6 +1176,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::STOREP: assert(false);
+
             case Bytecode_Instruction::PUSH_ARG:
             {
                 uint32_t val_index = bytecode_iterator_fetch_32(bci);
@@ -1135,6 +1201,8 @@ namespace Zodiac
                 bci->local_temp_index += 1;
                 break;
             }
+
+            case Bytecode_Instruction::OFFSET_PTR: assert(false);
         }
 
         if (newline) string_builder_append(sb, "\n");
