@@ -5,7 +5,6 @@
 #include "builtin.h"
 
 #include <stdio.h>
-#include <cassert>
 #include <cstdarg>
 #include <inttypes.h>
 

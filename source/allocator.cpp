@@ -1,6 +1,6 @@
 #include "allocator.h"
 
-#include <cassert>
+#include "common.h"
 
 namespace Zodiac
 {

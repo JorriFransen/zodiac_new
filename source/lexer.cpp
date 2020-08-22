@@ -5,7 +5,6 @@
 #include "temp_allocator.h"
 #include "zodiac_string.h"
 
-#include <cassert>
 #include <stdio.h>
 #include <inttypes.h>
 

@@ -42,7 +42,7 @@ namespace Zodiac
         assert(allocator);
 
         if (parent_scope) assert(anode->kind != AST_Node_Kind::MODULE ||
-                                 parent_scope->kind == Scope_Kind::GLOBAL);
+                                 parent_scope->kind == Scope_Kind::GLOBAL); 
         else assert(anode->kind == AST_Node_Kind::MODULE);
 
         switch (anode->kind)

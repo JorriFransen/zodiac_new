@@ -1,8 +1,9 @@
 
 #include "c_allocator.h"
 
+#include "common.h"
+
 #include <cstdlib>
-#include <cassert>
 
 namespace Zodiac
 {

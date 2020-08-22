@@ -9,7 +9,6 @@
 #include "interpreter.h"
 
 #include <stdio.h>
-#include <cassert>
 
 using namespace Zodiac;
 

@@ -7,7 +7,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm-c/TargetMachine.h>
 
-#include <cassert>
 #include <stdio.h>
 
 namespace Zodiac

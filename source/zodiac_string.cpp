@@ -1,7 +1,6 @@
 
 #include "zodiac_string.h"
 
-#include <cassert>
 #include <string.h>
 
 namespace Zodiac

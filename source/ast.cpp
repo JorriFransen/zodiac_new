@@ -6,7 +6,6 @@
 #include "string_builder.h"
 #include "scope.h"
 
-#include <cassert>
 #include <inttypes.h>
 
 namespace Zodiac

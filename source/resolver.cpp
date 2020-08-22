@@ -6,7 +6,6 @@
 #include "os.h"
 #include "temp_allocator.h"
 
-#include <cassert>
 #include <stdio.h>
 #include <stdarg.h>
 

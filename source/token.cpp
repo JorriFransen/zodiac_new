@@ -1,6 +1,5 @@
 #include "token.h"
 
-#include <cassert>
 #include <stdio.h>
 
 namespace Zodiac

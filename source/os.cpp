@@ -6,8 +6,6 @@
 #include "os_windows.h"
 #endif
 
-#include <cassert>
-
 namespace Zodiac
 {
 

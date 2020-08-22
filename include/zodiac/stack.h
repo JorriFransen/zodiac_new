@@ -2,7 +2,8 @@
 
 #include "allocator.h"
 
-#include <cassert>
+#include "common.h"
+
 #include <inttypes.h>
 
 namespace Zodiac

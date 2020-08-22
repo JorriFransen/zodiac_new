@@ -3,7 +3,6 @@
 #include "zodiac_string.h"
 #include "common.h"
 
-#include <cassert>
 #include <stdio.h>
 
 namespace Zodiac

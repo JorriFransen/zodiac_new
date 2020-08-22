@@ -7,7 +7,6 @@
 #include "sys/stat.h"
 
 #include <stdio.h>
-#include <cassert>
 #include <cstring>
 #include <unistd.h>
 #include <limits.h>
@@ -118,6 +117,8 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
     assert(command.length);
     assert(args.length); 
     assert(false);
+
+    return {};
 }
 }
 #endif // #ifdef linux
