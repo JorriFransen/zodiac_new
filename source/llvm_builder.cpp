@@ -474,13 +474,17 @@ namespace Zodiac
                 LLVMValueRef llvm_offset_val = LLVMConstInt(llvm_idx_type, offset_val, true);
                 LLVMValueRef indices[] = { zero_val, llvm_offset_val };
 
-                //store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
 
                 printf("%s\n", LLVMPrintTypeToString(LLVMTypeOf(store_val)));
                 printf("%s\n", LLVMPrintValueToString(store_val));
+                printf("%s\n", LLVMPrintTypeToString(LLVMTypeOf(llvm_offset_val)));
+                printf("%s\n", LLVMPrintValueToString(llvm_offset_val));
 
                 LLVMValueRef result = LLVMBuildGEP(builder->llvm_builder, store_val,
                                                    indices, 2, "");
+
+                printf("%s\n", LLVMPrintTypeToString(LLVMTypeOf(result)));
+                printf("%s\n", LLVMPrintValueToString(result));
 
                 llvm_push_temporary(builder, result);
                 break;
