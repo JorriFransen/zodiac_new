@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 
+
 namespace Zodiac
 { 
     void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder)
@@ -363,7 +364,16 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOADP: assert(false);
+            case Bytecode_Instruction::LOADP: 
+            {
+                auto ptr_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef ptr_val = builder->temps[ptr_idx];
+                LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder, ptr_val, "");
+                llvm_push_temporary(builder, result);
+                break; 
+            }
 
             case Bytecode_Instruction::LOAD_PARAM:
             {
@@ -389,7 +399,19 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::STOREP: assert(false);
+            case Bytecode_Instruction::STOREP: 
+            {
+                auto ptr_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef ptr_val = builder->temps[ptr_idx];
+                LLVMValueRef val = builder->temps[val_idx];
+
+                LLVMBuildStore(builder->llvm_builder, ptr_val, val);
+                break;
+            }
 
             case Bytecode_Instruction::PUSH_ARG:
             {
@@ -427,8 +449,8 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::U64: assert(false);
                     case Bytecode_Size_Specifier::S64:
                     {
-                        LLVMValueRef result = LLVMBuildAdd(builder->llvm_builder, lhs_val, rhs_val,
-                                                           "");
+                        LLVMValueRef result = LLVMBuildAdd(builder->llvm_builder,
+                                                           lhs_val, rhs_val, "");
                         llvm_push_temporary(builder, result);
                         break;
                     }
@@ -437,7 +459,32 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::OFFSET_PTR: assert(false);
+            case Bytecode_Instruction::OFFSET_PTR:
+            {
+                auto store_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
+                auto offset_val = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+
+                auto store_val = builder->allocas[store_idx];
+
+                LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
+
+                LLVMValueRef zero_val = LLVMConstNull(llvm_idx_type);
+                LLVMValueRef llvm_offset_val = LLVMConstInt(llvm_idx_type, offset_val, true);
+                LLVMValueRef indices[] = { zero_val, llvm_offset_val };
+
+                //store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
+
+                printf("%s\n", LLVMPrintTypeToString(LLVMTypeOf(store_val)));
+                printf("%s\n", LLVMPrintValueToString(store_val));
+
+                LLVMValueRef result = LLVMBuildGEP(builder->llvm_builder, store_val,
+                                                   indices, 2, "");
+
+                llvm_push_temporary(builder, result);
+                break;
+            }
         }
     }
 
@@ -560,7 +607,34 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::STRUCTURE:
+            {
+                auto name = ast_type->structure.declaration->identifier->atom;
+                LLVMTypeRef result = LLVMGetTypeByName(builder->llvm_module, name.data);
+                if (result)
+                {
+                    assert(LLVMGetTypeKind(result) == LLVMStructTypeKind);
+                }
+                else
+                {
+                    result = LLVMStructCreateNamed(LLVMGetGlobalContext(), name.data);
+
+                    auto ast_mem_types = ast_type->structure.member_types;
+                    assert(ast_mem_types.count);
+
+                    Array<LLVMTypeRef> mem_types = {};
+                    array_init(builder->allocator, &mem_types, ast_mem_types.count);
+                    for (int64_t i = 0; i < ast_mem_types.count; i++)
+                    {
+                        array_append(&mem_types, llvm_type_from_ast(builder, ast_mem_types[i]));
+                    }
+
+                    LLVMStructSetBody(result, mem_types.data, mem_types.count, false);
+                }
+
+                return result;
+                break;
+            }
         }
 
         assert(false);

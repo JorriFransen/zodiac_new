@@ -2,6 +2,8 @@
 #include "interpreter.h"
 #include "builtin.h"
 
+#include "common.h"
+
 namespace Zodiac
 {
     void interpreter_init(Allocator *allocator, Interpreter *interp)
