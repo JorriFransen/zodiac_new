@@ -409,7 +409,7 @@ namespace Zodiac
                 LLVMValueRef ptr_val = builder->temps[ptr_idx];
                 LLVMValueRef val = builder->temps[val_idx];
 
-                LLVMBuildStore(builder->llvm_builder, ptr_val, val);
+                LLVMBuildStore(builder->llvm_builder, val, ptr_val);
                 break;
             }
 
