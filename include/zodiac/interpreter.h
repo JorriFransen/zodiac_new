@@ -11,6 +11,7 @@ namespace Zodiac
         int64_t instruction_index = -1;
         int64_t block_index = -1;
         bool returned = false;
+        int64_t pushed_local_count = 0;
         int64_t local_count = 0;
         int64_t alloc_count = 0;
         Bytecode_Function *func = nullptr;

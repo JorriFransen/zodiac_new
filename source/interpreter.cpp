@@ -98,6 +98,29 @@ namespace Zodiac
             stack_push(&interp->allocl_stack, allocl_val);
         }
 
+        for (int64_t i = 0; i < func->local_temps.count; i++)
+        {
+            Bytecode_Value temp_val = {};
+            temp_val.kind = Bytecode_Value_Kind::TEMPORARY;
+            temp_val.type = func->local_temps[i]->type;
+            assert(temp_val.type);
+
+            if (temp_val.type->kind == AST_Type_Kind::STRUCTURE)
+            {
+                auto bit_size = temp_val.type->bit_size;
+                assert(bit_size);
+                auto size = bit_size / 8;
+                assert(size);
+
+                //@TODO: Custom allocator for this
+                temp_val.value.struct_pointer = alloc(interp->allocator, size);
+            }
+
+            stack_push(&interp->temp_stack, temp_val);
+        }
+        frame_p->pushed_local_count = 0;
+        frame_p->local_count = func->local_temps.count;
+
         Bytecode_Block *current_block = interpreter_current_block(interp, frame_p);
         while (!frame_p->returned && interp->running && current_block)
         {
@@ -113,6 +136,17 @@ namespace Zodiac
             auto val = stack_pop(&interp->allocl_stack);
             if (val.type->kind == AST_Type_Kind::STRUCTURE)
             {
+                assert(val.kind == Bytecode_Value_Kind::ALLOCL);
+                free(interp->allocator, val.value.struct_pointer);
+            }
+        }
+
+        for (int64_t i = 0; i < func->local_temps.count; i++)
+        {
+            auto val = stack_pop(&interp->temp_stack);
+            if (val.type->kind == AST_Type_Kind::STRUCTURE)
+            {
+                assert(val.kind == Bytecode_Value_Kind::TEMPORARY);
                 free(interp->allocator, val.value.struct_pointer);
             }
         }
@@ -178,7 +212,8 @@ namespace Zodiac
                         Bytecode_Value *return_value =
                             interpreter_push_temporary(interp, return_frame.return_value.type);
 
-                        *return_value = return_frame.return_value;
+                        assert(return_value->type->kind == AST_Type_Kind::INTEGER);
+                        return_value->value = return_frame.return_value.value;
 
                     }
                     break;
@@ -191,7 +226,8 @@ namespace Zodiac
                     auto ret_val = interpreter_load_temporary(interp, temp_index);
                     assert(ret_val);
 
-                    frame->return_value = *ret_val;
+                    assert (ret_val->type->kind == AST_Type_Kind::INTEGER);
+                    frame->return_value.value = ret_val->value;
 
                     frame->returned = true;
                     break;
@@ -237,10 +273,34 @@ namespace Zodiac
 
                     auto source_allocl = interpreter_load_allocl(interp, allocl_index);
                     assert(source_allocl);
-                    assert(source_allocl->type->kind == AST_Type_Kind::INTEGER);
+                    assert(source_allocl->type->kind == AST_Type_Kind::INTEGER ||
+                           source_allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
                     auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
-                    *dest_val = *source_allocl;
+
+                    switch (source_allocl->type->kind)
+                    {
+                        case AST_Type_Kind::INTEGER:
+                        {
+                            dest_val->value = source_allocl->value;
+                            break;
+                        }
+
+                        case AST_Type_Kind::STRUCTURE:
+                        {
+                            assert(dest_val->type->kind == AST_Type_Kind::STRUCTURE);
+                            assert(dest_val->value.struct_pointer);
+
+                            auto size = dest_val->type->bit_size / 8;
+                            memcpy(dest_val->value.struct_pointer,
+                                    source_allocl->value.struct_pointer,
+                                    size);
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
+
                     break;
                 }
 
@@ -300,7 +360,9 @@ namespace Zodiac
                     assert(param.type);
 
                     auto result_value = interpreter_push_temporary(interp, param.type);
-                    *result_value = param;
+
+                    assert(param.type->kind == AST_Type_Kind::INTEGER);
+                    result_value->value = param.value;
                     break;
                 }
 
@@ -315,7 +377,27 @@ namespace Zodiac
                     assert(source_val);
                     assert(dest_allocl);
                     
-                    dest_allocl->value = source_val->value;
+                    assert(source_val->type == dest_allocl->type);
+
+                    switch (source_val->type->kind)
+                    {
+                        case AST_Type_Kind::INTEGER:
+                        {
+                            dest_allocl->value = source_val->value;
+                            break;
+                        }
+
+                        case AST_Type_Kind::STRUCTURE:
+                        {
+                            auto size = dest_allocl->type->bit_size / 8;
+                            memcpy(dest_allocl->value.struct_pointer,
+                                   source_val->value.struct_pointer,
+                                   size);
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
                     break;
                 }
 
@@ -386,13 +468,10 @@ namespace Zodiac
                     auto rhs_index = interpreter_fetch<uint32_t>(interp);
 
                     auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
 
 
                     auto result_val = interpreter_push_temporary(interp, lhs_val->type);
-
-                    // Reload, since the push before might have invalidated the pointer.
-                    lhs_val = interpreter_load_temporary(interp, lhs_index); 
-                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
 
                     assert(lhs_val->type == rhs_val->type);
                     
@@ -464,6 +543,7 @@ namespace Zodiac
 
         result.instruction_index = 0;
         result.block_index = 0;
+        result.pushed_local_count = 0;
         result.local_count = 0;
         result.alloc_count = func->local_allocs.count;
         result.returned = false;
@@ -510,15 +590,18 @@ namespace Zodiac
     {
         assert(type);
 
-        Bytecode_Value value = {};
-        value.kind = Bytecode_Value_Kind::TEMPORARY;
-        value.type = type;
+        //Bytecode_Value value = {};
+        //value.kind = Bytecode_Value_Kind::TEMPORARY;
+        //value.type = type;
         
-        stack_push(&interp->temp_stack, value);
-        auto frame = interpreter_current_frame(interp);
-        frame->local_count += 1;
+        //stack_push(&interp->temp_stack, value);
 
-        return stack_top_ptr(&interp->temp_stack);
+        auto frame = interpreter_current_frame(interp);
+        auto local_index = frame->pushed_local_count;
+        frame->pushed_local_count += 1;
+        auto result = interpreter_load_temporary(interp, local_index);
+        assert(result->type == type);
+        return result;
     }
 
     Bytecode_Value *interpreter_load_temporary(Interpreter *interp, int32_t local_index)

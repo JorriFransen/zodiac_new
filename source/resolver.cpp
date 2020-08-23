@@ -702,16 +702,16 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY:
             {
+
+                result = true;
                 if (!try_resolve_identifiers(resolver, ast_expr->binary.lhs, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
                 if (!try_resolve_identifiers(resolver, ast_expr->binary.rhs, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
-
-                result = true;
                 break;
             }
 

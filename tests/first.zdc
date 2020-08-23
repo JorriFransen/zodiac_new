@@ -15,8 +15,10 @@ main :: func () -> s64
     p2.x = p1.y;
     p2.y = p1.x;
 
-    return p2.x + p2.y;
-     //return 33;
+    p3 : Vec2;
+    p3 = p2;
+
+    return p3.x + p3.y;
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

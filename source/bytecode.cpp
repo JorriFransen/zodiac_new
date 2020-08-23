@@ -589,7 +589,8 @@ namespace Zodiac
     {
         assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
         assert(allocl->type);
-        assert(allocl->type->kind == AST_Type_Kind::INTEGER);
+        assert(allocl->type->kind == AST_Type_Kind::INTEGER ||
+               allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
         bytecode_emit_32(builder, allocl->alloc_index);
@@ -828,7 +829,7 @@ namespace Zodiac
         assert(builder->current_function);
         auto func = builder->current_function;
 
-        for (int64_t i = 0; i < func->local_temps.count; i++)
+        for (int64_t i = 0; i < func->local_allocs.count; i++)
         {
             if (func->local_allocs[i].ast_decl == decl)
             {
