@@ -309,7 +309,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::RETURN:
+            case Bytecode_Instruction::RET:
             {
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
@@ -317,6 +317,8 @@ namespace Zodiac
                 LLVMBuildRet(builder->llvm_builder, ret_val);
                 break;
             }
+
+            case Bytecode_Instruction::RET_VOID: assert(false);
 
             case Bytecode_Instruction::ALLOCL:
             {
@@ -555,6 +557,10 @@ namespace Zodiac
         assert(builder);
         assert(ast_type);
 
+        assert(ast_type->flags & AST_NODE_FLAG_RESOLVED_ID);
+        assert(ast_type->flags & AST_NODE_FLAG_TYPED);
+        assert(ast_type->flags & AST_NODE_FLAG_SIZED);
+
         switch (ast_type->kind)
         {
             case AST_Type_Kind::INVALID: assert(false);
@@ -571,7 +577,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::POINTER:
+            {
+                LLVMTypeRef base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
+                return LLVMPointerType(base_type, 0);
+                break;
+            }
 
             case AST_Type_Kind::FUNCTION:
             {

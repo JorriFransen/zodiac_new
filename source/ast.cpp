@@ -1233,6 +1233,10 @@ namespace Zodiac
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::POINTER, Builtin::pointer_size);
         result->pointer.base = base_type;
+        result->bit_size = Builtin::pointer_size;
+        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        result->flags |= AST_NODE_FLAG_TYPED;
+        result->flags |= AST_NODE_FLAG_SIZED;
         return result;
     }
 
@@ -1265,6 +1269,7 @@ namespace Zodiac
 
         auto result = ast_pointer_type_new(allocator, base_type);
         base_type->pointer_to = result;
+
         return result;
     }
 

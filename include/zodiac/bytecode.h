@@ -13,20 +13,21 @@ namespace Zodiac
 
         EXIT       = 0x01,
         CALL       = 0x02,
-        RETURN     = 0x03,
-        ALLOCL     = 0x04,
-        LOAD_IM    = 0x05,
-        LOADL      = 0x06,
-        LOADP      = 0x07,
-        LOAD_PARAM = 0x08,
-        STOREL     = 0x09,
-        STOREP     = 0x0A,
+        RET        = 0x03,
+        RET_VOID   = 0x04,
+        ALLOCL     = 0x05,
+        LOAD_IM    = 0x06,
+        LOADL      = 0x07,
+        LOADP      = 0x08,
+        LOAD_PARAM = 0x09,
+        STOREL     = 0x0A,
+        STOREP     = 0x0B,
 
-        PUSH_ARG   = 0x0B,
+        PUSH_ARG   = 0x0C,
 
-        ADD        = 0x0C,
+        ADD        = 0x0D,
 
-        OFFSET_PTR = 0x0D,
+        OFFSET_PTR = 0x0E,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -46,6 +47,14 @@ namespace Zodiac
         U64       = 0x40, // 01000000
         S64       = 0xC0, // 11000000
 
+    };
+
+    enum class Bytecode_Value_Type_Specifier : uint8_t 
+    {
+        INVALID    = 0x00,
+        ALLOCL     = 0x01,
+        PARAMETER  = 0x02,
+        
     };
 
     enum class Bytecode_Value_Kind : uint32_t

@@ -66,6 +66,8 @@ AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, 
     assert(result);
 
     if (kind != Builtin_Type_Kind::VOID) assert(result->bit_size);
+    result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+    result->flags |= AST_NODE_FLAG_TYPED;
     result->flags |= AST_NODE_FLAG_SIZED;
 
     return result;

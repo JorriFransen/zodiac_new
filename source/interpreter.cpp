@@ -68,8 +68,10 @@ namespace Zodiac
 
         for (int64_t i = 0; i < arg_count; i++)
         {
-            array_append(&frame_p->parameters,
-                         stack_peek(&interp->arg_stack, (arg_count - 1) - i));
+            auto arg_copy = stack_peek(&interp->arg_stack, (arg_count - 1) - i);
+            assert(arg_copy.kind == Bytecode_Value_Kind::TEMPORARY);
+            arg_copy.kind = Bytecode_Value_Kind::PARAMETER;
+            array_append(&frame_p->parameters, arg_copy);
         }
 
         for (int64_t i = 0; i < arg_count; i++)
@@ -207,19 +209,21 @@ namespace Zodiac
 
                     if (interp->running)
                     {
-                        assert(return_frame.return_value.type);
+                        if (func->ast_decl->type->function.return_type != Builtin::type_void)
+                        {
+                            assert(return_frame.return_value.type);
 
-                        Bytecode_Value *return_value =
-                            interpreter_push_temporary(interp, return_frame.return_value.type);
+                            Bytecode_Value *return_value =
+                                interpreter_push_temporary(interp, return_frame.return_value.type);
 
-                        assert(return_value->type->kind == AST_Type_Kind::INTEGER);
-                        return_value->value = return_frame.return_value.value;
-
+                            assert(return_value->type->kind == AST_Type_Kind::INTEGER);
+                            return_value->value = return_frame.return_value.value;
+                        }
                     }
                     break;
                 }
 
-                case Bytecode_Instruction::RETURN:
+                case Bytecode_Instruction::RET:
                 {
                     uint32_t temp_index = interpreter_fetch<uint32_t>(interp);
 
@@ -228,9 +232,16 @@ namespace Zodiac
 
                     assert (ret_val->type->kind == AST_Type_Kind::INTEGER);
                     frame->return_value.value = ret_val->value;
+                    frame->return_value.type = ret_val->type;
 
                     frame->returned = true;
                     break;
+                }
+
+                case Bytecode_Instruction::RET_VOID:
+                {
+                    frame->returned = true;
+                    break; 
                 }
 
                 case Bytecode_Instruction::ALLOCL:
@@ -500,11 +511,34 @@ namespace Zodiac
 
                case Bytecode_Instruction::OFFSET_PTR:
                {
+                   auto store_kind = interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
                    auto store_idx = interpreter_fetch<uint32_t>(interp);
                    auto offset_val = interpreter_fetch<uint32_t>(interp);
 
-                   auto store_val = interpreter_load_allocl(interp, store_idx);
-                   assert(store_val->kind == Bytecode_Value_Kind::ALLOCL);
+                   //assert(store_kind == Bytecode_Value_Type_Specifier::ALLOCL ||
+                          //store_kind == Bytecode_Value_Type_Specifier::PARAMETER);
+
+                   Bytecode_Value *store_val = nullptr;
+                   switch (store_kind)
+                   {
+                       case Bytecode_Value_Type_Specifier::INVALID: assert(false);
+
+                       case Bytecode_Value_Type_Specifier::ALLOCL:
+                       {
+                           store_val = interpreter_load_allocl(interp, store_idx);
+                           break;
+                       }
+
+                       case Bytecode_Value_Type_Specifier::PARAMETER:
+                       {
+                           store_val = &frame->parameters[store_idx];
+                           break;
+                       }
+                   }
+                   assert(store_val);
+
+                   assert(store_val->kind == Bytecode_Value_Kind::ALLOCL ||
+                          store_val->kind == Bytecode_Value_Kind::PARAMETER);
                    assert(store_val->type->kind == AST_Type_Kind::STRUCTURE);
 
                    auto mem_types = store_val->type->structure.member_types;

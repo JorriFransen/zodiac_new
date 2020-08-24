@@ -200,12 +200,12 @@ namespace Zodiac
     {
         if (ret_val)
         {
-            bytecode_emit_instruction(builder, Bytecode_Instruction::RETURN);
+            bytecode_emit_instruction(builder, Bytecode_Instruction::RET);
             bytecode_emit_32(builder, ret_val->local_index);
         } 
         else
         {
-            assert(false);
+            bytecode_emit_instruction(builder, Bytecode_Instruction::RET_VOID);
         }
     }
 
@@ -229,7 +229,8 @@ namespace Zodiac
             {
                 auto lvalue = bytecode_emit_lvalue(builder, expression->dot.parent_expression);
                 assert(lvalue);
-                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL ||
+                       lvalue->kind == Bytecode_Value_Kind::PARAMETER);
 
                 assert(lvalue->type->kind == AST_Type_Kind::STRUCTURE);
 
@@ -468,12 +469,29 @@ namespace Zodiac
                 auto ident = lvalue_expr->identifier;
                 assert(ident->declaration);
                 auto idecl = ident->declaration;
-                assert(idecl->kind == AST_Declaration_Kind::VARIABLE);
 
-                auto result = bytecode_find_value_for_variable(builder, idecl);
-                assert(result);
-                assert(result->kind == Bytecode_Value_Kind::ALLOCL);
-                return result;
+                switch (idecl->kind)
+                {
+                    case AST_Declaration_Kind::VARIABLE:
+                    {
+                        auto result = bytecode_find_value_for_variable(builder, idecl);
+                        assert(result);
+                        assert(result->kind == Bytecode_Value_Kind::ALLOCL);
+                        return result;
+                        break;
+                    }
+
+                    case AST_Declaration_Kind::PARAMETER:
+                    {
+                        auto result = bytecode_find_value_for_parameter(builder, idecl);
+                        assert(result);
+                        assert(result->kind == Bytecode_Value_Kind::PARAMETER);
+                        return result;
+                        break;
+                    }
+
+                    default: assert(false);
+                }
                 break;
             }
 
@@ -654,7 +672,8 @@ namespace Zodiac
     {
         assert(builder);
         assert(lvalue);
-        assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+        assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL ||
+               lvalue->kind == Bytecode_Value_Kind::PARAMETER);
         assert(index >= 0);
 
         auto lval_type = lvalue->type;
@@ -664,7 +683,24 @@ namespace Zodiac
         auto mem_type = lval_type->structure.member_types[index];
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::OFFSET_PTR);
-        bytecode_emit_32(builder, lvalue->alloc_index);
+        switch (lvalue->kind)
+        {
+            default: assert(false);
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                bytecode_emit_byte(builder, (uint8_t)Bytecode_Value_Type_Specifier::ALLOCL);
+                bytecode_emit_32(builder, lvalue->alloc_index);
+                break;
+            }
+
+            case Bytecode_Value_Kind::PARAMETER:
+            {
+                bytecode_emit_byte(builder, (uint8_t)Bytecode_Value_Type_Specifier::PARAMETER);
+                bytecode_emit_32(builder, lvalue->param_index);
+                break;
+            }
+        }
         bytecode_emit_32(builder, index);
 
         auto mem_ptr_type = build_data_find_or_create_pointer_type(builder->allocator,
@@ -1147,10 +1183,16 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::RETURN:
+            case Bytecode_Instruction::RET:
             {
                 uint32_t temp_index = bytecode_iterator_fetch_32(bci);
                 string_builder_appendf(sb, "RETURN %%%" PRIu32, temp_index);
+                break;
+            }
+
+            case Bytecode_Instruction::RET_VOID:
+            {
+                string_builder_append(sb, "RETURN void");
                 break;
             }
 
@@ -1260,15 +1302,36 @@ namespace Zodiac
 
             case Bytecode_Instruction::OFFSET_PTR:
             {
+                auto kind = (Bytecode_Value_Type_Specifier)bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+
                 auto store_idx = bytecode_iterator_fetch_32(bci);
                 auto offset = bytecode_iterator_fetch_32(bci);
 
                 auto func = bci->builder->program.functions[bci->function_index];
-                auto name = func->local_allocs[store_idx].value->name;
 
-                string_builder_appendf(sb, "%%%" PRIu64 "  = OFFSET_PTR %%%s, %" PRIu32,
-                                       bci->local_temp_index, name.data, offset);
-                bci->local_temp_index += 1;
+                string_builder_appendf(sb, "%%%" PRIu64 " = OFFSET_PTR ",
+                                       bci->local_temp_index++);
+
+                switch (kind)
+                {
+                    case Bytecode_Value_Type_Specifier::INVALID: assert(false);
+
+                    case Bytecode_Value_Type_Specifier::ALLOCL: 
+                    {
+                        auto name = func->local_allocs[store_idx].value->name;
+                        string_builder_appendf(sb, "%%%s", name.data);
+                        break;
+                    }
+
+                    case Bytecode_Value_Type_Specifier::PARAMETER:
+                    {
+                        auto name = func->parameters[store_idx].value->name;
+                        string_builder_appendf(sb, "%%%s", name.data);
+                    }
+                }
+
+                string_builder_appendf(sb, ", %" PRIu32, offset);
                 break;
             }
         }
