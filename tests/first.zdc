@@ -14,6 +14,7 @@ Vec2 :: struct
 
 add_vec2 :: func (v: Vec2) -> s64
 {
+
     return v.x + v.y;
 }
 
@@ -23,7 +24,9 @@ main :: func () -> s64
     p1.x = 33;
     p1.y = 44;
 
-    return add_vec2(p1);
+    result := add_vec2(p1);
+
+    return result;
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

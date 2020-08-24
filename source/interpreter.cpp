@@ -71,6 +71,18 @@ namespace Zodiac
             auto arg_copy = stack_peek(&interp->arg_stack, (arg_count - 1) - i);
             assert(arg_copy.kind == Bytecode_Value_Kind::TEMPORARY);
             arg_copy.kind = Bytecode_Value_Kind::PARAMETER;
+
+            if (arg_copy.type->kind == AST_Type_Kind::STRUCTURE)
+            {
+                auto bit_size = arg_copy.type->bit_size;
+                assert(bit_size);
+                auto size = bit_size / 8;
+                assert(size);
+                auto new_mem = alloc(interp->allocator, size);
+                memcpy(new_mem, arg_copy.value.struct_pointer, size);
+                arg_copy.value.struct_pointer = new_mem;
+            }
+
             array_append(&frame_p->parameters, arg_copy);
         }
 
@@ -131,6 +143,15 @@ namespace Zodiac
             auto next_block = interpreter_current_block(interp, frame_p);
             if (next_block == current_block) break;
             current_block = next_block;
+        }
+
+        for (int64_t i = 0; i < frame_p->parameters.count; i++)
+        {
+            auto &param = frame_p->parameters[i];
+            if (param.type->kind == AST_Type_Kind::STRUCTURE)
+            {
+                free(interp->allocator, param.value.struct_pointer);
+            }
         }
 
         for (int64_t i = 0; i < func->local_allocs.count; i++)

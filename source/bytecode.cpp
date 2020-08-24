@@ -502,7 +502,8 @@ namespace Zodiac
                 auto parent_lvalue = bytecode_emit_lvalue(builder,
                                                           lvalue_expr->dot.parent_expression);
                 assert(parent_lvalue);
-                assert(parent_lvalue->kind == Bytecode_Value_Kind::ALLOCL);
+                assert(parent_lvalue->kind == Bytecode_Value_Kind::ALLOCL ||
+                       parent_lvalue->kind == Bytecode_Value_Kind::PARAMETER);
 
                 assert(lvalue_expr->dot.child_index >= 0);
 
