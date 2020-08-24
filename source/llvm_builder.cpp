@@ -24,6 +24,7 @@ namespace Zodiac
         array_init(allocator, &llvm_builder->functions);
         array_init(allocator, &llvm_builder->temps);
         array_init(allocator, &llvm_builder->allocas);
+        array_init(allocator, &llvm_builder->params);
 
         stack_init(allocator, &llvm_builder->arg_stack);
 
@@ -184,6 +185,7 @@ namespace Zodiac
 
         builder->temps.count = 0;
         builder->allocas.count = 0;
+        builder->params.count = 0;
 
         LLVMTypeRef llvm_func_type = llvm_type_from_ast(builder, func_decl->type);
 
@@ -207,6 +209,23 @@ namespace Zodiac
 
             LLVMPositionBuilderAtEnd(builder->llvm_builder, LLVMGetFirstBasicBlock(llvm_func_val));
 
+            for (int64_t i = 0; i < bc_func->parameters.count; i++)
+            {
+                LLVMTypeRef param_type = llvm_type_from_ast(builder,
+                                                            bc_func->parameters[i].value->type);
+                auto name = bc_func->parameters[i].value->name;
+                LLVMValueRef param_alloca = LLVMBuildAlloca(builder->llvm_builder, param_type,
+                                                            name.data);
+                array_append(&builder->params, param_alloca);
+            }
+
+            for (int64_t i = 0; i < bc_func->parameters.count; i++)
+            {
+                LLVMValueRef param_val = LLVMGetParam(llvm_func_val, i);
+                LLVMValueRef param_alloca = builder->params[i];
+                LLVMBuildStore(builder->llvm_builder, param_val, param_alloca);
+            }
+
             for (int64_t i = 0; i < bc_func->local_allocs.count; i++)
             {
                 auto decl = bc_func->local_allocs[i].ast_decl;
@@ -227,6 +246,9 @@ namespace Zodiac
                 llvm_block = LLVMGetNextBasicBlock(llvm_block);
             }
         }
+
+        //printf("Emitted function: %s\n", bc_func->ast_decl->identifier->atom.data);
+        //printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
     }
 
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context)
@@ -295,7 +317,12 @@ namespace Zodiac
                 LLVMValueRef func_val = func.llvm_func;
                 LLVMValueRef ret_val = LLVMBuildCall(builder->llvm_builder, func_val,
                                                      args.data, args.count, "");
-                llvm_push_temporary(builder, ret_val);
+
+
+                if (!(func.bc_func->ast_decl->type->function.return_type == Builtin::type_void))
+                {
+                    llvm_push_temporary(builder, ret_val);
+                }
 
                 if (func.bc_func->flags & BYTECODE_FUNC_FLAG_NORETURN)
                 {
@@ -318,7 +345,11 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::RET_VOID: assert(false);
+            case Bytecode_Instruction::RET_VOID:
+            {
+                LLVMBuildRetVoid(builder->llvm_builder);
+                break;
+            }
 
             case Bytecode_Instruction::ALLOCL:
             {
@@ -381,9 +412,9 @@ namespace Zodiac
             {
                 auto param_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                       &func_context->ip);
-                LLVMValueRef llvm_param_val = LLVMGetParam(func_context->llvm_function,
-                                                           param_index);
-                llvm_push_temporary(builder, llvm_param_val);
+                LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder,
+                                                    builder->params[param_index], "");
+                llvm_push_temporary(builder, result);
                 break;
             }
 
@@ -463,12 +494,37 @@ namespace Zodiac
 
             case Bytecode_Instruction::OFFSET_PTR:
             {
+                auto store_kind =
+                    llvm_fetch_from_bytecode<Bytecode_Value_Type_Specifier>(
+                            func_context->bc_block,
+                            &func_context->ip);
+
+                assert(store_kind == Bytecode_Value_Type_Specifier::ALLOCL ||
+                       store_kind  == Bytecode_Value_Type_Specifier::PARAMETER);
+
                 auto store_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
                 auto offset_val = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                      &func_context->ip);
 
-                auto store_val = builder->allocas[store_idx];
+                LLVMValueRef store_val = nullptr;
+                switch (store_kind)
+                {
+                    case Bytecode_Value_Type_Specifier::INVALID: assert(false);
+
+                    case Bytecode_Value_Type_Specifier::ALLOCL:
+                    {
+                        store_val = builder->allocas[store_idx];
+                        break;
+                    }
+
+                    case Bytecode_Value_Type_Specifier::PARAMETER:
+                    {
+                        store_val = builder->params[store_idx];
+                        break;
+                    }
+                }
+                assert(store_val);
 
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
 

@@ -198,8 +198,10 @@ namespace Zodiac
 
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val)
     {
+
         if (ret_val)
         {
+            assert(ret_val->kind == Bytecode_Value_Kind::TEMPORARY);
             bytecode_emit_instruction(builder, Bytecode_Instruction::RET);
             bytecode_emit_32(builder, ret_val->local_index);
         } 

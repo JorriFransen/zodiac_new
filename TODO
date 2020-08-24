@@ -1,4 +1,6 @@
 
+Copy structs on return (bytecode)
+
 Custom allocator for stack frame allocls in interpreter
 
 Linking with c runtime (entry point main instead of _start)

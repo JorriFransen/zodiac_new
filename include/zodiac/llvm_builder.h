@@ -30,6 +30,7 @@ namespace Zodiac
 
         Array<LLVMValueRef> temps = {};
         Array<LLVMValueRef> allocas = {};
+        Array<LLVMValueRef> params = {};
 
         Stack<LLVMValueRef> arg_stack = {};
 

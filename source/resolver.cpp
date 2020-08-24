@@ -223,9 +223,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    //queue_emit_llvm_func_job(resolver, job->result);
+                    queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
