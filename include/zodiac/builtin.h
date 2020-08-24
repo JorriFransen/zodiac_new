@@ -13,6 +13,10 @@ enum Builtin_Type_Kind
 
 #define BUILTIN_TYPE_LIST                        \
     DEFINE_BUILTIN_TYPE(void, VOID, 0, false)    \
+    DEFINE_BUILTIN_TYPE(s8,  INTEGER,  8, true)  \
+    DEFINE_BUILTIN_TYPE(u8,  INTEGER,  8, false) \
+    DEFINE_BUILTIN_TYPE(s16, INTEGER, 16, true)  \
+    DEFINE_BUILTIN_TYPE(u16, INTEGER, 16, false) \
     DEFINE_BUILTIN_TYPE(s32, INTEGER, 32, true)  \
     DEFINE_BUILTIN_TYPE(u32, INTEGER, 32, false) \
     DEFINE_BUILTIN_TYPE(s64, INTEGER, 64, true)  \
@@ -23,6 +27,7 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(mainCRTStartup)  \
     DEFINE_BUILTIN_ATOM(main)  \
     DEFINE_BUILTIN_ATOM(exit)  \
+    DEFINE_BUILTIN_ATOM(syscall)  \
     DEFINE_BUILTIN_ATOM(naked) \
     DEFINE_BUILTIN_ATOM(noreturn) \
     DEFINE_BUILTIN_ATOM(foreign) \
@@ -45,6 +50,8 @@ namespace Zodiac
 #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) static AST_Type *type_ ##name;
         BUILTIN_TYPE_LIST
 #undef DEFINE_BUILTIN_TYPE
+
+        static AST_Type *type_ptr_u8;
     };
 
     void builtin_initialize_atoms(Atom_Table* at);

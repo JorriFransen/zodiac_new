@@ -688,6 +688,10 @@ namespace Zodiac
                     {
                         // okay
                     }
+                    else if (atom == Builtin::atom_syscall)
+                    {
+                        // okay
+                    }
                     else assert(false);
                 }
 
@@ -718,7 +722,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                result = true;
+                break;
+            }
         }
 
         if (result)
@@ -1390,7 +1398,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                ast_expr->type = Builtin::type_ptr_u8;
+                result = true;
+                break;
+            }
         }
 
         if (result)
@@ -1402,7 +1415,8 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr, Scope *scope)
+    bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr,
+                                        Scope *scope)
     {
         assert(resolver);
         assert(call_expr);
@@ -1426,6 +1440,28 @@ namespace Zodiac
 
             call_expr->type = Builtin::type_void;
 
+            return true;
+        }
+        else if (ident_atom == Builtin::atom_syscall)
+        {
+            assert(call_expr->call.arg_expressions.count >= 1);
+
+            bool arg_res = true;
+            for (int64_t i = 0;  i < call_expr->call.arg_expressions.count; i++)
+            {
+                auto arg = call_expr->call.arg_expressions[i];
+                if (!try_resolve_types(resolver, arg, scope))
+                {
+                    arg_res = false;
+                }
+            }
+
+            if (!arg_res)
+            {
+                return false;
+            }
+
+            call_expr->type = Builtin::type_s64;
             return true;
         }
         else assert(false);
@@ -1986,11 +2022,12 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::COMPOUND: assert(false);
+
             case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::STRING_LITERAL:
             {
                 break;
             }
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }
     }
 

@@ -418,6 +418,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::LOAD_STR: assert(false);
+
             case Bytecode_Instruction::STOREL:
             {
                 auto dest_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
@@ -446,7 +448,14 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::ADDROF: assert(false);
+            case Bytecode_Instruction::ADDROF:
+            {
+                auto alloc_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
+                LLVMValueRef alloca = builder->allocas[alloc_idx];
+                llvm_push_temporary(builder, alloca);
+                break;
+            }
 
             case Bytecode_Instruction::PUSH_ARG:
             {
@@ -494,6 +503,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::SYSCALL: assert(false);
+
             case Bytecode_Instruction::OFFSET_PTR:
             {
                 auto store_kind =
@@ -502,7 +513,8 @@ namespace Zodiac
                             &func_context->ip);
 
                 assert(store_kind == Bytecode_Value_Type_Specifier::ALLOCL ||
-                       store_kind  == Bytecode_Value_Type_Specifier::PARAMETER);
+                       store_kind == Bytecode_Value_Type_Specifier::PARAMETER ||
+                       store_kind == Bytecode_Value_Type_Specifier::TEMPORARY);
 
                 auto store_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
@@ -528,7 +540,7 @@ namespace Zodiac
 
                     case Bytecode_Value_Type_Specifier::TEMPORARY:
                     {
-                        assert(false);
+                        store_val = builder->temps[store_idx];
                         break;
                     }
                 }

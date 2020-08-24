@@ -120,5 +120,25 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
 
     return {};
 }
+
+int64_t os_syscall(Array<int64_t> args)
+{
+    switch (args.count)
+    {
+        case 1: return syscall(args[0]);
+        case 2: return syscall(args[0], args[1]);
+        case 3: return syscall(args[0], args[1], args[2]);
+        case 4: return syscall(args[0], args[1], args[2], args[3]);
+        case 5: return syscall(args[0], args[1], args[2], args[3], args[4]);
+        case 6: return syscall(args[0], args[1], args[2], args[3], args[4], args[5]);
+        case 7: return syscall(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+
+        default: assert(false);
+    }
+
+    assert(false);
+    return 0;
+}
+
 }
 #endif // #ifdef linux

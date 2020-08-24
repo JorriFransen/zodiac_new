@@ -18,6 +18,7 @@ namespace Zodiac
         builder->build_data = bd;
 
         array_init(allocator, &builder->program.functions);
+        array_init(allocator, &builder->program.strings);
         builder->program.entry_function = nullptr;
         builder->program.bytecode_entry_function = nullptr;
 
@@ -300,7 +301,11 @@ namespace Zodiac
                 break;     
             }
 
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                return bytecode_emit_load_str(builder, expression->string_literal.atom.data);
+                break;
+            }
         }
 
         assert(false);
@@ -363,13 +368,13 @@ namespace Zodiac
         Bytecode_Value *return_value = nullptr;
 
         auto atom = ident_expr->identifier->atom;
+        auto arg_exprs = expression->call.arg_expressions;
         if (atom == Builtin::atom_exit)
         {
-            assert(expression->call.arg_expressions.count == 1);
-            auto arg_expr = expression->call.arg_expressions[0];
+            assert(arg_exprs.count == 1);
 
-            assert(arg_expr->type->kind == AST_Type_Kind::INTEGER);
-            auto exit_code_val = bytecode_emit_expression(builder, arg_expr);
+            assert(arg_exprs[0]->type->kind == AST_Type_Kind::INTEGER);
+            auto exit_code_val = bytecode_emit_expression(builder, arg_exprs[0]);
             assert(exit_code_val);
 
             bytecode_emit_instruction(builder, Bytecode_Instruction::EXIT);
@@ -377,12 +382,25 @@ namespace Zodiac
 
             return_value = nullptr;
         }
+        else if (atom == Builtin::atom_syscall)
+        {
+            assert(arg_exprs.count >= 1);
+
+            for (int64_t i = 0; i < arg_exprs.count; i++)
+            {
+                bytecode_emit_call_arg(builder, arg_exprs[i]);
+            }
+
+            bytecode_emit_instruction(builder, Bytecode_Instruction::SYSCALL);
+            bytecode_emit_32(builder, arg_exprs.count);
+        }
         else assert(false);
 
         return return_value;
     }
 
-    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder, AST_Expression *expr)
+    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder,
+                                                    AST_Expression *expr)
     {
         assert(builder);
         assert(expr);
@@ -716,6 +734,35 @@ namespace Zodiac
 
         auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
                                          param->type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const char *cstr)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_STR);
+
+        int64_t string_index = -1;
+
+        for (int64_t i = 0; i < builder->program.strings.count; i++)
+        {
+            if (cstr == builder->program.strings[i])
+            {
+                string_index = i;
+                break;
+            }
+        }
+
+        if (string_index == -1)
+        {
+            string_index = builder->program.strings.count;
+            array_append(&builder->program.strings, cstr);
+        }
+
+        bytecode_emit_32(builder, string_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         Builtin::type_ptr_u8);
         bytecode_push_local_temporary(builder, result);
         return result;
     }
@@ -1354,6 +1401,16 @@ namespace Zodiac
                 break; 
             }
 
+            case Bytecode_Instruction::LOAD_STR:
+            {
+                uint32_t str_index = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_STR %" PRIu32 " (\"%s\")",
+                                       bci->local_temp_index++, str_index,
+                                       bci->builder->program.strings[str_index]);
+                break;
+            }
+
             case Bytecode_Instruction::STOREL:
             {
                 uint32_t dest_index = bytecode_iterator_fetch_32(bci);
@@ -1409,6 +1466,24 @@ namespace Zodiac
                 bytecode_print_size_spec(sb, size_spec);
                 string_builder_appendf(sb, " %%%" PRIu32 " %%%" PRIu32, lhs_idx, rhs_idx);
                 bci->local_temp_index += 1;
+                break;
+            }
+
+            case Bytecode_Instruction::SYSCALL:
+            {
+                auto arg_count = bytecode_iterator_fetch_32(bci);
+                assert(arg_count);
+                string_builder_appendf(sb, "SYSCALL(");
+                for (int64_t i = 0; i < arg_count; i++)
+                {
+                    if (i) string_builder_append(sb, ", ");
+                    auto arg_val = stack_peek(&bci->arg_stack, (arg_count - 1) - i);
+
+                    assert(arg_val->kind == Bytecode_Value_Kind::TEMPORARY);
+                    string_builder_appendf(sb, "%%%" PRIu32, arg_val->local_index);
+                }
+                string_builder_append(sb, ")");
+                for (int64_t i = 0; i < arg_count; i++) stack_pop(&bci->arg_stack);
                 break;
             }
 

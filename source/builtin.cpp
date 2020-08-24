@@ -19,6 +19,8 @@ BUILTIN_ATOM_LIST
 BUILTIN_TYPE_LIST
 #undef DEFINE_BUILTIN_TYPE
 
+AST_Type *Builtin::type_ptr_u8 = {};
+
 #include <stdio.h>
 
 void builtin_initialize_atoms(Atom_Table* at)
@@ -39,6 +41,8 @@ void builtin_initialize_types(Allocator *allocator)
     BUILTIN_TYPE_LIST
 
 #undef DEFINE_BUILTIN_TYPE
+
+    Builtin::type_ptr_u8 = ast_find_or_create_pointer_type(allocator, Builtin::type_u8);
 }
 
 AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, uint64_t size,

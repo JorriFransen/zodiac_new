@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allocator.h"
+#include "array.h"
 #include "zodiac_string.h"
 
 namespace Zodiac
@@ -21,5 +22,7 @@ struct Process_Info
 };
 
 Process_Info execute_process(Allocator *allocator, const String &command, const String &args);
+
+int64_t os_syscall(Array<int64_t> args);
 
 }

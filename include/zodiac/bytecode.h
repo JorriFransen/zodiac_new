@@ -20,15 +20,17 @@ namespace Zodiac
         LOADL      = 0x07,
         LOADP      = 0x08,
         LOAD_PARAM = 0x09,
-        STOREL     = 0x0A,
-        STOREP     = 0x0B,
-        ADDROF     = 0x0C,
+        LOAD_STR   = 0x0A,
+        STOREL     = 0x0B,
+        STOREP     = 0x0C,
+        ADDROF     = 0x0D,
 
-        PUSH_ARG   = 0x0D,
+        PUSH_ARG   = 0x0E,
 
-        ADD        = 0x0E,
+        ADD        = 0x0F,
 
-        OFFSET_PTR = 0x0F,
+        SYSCALL    = 0x10,
+        OFFSET_PTR = 0x11,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -145,8 +147,10 @@ namespace Zodiac
     struct Bytecode_Program
     {
         Array<Bytecode_Function*> functions = {};
+        Array<const char*> strings = {};
         Bytecode_Function *entry_function = nullptr;
         Bytecode_Function *bytecode_entry_function = nullptr;
+
     };
 
     struct Bytecode_Builder
@@ -208,6 +212,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
+    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const char *cstr);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
     void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,

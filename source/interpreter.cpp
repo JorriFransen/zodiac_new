@@ -1,6 +1,7 @@
 
 #include "interpreter.h"
 #include "builtin.h"
+#include "os.h"
 
 #include "common.h"
 
@@ -399,6 +400,14 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::LOAD_STR:
+                {
+                    auto str_idx = interpreter_fetch<uint32_t>(interp);
+                    auto result_value = interpreter_push_temporary(interp, Builtin::type_ptr_u8);
+                    result_value->value.pointer = (void*)interp->program->strings[str_idx];
+                    break;
+                }
+
                 case Bytecode_Instruction::STOREL:
                 {
                     auto allocl_index = interpreter_fetch<uint32_t>(interp);
@@ -498,10 +507,11 @@ namespace Zodiac
                     {
                         result->value.pointer = alloc->value.struct_pointer;
                     }
-                    else
+                    else if (alloc->type->kind == AST_Type_Kind::INTEGER)
                     {
-                        assert(false);
+                        result->value.pointer = &alloc->value.int_literal;
                     }
+                    else assert(false);
 
                     break;
                 }
@@ -551,6 +561,26 @@ namespace Zodiac
                     }
                     break;
                 }
+
+               case Bytecode_Instruction::SYSCALL:
+               {
+                   auto arg_count = interpreter_fetch<uint32_t>(interp);
+                   Array<int64_t> args = {};
+                   array_init(interp->allocator, &args, arg_count);
+                   for (int64_t i = 0; i < arg_count; i++)
+                   {
+                       auto arg_val = stack_peek_ptr(&interp->arg_stack, (arg_count - 1) - i);
+                       assert(arg_val->type == Builtin::type_s64 ||
+                              arg_val->type->kind == AST_Type_Kind::POINTER);
+                       array_append(&args, arg_val->value.int_literal.s64);
+                   }
+
+                   os_syscall(args);
+                   array_free(&args);
+
+                   for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack);
+                   break;
+               }
 
                case Bytecode_Instruction::OFFSET_PTR:
                {
