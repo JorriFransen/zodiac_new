@@ -223,9 +223,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -626,69 +626,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT:
             {
-                auto parent_expr = ast_expr->dot.parent_expression;
-                if (try_resolve_identifiers(resolver, parent_expr, scope))
-                {
-                    AST_Declaration *parent_decl = nullptr;
-
-                    if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER)
-                    {
-                        parent_decl = parent_expr->identifier->declaration;
-                    }
-                    else assert(false);
-
-                    assert(parent_decl);
-                    assert(parent_decl->kind == AST_Declaration_Kind::VARIABLE ||
-                           parent_decl->kind == AST_Declaration_Kind::PARAMETER);
-                    if (parent_decl->type)
-                    {
-                        AST_Type *var_type = parent_decl->type;
-                        assert(var_type);
-                        assert(var_type->kind == AST_Type_Kind::STRUCTURE);
-
-                        assert(var_type->structure.member_scope);
-                        auto mem_scope = var_type->structure.member_scope;
-                        assert(mem_scope->kind == Scope_Kind::AGGREGATE);
-
-                        auto child_ident = ast_expr->dot.child_identifier;
-                        if (!child_ident->declaration)
-                        {
-                            auto child_decl = scope_find_declaration(mem_scope, child_ident);
-                            assert(child_decl);
-                            assert(child_ident->declaration);
-
-                            auto struct_decl = var_type->structure.declaration;
-                            assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
-
-                            bool index_found = false;
-                            int64_t index = -1;
-                            for (int64_t i = 0;
-                                 i < struct_decl->structure.member_declarations.count;
-                                 i++)
-                            {
-                                if (child_decl == struct_decl->structure.member_declarations[i]) 
-                                {
-                                    assert(!index_found);
-                                    index_found = true;
-                                    index = i;
-                                    break;
-                                }
-                            }
-
-                            assert(index_found);
-                            assert(index >= 0);
-                            
-                            ast_expr->dot.child_index = index;
-                        }
-
-                        result = true;
-                    }
-                    else result = false;
-                }
-                else
-                {
-                    result = false;
-                }
+                result = try_resolve_identifiers_dot_expr(resolver, ast_expr, scope);
                 break;
             }
 
@@ -766,6 +704,12 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::ADDROF:
+            {
+                result = try_resolve_identifiers(resolver, ast_expr->addrof.operand_expr, scope);
+                break;
+            }
+
             case AST_Expression_Kind::COMPOUND: assert(false);
                                                 
             case AST_Expression_Kind::NUMBER_LITERAL: 
@@ -780,6 +724,92 @@ namespace Zodiac
         if (result)
         {
             ast_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        }
+
+        return result;
+    }
+
+    bool try_resolve_identifiers_dot_expr(Resolver *resolver, AST_Expression *ast_expr,
+                                          Scope *scope)
+    {
+        assert(resolver);
+        assert(ast_expr->kind == AST_Expression_Kind::DOT);
+
+        bool result = false;
+
+        auto parent_expr = ast_expr->dot.parent_expression;
+        if (try_resolve_identifiers(resolver, parent_expr, scope))
+        {
+            AST_Declaration *parent_decl = nullptr;
+
+            if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER)
+            {
+                parent_decl = parent_expr->identifier->declaration;
+            }
+            else assert(false);
+
+            assert(parent_decl);
+            assert(parent_decl->kind == AST_Declaration_Kind::VARIABLE ||
+                   parent_decl->kind == AST_Declaration_Kind::PARAMETER);
+            if (parent_decl->type)
+            {
+                AST_Type *var_type = parent_decl->type;
+                assert(var_type);
+
+                AST_Type *struct_type = var_type;
+
+                if (var_type->kind != AST_Type_Kind::STRUCTURE)
+                {
+                    assert(var_type->kind == AST_Type_Kind::POINTER);
+                    assert(var_type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                    struct_type = var_type->pointer.base;
+                }
+
+                assert(struct_type);
+                assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+                assert(struct_type->structure.member_scope);
+                auto mem_scope = struct_type->structure.member_scope;
+                assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+                auto child_ident = ast_expr->dot.child_identifier;
+                if (!child_ident->declaration)
+                {
+                    auto child_decl = scope_find_declaration(mem_scope, child_ident);
+                    assert(child_decl);
+                    assert(child_ident->declaration);
+
+                    auto struct_decl = struct_type->structure.declaration;
+                    assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                    bool index_found = false;
+                    int64_t index = -1;
+                    for (int64_t i = 0;
+                         i < struct_decl->structure.member_declarations.count;
+                         i++)
+                    {
+                        if (child_decl == struct_decl->structure.member_declarations[i]) 
+                        {
+                            assert(!index_found);
+                            index_found = true;
+                            index = i;
+                            break;
+                        }
+                    }
+
+                    assert(index_found);
+                    assert(index >= 0);
+                    
+                    ast_expr->dot.child_index = index;
+                }
+
+                result = true;
+            }
+            else result = false;
+        }
+        else
+        {
+            result = false;
         }
 
         return result;
@@ -1255,7 +1285,9 @@ namespace Zodiac
                 assert(parent_res);
 
                 auto parent_type = parent_expr->type;
-                assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
+                assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
+                       (parent_type->kind == AST_Type_Kind::POINTER && 
+                        parent_type->pointer.base->kind == AST_Type_Kind::STRUCTURE));
 
                 auto member_ident = ast_expr->dot.child_identifier;
                 assert(member_ident);
@@ -1318,6 +1350,11 @@ namespace Zodiac
                             {
                                 assert(false);
                             }
+
+                            if (result)
+                            {
+                                assert(arg_expr->type == func_type->function.param_types[i]);
+                            }
                         }
 
                         ast_expr->type = func_type->function.return_type;
@@ -1330,6 +1367,17 @@ namespace Zodiac
                     assert(ast_expr->type);
                 }
                 
+                break;
+            }
+
+            case AST_Expression_Kind::ADDROF:
+            {
+                result = try_resolve_types(resolver, ast_expr->addrof.operand_expr, scope);
+                assert(result);
+                auto operand_type = ast_expr->addrof.operand_expr->type;
+                assert(operand_type);
+                ast_expr->type = ast_find_or_create_pointer_type(resolver->allocator,
+                                                                 operand_type);
                 break;
             }
 
@@ -1927,6 +1975,13 @@ namespace Zodiac
                         queue_emit_bytecode_job(resolver, callee_decl, scope);
                     }
                 }
+                break;
+            }
+
+            case AST_Expression_Kind::ADDROF:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->addrof.operand_expr,
+                                                         scope);
                 break;
             }
 

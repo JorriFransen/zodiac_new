@@ -195,6 +195,7 @@ namespace Zodiac
         UNARY,
 
         CALL,
+        ADDROF,
         COMPOUND,
 
         NUMBER_LITERAL,
@@ -246,6 +247,11 @@ namespace Zodiac
 
                 AST_Declaration *callee_declaration;
             } call;
+
+            struct
+            {
+                AST_Expression *operand_expr;
+            } addrof;
 
             struct
             {
@@ -469,6 +475,8 @@ namespace Zodiac
                                             Array<AST_Expression*> arg_expressions,
                                             bool is_builtin, const File_Pos & begin_fp,
                                             const File_Pos &end_fp);
+    AST_Expression *ast_addrof_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+                                              const File_Pos &begin_fp, const File_Pos &end_fp);
     AST_Expression* ast_compound_expression_new(Allocator* allocator, Array<AST_Expression*> exprs,
                                                 AST_Type_Spec* type_spec, const File_Pos & begin_fp,
                                                 const File_Pos &end_fp);

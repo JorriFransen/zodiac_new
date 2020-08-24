@@ -393,7 +393,8 @@ namespace Zodiac
 
                     auto result_value = interpreter_push_temporary(interp, param.type);
 
-                    assert(param.type->kind == AST_Type_Kind::INTEGER);
+                    assert(param.type->kind == AST_Type_Kind::INTEGER ||
+                           param.type->kind == AST_Type_Kind::POINTER);
                     result_value->value = param.value;
                     break;
                 }
@@ -484,6 +485,27 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::ADDROF:
+                {
+                    auto alloc_index = interpreter_fetch<int32_t>(interp);
+                    auto alloc = interpreter_load_allocl(interp, alloc_index);
+                    assert(alloc->kind == Bytecode_Value_Kind::ALLOCL);
+                    auto pointer_type = ast_find_or_create_pointer_type(interp->allocator,
+                                                                        alloc->type);
+                    auto result = interpreter_push_temporary(interp, pointer_type);
+
+                    if (alloc->type->kind == AST_Type_Kind::STRUCTURE)
+                    {
+                        result->value.pointer = alloc->value.struct_pointer;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
+
+                    break;
+                }
+
                 case Bytecode_Instruction::PUSH_ARG:
                 {
                     auto temp_index = interpreter_fetch<int32_t>(interp);
@@ -555,14 +577,34 @@ namespace Zodiac
                            store_val = &frame->parameters[store_idx];
                            break;
                        }
+
+                       case Bytecode_Value_Type_Specifier::TEMPORARY:
+                       {
+                           store_val = interpreter_load_temporary(interp, store_idx);
+                           break;
+                       }
                    }
+
                    assert(store_val);
 
                    assert(store_val->kind == Bytecode_Value_Kind::ALLOCL ||
-                          store_val->kind == Bytecode_Value_Kind::PARAMETER);
-                   assert(store_val->type->kind == AST_Type_Kind::STRUCTURE);
+                          store_val->kind == Bytecode_Value_Kind::PARAMETER ||
+                          store_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
-                   auto mem_types = store_val->type->structure.member_types;
+                   AST_Type *struct_type = nullptr;
+                   if (store_val->type->kind == AST_Type_Kind::STRUCTURE)
+                   {
+                       struct_type = store_val->type;
+                   }
+                   else if (store_val->type->kind == AST_Type_Kind::POINTER)
+                   {
+                       assert(store_val->type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                       struct_type = store_val->type->pointer.base;
+                   }
+
+                   assert(struct_type);
+
+                   auto mem_types = struct_type->structure.member_types;
                    assert(offset_val < mem_types.count);
 
                    auto ptr_type = ast_find_or_create_pointer_type(interp->allocator,

@@ -270,6 +270,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL: break;
 
+            case AST_Expression_Kind::ADDROF: assert(false);
+                                                
             case AST_Expression_Kind::COMPOUND:
             {
                 for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++)

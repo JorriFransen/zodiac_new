@@ -22,12 +22,13 @@ namespace Zodiac
         LOAD_PARAM = 0x09,
         STOREL     = 0x0A,
         STOREP     = 0x0B,
+        ADDROF     = 0x0C,
 
-        PUSH_ARG   = 0x0C,
+        PUSH_ARG   = 0x0D,
 
-        ADD        = 0x0D,
+        ADD        = 0x0E,
 
-        OFFSET_PTR = 0x0E,
+        OFFSET_PTR = 0x0F,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -54,7 +55,7 @@ namespace Zodiac
         INVALID    = 0x00,
         ALLOCL     = 0x01,
         PARAMETER  = 0x02,
-        
+        TEMPORARY  = 0x03,
     };
 
     enum class Bytecode_Value_Kind : uint32_t
@@ -190,6 +191,7 @@ namespace Zodiac
                                                     AST_Expression *expr);
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *lvalue_expr);
+    Bytecode_Value *bytecode_emit_addrof(Bytecode_Builder *builder, Bytecode_Value *lvalue);
     Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
                                          Atom name);
     
@@ -201,10 +203,11 @@ namespace Zodiac
 
     void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, uint8_t size);
 
+    Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *lvalue);
     void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size);
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
-    void bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
+    Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
     void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,

@@ -5,14 +5,13 @@ Vec2 :: struct
     y : s64;
 }
 
-print_vec2 :: func (v: Vec2) 
-{
-    a := v.x + v.y;
-   return;
-}
+//print_vec2 :: func (v: Vec2) 
+//{
+    //a := v.x + v.y;
+   //return;
+//}
 
-
-add_vec2 :: func (v: Vec2) -> s64
+add_vec2 :: func (v: *Vec2) -> s64
 {
 
     return v.x + v.y;
@@ -24,8 +23,8 @@ main :: func () -> s64
     p1.x = 33;
     p1.y = 44;
 
-    print_vec2(p1);
-    return add_vec2(p1);
+    //print_vec2(p1);
+    return add_vec2(*p1);
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

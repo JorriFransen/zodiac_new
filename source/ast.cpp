@@ -513,7 +513,15 @@ namespace Zodiac
             };
 
             case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
-            case Expression_PTN_Kind::POINTER_TYPE: assert(false);
+
+            case Expression_PTN_Kind::POINTER_TYPE:
+            {
+                auto operand_expr =
+                    ast_create_expression_from_ptn(allocator,
+                                                   ptn->pointer_type.pointee_type_expression);
+                return ast_addrof_expression_new(allocator, operand_expr, begin_fp, end_fp);
+                break;
+            }
 
             case Expression_PTN_Kind::POLY_TYPE:
             {
@@ -1069,6 +1077,16 @@ namespace Zodiac
         result->call.arg_expressions = arg_expressions;
         result->call.is_builtin = is_builtin;
         result->call.callee_declaration = nullptr;
+
+        return result;
+    }
+
+    AST_Expression *ast_addrof_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+                                              const File_Pos &begin_fp, const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::ADDROF, begin_fp, end_fp);
+
+        result->addrof.operand_expr = operand_expr;
 
         return result;
     }
@@ -1654,6 +1672,8 @@ namespace Zodiac
                 printf(")");
                 break;
             }
+
+            case AST_Expression_Kind::ADDROF: assert(false);
 
             case AST_Expression_Kind::COMPOUND:
             {

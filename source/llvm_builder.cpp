@@ -446,6 +446,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::ADDROF: assert(false);
+
             case Bytecode_Instruction::PUSH_ARG:
             {
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
@@ -521,6 +523,12 @@ namespace Zodiac
                     case Bytecode_Value_Type_Specifier::PARAMETER:
                     {
                         store_val = builder->params[store_idx];
+                        break;
+                    }
+
+                    case Bytecode_Value_Type_Specifier::TEMPORARY:
+                    {
+                        assert(false);
                         break;
                     }
                 }
