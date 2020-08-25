@@ -204,13 +204,18 @@ namespace Zodiac
         }
         else
         {
+            Array<LLVMBasicBlockRef> llvm_blocks = {};
+            array_init(builder->allocator, &llvm_blocks, bc_func->blocks.count);
+
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 auto bc_block = bc_func->blocks[i];
-                LLVMAppendBasicBlock(llvm_func_val, bc_block->name.data);
+                auto llvm_block = LLVMAppendBasicBlock(llvm_func_val, bc_block->name.data);
+                array_append(&llvm_blocks, llvm_block);
             }
 
-            LLVMPositionBuilderAtEnd(builder->llvm_builder, LLVMGetFirstBasicBlock(llvm_func_val));
+            LLVMPositionBuilderAtEnd(builder->llvm_builder,
+                                     LLVMGetFirstBasicBlock(llvm_func_val));
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
@@ -244,10 +249,12 @@ namespace Zodiac
             {
                 LLVM_Function_Context func_context =
                     llvm_create_function_context(llvm_func_val, bc_func, llvm_block,
-                                                 bc_func->blocks[i]);
+                                                 bc_func->blocks[i], llvm_blocks);
                 llvm_emit_block(builder, &func_context);
                 llvm_block = LLVMGetNextBasicBlock(llvm_block);
             }
+
+            array_free(&llvm_blocks);
         }
 
         //printf("Emitted function: %s\n", bc_func->ast_decl->identifier->atom.data);
@@ -491,7 +498,43 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::GT: assert(false);
+            case Bytecode_Instruction::GT:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntSGT,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+                    default: assert(false);
+                }
+                break;
+                break;
+            }
 
             case Bytecode_Instruction::ADD:
             {
@@ -530,15 +573,86 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::SUB: assert(false);
+            case Bytecode_Instruction::SUB:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildSub(builder->llvm_builder,
+                                                           lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+                    default: assert(false);
+                }
+                break;
+            }
                                             
             case Bytecode_Instruction::REM: assert(false);
             case Bytecode_Instruction::MUL: assert(false);
             case Bytecode_Instruction::DIV: assert(false);
 
-            case Bytecode_Instruction::JUMP: assert(false);
+            case Bytecode_Instruction::JUMP:
+            {
+                auto block_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
 
-            case Bytecode_Instruction::JUMP_IF: assert(false);
+                assert(block_idx < func_context->llvm_blocks.count);
+                LLVMBasicBlockRef target_block = func_context->llvm_blocks[block_idx];
+
+                LLVMBuildBr(builder->llvm_builder, target_block);
+
+                break;
+            }
+
+            case Bytecode_Instruction::JUMP_IF:
+            {
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto then_block_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                         &func_context->ip);
+
+                auto next_inst =
+                    llvm_fetch_from_bytecode<Bytecode_Instruction>(func_context->bc_block,
+                                                                   &func_context->ip);
+                assert(next_inst == Bytecode_Instruction::JUMP);
+                auto else_block_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                         &func_context->ip);
+
+                LLVMValueRef cond_val = builder->temps[val_idx];
+
+                assert(then_block_idx < func_context->llvm_blocks.count);
+                LLVMBasicBlockRef then_block = func_context->llvm_blocks[then_block_idx];
+
+                assert(else_block_idx < func_context->llvm_blocks.count);
+                LLVMBasicBlockRef else_block = func_context->llvm_blocks[else_block_idx];
+
+
+                LLVMBuildCondBr(builder->llvm_builder, cond_val, then_block, else_block);
+                break;
+            }
 
             case Bytecode_Instruction::SYSCALL:
             {
@@ -866,13 +980,15 @@ namespace Zodiac
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
                                                        Bytecode_Function *bc_func,
                                                        LLVMBasicBlockRef llvm_block,
-                                                       Bytecode_Block *bc_block)
+                                                       Bytecode_Block *bc_block,
+                                                       Array<LLVMBasicBlockRef> llvm_blocks)
     {
         LLVM_Function_Context result = {};
         result.llvm_function = llvm_func;
         result.llvm_block = llvm_block;
         result.bc_func = bc_func;
         result.bc_block = bc_block;
+        result.llvm_blocks = llvm_blocks;
         result.ip = 0;
 
         return result;

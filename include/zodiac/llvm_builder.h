@@ -48,6 +48,8 @@ namespace Zodiac
         Bytecode_Function *bc_func = nullptr;
         Bytecode_Block *bc_block = nullptr;
 
+        Array<LLVMBasicBlockRef> llvm_blocks = {};
+
         int64_t ip = 0;
     };
 
@@ -74,8 +76,9 @@ namespace Zodiac
 
     LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
                                                        Bytecode_Function *bc_func,
-                                                       LLVMBasicBlockRef llvm_bock,
-                                                       Bytecode_Block *bc_block);
+                                                       LLVMBasicBlockRef llvm_block,
+                                                       Bytecode_Block *bc_block,
+                                                       Array<LLVMBasicBlockRef> llvm_blocks);
 
     template <typename T> 
     T llvm_fetch_from_bytecode(Bytecode_Block *block, int64_t *ipp)
