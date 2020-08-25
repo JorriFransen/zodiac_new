@@ -13,7 +13,7 @@ PTN_Kind Expression_List_PTN::_kind = PTN_Kind::EXPRESSION_LIST;
 PTN_Kind Expression_PTN::_kind = PTN_Kind::EXPRESSION;
 PTN_Kind Parameter_PTN::_kind = PTN_Kind::PARAMETER;
 
-void init_ptn(PTN* ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const File_Pos &end_file_pos)
+void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const File_Pos &end_file_pos)
 {
     assert(ptn);
     ptn->kind = kind;
@@ -22,7 +22,7 @@ void init_ptn(PTN* ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const Fil
 }
 
 
-Statement_PTN* new_statement(Allocator* allocator, Statement_PTN_Kind kind,
+Statement_PTN *new_statement(Allocator *allocator, Statement_PTN_Kind kind,
                              const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Statement_PTN>(allocator, begin_fp, end_fp);
@@ -30,15 +30,15 @@ Statement_PTN* new_statement(Allocator* allocator, Statement_PTN_Kind kind,
     return result;
 }
 
-Identifier_PTN* new_identifier_ptn(Allocator* allocator, const Atom& atom, const File_Pos &begin_fp,
+Identifier_PTN *new_identifier_ptn(Allocator *allocator, const Atom& atom, const File_Pos &begin_fp,
                                    const File_Pos &end_fp)
 {
-    Identifier_PTN* result = new_ptn<Identifier_PTN>(allocator, begin_fp, end_fp);
+    Identifier_PTN *result = new_ptn<Identifier_PTN>(allocator, begin_fp, end_fp);
     result->atom = atom;
     return result;
 }
 
-Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN*> statements, 
+Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements, 
                                        const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::BLOCK, begin_fp, end_fp);
@@ -46,7 +46,7 @@ Statement_PTN* new_block_statement_ptn(Allocator* allocator, Array<Statement_PTN
     return result;
 }
 
-Statement_PTN* new_expression_statement_ptn(Allocator* allocator, Expression_PTN* expr, 
+Statement_PTN *new_expression_statement_ptn(Allocator *allocator, Expression_PTN *expr, 
                                             const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::EXPRESSION, begin_fp, end_fp);
@@ -54,7 +54,7 @@ Statement_PTN* new_expression_statement_ptn(Allocator* allocator, Expression_PTN
     return result;
 }
 
-Statement_PTN* new_declaration_statement_ptn(Allocator* allocator, Declaration_PTN* decl,
+Statement_PTN *new_declaration_statement_ptn(Allocator *allocator, Declaration_PTN *decl,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::DECLARATION, begin_fp, end_fp);
@@ -62,7 +62,7 @@ Statement_PTN* new_declaration_statement_ptn(Allocator* allocator, Declaration_P
     return result;
 }
 
-Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* expr,
+Statement_PTN *new_return_statement_ptn(Allocator *allocator, Expression_PTN *expr,
                                         const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::RETURN, begin_fp, end_fp);
@@ -70,8 +70,8 @@ Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* ex
     return result;
 }
 
-Statement_PTN* new_assignment_statement_ptn(Allocator* allocator, Expression_PTN* ident_expression,
-                                            Expression_PTN* rhs_expression,
+Statement_PTN *new_assignment_statement_ptn(Allocator *allocator, Expression_PTN *ident_expression,
+                                            Expression_PTN *rhs_expression,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp)
 {
@@ -91,20 +91,20 @@ Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *whi
     return result;
 }
 
-Function_Proto_PTN* new_function_prototype_parse_tree_node(Allocator* allocator,
+Function_Proto_PTN *new_function_prototype_parse_tree_node(Allocator *allocator,
                                                            Array<Parameter_PTN*> parameters,
-                                                           Expression_PTN* return_type_expr,
+                                                           Expression_PTN *return_type_expr,
                                                            const File_Pos &begin_fp,
                                                            const File_Pos &end_fp)
 {
-    Function_Proto_PTN* result = new_ptn<Function_Proto_PTN>(allocator, begin_fp, end_fp);
+    Function_Proto_PTN *result = new_ptn<Function_Proto_PTN>(allocator, begin_fp, end_fp);
     result->parameters = parameters;
     result->return_type_expression = return_type_expr;
     return result;
 }
 
-Declaration_PTN* new_import_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                            Expression_PTN* module_ident_expr, const File_Pos &begin_fp, const File_Pos &end_fp)
+Declaration_PTN *new_import_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                            Expression_PTN *module_ident_expr, const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
     assert(result);
@@ -116,8 +116,8 @@ Declaration_PTN* new_import_declaration_ptn(Allocator* allocator, Identifier_PTN
     return result;
 }
 
-Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                              Function_Proto_PTN* prototype, Statement_PTN* body,
+Declaration_PTN *new_function_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                              Function_Proto_PTN *prototype, Statement_PTN *body,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     assert(prototype);
@@ -134,9 +134,9 @@ Declaration_PTN* new_function_declaration_ptn(Allocator* allocator, Identifier_P
     return result;
 }
 
-Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                              Expression_PTN* type_expression,
-                                              Expression_PTN* init_expression,
+Declaration_PTN *new_variable_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                              Expression_PTN *type_expression,
+                                              Expression_PTN *init_expression,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
@@ -147,7 +147,7 @@ Declaration_PTN* new_variable_declaration_ptn(Allocator* allocator, Identifier_P
     return result;
 }
 
-Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
+Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                             Array<Declaration_PTN*> members,
                                             Array<Parameter_PTN*> parameters,
                                             const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -160,8 +160,8 @@ Declaration_PTN* new_struct_declaration_ptn(Allocator* allocator, Identifier_PTN
     return result;
 }
 
-Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                              Expression_PTN* type_expr, Expression_PTN* init_expr,
+Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                              Expression_PTN *type_expr, Expression_PTN *init_expr,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
@@ -173,7 +173,7 @@ Declaration_PTN* new_constant_declaration_ptn(Allocator* allocator, Identifier_P
     return result;
 }
 
-Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
+Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
 {
@@ -182,8 +182,8 @@ Expression_List_PTN* new_expression_list_ptn(Allocator* allocator,
     return result;
 }
 
-Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
-                                        Expression_PTN* ident_expr, Expression_List_PTN* arg_list,
+Expression_PTN *new_call_expression_ptn(Allocator *allocator, bool is_builtin,
+                                        Expression_PTN *ident_expr, Expression_List_PTN *arg_list,
                                         const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     assert(ident_expr->kind == Expression_PTN_Kind::IDENTIFIER ||
@@ -197,7 +197,7 @@ Expression_PTN* new_call_expression_ptn(Allocator* allocator, bool is_builtin,
     return result;
 }
 
-Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_PTN* identifier,
+Expression_PTN *new_identifier_expression_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -206,8 +206,8 @@ Expression_PTN* new_identifier_expression_ptn(Allocator* allocator, Identifier_P
     return result;
 }
 
-Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator op,
-                                          Expression_PTN* lhs, Expression_PTN* rhs,
+Expression_PTN *new_binary_expression_ptn(Allocator *allocator, Binary_Operator op,
+                                          Expression_PTN *lhs, Expression_PTN *rhs,
                                           const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -219,8 +219,8 @@ Expression_PTN* new_binary_expression_ptn(Allocator* allocator, Binary_Operator 
     return result;
 }
 
-Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op,
-                                         Expression_PTN* operand_expression,
+Expression_PTN *new_unary_expression_ptn(Allocator *allocator, Unary_Operator op,
+                                         Expression_PTN *operand_expression,
                                          const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -231,7 +231,7 @@ Expression_PTN* new_unary_expression_ptn(Allocator* allocator, Unary_Operator op
     return result;
 }
 
-Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom atom,
+Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom atom,
                                                   const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -248,7 +248,7 @@ Expression_PTN* new_number_literal_expression_ptn(Allocator* allocator, Atom ato
     return result;
 }
 
-Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom atom,
+Expression_PTN *new_string_literal_expression_ptn(Allocator *allocator, Atom atom,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
 {
@@ -260,8 +260,8 @@ Expression_PTN* new_string_literal_expression_ptn(Allocator* allocator, Atom ato
     return result;
 }
 
-Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* parent,
-                                       Identifier_PTN* child_ident, const File_Pos &begin_fp,
+Expression_PTN *new_dot_expression_ptn(Allocator *allocator, Expression_PTN *parent,
+                                       Identifier_PTN *child_ident, const File_Pos &begin_fp,
                                        const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -271,8 +271,8 @@ Expression_PTN* new_dot_expression_ptn(Allocator* allocator, Expression_PTN* par
     return result;
 }
 
-Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_List_PTN* expr_list,
-                                            Expression_PTN* type_expression,
+Expression_PTN *new_compound_expression_ptn(Allocator *allocator, Expression_List_PTN *expr_list,
+                                            Expression_PTN *type_expression,
                                             const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -282,9 +282,22 @@ Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_Lis
     return result;
 }
 
-Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
-                                              Expression_PTN* length_expression,
-                                              Expression_PTN* element_type_expression,
+Expression_PTN *new_subscript_expression_ptn(Allocator *allocator,
+                                             Expression_PTN *pointer_expression,
+                                             Expression_PTN *index_expression,
+                                             const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Expression_PTN_Kind::SUBSCRIPT;
+    result->subscript.pointer_expression = pointer_expression;
+    result->subscript.index_expression = index_expression;
+
+    return result;
+}
+
+Expression_PTN *new_array_type_expression_ptn(Allocator *allocator,
+                                              Expression_PTN *length_expression,
+                                              Expression_PTN *element_type_expression,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -294,8 +307,8 @@ Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
     return result;
 }
 
-Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
-                                                Expression_PTN* pointee_type_expression,
+Expression_PTN *new_pointer_type_expression_ptn(Allocator *allocator,
+                                                Expression_PTN *pointee_type_expression,
                                                 const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -304,8 +317,8 @@ Expression_PTN* new_pointer_type_expression_ptn(Allocator* allocator,
     return result;
 }
 
-Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                             Identifier_PTN* specification_identifier,
+Expression_PTN *new_poly_type_expression_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                             Identifier_PTN *specification_identifier,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -315,8 +328,8 @@ Expression_PTN* new_poly_type_expression_ptn(Allocator* allocator, Identifier_PT
     return result;
 }
 
-Parameter_PTN* new_parameter_ptn(Allocator* allocator, Identifier_PTN* identifier,
-                                 Expression_PTN* type_expression,
+Parameter_PTN *new_parameter_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                 Expression_PTN *type_expression,
                                  const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Parameter_PTN>(allocator, begin_fp, end_fp);
@@ -335,10 +348,10 @@ void print_indent(uint64_t indent)
     }
 }
 
-Declaration_PTN* copy_declaration_ptn(Allocator* allocator, Declaration_PTN* decl,
+Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *decl,
                                       PTN_Copy_Flags flags/*= PTNC_FLAG_NONE*/)
 {
-    Identifier_PTN* ident_copy = nullptr;
+    Identifier_PTN *ident_copy = nullptr;
     if (flags & PTNC_FLAG_DONT_COPY_IDENTIFIERS)
     {
         ident_copy = decl->identifier;
@@ -357,8 +370,8 @@ Declaration_PTN* copy_declaration_ptn(Allocator* allocator, Declaration_PTN* dec
 
         case Declaration_PTN_Kind::VARIABLE:
         {
-            Expression_PTN* type_expr_copy = nullptr;
-            Expression_PTN* init_expr_copy = nullptr;
+            Expression_PTN *type_expr_copy = nullptr;
+            Expression_PTN *init_expr_copy = nullptr;
             if (flags & PTNC_FLAG_DONT_COPY_EXPRESSIONS)
             {
                 type_expr_copy = decl->variable.type_expression;
@@ -387,7 +400,7 @@ Declaration_PTN* copy_declaration_ptn(Allocator* allocator, Declaration_PTN* dec
     return nullptr;
 }
 
-Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
+Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
                                     PTN_Copy_Flags flags/*= PTNC_FLAG_NONE*/)
 {
     if (!expr) return nullptr;
@@ -404,7 +417,7 @@ Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
 
         case Expression_PTN_Kind::IDENTIFIER:
         {
-            Identifier_PTN* new_identifier = nullptr;
+            Identifier_PTN *new_identifier = nullptr;
             if (flags & PTNC_FLAG_DONT_COPY_IDENTIFIERS)
                 new_identifier = expr->identifier;
             else
@@ -419,6 +432,7 @@ Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
         case Expression_PTN_Kind::UNARY: assert(false);
         case Expression_PTN_Kind::DOT: assert(false);
         case Expression_PTN_Kind::COMPOUND: assert(false);
+        case Expression_PTN_Kind::SUBSCRIPT: assert(false);
         case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
         case Expression_PTN_Kind::STRING_LITERAL: assert(false);
         case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
@@ -430,13 +444,13 @@ Expression_PTN* copy_expression_ptn(Allocator* allocator, Expression_PTN* expr,
     return nullptr;
 }
 
-Identifier_PTN* copy_identifier_ptn(Allocator* allocator, Identifier_PTN* identifier)
+Identifier_PTN *copy_identifier_ptn(Allocator *allocator, Identifier_PTN *identifier)
 {
     return new_identifier_ptn(allocator, identifier->atom, identifier->self.begin_file_pos,
                               identifier->self.end_file_pos);
 }
 
-void print_ptn(PTN* ptn, uint64_t indent)
+void print_ptn(PTN *ptn, uint64_t indent)
 {
     switch (ptn->kind)
     {
@@ -524,7 +538,7 @@ void print_ptn(PTN* ptn, uint64_t indent)
     }
 }
 
-void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline/*=true*/)
+void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline/*=true*/)
 {
     switch (statement->kind)
     {
@@ -595,7 +609,7 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline
     }
 }
 
-void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent, bool newline/*=true*/)
+void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/*=true*/)
 {
     switch (decl->kind)
     {
@@ -708,7 +722,7 @@ void print_declaration_ptn(Declaration_PTN* decl, uint64_t indent, bool newline/
     }
 }
 
-void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
+void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
 {
     switch (expression->kind)
     {
@@ -749,6 +763,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             {
                 case BINOP_INVALID:    assert(false);
                 case BINOP_EQ:         printf(" == "); break; 
+                case BINOP_NEQ:        printf(" != "); break; 
                 case BINOP_LT:         printf(" < "); break; 
                 case BINOP_LTEQ:       printf(" <= "); break; 
                 case BINOP_GT:         printf(" > "); break; 
@@ -756,7 +771,7 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
                 case BINOP_ADD:        printf(" + "); break; 
                 case BINOP_SUB:        printf(" - "); break;
                 case BINOP_REMAINDER:  printf(" %% "); break;
-                case BINOP_MUL:        printf(" * "); break;
+                case BINOP_MUL:        printf("  *"); break;
                 case BINOP_DIV:        printf(" / "); break;
             }
             print_expression_ptn(expression->binary.rhs, 0);
@@ -777,6 +792,16 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             printf(")");
             break;
         };
+
+        case Expression_PTN_Kind::SUBSCRIPT:
+        {
+            print_indent(indent);
+            print_expression_ptn(expression->subscript.pointer_expression, 0);
+            printf("[");
+            print_expression_ptn(expression->subscript.index_expression, 0);
+            printf("]");
+            break;
+        }
 
         case Expression_PTN_Kind::NUMBER_LITERAL:
         {

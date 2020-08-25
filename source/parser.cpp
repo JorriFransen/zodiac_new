@@ -813,7 +813,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
         if (parser_match_token(ts, TOK_DOT))
         {
             auto parent = result;
-            Identifier_PTN* child_ident = parser_parse_identifier(parser, ts);
+            Identifier_PTN *child_ident = parser_parse_identifier(parser, ts);
             auto end_fp = child_ident->self.end_file_pos;
             result = new_dot_expression_ptn(parser->allocator, parent, child_ident, begin_fp,
                                             end_fp);
@@ -821,6 +821,17 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
         else if (parser_is_token(ts, TOK_LPAREN))
         {
             result = parser_parse_call_expression(parser, ts, result, false);
+        }
+        else if (parser_match_token(ts, TOK_LBRACK))
+        {
+            Expression_PTN *index_expr = parser_parse_expression(parser, ts);
+            auto end_fp = ts->current_token().end_file_pos;
+            if (parser_expect_token(parser, ts, TOK_RBRACK))
+            {
+                result = new_subscript_expression_ptn(parser->allocator, result, index_expr,
+                                                      begin_fp, end_fp);
+            }
+            else assert(false);
         }
         else
         {
@@ -1004,6 +1015,12 @@ Binary_Operator parser_parse_cmp_op(Token_Stream* ts)
             break;
         }
 
+        case TOK_NEQ:
+        {
+            result = BINOP_NEQ;
+            break;
+        }
+
         case TOK_LT:
         {
             result = BINOP_LT;
@@ -1136,6 +1153,7 @@ bool parser_is_cmp_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
     return ct.kind == TOK_EQ_EQ ||
+           ct.kind == TOK_NEQ   ||
            ct.kind == TOK_LT    ||
            ct.kind == TOK_LTEQ  ||
            ct.kind == TOK_GT    ||

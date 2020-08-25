@@ -131,6 +131,7 @@ restart:
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
+        __2_CHAR_TOKEN_CASE('!', TOK_BANG, '=', TOK_NEQ);
 
         case '/':
         {

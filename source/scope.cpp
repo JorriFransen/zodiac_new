@@ -293,6 +293,15 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                scope_populate_expression_ast(allocator, ast_expr->subscript.pointer_expression,
+                                              parent_scope);
+                scope_populate_expression_ast(allocator, ast_expr->subscript.index_expression,
+                                              parent_scope);
+                break;;
+            }
+
             case AST_Expression_Kind::NUMBER_LITERAL: break;
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
 

@@ -25,20 +25,27 @@ Vec2 :: struct
     //return;
 //}
 
-print_vec2 :: func (v: *Vec2) 
+strlen :: func (cstr: *u8) -> s64
 {
-    @syscall(1, 1, "x: ", 3);
-    //print_num(v.x);
-    @syscall(1, 1, ", y: ", 5);
-    //print_num(v.y);
-    print_newline();
+    i := 0;
+    while (cstr[i] != 0)
+    {
+        i = i + 1;
+    }
+    return i;
+}
+
+println :: func (cstr: *u8)
+{
+    print(cstr);
+    nl := 10;
+    @syscall(1, 1, *nl, 1);
     return;
 }
 
-print_newline :: func ()
+print :: func (cstr: *u8)
 {
-    nl := 10;
-    @syscall(1, 1, *nl, 1);
+    @syscall(1, 1, cstr, strlen(cstr));
     return;
 }
 

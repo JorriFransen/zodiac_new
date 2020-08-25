@@ -338,6 +338,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND: assert(false);
 
+            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
                 return bytecode_emit_number_literal(builder, expression);
@@ -465,6 +467,7 @@ namespace Zodiac
             case BINOP_INVALID: assert(false);
 
             case BINOP_EQ: assert(false);
+            case BINOP_NEQ: assert(false);
             case BINOP_LT: assert(false);
             case BINOP_LTEQ: assert(false);
             case BINOP_GT: 
@@ -636,6 +639,7 @@ namespace Zodiac
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
+            case AST_Expression_Kind::SUBSCRIPT:  assert(false);
             case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
         }

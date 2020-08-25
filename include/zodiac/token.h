@@ -27,6 +27,7 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_DOT),                                 \
     DEFINE_TOKEN(TOK_COMMA),                               \
     DEFINE_TOKEN(TOK_DOLLAR),                              \
+    DEFINE_TOKEN(TOK_BANG),                                \
                                                            \
     DEFINE_TOKEN(TOK_LPAREN),                              \
     DEFINE_TOKEN(TOK_RPAREN),                              \

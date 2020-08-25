@@ -225,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    //queue_emit_llvm_func_job(resolver, job->result);
+                    queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -687,7 +687,8 @@ namespace Zodiac
             {
                 if (!ast_expr->call.is_builtin)
                 {
-                    if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression, scope))
+                    if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression,
+                                                scope))
                     {
                         auto ident_expr = ast_expr->call.ident_expression;
                         assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
@@ -737,6 +738,22 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND: assert(false);
                                                 
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                if (!try_resolve_identifiers(resolver, ast_expr->subscript.pointer_expression,
+                                             scope))
+                {
+                    assert(false);
+                }
+                if (!try_resolve_identifiers(resolver, ast_expr->subscript.index_expression,
+                                             scope))
+                {
+                    assert(false);
+                }
+                result = true;
+                break;
+            }
+
             case AST_Expression_Kind::NUMBER_LITERAL: 
             {
                 result = true;
@@ -1449,6 +1466,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND: assert(false);
 
+            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
                 ast_expr->type = Builtin::type_s64;
@@ -2057,7 +2076,8 @@ namespace Zodiac
 
             case AST_Statement_Kind::WHILE:
             {
-                queue_emit_bytecode_jobs_from_expression(resolver, stmt->while_stmt.cond_expr, scope);
+                queue_emit_bytecode_jobs_from_expression(resolver, stmt->while_stmt.cond_expr,
+                                                         scope);
                 queue_emit_bytecode_jobs_from_statement(resolver, stmt->while_stmt.body, scope);
                 break;
             }
@@ -2144,6 +2164,8 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::COMPOUND: assert(false);
+
+            case AST_Expression_Kind::SUBSCRIPT: assert(false);
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             case AST_Expression_Kind::STRING_LITERAL:

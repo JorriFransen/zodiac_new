@@ -7,6 +7,7 @@ namespace Zodiac
         BINOP_INVALID,
 
         BINOP_EQ,
+        BINOP_NEQ,
         BINOP_LT,
         BINOP_LTEQ,
         BINOP_GT,
