@@ -81,6 +81,16 @@ Statement_PTN* new_assignment_statement_ptn(Allocator* allocator, Expression_PTN
     return result;
 }
 
+Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *while_expr,
+                                       Statement_PTN *while_body, const File_Pos &begin_fp,
+                                       const File_Pos &end_fp)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::WHILE, begin_fp, end_fp);
+    result->while_stmt.cond_expr = while_expr;
+    result->while_stmt.body = while_body;
+    return result;
+}
+
 Function_Proto_PTN* new_function_prototype_parse_tree_node(Allocator* allocator,
                                                            Array<Parameter_PTN*> parameters,
                                                            Expression_PTN* return_type_expr,
@@ -273,11 +283,13 @@ Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_Lis
 }
 
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
+                                              Expression_PTN* length_expression,
                                               Expression_PTN* element_type_expression,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
     result->kind = Expression_PTN_Kind::ARRAY_TYPE;
+    result->array_type.length_expression = length_expression;
     result->array_type.element_type_expression = element_type_expression;
     return result;
 }
@@ -570,6 +582,16 @@ void print_statement_ptn(Statement_PTN* statement, uint64_t indent, bool newline
             printf(";\n");
             break;
         }
+
+        case Statement_PTN_Kind::WHILE:
+        {
+            print_indent(indent);
+            printf("while ");
+            print_expression_ptn(statement->while_stmt.cond_expr, 0);
+            printf("\n");
+            print_statement_ptn(statement->while_stmt.body, indent);
+            break;
+        }
     }
 }
 
@@ -725,19 +747,17 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
             print_expression_ptn(expression->binary.lhs, 0);
             switch (expression->binary.op)
             {
-                case BINOP_INVALID: assert(false);
-
-                case BINOP_ADD:
-                {
-                    printf(" + ");
-                    break;
-                }
-
-                case BINOP_SUB:
-                {
-                    printf(" - ");
-                    break;
-                }
+                case BINOP_INVALID:    assert(false);
+                case BINOP_EQ:         printf(" == "); break; 
+                case BINOP_LT:         printf(" < "); break; 
+                case BINOP_LTEQ:       printf(" <= "); break; 
+                case BINOP_GT:         printf(" > "); break; 
+                case BINOP_GTEQ:       printf(" >= "); break; 
+                case BINOP_ADD:        printf(" + "); break; 
+                case BINOP_SUB:        printf(" - "); break;
+                case BINOP_REMAINDER:  printf(" %% "); break;
+                case BINOP_MUL:        printf(" * "); break;
+                case BINOP_DIV:        printf(" / "); break;
             }
             print_expression_ptn(expression->binary.rhs, 0);
             printf(")");
@@ -799,7 +819,12 @@ void print_expression_ptn(Expression_PTN* expression, uint64_t indent)
         case Expression_PTN_Kind::ARRAY_TYPE:
         {
             print_indent(indent);
-            printf("[]");
+            printf("[");
+            if (expression->array_type.length_expression)
+            {
+                print_expression_ptn(expression->array_type.length_expression, 0);
+            }
+            printf("]");
             print_expression_ptn(expression->array_type.element_type_expression, 0);
             break;
         }

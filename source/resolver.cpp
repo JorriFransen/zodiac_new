@@ -37,7 +37,7 @@ namespace Zodiac
         resolver->build_data = build_data;
         assert(build_data);
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
-        llvm_builder_init(allocator, &resolver->llvm_builder);
+        llvm_builder_init(allocator, &resolver->llvm_builder, &resolver->bytecode_builder.program);
 
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
@@ -223,9 +223,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    //queue_emit_llvm_func_job(resolver, job->result);
+                    queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -602,6 +602,8 @@ namespace Zodiac
                 result = try_resolve_identifiers(resolver, ast_stmt->expression, scope);
                 break;
             }
+
+            case AST_Statement_Kind::WHILE: assert(false);
         }
 
         if (result)
@@ -881,6 +883,7 @@ namespace Zodiac
             }
 
             case AST_Type_Spec_Kind::ARRAY: assert(false);
+
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
         }
@@ -1239,6 +1242,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Statement_Kind::WHILE: assert(false);
 
         }
 
@@ -1939,6 +1944,8 @@ namespace Zodiac
                 queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
                 break;
             }
+
+            case AST_Statement_Kind::WHILE: assert(false);
 
         }
     }

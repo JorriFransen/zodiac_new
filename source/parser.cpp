@@ -499,6 +499,33 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_KW_WHILE:
+        {
+            ts->next_token();
+
+            if (!parser_expect_token(parser, ts, TOK_LPAREN))
+            {
+                assert(false);
+            }
+
+            auto while_expr = parser_parse_expression(parser, ts);
+            assert(while_expr);
+
+            if (!parser_expect_token(parser, ts, TOK_RPAREN))
+            {
+                assert(false);
+            }
+
+            auto while_body = parser_parse_statement(parser, ts);
+            assert(while_body);
+
+            auto end_fp = while_body->self.end_file_pos;
+
+            return new_while_statement_ptn(parser->allocator, while_expr, while_body,
+                                           begin_fp, end_fp);
+            break;
+        }
+
         default:
         {
             auto expr = parser_parse_expression(parser, ts);
@@ -511,6 +538,9 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             return new_expression_statement_ptn(parser->allocator, expr, begin_fp, end_fp);
         }
     }
+
+    assert(false);
+    return nullptr;
 }
 
 Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* ts,
@@ -568,20 +598,59 @@ Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stre
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
 {
-    return parser_parse_add_expression(parser, ts, is_type);
+    return parser_parse_cmp_expression(parser, ts, is_type);
+}
+
+Expression_PTN* parser_parse_cmp_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
+{
+    auto lhs = parser_parse_add_expression(parser, ts, is_type);
+    assert(lhs);
+
+    while (parser_is_cmp_op(ts))
+    {
+        auto op = parser_parse_cmp_op(ts);
+        auto rhs = parser_parse_add_expression(parser, ts, is_type);
+        assert(rhs);
+        
+        auto begin_fp = lhs->self.begin_file_pos;
+        auto end_fp = rhs->self.end_file_pos;
+        lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs, begin_fp, end_fp);
+    }
+
+    return lhs;
+
 }
 
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
 {
-    auto lhs = parser_parse_unary_expression(parser, ts, is_type);
+    auto lhs = parser_parse_mul_expression(parser, ts, is_type);
     assert(lhs);
 
     while (parser_is_add_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
         auto op = parser_parse_add_op(ts);
-        auto rhs = parser_parse_unary_expression(parser, ts, is_type);
+        auto rhs = parser_parse_mul_expression(parser, ts, is_type);
         assert(rhs);
         
+        auto begin_fp = lhs->self.begin_file_pos;
+        auto end_fp = rhs->self.end_file_pos;
+        lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs, begin_fp, end_fp);
+    }
+
+    return lhs;
+}
+
+Expression_PTN* parser_parse_mul_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
+{
+    auto lhs = parser_parse_unary_expression(parser, ts, is_type);
+    assert(lhs);
+
+    while (parser_is_mul_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
+    {
+        auto op = parser_parse_mul_op(ts);
+        auto rhs = parser_parse_unary_expression(parser, ts, is_type);
+        assert(rhs);
+
         auto begin_fp = lhs->self.begin_file_pos;
         auto end_fp = rhs->self.end_file_pos;
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs, begin_fp, end_fp);
@@ -595,7 +664,8 @@ Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts,
 {
     auto begin_fp = ts->current_token().begin_file_pos;
 
-    auto op = parser_parse_unary_op(ts); if (op != UNOP_INVALID)
+    auto op = parser_parse_unary_op(ts);
+    if (op != UNOP_INVALID)
     {
         auto operand_expr = parser_parse_unary_expression(parser, ts, is_type);
         auto end_fp = operand_expr->self.end_file_pos;
@@ -623,21 +693,29 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
             {
                 auto call_expr = parser_parse_call_expression(parser, ts);
                 assert(call_expr);
+                result = call_expr;
 
-                if (!is_type && parser_match_token(ts, TOK_LBRACE))
-                {
-                    auto expr_list = parser_parse_expression_list(parser, ts);
-                    assert(expr_list);
-                    auto end_fp = ts->current_token().end_file_pos;
-                    if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
+                // ::TypedStructLiterals
+                // I think this was meant to parse this:
+                // p2 := Vec3(float) { 4, 5, 6 };
+                // This should probably be written as this anyways:
+                // p2 := cast(Vec3(float), {4, 5, 6 });
+                // or whatever the cast syntax will be
+                
+                //if (!is_type && parser_match_token(ts, TOK_LBRACE))
+                //{
+                    //auto expr_list = parser_parse_expression_list(parser, ts);
+                    //assert(expr_list);
+                    //auto end_fp = ts->current_token().end_file_pos;
+                    //if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
 
-                    result = new_compound_expression_ptn(parser->allocator, expr_list, call_expr,
-                                                         begin_fp, end_fp);
-                }
-                else
-                {
-                    result = call_expr;
-                }
+                    //result = new_compound_expression_ptn(parser->allocator, expr_list, call_expr,
+                                                         //begin_fp, end_fp);
+                //}
+                //else
+                //{
+                    //result = call_expr;
+                //}
             }
             else if (!is_type && ts->peek_token(1).kind == TOK_LBRACE)
             {
@@ -824,6 +902,12 @@ Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream*
         assert(false);
     }
 
+    Expression_PTN* length_expr = nullptr;
+    if (!parser_is_token(ts, TOK_RBRACK))
+    {
+        length_expr = parser_parse_number_literal_expression(parser, ts);
+    }
+
     if (!parser_expect_token(parser, ts, TOK_RBRACK))
     {
         assert(false);
@@ -834,7 +918,8 @@ Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream*
 
     auto end_fp = element_type->self.end_file_pos;
 
-    return new_array_type_expression_ptn(parser->allocator, element_type, begin_fp, end_fp);
+    return new_array_type_expression_ptn(parser->allocator, length_expr, element_type, begin_fp,
+                                         end_fp);
 }
 
 Expression_PTN* parser_parse_pointer_type_expression(Parser* parser, Token_Stream* ts)
@@ -906,6 +991,50 @@ Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* 
     return new_expression_list_ptn(parser->allocator, expressions, begin_fp, end_fp);
 }
 
+Binary_Operator parser_parse_cmp_op(Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+    Binary_Operator result = BINOP_INVALID;
+
+    switch (ct.kind)
+    {
+        case TOK_EQ_EQ:
+        {
+            result = BINOP_EQ;
+            break;
+        }
+
+        case TOK_LT:
+        {
+            result = BINOP_LT;
+            break;
+        }
+
+        case TOK_LTEQ:
+        {
+            result = BINOP_LTEQ;
+            break;
+        }
+
+        case TOK_GT:
+        {
+            result = BINOP_GT;
+            break;
+        }
+
+        case TOK_GTEQ:
+        {
+            result = BINOP_GT;
+            break;
+        }
+
+        default: assert(false);
+    }
+
+    ts->next_token();
+    return result;
+}
+
 Binary_Operator parser_parse_add_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
@@ -921,6 +1050,37 @@ Binary_Operator parser_parse_add_op(Token_Stream* ts)
         case TOK_MINUS:
         {
             result = BINOP_SUB;
+            break;
+        }
+
+        default: assert(false);
+    }
+
+    ts->next_token();
+    return result;
+}
+
+Binary_Operator parser_parse_mul_op(Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+    Binary_Operator result = BINOP_INVALID;
+    switch (ct.kind)
+    {
+        case TOK_PERCENT:
+        {
+            result = BINOP_REMAINDER;
+            break;
+        }
+
+        case TOK_STAR:
+        {
+            result = BINOP_MUL;
+            break;
+        }
+
+        case TOK_FORWARD_SLASH:
+        {
+            result = BINOP_DIV;
             break;
         }
 
@@ -972,10 +1132,29 @@ bool parser_is_token(Token_Stream* ts, Token_Kind kind)
     return true;
 }
 
+bool parser_is_cmp_op(Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+    return ct.kind == TOK_EQ_EQ ||
+           ct.kind == TOK_LT    ||
+           ct.kind == TOK_LTEQ  ||
+           ct.kind == TOK_GT    ||
+           ct.kind == TOK_GTEQ;
+
+}
+
 bool parser_is_add_op(Token_Stream* ts)
 {
     auto ct = ts->current_token();
     return ct.kind == TOK_PLUS || ct.kind == TOK_MINUS;
+}
+
+bool parser_is_mul_op(Token_Stream* ts)
+{
+    auto ct = ts->current_token();
+    return ct.kind == TOK_PERCENT ||
+           ct.kind == TOK_STAR    ||
+           ct.kind == TOK_FORWARD_SLASH;
 }
 
 Unary_Operator parser_parse_unary_op(Token_Stream* ts)

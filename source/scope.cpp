@@ -226,6 +226,16 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Statement_Kind::WHILE:
+            {
+                scope_populate_expression_ast(allocator, ast_stmt->while_stmt.cond_expr,
+                                              parent_scope);
+                auto while_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                assert(ast_stmt->while_stmt.body_scope == nullptr);
+                ast_stmt->while_stmt.body_scope = while_scope;
+                scope_populate_statement_ast(allocator, ast_stmt->while_stmt.body, while_scope);
+                break;
+            }
         }
     }
 

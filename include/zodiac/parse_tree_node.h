@@ -66,6 +66,7 @@ enum class Statement_PTN_Kind
     EXPRESSION,
     RETURN,
     ASSIGNMENT,
+    WHILE,
 };
 
 struct Statement_PTN
@@ -76,8 +77,8 @@ struct Statement_PTN
 
     union
     {
-        Expression_PTN* expression;
-        Declaration_PTN* declaration;
+        Expression_PTN *expression;
+        Declaration_PTN *declaration;
 
         struct
         {
@@ -86,14 +87,20 @@ struct Statement_PTN
 
         struct
         {
-            Expression_PTN* expression;
+            Expression_PTN *expression;
         } return_stmt;
 
         struct
         {
-            Expression_PTN* ident_expression;
-            Expression_PTN* rhs_expression;
+            Expression_PTN *ident_expression;
+            Expression_PTN *rhs_expression;
         } assignment;
+
+        struct
+        {
+            Expression_PTN *cond_expr;
+            Statement_PTN *body;
+        } while_stmt;
     };
 
     Statement_PTN() {}
@@ -261,6 +268,7 @@ struct Expression_PTN
 
         struct
         {
+            Expression_PTN* length_expression;
             Expression_PTN* element_type_expression;
         } array_type;
 
@@ -305,6 +313,9 @@ Statement_PTN* new_return_statement_ptn(Allocator* allocator, Expression_PTN* ex
 Statement_PTN* new_assignment_statement_ptn(Allocator* allocator, Expression_PTN* ident_expression,
                                             Expression_PTN* rhs_expression, const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
+Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *while_expr,
+                                       Statement_PTN *while_body, const File_Pos &begin_fp,
+                                       const File_Pos &end_fp);
 
 Function_Proto_PTN* new_function_prototype_parse_tree_node(Allocator* allocator,
                                                            Array<Parameter_PTN*> parameters,
@@ -371,6 +382,7 @@ Expression_PTN* new_compound_expression_ptn(Allocator* allocator, Expression_Lis
                                             const File_Pos &begin_file_pos,
                                             const File_Pos &end_file_pos);
 Expression_PTN* new_array_type_expression_ptn(Allocator* allocator,
+                                              Expression_PTN *length_expression,
                                               Expression_PTN* element_type_expression,
                                               const File_Pos &begin_file_pos,
                                               const File_Pos &end_file_pos);

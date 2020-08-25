@@ -246,7 +246,6 @@ namespace Zodiac
                         }
 
 
-                        assert(ast_param_ts);
                         auto ast_param_decl = ast_create_declaration_from_ptn(allocator,
                                                                               ptn_param,
                                                                               ast_param_ts);
@@ -364,6 +363,16 @@ namespace Zodiac
 
                 return ast_assignment_statement_new(allocator, ast_ident_expr, ast_rhs_expr,
                                                     begin_fp, end_fp);
+                break;
+            }
+            
+            case Statement_PTN_Kind::WHILE:
+            {
+                auto cond_expr = ast_create_expression_from_ptn(allocator,
+                                                                ptn->while_stmt.cond_expr);
+                auto body = ast_create_statement_from_ptn(allocator, ptn->while_stmt.body,
+                                                          var_decls);
+                return ast_while_statement_new(allocator, cond_expr, body, begin_fp, end_fp);
                 break;
             }
         }
@@ -700,12 +709,19 @@ namespace Zodiac
                                                       
             case Expression_PTN_Kind::ARRAY_TYPE:
             {
+                auto length_ptn = ptn->array_type.length_expression;
                 auto elem_type_ptn = ptn->array_type.element_type_expression;
+                AST_Expression *length_expr = nullptr;
+                if (length_ptn)
+                {
+                    length_expr = ast_create_expression_from_ptn(allocator, length_ptn);
+                }
                 auto ast_elem_ts = ast_create_type_spec_from_expression_ptn(allocator,
                                                                             elem_type_ptn);
                 assert(ast_elem_ts);
 
-                return ast_array_type_spec_new(allocator, ast_elem_ts, begin_fp, end_fp);
+                return ast_array_type_spec_new(allocator, length_expr, ast_elem_ts, begin_fp,
+                                               end_fp);
                 break;
             }
 
@@ -994,6 +1010,19 @@ namespace Zodiac
         return result;
     }
 
+    AST_Statement* ast_while_statement_new(Allocator* allocator, AST_Expression* cond_expr,
+                                           AST_Statement *body, const File_Pos & begin_fp,
+                                           const File_Pos &end_fp)
+    {
+        auto result = ast_statement_new(allocator, AST_Statement_Kind::WHILE, begin_fp, end_fp);
+
+        result->while_stmt.cond_expr = cond_expr;
+        result->while_stmt.body = body;
+        result->while_stmt.body_scope = nullptr;
+
+        return result;
+    }
+
     AST_Expression* ast_expression_new(Allocator* allocator, AST_Expression_Kind kind,
                                        const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -1189,11 +1218,13 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type_Spec* ast_array_type_spec_new(Allocator* allocator, AST_Type_Spec* element_ts,
-                                           const File_Pos &begin_fp, const File_Pos &end_fp)
+    AST_Type_Spec* ast_array_type_spec_new(Allocator* allocator, AST_Expression *length_expr,
+                                           AST_Type_Spec* element_ts,
+                                           const File_Pos & begin_fp, const File_Pos &end_fp)
     {
         auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::ARRAY, begin_fp, end_fp);
 
+        result->array.length_expression = length_expr;
         result->array.element_type_spec = element_ts;
 
         return result;
@@ -1525,6 +1556,8 @@ namespace Zodiac
                 ast_print_expression(ast_stmt->expression, 0);
                 printf(";\n");
             }
+
+            case AST_Statement_Kind::WHILE: assert(false);
         } 
     }
 
@@ -1637,8 +1670,16 @@ namespace Zodiac
                 switch (ast_expr->binary.op)
                 {
                     case BINOP_INVALID: assert(false);
+                    case BINOP_EQ: printf(" == "); break;
+                    case BINOP_LT: printf(" < "); break;
+                    case BINOP_LTEQ: printf(" <= "); break;
+                    case BINOP_GT: printf(" > "); break;
+                    case BINOP_GTEQ: printf(" >= "); break;
                     case BINOP_ADD: printf(" + "); break;
                     case BINOP_SUB: printf(" - "); break;
+                    case BINOP_REMAINDER: printf(" %% "); break;
+                    case BINOP_MUL: printf(" * "); break;
+                    case BINOP_DIV: printf(" / "); break;
                 }
                 ast_print_expression(ast_expr->binary.rhs, 0);
                 break;
@@ -1793,7 +1834,8 @@ namespace Zodiac
             {
                 string_builder_append(sb, " (func)\n");
                 scope_print(sb, ast_decl->function.parameter_scope, indent);
-                scope_print(sb, ast_decl->function.body->block.scope, indent);
+                if (ast_decl->function.body)
+                    scope_print(sb, ast_decl->function.body->block.scope, indent);
                 break;
             }
 

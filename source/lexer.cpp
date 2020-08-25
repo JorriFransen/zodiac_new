@@ -124,10 +124,11 @@ restart:
 
         __1_CHAR_TOKEN_CASE('=', TOK_EQ);
         __1_CHAR_TOKEN_CASE('<', TOK_LT);
-        __1_CHAR_TOKEN_CASE('>', TOK_LTEQ);
+        __1_CHAR_TOKEN_CASE('>', TOK_GT);
 
         __1_CHAR_TOKEN_CASE('+', TOK_PLUS);
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
+        __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
 

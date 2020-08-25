@@ -155,6 +155,8 @@ namespace Zodiac
 
         DECLARATION,
         EXPRESSION,
+
+        WHILE,
     };
 
     struct AST_Statement : public AST_Node
@@ -180,6 +182,13 @@ namespace Zodiac
                 AST_Expression *identifier_expression;
                 AST_Expression *rhs_expression;
             } assignment;
+
+            struct
+            {
+                AST_Expression *cond_expr;
+                AST_Statement *body;
+                Scope *body_scope;
+            } while_stmt;
         };
     };
 
@@ -305,6 +314,7 @@ namespace Zodiac
 
             struct
             {
+                AST_Expression *length_expression;
                 AST_Type_Spec* element_type_spec;
             } array;
 
@@ -453,7 +463,9 @@ namespace Zodiac
     AST_Statement* ast_expression_statement_new(Allocator* allocator,
                                                 AST_Expression* expression,
                                                 const File_Pos & begin_fp, const File_Pos &end_fp);
-
+    AST_Statement* ast_while_statement_new(Allocator* allocator, AST_Expression* cond_expr,
+                                           AST_Statement *body, const File_Pos & begin_fp,
+                                           const File_Pos &end_fp);
     AST_Expression* ast_expression_new(Allocator* allocator, AST_Expression_Kind kind,
                                        const File_Pos & begin_fp, const File_Pos &end_fp);
     AST_Expression* ast_identifier_expression_new(Allocator* allocator, AST_Identifier* identifier,
@@ -499,7 +511,8 @@ namespace Zodiac
                                               Array<AST_Type_Spec*> param_type_specs,
                                               AST_Type_Spec* return_type_spec,
                                               const File_Pos & begin_fp, const File_Pos &end_fp);
-    AST_Type_Spec* ast_array_type_spec_new(Allocator* allocator, AST_Type_Spec* element_ts,
+    AST_Type_Spec* ast_array_type_spec_new(Allocator* allocator, AST_Expression *length_expr,
+                                           AST_Type_Spec* element_ts,
                                            const File_Pos & begin_fp, const File_Pos &end_fp);
     AST_Type_Spec* ast_templated_type_spec_new(Allocator* allocator, AST_Expression* ident_expr,
                                                Array<AST_Expression*> arg_exprs,

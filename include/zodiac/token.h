@@ -12,6 +12,7 @@ namespace Zodiac
     DEFINE_KW_TOKEN(TOK_KW_RETURN, "return"),              \
     DEFINE_KW_TOKEN(TOK_KW_FUNC, "func"),                  \
     DEFINE_KW_TOKEN(TOK_KW_STRUCT, "struct"),              \
+    DEFINE_KW_TOKEN(TOK_KW_WHILE, "while"),                \
 
 
 #define TOKEN_LIST                                         \
@@ -46,6 +47,7 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_MINUS),                               \
     DEFINE_TOKEN(TOK_STAR),                                \
     DEFINE_TOKEN(TOK_FORWARD_SLASH),                       \
+    DEFINE_TOKEN(TOK_PERCENT),                             \
                                                            \
     DEFINE_TOKEN(TOK_RARROW),                              \
                                                            \

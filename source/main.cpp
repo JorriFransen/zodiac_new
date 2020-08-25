@@ -32,14 +32,14 @@ int main(int argc, char** argv)
     Lexed_File lexed_file = lexer_lex_file(&lexer, file_path);
     if (!lexed_file.valid) return 1;
 
-    // lexed_file_print(&lexed_file);
+     //lexed_file_print(&lexed_file);
 
     Token_Stream* token_stream = lexer_new_token_stream(ca, &lexed_file);
 
     Parser parser = parser_create(ca, &build_data);
     Parsed_File parsed_file = parser_parse_file(&parser, token_stream);
 
-    //parsed_file_print(&parsed_file);
+    parsed_file_print(&parsed_file);
 
     //@TODO: initialize with builtin global count
     Scope *global_scope = scope_new(ca, Scope_Kind::GLOBAL, nullptr);

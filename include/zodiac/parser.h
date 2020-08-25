@@ -46,7 +46,9 @@ Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stre
                                                       Expression_PTN* ident_expression);
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
+Expression_PTN* parser_parse_cmp_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
 Expression_PTN* parser_parse_add_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
+Expression_PTN* parser_parse_mul_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
 Expression_PTN* parser_parse_unary_expression(Parser* parser, Token_Stream* ts,
                                               bool is_type = false);
 Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
@@ -63,13 +65,17 @@ Expression_PTN* parser_parse_poly_type_expression(Parser* parser, Token_Stream* 
 
 Expression_List_PTN* parser_parse_expression_list(Parser* parser, Token_Stream* ts);
 
+Binary_Operator parser_parse_cmp_op(Token_Stream* ts);
 Binary_Operator parser_parse_add_op(Token_Stream* ts);
+Binary_Operator parser_parse_mul_op(Token_Stream* ts);
 
 bool parser_expect_token(Parser* parser, Token_Stream* ts, Token_Kind kind);
 bool parser_match_token(Token_Stream* ts, Token_Kind kind);
 bool parser_is_token(Token_Stream* ts, Token_Kind kind);
 
+bool parser_is_cmp_op(Token_Stream* ts);
 bool parser_is_add_op(Token_Stream* ts);
+bool parser_is_mul_op(Token_Stream* ts);
 
 Unary_Operator parser_parse_unary_op(Token_Stream* ts);
 

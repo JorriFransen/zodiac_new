@@ -36,6 +36,8 @@ namespace Zodiac
 
         String target_triple = {};
         Zodiac_Target_Platform target_platform = Zodiac_Target_Platform::INVALID;
+
+        Bytecode_Program *bc_program = {};
     };
 
     struct LLVM_Function_Context
@@ -49,7 +51,8 @@ namespace Zodiac
         int64_t ip = 0;
     };
 
-    void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder);
+    void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder,
+                           Bytecode_Program *bc_program);
 
     bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name);
     bool llvm_run_linker(Allocator *allocator, const char *output_file_name);
@@ -60,6 +63,7 @@ namespace Zodiac
                                LLVM_Function_Context *func_context);
 
     void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context);
+    void llvm_emit_syscall(LLVM_Builder *builder, int32_t arg_count);
 
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val);
 

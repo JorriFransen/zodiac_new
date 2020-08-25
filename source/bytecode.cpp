@@ -194,6 +194,8 @@ namespace Zodiac
                 bytecode_emit_expression(builder, statement->expression);
                 break;
             }
+
+            case AST_Statement_Kind::WHILE: assert(false);
         }
     }
 
@@ -421,6 +423,12 @@ namespace Zodiac
         {
             case BINOP_INVALID: assert(false);
 
+            case BINOP_EQ: assert(false);
+            case BINOP_LT: assert(false);
+            case BINOP_LTEQ: assert(false);
+            case BINOP_GT: assert(false);
+            case BINOP_GTEQ: assert(false);
+
             case BINOP_ADD: 
             {
                 bytecode_emit_instruction(builder, Bytecode_Instruction::ADD);
@@ -428,6 +436,9 @@ namespace Zodiac
             }
 
             case BINOP_SUB: assert(false);
+            case BINOP_REMAINDER: assert(false);
+            case BINOP_MUL: assert(false);
+            case BINOP_DIV: assert(false);
         }    
 
         auto type = lhs->type;

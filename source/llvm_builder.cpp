@@ -12,7 +12,8 @@
 
 namespace Zodiac
 { 
-    void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder)
+    void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder,
+                           Bytecode_Program *bc_program)
     {
         assert(allocator);
         assert(llvm_builder);
@@ -27,6 +28,8 @@ namespace Zodiac
         array_init(allocator, &llvm_builder->params);
 
         stack_init(allocator, &llvm_builder->arg_stack);
+
+        llvm_builder->bc_program = bc_program;
 
         LLVMInitializeNativeTarget();
         LLVMInitializeNativeAsmPrinter();
@@ -418,7 +421,27 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOAD_STR: assert(false);
+            case Bytecode_Instruction::LOAD_STR:
+            {
+                auto str_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto cstr = builder->bc_program->strings[str_idx];
+                LLVMValueRef llvm_str = LLVMConstString(cstr, strlen(cstr), false);
+                LLVMValueRef llvm_str_glob = LLVMAddGlobal(builder->llvm_module,
+                                                           LLVMTypeOf(llvm_str),
+                                                           "_string_const");
+                LLVMSetInitializer(llvm_str_glob, llvm_str);
+                LLVMSetLinkage(llvm_str_glob, LLVMPrivateLinkage);
+                LLVMSetUnnamedAddress(llvm_str_glob, LLVMGlobalUnnamedAddr);
+                LLVMSetAlignment(llvm_str_glob, 1);
+                LLVMSetGlobalConstant(llvm_str_glob, true);
+
+                LLVMTypeRef dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
+                LLVMValueRef llvm_str_ptr = LLVMConstPointerCast(llvm_str_glob, dest_type);
+                llvm_push_temporary(builder, llvm_str_ptr);
+
+                break;
+            }
 
             case Bytecode_Instruction::STOREL:
             {
@@ -503,7 +526,13 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::SYSCALL: assert(false);
+            case Bytecode_Instruction::SYSCALL:
+            {
+                auto arg_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
+                llvm_emit_syscall(builder, arg_count);                
+                break;
+            }
 
             case Bytecode_Instruction::OFFSET_PTR:
             {
@@ -581,7 +610,7 @@ namespace Zodiac
 
                 string_builder_append(&sb, "=r,{rax},{rdi}");
 
-                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 1);
+                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 2);
 
                 auto constraint_string = string_builder_to_string(sb.allocator, &sb);
                 string_builder_free(&sb);
@@ -618,6 +647,76 @@ namespace Zodiac
             }
         }
 
+    }
+
+    void llvm_emit_syscall(LLVM_Builder *builder, int32_t arg_count)
+    {
+        assert(arg_count >= 1 && arg_count <= 7);
+
+        auto asm_string = string_ref("syscall");
+
+        String_Builder sb = {};
+        string_builder_init(builder->allocator, &sb);
+
+        string_builder_append(&sb, "=r,{rax}");
+    
+        if (arg_count >= 2) string_builder_append(&sb, ",{rdi}");
+        if (arg_count >= 3) string_builder_append(&sb, ",{rsi}");
+        if (arg_count >= 4) string_builder_append(&sb, ",{rdx}");
+        if (arg_count >= 5) string_builder_append(&sb, ",{r10}");
+        if (arg_count >= 6) string_builder_append(&sb, ",{r9}");
+        if (arg_count >= 7) string_builder_append(&sb, ",{r8}");
+
+        LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, arg_count);
+
+        Array<LLVMValueRef> llvm_args = {};
+        array_init(builder->allocator, &llvm_args, arg_count);
+        for (int64_t i = 0 ; i < arg_count; i++)
+        {
+            LLVMValueRef arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
+            LLVMTypeRef arg_type = LLVMTypeOf(arg_val); 
+                LLVMTypeRef dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
+            if (arg_type != dest_type)
+            {
+                LLVMTypeKind type_kind = LLVMGetTypeKind(arg_type);
+                switch (type_kind)
+                {
+                    case LLVMPointerTypeKind:
+                    {
+                        arg_val = LLVMBuildPtrToInt(builder->llvm_builder, arg_val, dest_type, "");
+                        break;
+                    }
+
+                    default: assert(false); 
+                }
+
+            }
+            array_append(&llvm_args, arg_val);
+        }
+
+        for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
+
+        auto constraint_str = string_builder_to_string(builder->allocator, &sb);
+
+        LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
+                                                (char*)asm_string.data,
+                                                asm_string.length,
+                                                (char*)constraint_str.data,
+                                                constraint_str.length,
+                                                true,
+                                                false,
+                                                LLVMInlineAsmDialectATT);
+
+        LLVMValueRef result = LLVMBuildCall(builder->llvm_builder, asm_val, llvm_args.data,
+                                            llvm_args.count, "");
+        assert(result);
+
+        free(builder->allocator, constraint_str.data);
+
+        array_free(&llvm_args);
+
+
+        string_builder_free(&sb);
     }
 
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val)
@@ -728,12 +827,12 @@ namespace Zodiac
     {
         assert(builder);
         assert(arg_count >= 0);
-        assert(arg_count < 6);
+        assert(arg_count < 7);
 
         LLVMTypeRef ret_type = llvm_type_from_ast(builder, Builtin::type_s64);
         LLVMTypeRef param_types[7] = { ret_type, ret_type, ret_type, ret_type,
                                        ret_type, ret_type, ret_type };
-        LLVMTypeRef result = LLVMFunctionType(ret_type, param_types, arg_count + 1, false);
+        LLVMTypeRef result = LLVMFunctionType(ret_type, param_types, arg_count, false);
 
         return result;
     }

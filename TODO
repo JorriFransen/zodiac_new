@@ -1,4 +1,14 @@
 
+::TypedStructLiterals
+  I think this was meant to parse this:
+  p2 := Vec3(float) { 4, 5, 6 };
+  This should probably be written as this anyways:
+  p2 := cast(Vec3(float), {4, 5, 6 });
+  or whatever the cast syntax will be
+
+recursive functions
+recursive structs
+Syscall return values
 Replace escaped characters in string/character literals
 Check call arg types
 Copy structs on return (bytecode)
