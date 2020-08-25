@@ -7,13 +7,14 @@
 
 namespace Zodiac
 {
-    void interpreter_init(Allocator *allocator, Interpreter *interp)
+    void interpreter_init(Allocator *allocator, Interpreter *interp, Build_Data *build_data)
     {
         assert(allocator);
         assert(interp);
 
         interp->allocator = allocator;
         interp->program = nullptr;
+        interp->build_data = build_data;
 
         interp->running = false;
         interp->exited = false;
@@ -142,7 +143,11 @@ namespace Zodiac
             interpreter_execute_block(interp, current_block); 
             frame_p = interpreter_current_frame(interp);
             auto next_block = interpreter_current_block(interp, frame_p);
-            if (next_block == current_block) break;
+            if (frame_p->jumped)
+            {
+                frame_p->jumped = false;
+                frame_p->pushed_local_count = next_block->preceding_temp_count;
+            }
             current_block = next_block;
         }
 
@@ -191,7 +196,8 @@ namespace Zodiac
 
         frame->instruction_index = 0;
 
-        while (!frame->returned &&
+        while (!frame->jumped &&
+               !frame->returned &&
                interp->running && 
                frame->instruction_index < block->instructions.count)
         {
@@ -236,7 +242,8 @@ namespace Zodiac
                             assert(return_frame.return_value.type);
 
                             Bytecode_Value *return_value =
-                                interpreter_push_temporary(interp, return_frame.return_value.type);
+                                interpreter_push_temporary(interp,
+                                                           return_frame.return_value.type);
 
                             assert(return_value->type->kind == AST_Type_Kind::INTEGER);
                             return_value->value = return_frame.return_value.value;
@@ -494,13 +501,28 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::STORE_PARAM:
+                {
+                    auto param_idx = interpreter_fetch<int32_t>(interp);
+                    auto val_idx = interpreter_fetch<int32_t>(interp);
+
+                    auto& param = frame->parameters[param_idx];
+                    auto value = interpreter_load_temporary(interp, val_idx);
+
+                    assert(param.type->kind == AST_Type_Kind::INTEGER ||
+                           param.type->kind == AST_Type_Kind::POINTER);
+                    param.value = value->value;
+                    break;
+                }
+
                 case Bytecode_Instruction::ADDROF:
                 {
                     auto alloc_index = interpreter_fetch<int32_t>(interp);
                     auto alloc = interpreter_load_allocl(interp, alloc_index);
                     assert(alloc->kind == Bytecode_Value_Kind::ALLOCL);
-                    auto pointer_type = ast_find_or_create_pointer_type(interp->allocator,
-                                                                        alloc->type);
+                    auto pointer_type = build_data_find_or_create_pointer_type(interp->allocator,
+                                                                               interp->build_data,
+                                                                               alloc->type);
                     auto result = interpreter_push_temporary(interp, pointer_type);
 
                     if (alloc->type->kind == AST_Type_Kind::STRUCTURE)
@@ -525,6 +547,43 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::GT:
+                {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                    auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    assert(lhs_val->type == rhs_val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.boolean =
+                                lhs_val->value.int_literal.s64 > rhs_val->value.int_literal.s64;
+                            break;
+                        }
+                        default: assert(false);
+
+                    }
+                    break;
+                }
+
                 case Bytecode_Instruction::ADD:
                 {
                     auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
@@ -538,7 +597,7 @@ namespace Zodiac
                     auto result_val = interpreter_push_temporary(interp, lhs_val->type);
 
                     assert(lhs_val->type == rhs_val->type);
-                    
+
                     switch (size_spec)
                     {
                         case Bytecode_Size_Specifier::INVALID: assert(false);
@@ -561,6 +620,144 @@ namespace Zodiac
                     }
                     break;
                 }
+
+               case Bytecode_Instruction::SUB:
+               {
+                   auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                   auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                   auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                   auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                   auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                   auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                   assert(lhs_val->type == rhs_val->type);
+
+                   switch (size_spec)
+                   {
+                       case Bytecode_Size_Specifier::INVALID: assert(false);
+                       case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                       case Bytecode_Size_Specifier::U8: assert(false);
+                       case Bytecode_Size_Specifier::S8: assert(false);
+                       case Bytecode_Size_Specifier::U16: assert(false);
+                       case Bytecode_Size_Specifier::S16: assert(false);
+                       case Bytecode_Size_Specifier::U32: assert(false);
+                       case Bytecode_Size_Specifier::S32: assert(false);
+                       case Bytecode_Size_Specifier::U64: assert(false);
+                       case Bytecode_Size_Specifier::S64:
+                       {
+                           result_val->value.int_literal.s64 =
+                               lhs_val->value.int_literal.s64 - rhs_val->value.int_literal.s64;
+                           break;
+                       }
+                       default: assert(false);
+
+                   }
+                   break;
+               }
+
+               case Bytecode_Instruction::REM:
+               {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                    auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    assert(lhs_val->type == rhs_val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.int_literal.s64 =
+                                lhs_val->value.int_literal.s64 % rhs_val->value.int_literal.s64;
+                            break;
+                        }
+                        default: assert(false);
+
+                    }
+                   break;
+               }
+
+               case Bytecode_Instruction::MUL: assert(false);
+
+               case Bytecode_Instruction::DIV:
+               {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                    auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    assert(lhs_val->type == rhs_val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.int_literal.s64 =
+                                lhs_val->value.int_literal.s64 / rhs_val->value.int_literal.s64;
+                            break;
+                        }
+                        default: assert(false);
+
+                    }
+                   break;
+               }
+
+               case Bytecode_Instruction::JUMP: 
+               {
+                   auto block_idx = interpreter_fetch<uint32_t>(interp);
+                   assert(block_idx < frame->func->blocks.count);
+                   frame->block_index = block_idx;
+                   frame->jumped = true;
+                   break;
+               }
+
+               case Bytecode_Instruction::JUMP_IF:
+               {
+                   auto val_idx = interpreter_fetch<uint32_t>(interp);
+                   auto block_idx = interpreter_fetch<uint32_t>(interp);
+
+                   assert(block_idx < frame->func->blocks.count);
+
+                   auto val = interpreter_load_temporary(interp, val_idx);
+                   if (val->value.boolean)
+                   {
+                       frame->block_index = block_idx;
+                       frame->jumped = true;
+                   }
+                   break;
+               }
 
                case Bytecode_Instruction::SYSCALL:
                {
@@ -637,8 +834,9 @@ namespace Zodiac
                    auto mem_types = struct_type->structure.member_types;
                    assert(offset_val < mem_types.count);
 
-                   auto ptr_type = ast_find_or_create_pointer_type(interp->allocator,
-                                                                   mem_types[offset_val]);
+                   auto ptr_type = build_data_find_or_create_pointer_type(interp->allocator,
+                                                                          interp->build_data,
+                                                                          mem_types[offset_val]);
                    auto result = interpreter_push_temporary(interp, ptr_type);
                    assert(result);
 
@@ -674,6 +872,7 @@ namespace Zodiac
         result.local_count = 0;
         result.alloc_count = func->local_allocs.count;
         result.returned = false;
+        result.jumped = false;
         result.func = func;
 
         array_init(allocator, &result.parameters, func->parameters.count);

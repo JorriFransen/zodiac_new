@@ -33,7 +33,7 @@ void builtin_initialize_atoms(Atom_Table* at)
 #undef DEFINE_BUILTIN_TYPE
 }
 
-void builtin_initialize_types(Allocator *allocator)
+void builtin_initialize_types(Allocator *allocator, Build_Data *build_data)
 {
 #define DEFINE_BUILTIN_TYPE(name, kind, size, sign) \
     Builtin::type_ ##name = builtin_initialize_type(allocator, Builtin_Type_Kind::kind, size, sign);
@@ -42,7 +42,8 @@ void builtin_initialize_types(Allocator *allocator)
 
 #undef DEFINE_BUILTIN_TYPE
 
-    Builtin::type_ptr_u8 = ast_find_or_create_pointer_type(allocator, Builtin::type_u8);
+    Builtin::type_ptr_u8 = build_data_find_or_create_pointer_type(allocator, build_data,
+                                                                  Builtin::type_u8);
 }
 
 AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, uint64_t size,

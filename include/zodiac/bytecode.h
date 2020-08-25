@@ -9,28 +9,37 @@ namespace Zodiac
 {
     enum class Bytecode_Instruction : uint8_t
     {
-        NOP        = 0x00,
+        NOP         = 0x00,
 
-        EXIT       = 0x01,
-        CALL       = 0x02,
-        RET        = 0x03,
-        RET_VOID   = 0x04,
-        ALLOCL     = 0x05,
-        LOAD_IM    = 0x06,
-        LOADL      = 0x07,
-        LOADP      = 0x08,
-        LOAD_PARAM = 0x09,
-        LOAD_STR   = 0x0A,
-        STOREL     = 0x0B,
-        STOREP     = 0x0C,
-        ADDROF     = 0x0D,
+        EXIT        = 0x01,
+        CALL        = 0x02,
+        RET         = 0x03,
+        RET_VOID    = 0x04,
+        ALLOCL      = 0x05,
+        LOAD_IM     = 0x06,
+        LOADL       = 0x07,
+        LOADP       = 0x08,
+        LOAD_PARAM  = 0x09,
+        LOAD_STR    = 0x0A,
+        STOREL      = 0x0B,
+        STOREP      = 0x0C,
+        STORE_PARAM = 0x0D,
 
-        PUSH_ARG   = 0x0E,
+        ADDROF      = 0x0E,
 
-        ADD        = 0x0F,
+        PUSH_ARG    = 0x0F,
 
-        SYSCALL    = 0x10,
-        OFFSET_PTR = 0x11,
+        GT          = 0x10,
+        ADD         = 0x11,
+        SUB         = 0x12,
+        REM         = 0x13,
+        MUL         = 0x14,
+        DIV         = 0x15,
+
+        JUMP        = 0x16,
+        JUMP_IF     = 0x17,
+        SYSCALL     = 0x18,
+        OFFSET_PTR  = 0x19,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -99,6 +108,8 @@ namespace Zodiac
 
             } int_literal;
 
+            bool boolean;
+
         } value;
 
     };
@@ -106,6 +117,9 @@ namespace Zodiac
     struct Bytecode_Block
     {
         String name = {};
+        int64_t index = -1;
+        int64_t local_temp_count = 0;
+        int64_t preceding_temp_count = 0;
         Array<uint8_t> instructions = {};
     };
 
@@ -186,6 +200,7 @@ namespace Zodiac
                                                           AST_Declaration *decl);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement);
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
+    void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression);
     Bytecode_Value *bytecode_emit_call_expression(Bytecode_Builder *builder,
                                                   AST_Expression *expression);
@@ -217,6 +232,12 @@ namespace Zodiac
                               Bytecode_Value *value);
     void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
+    void bytecode_emit_store_param(Bytecode_Builder *builder, Bytecode_Value *dest,
+                                   Bytecode_Value *value);
+
+    void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *block);
+    void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Block *block,
+                               Bytecode_Value *cond);
 
     Bytecode_Value *bytecode_emit_offset_pointer(Bytecode_Builder *builder, Bytecode_Value *lvalue,
                                                  int64_t index);
@@ -232,8 +253,8 @@ namespace Zodiac
     void bytecode_builder_set_insert_point(Bytecode_Builder *builder, Bytecode_Function *func);
     void bytecode_builder_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block);
 
-    void bytecode_builder_append_block(Bytecode_Builder *builder, Bytecode_Function *func,
-                                       const char *name);
+    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
+                                                  Bytecode_Function *func, const char *name);
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
                                                        AST_Declaration *decl);

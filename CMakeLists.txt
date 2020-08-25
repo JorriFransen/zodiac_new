@@ -22,6 +22,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/bytecode.cpp
     source/c_allocator.cpp
     source/common.cpp
+    source/const_interpreter.cpp
     source/file_pos.cpp
     source/hash_table.cpp
     source/interpreter.cpp

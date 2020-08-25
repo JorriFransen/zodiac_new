@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "builtin.h"
+#include "const_interpreter.h"
 #include "scope.h"
 #include "os.h"
 #include "temp_allocator.h"
@@ -37,7 +38,8 @@ namespace Zodiac
         resolver->build_data = build_data;
         assert(build_data);
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
-        llvm_builder_init(allocator, &resolver->llvm_builder, &resolver->bytecode_builder.program);
+        llvm_builder_init(allocator, &resolver->llvm_builder,
+                          &resolver->bytecode_builder.program);
 
         queue_init(allocator, &resolver->ident_job_queue);
         queue_init(allocator, &resolver->type_job_queue);
@@ -223,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -603,7 +605,21 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE:
+            {
+                if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.cond_expr, scope))
+                {
+                    assert(false);
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body, scope))
+                {
+                    assert(false); 
+                }
+
+                result = true;
+                break;
+            }
         }
 
         if (result)
@@ -638,7 +654,7 @@ namespace Zodiac
                 if (!decl)
                 {
                     resolver_report_undeclared_identifier(resolver, ast_expr->identifier);
-                   result = false; 
+                    result = false; 
                 }
                 else
                 {
@@ -697,16 +713,19 @@ namespace Zodiac
                     else assert(false);
                 }
 
+                bool arg_res = true;
                 for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
                 {
                     auto arg_expr = ast_expr->call.arg_expressions[i];
                     if (!try_resolve_identifiers(resolver, arg_expr, scope))
                     {
-                        assert(false);
+                        arg_res = false;
                     }
                 }
 
                 result = true;
+                if (!arg_res) result = false;
+
                 break;
             }
 
@@ -882,7 +901,19 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::ARRAY:
+            {
+                if (!try_resolve_identifiers(resolver, ast_ts->array.length_expression, scope))
+                {
+                    assert(false);
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_ts->array.element_type_spec, scope))
+                {
+                    assert(false);
+                }
+                break;
+            }
 
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
@@ -1243,7 +1274,28 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE:
+            {
+                if (!try_resolve_types(resolver, ast_stmt->while_stmt.cond_expr, scope))
+                {
+                    assert(false);
+                }
+
+                auto body_scope = scope;
+                if (ast_stmt->while_stmt.body->kind == AST_Statement_Kind::BLOCK)
+                {
+                    body_scope = nullptr;
+                }
+
+                if (!try_resolve_types(resolver, ast_stmt->while_stmt.body, body_scope))
+                {
+                    assert(false);
+                }
+
+                result = true;
+                ast_stmt->flags |= AST_NODE_FLAG_TYPED; 
+                break;
+            }
 
         }
 
@@ -1389,8 +1441,9 @@ namespace Zodiac
                 assert(result);
                 auto operand_type = ast_expr->addrof.operand_expr->type;
                 assert(operand_type);
-                ast_expr->type = ast_find_or_create_pointer_type(resolver->allocator,
-                                                                 operand_type);
+                ast_expr->type = build_data_find_or_create_pointer_type(resolver->allocator,
+                                                                        resolver->build_data,
+                                                                        operand_type);
                 break;
             }
 
@@ -1515,7 +1568,9 @@ namespace Zodiac
                 if (result)
                 {
                     assert(base_type);
-                    *type_target = ast_find_or_create_pointer_type(resolver->allocator, base_type);
+                    *type_target = build_data_find_or_create_pointer_type(resolver->allocator,
+                                                                          resolver->build_data,
+                                                                          base_type);
                     assert(*type_target);
                     ts->type = *type_target;
                 }
@@ -1580,8 +1635,8 @@ namespace Zodiac
                     return_type = Builtin::type_void; 
                 }
 
-                auto func_type = find_or_create_function_type(resolver, param_types, return_type,
-                                                              scope);
+                auto func_type = find_or_create_function_type(resolver, param_types,
+                                                              return_type, scope);
                 assert(func_type);
                 result = true;
                 ts->type = func_type;
@@ -1589,7 +1644,51 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::ARRAY:
+            {
+                AST_Type *element_type = nullptr;
+                if (!try_resolve_types(resolver, ts->array.element_type_spec, scope,
+                                       &element_type))
+                {
+                    assert(false);
+                }
+
+                assert(element_type);
+
+                auto length_expr = ts->array.length_expression;
+                int64_t length = -1;
+                if (length_expr)
+                {
+                    if (!try_resolve_types(resolver, length_expr, scope))
+                    {
+                        assert(false);
+                    }
+
+                    assert(length_expr->type);
+                    assert(length_expr->type->kind == AST_Type_Kind::INTEGER);
+
+                    assert(length_expr->is_const);
+
+                    Const_Value length_val = const_interpret_expression(length_expr);
+                    assert(length_val.type == length_expr->type);
+                    assert(length_val.s64 > 0);
+
+                    length = length_val.s64; 
+                }
+
+                assert(length);
+
+                auto array_type = build_data_find_or_create_array_type(resolver->allocator,
+                                                                       resolver->build_data,
+                                                                       element_type,
+                                                                       length);
+                assert(array_type);
+                result = true;
+                ts->type = array_type;
+                *type_target = array_type;
+                break;
+            }
+
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
         }
@@ -1730,6 +1829,8 @@ namespace Zodiac
                 ast_type->flags |= AST_NODE_FLAG_SIZED;
                 break;
             }
+
+            case AST_Type_Kind::ARRAY:assert(false);
         }
 
         if (result)
@@ -1912,7 +2013,16 @@ namespace Zodiac
         switch (stmt->kind)
         {
             case AST_Statement_Kind::INVALID: assert(false);
-            case AST_Statement_Kind::BLOCK: assert(false);
+
+            case AST_Statement_Kind::BLOCK:
+            {
+                for (int64_t i = 0; i < stmt->block.statements.count; i++)
+                {
+                    queue_emit_bytecode_jobs_from_statement(resolver, stmt->block.statements[i],
+                                                           stmt->block.scope);
+                }
+                break;
+            }
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
@@ -1945,7 +2055,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, stmt->while_stmt.cond_expr, scope);
+                queue_emit_bytecode_jobs_from_statement(resolver, stmt->while_stmt.body, scope);
+                break;
+            }
 
         }
     }

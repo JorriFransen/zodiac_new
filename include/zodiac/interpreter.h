@@ -11,6 +11,7 @@ namespace Zodiac
         int64_t instruction_index = -1;
         int64_t block_index = -1;
         bool returned = false;
+        bool jumped = false;
         int64_t pushed_local_count = 0;
         int64_t local_count = 0;
         int64_t alloc_count = 0;
@@ -25,6 +26,7 @@ namespace Zodiac
         Allocator *allocator = nullptr;
 
         Bytecode_Program *program = nullptr;
+        Build_Data *build_data = nullptr;
 
         bool running = false;
 
@@ -37,7 +39,7 @@ namespace Zodiac
         bool exited = false;
     };
 
-    void interpreter_init(Allocator *allocator, Interpreter *interp);
+    void interpreter_init(Allocator *allocator, Interpreter *interp, Build_Data *build_data);
     void interpreter_free(Interpreter *interp);
 
     void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program);

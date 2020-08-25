@@ -125,6 +125,14 @@ namespace Zodiac
             bytecode_emit_statement(builder, decl->function.body);
         }
 
+        int64_t temp_count = 0;
+        for (int64_t i = 0; i < func->blocks.count; i++)
+        {
+            auto block = func->blocks[i];
+            block->preceding_temp_count = temp_count;
+            temp_count += block->local_temp_count;
+        }
+
         return func;
     }
 
@@ -157,6 +165,11 @@ namespace Zodiac
                 {
                     assert(lvalue->type == rhs_value->type);
                     bytecode_emit_storel(builder, lvalue, rhs_value);
+                }
+                else if (lvalue->kind == Bytecode_Value_Kind::PARAMETER)
+                {
+                    assert(lvalue->type == rhs_value->type);
+                    bytecode_emit_store_param(builder, lvalue, rhs_value);
                 }
                 else if (lvalue->kind == Bytecode_Value_Kind::TEMPORARY &&
                          lvalue->type->kind == AST_Type_Kind::POINTER &&
@@ -195,13 +208,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE:
+            {
+                bytecode_emit_while_statement(builder, statement);
+                break;
+            }
         }
     }
 
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val)
     {
-
         if (ret_val)
         {
             assert(ret_val->kind == Bytecode_Value_Kind::TEMPORARY);
@@ -214,7 +230,32 @@ namespace Zodiac
         }
     }
 
-    Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression)
+    void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt)
+    {
+        auto current_func = builder->current_function;
+        auto cond_block = bytecode_builder_append_block(builder, current_func, "while_cond");
+        auto body_block = bytecode_builder_append_block(builder, current_func, "while_body");
+        auto post_while_block = bytecode_builder_append_block(builder, current_func,
+                                                              "post_while");
+
+        bytecode_emit_jump(builder, cond_block);
+        bytecode_builder_set_insert_point(builder, cond_block);
+
+        auto cond_val = bytecode_emit_expression(builder, stmt->while_stmt.cond_expr);
+        assert(cond_val);
+
+        bytecode_emit_jump_if(builder, body_block, cond_val);
+        bytecode_emit_jump(builder, post_while_block);
+
+        bytecode_builder_set_insert_point(builder, body_block);
+        bytecode_emit_statement(builder, stmt->while_stmt.body);
+        bytecode_emit_jump(builder, cond_block);
+
+        bytecode_builder_set_insert_point(builder, post_while_block);
+    }
+
+    Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder,
+                                             AST_Expression *expression)
     {
         assert(builder);
         
@@ -426,7 +467,12 @@ namespace Zodiac
             case BINOP_EQ: assert(false);
             case BINOP_LT: assert(false);
             case BINOP_LTEQ: assert(false);
-            case BINOP_GT: assert(false);
+            case BINOP_GT: 
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::GT);
+                break;
+            }
+
             case BINOP_GTEQ: assert(false);
 
             case BINOP_ADD: 
@@ -435,10 +481,25 @@ namespace Zodiac
                 break;
             }
 
-            case BINOP_SUB: assert(false);
-            case BINOP_REMAINDER: assert(false);
+            case BINOP_SUB:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::SUB);
+                break;
+            }
+
+            case BINOP_REMAINDER:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::REM);
+                break;
+            }
+
             case BINOP_MUL: assert(false);
-            case BINOP_DIV: assert(false);
+
+            case BINOP_DIV:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::DIV);
+                break;
+            }
         }    
 
         auto type = lhs->type;
@@ -590,7 +651,9 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::ADDROF);
         bytecode_emit_32(builder, lvalue->alloc_index);
 
-        auto pointer_type = ast_find_or_create_pointer_type(builder->allocator, lvalue->type);
+        auto pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                  builder->build_data,
+                                                                  lvalue->type);
         auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, pointer_type);
         bytecode_push_local_temporary(builder, result);
 
@@ -632,6 +695,8 @@ namespace Zodiac
 
         array_append(&builder->current_function->local_temps, value);
         value->local_index = local_index;
+
+        builder->insert_block->local_temp_count += 1;
     }
 
     void bytecode_push_local_alloc(Bytecode_Builder *builder, Bytecode_Value *value,
@@ -803,6 +868,35 @@ namespace Zodiac
 
     }
 
+    void bytecode_emit_store_param(Bytecode_Builder *builder, Bytecode_Value *dest,
+                                   Bytecode_Value *value)
+    {
+        assert(dest->kind == Bytecode_Value_Kind::PARAMETER);
+        assert(value->kind == Bytecode_Value_Kind::TEMPORARY);
+        assert(value->type == dest->type);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::STORE_PARAM);
+        bytecode_emit_32(builder, dest->param_index);
+        bytecode_emit_32(builder, value->local_index);
+    }
+
+    void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *block)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::JUMP);
+        assert(block->index >= 0);
+        bytecode_emit_32(builder, block->index);
+    }
+
+    void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Block *block,
+                               Bytecode_Value *cond)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::JUMP_IF);
+        assert(cond->kind == Bytecode_Value_Kind::TEMPORARY);
+        bytecode_emit_32(builder, cond->local_index);
+        assert(block->index >= 0);
+        bytecode_emit_32(builder, block->index);
+    }
+
     Bytecode_Value *bytecode_emit_offset_pointer(Bytecode_Builder *builder,
                                                  Bytecode_Value *lvalue, int64_t index)
     {
@@ -967,13 +1061,16 @@ namespace Zodiac
         builder->insert_block = block;
     }
 
-    void bytecode_builder_append_block(Bytecode_Builder *builder, Bytecode_Function *func,
-                                       const char *name)
+    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
+                                                  Bytecode_Function *func, const char *name)
     {
         auto block = bytecode_new_block(builder->allocator, name);
+        block->index = func->blocks.count;
         array_append(&func->blocks, block);
 
         func->last_block = block;
+
+        return block;
     }
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
@@ -1064,6 +1161,9 @@ namespace Zodiac
         Bytecode_Block *result = alloc_type<Bytecode_Block>(allocator);
 
         result->name = string_ref(name);
+        result->index = -1;
+        result->local_temp_count = 0;
+        result->preceding_temp_count = 0;
         array_init(allocator, &result->instructions);
 
         return result;
@@ -1444,6 +1544,19 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::STORE_PARAM:
+            {
+                uint32_t param_idx = bytecode_iterator_fetch_32(bci);
+                uint32_t val_idx = bytecode_iterator_fetch_32(bci);
+
+                auto func = bci->builder->program.functions[bci->function_index];
+                auto name = func->parameters[param_idx].value->name;
+
+                string_builder_appendf(sb, "STORE_PARAM %%%s %%%" PRIu32,
+                                       name.data, val_idx);
+                break;
+            }
+
             case Bytecode_Instruction::ADDROF:
             {
                 auto alloc_idx = bytecode_iterator_fetch_32(bci);
@@ -1465,7 +1578,12 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::GT:
             case Bytecode_Instruction::ADD:
+            case Bytecode_Instruction::SUB:
+            case Bytecode_Instruction::REM: 
+            case Bytecode_Instruction::MUL:
+            case Bytecode_Instruction::DIV:
             {
                 auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
                 bytecode_iterator_advance_ip(bci);
@@ -1473,10 +1591,40 @@ namespace Zodiac
                 uint32_t lhs_idx = bytecode_iterator_fetch_32(bci);
                 uint32_t rhs_idx = bytecode_iterator_fetch_32(bci);
 
-                string_builder_appendf(sb, "%%%" PRIu64 " = ADD ", bci->local_temp_index);
+                const char *op_name;
+                if (inst == Bytecode_Instruction::GT) op_name = "GT";
+                else if (inst == Bytecode_Instruction::ADD) op_name = "ADD";
+                else if (inst == Bytecode_Instruction::SUB) op_name = "SUB";
+                else if (inst == Bytecode_Instruction::REM) op_name = "REM";
+                else if (inst == Bytecode_Instruction::MUL) op_name = "MUL";
+                else if (inst == Bytecode_Instruction::DIV) op_name = "DIV";
+                else assert(false);
+
+                string_builder_appendf(sb, "%%%" PRIu64 " = %s ", bci->local_temp_index,
+                                       op_name);
                 bytecode_print_size_spec(sb, size_spec);
                 string_builder_appendf(sb, " %%%" PRIu32 " %%%" PRIu32, lhs_idx, rhs_idx);
                 bci->local_temp_index += 1;
+                break;
+            }
+
+            case Bytecode_Instruction::JUMP:
+            {
+                auto block_idx = bytecode_iterator_fetch_32(bci);
+                auto func = bci->builder->program.functions[bci->function_index];
+                auto block = func->blocks[block_idx];
+                string_builder_appendf(sb, "JUMP %s", block->name);
+                break;
+            }
+
+            case Bytecode_Instruction::JUMP_IF:
+            {
+                auto tmp_idx = bytecode_iterator_fetch_32(bci);
+                auto block_idx = bytecode_iterator_fetch_32(bci);
+                auto func = bci->builder->program.functions[bci->function_index];
+                auto block = func->blocks[block_idx];
+                string_builder_appendf(sb, "JUMP_IF %%% " PRIu32 ", %s",
+                                       tmp_idx, block->name);
                 break;
             }
 

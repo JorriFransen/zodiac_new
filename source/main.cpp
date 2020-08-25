@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     Build_Data build_data = {};
     build_data_init(ca, &build_data);
     builtin_initialize_atoms(&build_data.atom_table);
-    builtin_initialize_types(ca);
+    builtin_initialize_types(ca, &build_data);
 
     Lexer lexer = lexer_create(ca, &build_data);
     String file_path = string_ref(argv[1]);
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     assert(resolver.bytecode_builder.program.entry_function);
 
     Interpreter interp;
-    interpreter_init(ca, &interp);
+    interpreter_init(ca, &interp, &build_data);
 
     interpreter_execute_entry(&interp, &resolver.bytecode_builder.program);
     printf("Interpreter exited with code: %" PRId64 "\n",

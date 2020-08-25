@@ -20,7 +20,8 @@ namespace Zodiac
         array_init(allocator, &build_data->type_table);
     }
 
-    AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator, Build_Data *build_data,
+    AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator,
+                                                     Build_Data *build_data,
                                                      AST_Type *base_type)
     {
         assert(build_data);
@@ -37,10 +38,30 @@ namespace Zodiac
         }
 
         //AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
-        AST_Type *ptr_type = ast_find_or_create_pointer_type(allocator, base_type);
+        AST_Type *ptr_type = _ast_find_or_create_pointer_type(allocator, base_type);
         assert(ptr_type);
         array_append(&build_data->type_table, ptr_type);
         return ptr_type;
+    }
+
+    AST_Type *build_data_find_or_create_array_type(Allocator *allocator, Build_Data *build_data,
+                                                   AST_Type *elem_type, int64_t elem_count)
+    {
+        for (int64_t i = 0; i < build_data->type_table.count; i++)
+        {
+            auto r_type = build_data->type_table[i];
+            if (r_type->kind == AST_Type_Kind::ARRAY &&
+                r_type->array.element_type == elem_type &&
+                r_type->array.element_count == elem_count)
+            {
+                return r_type; 
+            }
+        }
+
+        AST_Type *arr_type = _ast_create_array_type(allocator, elem_type, elem_count);
+        assert(arr_type);
+        array_append(&build_data->type_table, arr_type);
+        return arr_type;
     }
 
     AST_Type* build_data_find_function_type(Build_Data *build_data, Array<AST_Type*> param_types,

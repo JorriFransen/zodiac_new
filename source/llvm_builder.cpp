@@ -471,6 +471,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::STORE_PARAM: assert(false);
+
             case Bytecode_Instruction::ADDROF:
             {
                 auto alloc_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
@@ -488,6 +490,8 @@ namespace Zodiac
                 stack_push(&builder->arg_stack, val);
                 break;
             }
+
+            case Bytecode_Instruction::GT: assert(false);
 
             case Bytecode_Instruction::ADD:
             {
@@ -525,6 +529,16 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case Bytecode_Instruction::SUB: assert(false);
+                                            
+            case Bytecode_Instruction::REM: assert(false);
+            case Bytecode_Instruction::MUL: assert(false);
+            case Bytecode_Instruction::DIV: assert(false);
+
+            case Bytecode_Instruction::JUMP: assert(false);
+
+            case Bytecode_Instruction::JUMP_IF: assert(false);
 
             case Bytecode_Instruction::SYSCALL:
             {
@@ -817,6 +831,8 @@ namespace Zodiac
                 return result;
                 break;
             }
+
+            case AST_Type_Kind::ARRAY:assert(false);
         }
 
         assert(false);

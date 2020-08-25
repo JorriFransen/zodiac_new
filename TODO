@@ -1,4 +1,6 @@
 
+result of cmp ops should be bool
+
 ::TypedStructLiterals
   I think this was meant to parse this:
   p2 := Vec3(float) { 4, 5, 6 };

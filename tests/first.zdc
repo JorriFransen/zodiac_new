@@ -5,31 +5,40 @@ Vec2 :: struct
     y : s64;
 }
 
-print_num :: func (n: s64)
-{
-    buf : [32]s64;
-    i := 0;
-    while (n > 0)
-    {
-        nc := n % 10; 
-        //buf[i] = nc + 48;
-        i = i + 1;
-        n = n / 10;
-    }
+//print_num :: func (n: s64)
+//{
+    //buf : [32]s64;
+    //i := 0;
+    //while (n > 0)
+    //{
+        //nc := n % 10; 
+        ////buf[i] = nc + 48;
+        //i = i + 1;
+        //n = n / 10;
+    //}
 
-    while (i > 0)
-    {
-        //@syscall(1, 1, *buf[i - 1], 1);
-        i = i - 1;
-    }
-}
+    ////while (i > 0)
+    ////{
+        //////@syscall(1, 1, *buf[i - 1], 1);
+        ////i = i - 1;
+    ////}
+    //return;
+//}
 
 print_vec2 :: func (v: *Vec2) 
 {
     @syscall(1, 1, "x: ", 3);
-    print_num(v.x);
-    @syscall(1, 1, ", y: ", 3);
-    print_num(v.y);
+    //print_num(v.x);
+    @syscall(1, 1, ", y: ", 5);
+    //print_num(v.y);
+    print_newline();
+    return;
+}
+
+print_newline :: func ()
+{
+    nl := 10;
+    @syscall(1, 1, *nl, 1);
     return;
 }
 
@@ -43,10 +52,23 @@ main :: func () -> s64
 {
     // 1 = sys_write (syscall num)
     // 1 = stdout_fileno
-    a := 65;
-    @syscall(1, 1, "Hello World!", 12);
-    nl := 10;
-    @syscall(1, 1, *nl, 1);
+    count := 4;
+    while (count > 0)
+    {
+        @syscall(1, 1, "Hello World!", 12);
+        print_newline();
+        count = count - 1;
+    }
+    count = 26;
+    c := 65;
+    while (count > 0)
+    {
+        @syscall(1, 1, *c, 1);
+        c = c + 1;
+        count = count - 1;
+    }
+    print_newline();
+
     p1 : Vec2;
     p1.x = 33;
     p1.y = 44;

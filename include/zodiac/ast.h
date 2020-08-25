@@ -219,6 +219,8 @@ namespace Zodiac
         AST_Expression_Kind kind = AST_Expression_Kind::INVALID;
         AST_Type *type = nullptr;
 
+        bool is_const = false;
+
         union
         {
             AST_Identifier* identifier;
@@ -342,6 +344,7 @@ namespace Zodiac
 
         FUNCTION,
         STRUCTURE,
+        ARRAY,
     };
 
     struct AST_Type :  public AST_Node
@@ -379,6 +382,12 @@ namespace Zodiac
                 Scope *member_scope;
                 AST_Declaration *declaration;
             } structure;
+
+            struct 
+            {
+                AST_Type *element_type;
+                int64_t element_count;
+            } array;
         };
     };
 
@@ -530,7 +539,8 @@ namespace Zodiac
     AST_Type* ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
                                      Array<AST_Type*> member_types, Scope *member_scope);
 
-    AST_Type* ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type);
+    AST_Type* _ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type);
+    AST_Type* _ast_create_array_type(Allocator *allocator, AST_Type *elem_type, int64_t elem_count);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node* ast_node);
@@ -541,7 +551,8 @@ namespace Zodiac
 
     void ast_print_scope(Allocator *allocator, AST_Node *anode);
     void ast_print_scope(String_Builder* sb, AST_Node *anode, int64_t indent = 0);
-    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl, int64_t indent);
+    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl,
+                                      int64_t indent);
 
     void ast_print_type(String_Builder *sb, AST_Type *type);
 }

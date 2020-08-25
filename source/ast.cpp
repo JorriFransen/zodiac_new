@@ -1029,12 +1029,15 @@ namespace Zodiac
         auto result = ast_node_new<AST_Expression>(allocator, begin_fp, end_fp); 
 
         result->kind = kind;
+        result->is_const = false;
 
         return result;
     }
 
-    AST_Expression* ast_identifier_expression_new(Allocator* allocator, AST_Identifier* identifier,
-                                                  const File_Pos &begin_fp, const File_Pos &end_fp)
+    AST_Expression* ast_identifier_expression_new(Allocator* allocator,
+                                                  AST_Identifier* identifier,
+                                                  const File_Pos &begin_fp,
+                                                  const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::IDENTIFIER, begin_fp,
                                          end_fp);
@@ -1058,8 +1061,8 @@ namespace Zodiac
     }
 
     AST_Expression* ast_dot_expression_new(Allocator* allocator, AST_Expression* parent_expr,
-                                           AST_Identifier* child_ident, const File_Pos &begin_fp,
-                                           const File_Pos &end_fp)
+                                           AST_Identifier* child_ident,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::DOT, begin_fp, end_fp);
 
@@ -1074,7 +1077,8 @@ namespace Zodiac
                                               AST_Expression* lhs, AST_Expression* rhs,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::BINARY, begin_fp, end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::BINARY, begin_fp,
+                                         end_fp);
 
         result->binary.op = op;
         result->binary.lhs = lhs;
@@ -1084,10 +1088,12 @@ namespace Zodiac
     }
 
     AST_Expression* ast_unary_expression_new(Allocator* allocator, Unary_Operator op,
-                                             AST_Expression* operand_expr, const File_Pos &begin_fp,
+                                             AST_Expression* operand_expr,
+                                             const File_Pos &begin_fp,
                                              const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::UNARY, begin_fp, end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::UNARY, begin_fp,
+                                         end_fp);
 
         result->unary.op = op;
         result->unary.operand_expression = operand_expr;
@@ -1100,7 +1106,8 @@ namespace Zodiac
                                             bool is_builtin, const File_Pos &begin_fp,
                                             const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::CALL, begin_fp, end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::CALL, begin_fp,
+                                         end_fp);
 
         result->call.ident_expression = ident_expr;
         result->call.arg_expressions = arg_expressions;
@@ -1110,19 +1117,23 @@ namespace Zodiac
         return result;
     }
 
-    AST_Expression *ast_addrof_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+    AST_Expression *ast_addrof_expression_new(Allocator *allocator,
+                                              AST_Expression *operand_expr,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::ADDROF, begin_fp, end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::ADDROF,
+                                         begin_fp, end_fp);
 
         result->addrof.operand_expr = operand_expr;
 
         return result;
     }
 
-    AST_Expression* ast_compound_expression_new(Allocator* allocator, Array<AST_Expression*> exprs,
+    AST_Expression* ast_compound_expression_new(Allocator* allocator,
+                                                Array<AST_Expression*> exprs,
                                                 AST_Type_Spec* type_spec,
-                                                const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                const File_Pos &begin_fp,
+                                                const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::COMPOUND, begin_fp,
                                          end_fp);
@@ -1137,9 +1148,10 @@ namespace Zodiac
                                                       const File_Pos &begin_fp,
                                                       const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::NUMBER_LITERAL, begin_fp,
-                                         end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::NUMBER_LITERAL,
+                                         begin_fp, end_fp);
         
+        result->is_const = true;
         result->number_literal.s64 = value;
 
         return result;
@@ -1149,8 +1161,8 @@ namespace Zodiac
                                                       const File_Pos &begin_fp,
                                                       const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::STRING_LITERAL, begin_fp,
-                                         end_fp);
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::STRING_LITERAL,
+                                         begin_fp, end_fp);
 
         result->string_literal.atom = atom;
 
@@ -1312,12 +1324,23 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type* ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type)
+    AST_Type* _ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type)
     {
         if (base_type->pointer_to) return base_type->pointer_to;
 
         auto result = ast_pointer_type_new(allocator, base_type);
         base_type->pointer_to = result;
+
+        return result;
+    }
+
+    AST_Type* _ast_create_array_type(Allocator *allocator, AST_Type *elem_type,
+                                     int64_t elem_count)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::ARRAY, 0);
+
+        result->array.element_type = elem_type;
+        result->array.element_count = elem_count;
 
         return result;
     }
@@ -1889,6 +1912,13 @@ namespace Zodiac
             {
                 auto decl = type->structure.declaration;
                 string_builder_appendf(sb, "struct(%s)", decl->identifier->atom.data);
+                break;
+            }
+
+            case AST_Type_Kind::ARRAY:
+            {
+                string_builder_appendf(sb, "[%" PRId64 "]", type->array.element_count);
+                ast_print_type(sb, type->array.element_type);
                 break;
             }
         }
