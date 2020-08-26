@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     Parser parser = parser_create(ca, &build_data);
     Parsed_File parsed_file = parser_parse_file(&parser, token_stream);
 
-    parsed_file_print(&parsed_file);
+    //parsed_file_print(&parsed_file);
 
     //@TODO: initialize with builtin global count
     Scope *global_scope = scope_new(ca, Scope_Kind::GLOBAL, nullptr);
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
     assert(rr.error_count == 0);
     //if (rr.llvm_error) return 1;
 
-    bytecode_print(ca, &resolver.bytecode_builder);
+    //bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
 
     Interpreter interp;

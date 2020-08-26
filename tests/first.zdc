@@ -57,14 +57,10 @@ add_vec2 :: func (v: *Vec2) -> s64
 
 main :: func () -> s64
 {
-     //1 = sys_write (syscall num)
-     //1 = stdout_fileno
     count := 4;
     while (count > 0)
     {
         println("Hello World!");
-        //@syscall(1, 1, "Hello World!", 12);
-        //println(" ");
         count = count - 1;
     }
     count = 26;
