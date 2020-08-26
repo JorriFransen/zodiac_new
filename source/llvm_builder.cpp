@@ -490,7 +490,19 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::STORE_PARAM: assert(false);
+            case Bytecode_Instruction::STORE_PARAM:
+            {
+                auto param_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef param_alloca = builder->params[param_idx];
+                LLVMValueRef val = builder->temps[val_idx];
+
+                LLVMBuildStore(builder->llvm_builder, val, param_alloca);
+                break;
+            }
 
             case Bytecode_Instruction::ADDROF:
             {
@@ -660,9 +672,81 @@ namespace Zodiac
                 break;
             }
                                             
-            case Bytecode_Instruction::REM: assert(false);
+            case Bytecode_Instruction::REM:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildSRem(builder->llvm_builder,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+                    default: assert(false);
+                }
+                break;
+            }
+
             case Bytecode_Instruction::MUL: assert(false);
-            case Bytecode_Instruction::DIV: assert(false);
+
+            case Bytecode_Instruction::DIV:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildSDiv(builder->llvm_builder,
+                                                           lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+                    default: assert(false);
+                }
+                break;
+            }
 
             case Bytecode_Instruction::JUMP:
             {
@@ -825,6 +909,8 @@ namespace Zodiac
                 auto offset_val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                          &func_context->ip);
 
+                bool is_array = false;
+
                 LLVMValueRef store_val = nullptr;
                 switch (store_kind)
                 {
@@ -833,7 +919,7 @@ namespace Zodiac
                     case Bytecode_Value_Type_Specifier::ALLOCL:
                     {
                         store_val = builder->allocas[store_idx];
-                        store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
+                        //store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
                         break;
                     }
 
@@ -853,12 +939,37 @@ namespace Zodiac
 
                 assert(store_val);
 
+                LLVMTypeRef store_type = LLVMTypeOf(store_val);
+                assert(LLVMGetTypeKind(store_type) == LLVMPointerTypeKind);
+                store_type = LLVMGetElementType(store_type);
+                LLVMTypeKind store_type_kind = LLVMGetTypeKind(store_type);
+                if (store_type_kind == LLVMArrayTypeKind)
+                {
+                    is_array = true; 
+                }
+
                 LLVMValueRef llvm_offset_val = builder->temps[offset_val_idx];
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
                 assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
 
+                LLVMValueRef llvm_zero_val = LLVMConstNull(llvm_idx_type);
+
+                LLVMValueRef indices[2];
+                unsigned index_count = 0;
+                if (is_array)
+                {
+                    indices[0] = llvm_zero_val;
+                    indices[1] = llvm_offset_val;
+                    index_count = 2;
+                }
+                else
+                {
+                    indices[0] = llvm_offset_val;
+                    index_count = 1;
+                }
+
                 LLVMValueRef result = LLVMBuildGEP(builder->llvm_builder, store_val,
-                                                   &llvm_offset_val, 1, "");
+                                                   indices, index_count, "");
                 llvm_push_temporary(builder, result);
                 break;
             }
@@ -1093,7 +1204,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::ARRAY:assert(false);
+            case AST_Type_Kind::ARRAY:
+            {
+                LLVMTypeRef llvm_elem_type = llvm_type_from_ast(builder,
+                                                                ast_type->array.element_type);
+                return LLVMArrayType(llvm_elem_type, ast_type->array.element_count);
+                break;
+            }
         }
 
         assert(false);
