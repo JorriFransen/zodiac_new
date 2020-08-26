@@ -59,28 +59,28 @@ main :: func () -> s64
 {
     // 1 = sys_write (syscall num)
     // 1 = stdout_fileno
-    count := 4;
-    while (count > 0)
-    {
-        @syscall(1, 1, "Hello World!", 12);
-        print_newline();
-        count = count - 1;
-    }
-    count = 26;
-    c := 65;
-    while (count > 0)
-    {
-        @syscall(1, 1, *c, 1);
-        c = c + 1;
-        count = count - 1;
-    }
-    print_newline();
+    //count := 4;
+    //while (count > 0)
+    //{
+        //@syscall(1, 1, "Hello World!", 12);
+        //println("");
+        //count = count - 1;
+    //}
+    //count = 26;
+    //c := 65;
+    //while (count > 0)
+    //{
+        //@syscall(1, 1, *c, 1);
+        //c = c + 1;
+        //count = count - 1;
+    //}
+    //println("");
 
     p1 : Vec2;
     p1.x = 33;
-    p1.y = 44;
+    //p1.y = 44;
 
-    print_vec2(*p1);
+    //print_vec2(*p1);
     return add_vec2(*p1);
 }
 

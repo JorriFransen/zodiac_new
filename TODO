@@ -14,6 +14,7 @@ Syscall return values
 Replace escaped characters in string/character literals
 Check call arg types
 Copy structs on return (bytecode)
+function overloads
 
 Custom allocator for stack frame allocls in interpreter
 

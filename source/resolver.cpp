@@ -225,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -338,8 +338,8 @@ namespace Zodiac
                     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
                     auto decl = static_cast<AST_Declaration*>(job->ast_node);
                     assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                    auto bc_func = bytecode_emit_function_declaration(&resolver->bytecode_builder,
-                                                                      decl);
+                    auto bc_func =
+                        bytecode_emit_function_declaration(&resolver->bytecode_builder, decl);
                     job->result = bc_func;
                     result = true;
                 }
@@ -685,6 +685,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL:
             {
+                result = true;
                 if (!ast_expr->call.is_builtin)
                 {
                     if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression,
@@ -724,8 +725,10 @@ namespace Zodiac
                     }
                 }
 
-                result = true;
-                if (!arg_res) result = false;
+                if (result)
+                {
+                    if (!arg_res) result = false;
+                }
 
                 break;
             }
@@ -753,6 +756,8 @@ namespace Zodiac
                 result = true;
                 break;
             }
+
+            case AST_Expression_Kind::CAST:  assert(false);
 
             case AST_Expression_Kind::NUMBER_LITERAL: 
             {
@@ -1399,9 +1404,46 @@ namespace Zodiac
                     assert(false);
                 }
 
+                AST_Type *result_type = nullptr;
+
+                if (lhs->type != rhs->type)
+                {
+                    assert(lhs->type->kind == AST_Type_Kind::INTEGER);
+                    assert(rhs->type->kind == AST_Type_Kind::INTEGER);
+
+                    if (lhs->type->bit_size == rhs->type->bit_size)
+                    {
+                        assert(false);
+                    }
+                    else if (lhs->type->bit_size > rhs->type->bit_size)
+                    {
+                        assert(false);
+                    }
+                    else if (rhs->type->bit_size > lhs->type->bit_size)
+                    {
+                        if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
+
+                        result_type = rhs->type;
+                        ast_expr->binary.lhs = ast_cast_expression_new(resolver->allocator,
+                                                                       lhs, result_type,
+                                                                       lhs->begin_file_pos,
+                                                                       lhs->end_file_pos);
+                        ast_expr->binary.lhs->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                        if (!try_resolve_types(resolver, ast_expr->binary.lhs, scope))
+                        {
+                            assert(false);
+                        }
+                    }
+                    else assert(false);
+                }
+                else
+                {
+                    result_type = lhs->type;
+                }
+
+                assert(result_type);
                 result = true;
-                assert(lhs->type == rhs->type);
-                ast_expr->type = lhs->type;
+                ast_expr->type = result_type;
                 break;
             }
 
@@ -1466,7 +1508,65 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND: assert(false);
 
-            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                if (!try_resolve_types(resolver, ast_expr->subscript.index_expression, scope))
+                {
+                    assert(false);
+                }
+
+                auto index_type = ast_expr->subscript.index_expression->type;
+                assert(index_type->kind == AST_Type_Kind::INTEGER);
+
+                if (!try_resolve_types(resolver, ast_expr->subscript.pointer_expression, scope))
+                {
+                    assert(false);
+                }
+
+                auto pointer_type = ast_expr->subscript.pointer_expression->type;
+                assert(pointer_type->kind == AST_Type_Kind::POINTER);
+
+                ast_expr->type = pointer_type->pointer.base;
+                result = true;
+                break;
+            }
+
+            case AST_Expression_Kind::CAST:
+            {
+                if (!try_resolve_types(resolver, ast_expr->cast.operand_expression, scope))
+                {
+                    assert(false);
+                }
+
+                auto operand = ast_expr->cast.operand_expression;
+                auto target_type = ast_expr->cast.target_type;
+
+                AST_Type *result_type = nullptr;
+
+                if (operand->type == target_type)
+                {
+                    result = true;
+                    result_type = target_type;
+                }
+                else
+                {
+                    if (target_type->kind == AST_Type_Kind::INTEGER)
+                    {
+                        assert(operand->type->kind == AST_Type_Kind::INTEGER);
+                        result = true;
+                        result_type = target_type;
+                    }
+                    else assert(false);
+                }
+
+                if (result)
+                {
+                    assert(result_type);
+                    ast_expr->type = result_type;
+                }
+
+                break;
+            }
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
@@ -2165,7 +2265,23 @@ namespace Zodiac
 
             case AST_Expression_Kind::COMPOUND: assert(false);
 
-            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         expr->subscript.pointer_expression,
+                                                         scope);
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         expr->subscript.index_expression,
+                                                         scope);
+            }
+
+            case AST_Expression_Kind::CAST:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         expr->cast.operand_expression,
+                                                         scope);
+                break;
+            }
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             case AST_Expression_Kind::STRING_LITERAL:

@@ -654,6 +654,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::CAST_INT: assert(false);
+
             case Bytecode_Instruction::SYSCALL:
             {
                 auto arg_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

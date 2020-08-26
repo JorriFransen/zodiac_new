@@ -24,6 +24,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::SUBSCRIPT: assert(false);
 
+            case AST_Expression_Kind::CAST: assert(false);
+
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
                 assert(expr->type == Builtin::type_s64);

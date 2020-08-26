@@ -759,6 +759,8 @@ namespace Zodiac
                    break;
                }
 
+               case Bytecode_Instruction::CAST_INT: assert(false);
+
                case Bytecode_Instruction::SYSCALL:
                {
                    auto arg_count = interpreter_fetch<uint32_t>(interp);
@@ -783,7 +785,7 @@ namespace Zodiac
                {
                    auto store_kind = interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
                    auto store_idx = interpreter_fetch<uint32_t>(interp);
-                   auto offset_val = interpreter_fetch<uint32_t>(interp);
+                   auto offset_idx = interpreter_fetch<uint32_t>(interp);
 
                    //assert(store_kind == Bytecode_Value_Type_Specifier::ALLOCL ||
                           //store_kind == Bytecode_Value_Type_Specifier::PARAMETER);
@@ -818,6 +820,10 @@ namespace Zodiac
                           store_val->kind == Bytecode_Value_Kind::PARAMETER ||
                           store_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
+                   Bytecode_Value *offset_val = interpreter_load_temporary(interp, offset_idx);
+                   assert(offset_val->type == Builtin::type_s64);
+                   int64_t offset = offset_val->value.int_literal.s64;
+
                    AST_Type *struct_type = nullptr;
                    if (store_val->type->kind == AST_Type_Kind::STRUCTURE)
                    {
@@ -832,17 +838,17 @@ namespace Zodiac
                    assert(struct_type);
 
                    auto mem_types = struct_type->structure.member_types;
-                   assert(offset_val < mem_types.count);
+                   assert(offset < mem_types.count);
 
                    auto ptr_type = build_data_find_or_create_pointer_type(interp->allocator,
                                                                           interp->build_data,
-                                                                          mem_types[offset_val]);
+                                                                          mem_types[offset]);
                    auto result = interpreter_push_temporary(interp, ptr_type);
                    assert(result);
 
                    auto byte_offset = 0;
 
-                   for (int64_t i = 0; i < offset_val; i++)
+                   for (int64_t i = 0; i < offset; i++)
                    {
                        byte_offset += (mem_types[i]->bit_size / 8);
                    }

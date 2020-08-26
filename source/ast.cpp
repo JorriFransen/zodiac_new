@@ -1172,6 +1172,16 @@ namespace Zodiac
         return result;
     }
 
+    AST_Expression *ast_cast_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+                                            AST_Type *target_type, const File_Pos &bfp,
+                                            const File_Pos &efp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::CAST, bfp, efp);
+        result->cast.operand_expression = operand_expr;
+        result->cast.target_type = target_type;
+        return result;
+    }
+
     AST_Expression *ast_number_literal_expression_new(Allocator *allocator, int64_t value,
                                                       const File_Pos &begin_fp,
                                                       const File_Pos &end_fp)
@@ -1788,6 +1798,8 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::SUBSCRIPT: assert(false);
+
+            case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             {

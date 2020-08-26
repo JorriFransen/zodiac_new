@@ -302,6 +302,8 @@ namespace Zodiac
                 break;;
             }
 
+            case AST_Expression_Kind::CAST: assert(false);
+
             case AST_Expression_Kind::NUMBER_LITERAL: break;
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
 

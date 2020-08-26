@@ -207,6 +207,7 @@ namespace Zodiac
         ADDROF,
         COMPOUND,
         SUBSCRIPT,
+        CAST,
 
         NUMBER_LITERAL,
         STRING_LITERAL,
@@ -276,6 +277,12 @@ namespace Zodiac
                 AST_Expression *pointer_expression;
                 AST_Expression *index_expression;
             } subscript;
+
+            struct
+            {
+                AST_Expression *operand_expression;
+                AST_Type *target_type;
+            } cast;
 
             Number_Literal number_literal;
 
@@ -511,6 +518,9 @@ namespace Zodiac
     AST_Expression *ast_subscript_expression_new(Allocator *allocator, AST_Expression *pointer_expr,
                                                  AST_Expression *index_expr,
                                                  const File_Pos &bfp, const File_Pos &efp);
+    AST_Expression *ast_cast_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+                                            AST_Type *target_type, const File_Pos &bfp,
+                                            const File_Pos &efp);
     AST_Expression *ast_number_literal_expression_new(Allocator *allocator, int64_t value,
                                                       const File_Pos & begin_fp,
                                                       const File_Pos &end_fp);
