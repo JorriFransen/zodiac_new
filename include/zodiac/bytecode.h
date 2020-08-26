@@ -280,6 +280,9 @@ namespace Zodiac
     void bytecode_builder_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block);
 
     Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
+                                                  Bytecode_Function *func,
+                                                  Bytecode_Block *block);
+    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
                                                   Bytecode_Function *func, const char *name);
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
@@ -293,7 +296,7 @@ namespace Zodiac
                               int64_t offset);
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration* decl);
-    Bytecode_Block *bytecode_new_block(Allocator *allocator, const char* name);
+    Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char* name);
 
     Bytecode_Value *bytecode_new_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                        AST_Type *type);

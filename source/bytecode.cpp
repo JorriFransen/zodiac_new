@@ -252,9 +252,8 @@ namespace Zodiac
 
         auto current_func = builder->current_function;
         auto cond_block = bytecode_builder_append_block(builder, current_func, "while_cond");
-        auto body_block = bytecode_builder_append_block(builder, current_func, "while_body");
-        auto post_while_block = bytecode_builder_append_block(builder, current_func,
-                                                              "post_while");
+        auto body_block = bytecode_new_block(builder, "while_body");
+        auto post_while_block = bytecode_new_block(builder, "post_while");
 
         bytecode_emit_jump(builder, cond_block);
         bytecode_builder_set_insert_point(builder, cond_block);
@@ -265,10 +264,12 @@ namespace Zodiac
         bytecode_emit_jump_if(builder, body_block, cond_val);
         bytecode_emit_jump(builder, post_while_block);
 
+        bytecode_builder_append_block(builder, current_func, body_block);
         bytecode_builder_set_insert_point(builder, body_block);
         bytecode_emit_statement(builder, stmt->while_stmt.body);
         bytecode_emit_jump(builder, cond_block);
 
+        bytecode_builder_append_block(builder, current_func, post_while_block);
         bytecode_builder_set_insert_point(builder, post_while_block);
     }
 
@@ -280,15 +281,29 @@ namespace Zodiac
 
         auto current_func = builder->current_function;
         auto then_block = bytecode_builder_append_block(builder, current_func, "then");
-        auto post_if_block = bytecode_builder_append_block(builder, current_func, "post_if");
+        Bytecode_Block * else_block = nullptr;
+        if (stmt->if_stmt.else_stmt)
+        {
+            else_block = bytecode_new_block(builder, "else");
+        }
+        auto post_if_block = bytecode_new_block(builder, "post_if");
 
         bytecode_emit_jump_if(builder, then_block, cond_val);
-        bytecode_emit_jump(builder, post_if_block);
+        bytecode_emit_jump(builder, else_block ? else_block : post_if_block);
 
         bytecode_builder_set_insert_point(builder, then_block);
         bytecode_emit_statement(builder, stmt->if_stmt.then_stmt);
         bytecode_emit_jump(builder, post_if_block);
 
+        if (stmt->if_stmt.else_stmt)
+        {
+            bytecode_builder_append_block(builder, current_func, else_block);
+            bytecode_builder_set_insert_point(builder, else_block);
+            bytecode_emit_statement(builder, stmt->if_stmt.else_stmt);
+            bytecode_emit_jump(builder, post_if_block);
+        }
+
+        bytecode_builder_append_block(builder, current_func, post_if_block);
         bytecode_builder_set_insert_point(builder, post_if_block);
     }
 
@@ -1310,15 +1325,22 @@ namespace Zodiac
     }
 
     Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
-                                                  Bytecode_Function *func, const char *name)
+                                                  Bytecode_Function *func,
+                                                  Bytecode_Block *block)
     {
-        auto block = bytecode_new_block(builder->allocator, name);
         block->index = func->blocks.count;
         array_append(&func->blocks, block);
 
         func->last_block = block;
 
         return block;
+    }
+
+    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
+                                                  Bytecode_Function *func, const char *name)
+    {
+        auto block = bytecode_new_block(builder, name);
+        return bytecode_builder_append_block(builder, func, block);
     }
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
@@ -1411,15 +1433,15 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Block *bytecode_new_block(Allocator *allocator, const char *name)
+    Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)
     {
-        Bytecode_Block *result = alloc_type<Bytecode_Block>(allocator);
+        Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
 
         result->name = string_ref(name);
         result->index = -1;
         result->local_temp_count = 0;
         result->preceding_temp_count = 0;
-        array_init(allocator, &result->instructions);
+        array_init(builder->allocator, &result->instructions);
 
         return result;
     }
