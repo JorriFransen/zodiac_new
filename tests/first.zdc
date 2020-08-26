@@ -5,25 +5,26 @@ Vec2 :: struct
     y : s64;
 }
 
-//print_num :: func (n: s64)
-//{
-    //buf : [32]s64;
-    //i := 0;
-    //while (n > 0)
-    //{
-        //nc := n % 10; 
-        ////buf[i] = nc + 48;
-        //i = i + 1;
-        //n = n / 10;
-    //}
+print_num :: func (n: s64)
+{
+    buf : [32]s64;
+    i := 0;
+    while (n > 0)
+    {
+        nc := n % 10; 
+        buf[i] = nc + 48;
+        i = i + 1;
+        n = n / 10;
+    }
 
-    ////while (i > 0)
-    ////{
-        //////@syscall(1, 1, *buf[i - 1], 1);
-        ////i = i - 1;
-    ////}
-    //return;
-//}
+    while (i > 0)
+    {
+        @syscall(1, 1, *buf[i - 1], 1);
+        i = i - 1;
+    }
+    return;
+}
+
 
 strlen :: func (cstr: *u8) -> s64
 {
@@ -35,6 +36,12 @@ strlen :: func (cstr: *u8) -> s64
     return i;
 }
 
+print :: func (cstr: *u8)
+{
+    @syscall(1, 1, cstr, strlen(cstr));
+    return;
+}
+
 println :: func (cstr: *u8)
 {
     print(cstr);
@@ -43,42 +50,48 @@ println :: func (cstr: *u8)
     return;
 }
 
-print :: func (cstr: *u8)
+print_vec2 :: func (v: *Vec2)
 {
-    @syscall(1, 1, cstr, strlen(cstr));
+    print("x: ");
+    print_num(v.x);
+    print("y: ");
+    print_num(v.y);
+    println(" ");
     return;
 }
 
 add_vec2 :: func (v: *Vec2) -> s64
 {
-
     return v.x + v.y;
 }
 
 main :: func () -> s64
 {
-    count := 4;
-    while (count > 0)
-    {
-        println("Hello World!");
-        count = count - 1;
-    }
-    count = 26;
-    c := 65;
-    while (count > 0)
-    {
-        @syscall(1, 1, *c, 1);
-        c = c + 1;
-        count = count - 1;
-    }
+    //count := 4;
+    //while (count > 0)
+    //{
+        //println("Hello World!");
+        //count = count - 1;
+    //}
+    //count = 26;
+    //c := 65;
+    //while (count > 0)
+    //{
+        //@syscall(1, 1, *c, 1);
+        //c = c + 1;
+        //count = count - 1;
+    //}
+    //println(" ");
+
+    //p1 : Vec2;
+    //p1.x = 33;
+    //p1.y = 44;
+
+    ////print_vec2(*p1);
+    print_num(666);
     println(" ");
-
-    p1 : Vec2;
-    p1.x = 33;
-    p1.y = 44;
-
-    //print_vec2(*p1);
-    return add_vec2(*p1);
+    return 0;
+    //return add_vec2(*p1);
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

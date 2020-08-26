@@ -857,11 +857,8 @@ namespace Zodiac
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
                 assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
 
-                printf("%s\n", LLVMPrintValueToString(store_val));
-
                 LLVMValueRef result = LLVMBuildGEP(builder->llvm_builder, store_val,
                                                    &llvm_offset_val, 1, "");
-                printf("%s\n", LLVMPrintValueToString(result));
                 llvm_push_temporary(builder, result);
                 break;
             }

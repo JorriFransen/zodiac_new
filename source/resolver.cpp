@@ -225,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -1524,9 +1524,19 @@ namespace Zodiac
                 }
 
                 auto pointer_type = ast_expr->subscript.pointer_expression->type;
-                assert(pointer_type->kind == AST_Type_Kind::POINTER);
+                AST_Type *result_type = nullptr;
+                if (pointer_type->kind == AST_Type_Kind::POINTER)
+                {
+                    result_type = pointer_type->pointer.base; 
+                }
+                else if (pointer_type->kind == AST_Type_Kind::ARRAY)
+                {
+                    result_type = pointer_type->array.element_type;
+                }
 
-                ast_expr->type = pointer_type->pointer.base;
+                assert(result_type);
+
+                ast_expr->type = result_type;
                 result = true;
                 break;
             }
@@ -1797,10 +1807,8 @@ namespace Zodiac
 
                 assert(length);
 
-                auto array_type = build_data_find_or_create_array_type(resolver->allocator,
-                                                                       resolver->build_data,
-                                                                       element_type,
-                                                                       length);
+                auto array_type = find_or_create_array_type(resolver, element_type, length,
+                                                            scope);
                 assert(array_type);
                 result = true;
                 ts->type = array_type;
@@ -1949,7 +1957,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::ARRAY:assert(false);
+            case AST_Type_Kind::ARRAY:
+            {
+                auto elem_size = ast_type->array.element_type->bit_size;
+                assert(elem_size);
+                auto bit_size = elem_size * ast_type->array.element_count;
+                assert(bit_size);
+                ast_type->bit_size = bit_size;
+                ast_type->flags |= AST_NODE_FLAG_SIZED;
+                break;
+            }
         }
 
         if (result)
@@ -1984,6 +2001,30 @@ namespace Zodiac
         assert(func_type);
 
         return func_type;
+    }
+
+    AST_Type* find_or_create_array_type(Resolver *resolver, AST_Type *element_type,
+                                        int64_t element_count, Scope *current_scope)
+    {
+        assert(element_count > 0);
+
+        AST_Type *array_type = build_data_find_array_type(resolver->allocator,
+                                                          resolver->build_data,
+                                                          element_type,
+                                                          element_count);
+
+        if (!array_type)
+        {
+            array_type = build_data_create_array_type(resolver->allocator,
+                                                      resolver->build_data,
+                                                      element_type,
+                                                      element_count);
+            queue_size_job(resolver, array_type, current_scope);
+        }
+        
+        assert(array_type);
+        return array_type;
+
     }
 
     AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 

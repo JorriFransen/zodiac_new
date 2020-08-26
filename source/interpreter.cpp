@@ -84,6 +84,7 @@ namespace Zodiac
                 memcpy(new_mem, arg_copy.value.struct_pointer, size);
                 arg_copy.value.struct_pointer = new_mem;
             }
+            else if (arg_copy.type->kind == AST_Type_Kind::ARRAY) assert(false);
 
             array_append(&frame_p->parameters, arg_copy);
         }
@@ -100,7 +101,8 @@ namespace Zodiac
             allocl_val.type = func->local_allocs[i].value->type;
             assert(allocl_val.type);
 
-            if (allocl_val.type->kind == AST_Type_Kind::STRUCTURE)
+            if (allocl_val.type->kind == AST_Type_Kind::STRUCTURE ||
+                allocl_val.type->kind == AST_Type_Kind::ARRAY)
             {
                 auto bit_size = allocl_val.type->bit_size;
                 assert(bit_size);
@@ -110,6 +112,7 @@ namespace Zodiac
                 //@TODO: Custom allocator for this
                 allocl_val.value.struct_pointer = alloc(interp->allocator, size);
             }
+
 
             stack_push(&interp->allocl_stack, allocl_val);
         }
@@ -163,7 +166,8 @@ namespace Zodiac
         for (int64_t i = 0; i < func->local_allocs.count; i++)
         {
             auto val = stack_pop(&interp->allocl_stack);
-            if (val.type->kind == AST_Type_Kind::STRUCTURE)
+            if (val.type->kind == AST_Type_Kind::STRUCTURE ||
+                val.type->kind == AST_Type_Kind::ARRAY)
             {
                 assert(val.kind == Bytecode_Value_Kind::ALLOCL);
                 free(interp->allocator, val.value.struct_pointer);
@@ -996,17 +1000,34 @@ namespace Zodiac
                    }
 
                    assert(store_val);
-                   assert(store_val->type->kind == AST_Type_Kind::POINTER);
 
                    auto offset_val = interpreter_load_temporary(interp, offset_idx);
                    assert(offset_val->type == Builtin::type_u32);
                    int64_t offset = offset_val->value.int_literal.u32;
 
-                   auto elem_type = store_val->type->pointer.base;
-                   auto elem_byte_size = elem_type->bit_size / 8;
+                   AST_Type *element_type = nullptr;
+                   AST_Type *elem_ptr_type = nullptr;
+                   if (store_val->type->kind == AST_Type_Kind::POINTER)
+                   {
+                       element_type = store_val->type->pointer.base;
+                       elem_ptr_type = store_val->type;
+                   }
+                   else if (store_val->type->kind == AST_Type_Kind::ARRAY)
+                   {
+                        element_type = store_val->type->array.element_type;
+                        elem_ptr_type =
+                            build_data_find_or_create_pointer_type(interp->allocator,
+                                                                   interp->build_data,
+                                                                   element_type);
+                   }
+                   else assert(false);
+                   assert(element_type);
+
+                   auto elem_byte_size = element_type->bit_size / 8;
                    auto byte_offset = offset * elem_byte_size;
 
-                   auto result = interpreter_push_temporary(interp, store_val->type);
+
+                   auto result = interpreter_push_temporary(interp, elem_ptr_type);
                    char *result_p = (char*)store_val->value.pointer;
                    result->value.pointer = &result_p[byte_offset];
                    break;

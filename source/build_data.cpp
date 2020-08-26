@@ -44,23 +44,31 @@ namespace Zodiac
         return ptr_type;
     }
 
-    AST_Type *build_data_find_or_create_array_type(Allocator *allocator, Build_Data *build_data,
-                                                   AST_Type *elem_type, int64_t elem_count)
+    AST_Type *build_data_find_array_type(Allocator *allocator, Build_Data *build_data,
+                                                   AST_Type *elem_type, int64_t element_count)
     {
         for (int64_t i = 0; i < build_data->type_table.count; i++)
         {
             auto r_type = build_data->type_table[i];
             if (r_type->kind == AST_Type_Kind::ARRAY &&
                 r_type->array.element_type == elem_type &&
-                r_type->array.element_count == elem_count)
+                r_type->array.element_count == element_count)
             {
                 return r_type; 
             }
         }
 
-        AST_Type *arr_type = _ast_create_array_type(allocator, elem_type, elem_count);
+        return nullptr;
+    }
+
+    AST_Type *build_data_create_array_type(Allocator *allocator, Build_Data *build_data,
+                                                   AST_Type *elem_type, int64_t element_count)
+    {
+        AST_Type *arr_type = _ast_create_array_type(allocator, elem_type, element_count);
         assert(arr_type);
         array_append(&build_data->type_table, arr_type);
+        arr_type->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        arr_type->flags |= AST_NODE_FLAG_TYPED;
         return arr_type;
     }
 

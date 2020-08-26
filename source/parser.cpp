@@ -439,7 +439,8 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
                 if (parser_is_token(ts, TOK_EQ))
                 {
                     assert(expr->kind == Expression_PTN_Kind::IDENTIFIER ||
-                           expr->kind == Expression_PTN_Kind::DOT);
+                           expr->kind == Expression_PTN_Kind::DOT ||
+                           expr->kind == Expression_PTN_Kind::SUBSCRIPT);
 
                     result = parser_parse_assignment_statement(parser, ts, expr);
                 }
@@ -547,7 +548,8 @@ Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* t
                                                  Expression_PTN* ident_expression)
 {
     assert(ident_expression->kind == Expression_PTN_Kind::IDENTIFIER ||
-           ident_expression->kind == Expression_PTN_Kind::DOT);
+           ident_expression->kind == Expression_PTN_Kind::DOT ||
+           ident_expression->kind == Expression_PTN_Kind::SUBSCRIPT);
 
     if (!parser_expect_token(parser, ts, TOK_EQ))
     {
