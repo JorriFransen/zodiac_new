@@ -524,7 +524,39 @@ namespace Zodiac
 
             case Bytecode_Instruction::EQ:
             {
-                assert(false);
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntEQ,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+                    default: assert(false);
+                }
+                break;
                 break;
             }
 
