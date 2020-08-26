@@ -225,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -2276,7 +2276,20 @@ namespace Zodiac
             }
 
             
-            case AST_Statement_Kind::IF: assert(false);
+            case AST_Statement_Kind::IF:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, stmt->if_stmt.cond_expr,
+                                                         scope);
+                queue_emit_bytecode_jobs_from_statement(resolver, stmt->if_stmt.then_stmt,
+                                                        stmt->if_stmt.then_scope);
+
+                if (stmt->if_stmt.else_stmt)
+                {
+                    queue_emit_bytecode_jobs_from_statement(resolver, stmt->if_stmt.else_stmt,
+                                                            stmt->if_stmt.else_scope);
+                }
+                break;
+            }
         }
     }
 

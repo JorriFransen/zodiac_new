@@ -522,6 +522,12 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::EQ:
+            {
+                assert(false);
+                break;
+            }
+
             case Bytecode_Instruction::NEQ:
             {
                 auto size_spec =

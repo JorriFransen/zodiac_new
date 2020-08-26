@@ -23,6 +23,7 @@ namespace Zodiac
         builder->program.bytecode_entry_function = nullptr;
 
         array_init(allocator, &builder->emitted_types);
+        array_init(allocator, &builder->jump_records);
 
         builder->insert_block = nullptr;
         builder->current_function = nullptr;
@@ -101,6 +102,7 @@ namespace Zodiac
         }
         else
         {
+            builder->jump_records.count = 0;
             builder->current_function = func;
             bytecode_builder_append_block(builder, func, "entry");
             bytecode_builder_set_insert_point(builder, func);
@@ -131,6 +133,14 @@ namespace Zodiac
             auto block = func->blocks[i];
             block->preceding_temp_count = temp_count;
             temp_count += block->local_temp_count;
+        }
+
+        for (int64_t i = 0; i < builder->jump_records.count; i++)
+        {
+            auto &jr = builder->jump_records[i];
+            uint32_t *ptr = (uint32_t*)&jr.from_block->instructions[jr.index_offset];
+            uint32_t index = jr.target_block->index;
+            *ptr = index;
         }
 
         return func;
@@ -214,7 +224,11 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Statement_Kind::IF: assert(false);
+            case AST_Statement_Kind::IF:
+            {
+                bytecode_emit_if_statement(builder, statement);
+                break;
+            }
         }
     }
 
@@ -234,6 +248,8 @@ namespace Zodiac
 
     void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt)
     {
+        assert(stmt->kind == AST_Statement_Kind::WHILE);
+
         auto current_func = builder->current_function;
         auto cond_block = bytecode_builder_append_block(builder, current_func, "while_cond");
         auto body_block = bytecode_builder_append_block(builder, current_func, "while_body");
@@ -254,6 +270,26 @@ namespace Zodiac
         bytecode_emit_jump(builder, cond_block);
 
         bytecode_builder_set_insert_point(builder, post_while_block);
+    }
+
+    void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt)
+    {
+        assert(stmt->kind == AST_Statement_Kind::IF);
+
+        auto cond_val = bytecode_emit_expression(builder, stmt->if_stmt.cond_expr);
+
+        auto current_func = builder->current_function;
+        auto then_block = bytecode_builder_append_block(builder, current_func, "then");
+        auto post_if_block = bytecode_builder_append_block(builder, current_func, "post_if");
+
+        bytecode_emit_jump_if(builder, then_block, cond_val);
+        bytecode_emit_jump(builder, post_if_block);
+
+        bytecode_builder_set_insert_point(builder, then_block);
+        bytecode_emit_statement(builder, stmt->if_stmt.then_stmt);
+        bytecode_emit_jump(builder, post_if_block);
+
+        bytecode_builder_set_insert_point(builder, post_if_block);
     }
 
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder,
@@ -512,7 +548,11 @@ namespace Zodiac
         {
             case BINOP_INVALID: assert(false);
 
-            case BINOP_EQ: assert(false);
+            case BINOP_EQ:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::EQ);
+                break;
+            }
 
             case BINOP_NEQ:
             {
@@ -980,8 +1020,8 @@ namespace Zodiac
     void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *block)
     {
         bytecode_emit_instruction(builder, Bytecode_Instruction::JUMP);
-        assert(block->index >= 0);
-        bytecode_emit_32(builder, block->index);
+        auto offset = bytecode_emit_32(builder, 0);
+        bytecode_record_jump(builder, block, offset);
     }
 
     void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Block *block,
@@ -990,8 +1030,8 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::JUMP_IF);
         assert(cond->kind == Bytecode_Value_Kind::TEMPORARY);
         bytecode_emit_32(builder, cond->local_index);
-        assert(block->index >= 0);
-        bytecode_emit_32(builder, block->index);
+        auto offset = bytecode_emit_32(builder, 0);
+        bytecode_record_jump(builder, block, offset);
     }
 
     Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder,
@@ -1338,6 +1378,13 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
+    }
+
+    void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *target_block,
+                              int64_t offset)
+    {
+        auto current_block = builder->insert_block;
+        array_append(&builder->jump_records, { current_block, target_block, offset });
     }
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration *decl)
@@ -1786,6 +1833,7 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::EQ:
             case Bytecode_Instruction::NEQ:
             case Bytecode_Instruction::GT:
             case Bytecode_Instruction::ADD:
@@ -1802,6 +1850,7 @@ namespace Zodiac
 
                 const char *op_name;
                 if (inst == Bytecode_Instruction::GT) op_name = "GT";
+                else if (inst == Bytecode_Instruction::EQ) op_name = "EQ";
                 else if (inst == Bytecode_Instruction::NEQ) op_name = "NEQ";
                 else if (inst == Bytecode_Instruction::ADD) op_name = "ADD";
                 else if (inst == Bytecode_Instruction::SUB) op_name = "SUB";

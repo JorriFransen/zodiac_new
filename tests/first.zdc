@@ -49,14 +49,14 @@ main :: func () -> s64
     count := 4;
     while (count > 0)
     {
-        if (count == 4)
-        {
-            println("Welcome!");
-        }
-        else
-        {
-            println("Again...?");
-        }
+        //if (count == 4)
+        //{
+            //println("Welcome!");
+        //}
+        //else
+        //{
+            //println("Again...?");
+        //}
 
         println("Hello World!");
         count = count - 1;
