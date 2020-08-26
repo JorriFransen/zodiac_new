@@ -528,9 +528,10 @@ namespace Zodiac
                     auto alloc_index = interpreter_fetch<int32_t>(interp);
                     auto alloc = interpreter_load_allocl(interp, alloc_index);
                     assert(alloc->kind == Bytecode_Value_Kind::ALLOCL);
-                    auto pointer_type = build_data_find_or_create_pointer_type(interp->allocator,
-                                                                               interp->build_data,
-                                                                               alloc->type);
+                    auto pointer_type =
+                        build_data_find_or_create_pointer_type(interp->allocator,
+                                                               interp->build_data,
+                                                               alloc->type);
                     auto result = interpreter_push_temporary(interp, pointer_type);
 
                     if (alloc->type->kind == AST_Type_Kind::STRUCTURE)
@@ -555,7 +556,43 @@ namespace Zodiac
                     break;
                 }
 
-                case Bytecode_Instruction::NEQ: assert(false);
+                case Bytecode_Instruction::NEQ:
+                {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                    auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    assert(lhs_val->type == rhs_val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.boolean =
+                                lhs_val->value.int_literal.s64 !=
+                                rhs_val->value.int_literal.s64;
+                            break;
+                        }
+                        default: assert(false);
+
+                    }
+                    break;
+                }
 
                 case Bytecode_Instruction::GT:
                 {
@@ -769,7 +806,63 @@ namespace Zodiac
                    break;
                }
 
-               case Bytecode_Instruction::CAST_INT: assert(false);
+               case Bytecode_Instruction::CAST_INT:
+               {
+                   auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                   auto val_idx = interpreter_fetch<uint32_t>(interp);
+
+                   auto val = interpreter_load_temporary(interp, val_idx);
+                   assert(val->type->kind == AST_Type_Kind::INTEGER);
+
+                   switch (size_spec)
+                   {
+                       case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+
+                        case Bytecode_Size_Specifier::U32:
+                        {
+                            auto result = interpreter_push_temporary(interp, Builtin::type_u32);
+                            uint32_t new_val = 0;
+                            switch (val->type->bit_size)
+                            {
+                                case 8: assert(false);
+                                case 16: assert(false);
+                                case 32: assert(false);
+                                case 64: new_val = (uint32_t)val->value.int_literal.s64; break;
+                                default: assert(false);
+                            }
+                            result->value.int_literal.u32 = new_val;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            auto result = interpreter_push_temporary(interp, Builtin::type_s64);
+                            int64_t new_val = 0;
+                            switch (val->type->bit_size)
+                            {
+                                case 8: new_val = (int64_t)val->value.int_literal.s8; break;
+                                case 16: assert(false);
+                                case 32: assert(false);
+                                case 64: new_val = (int64_t)val->value.int_literal.s64; break;
+                                default: assert(false);
+                            }
+                            result->value.int_literal.s64 = new_val;
+                            break;
+                        }
+
+                        default: assert(false);
+
+                   }
+
+                   break;
+               }
 
                case Bytecode_Instruction::SYSCALL:
                {
@@ -872,7 +965,52 @@ namespace Zodiac
                    break;
                }
 
-               case Bytecode_Instruction::ARR_OFFSET_PTR: assert(false);
+               case Bytecode_Instruction::ARR_OFFSET_PTR:
+               {
+                   auto store_kind = interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
+                   auto store_idx = interpreter_fetch<uint32_t>(interp);
+                   auto offset_idx = interpreter_fetch<uint32_t>(interp);
+
+                   Bytecode_Value *store_val = nullptr;
+                   switch (store_kind)
+                   {
+                       case Bytecode_Value_Type_Specifier::INVALID: assert(false);
+
+                       case Bytecode_Value_Type_Specifier::ALLOCL:
+                       {
+                           store_val = interpreter_load_allocl(interp, store_idx);
+                           break;
+                       }
+
+                       case Bytecode_Value_Type_Specifier::PARAMETER:
+                       {
+                           store_val = &frame->parameters[store_idx];
+                           break;
+                       }
+
+                       case Bytecode_Value_Type_Specifier::TEMPORARY:
+                       {
+                           store_val = interpreter_load_temporary(interp, store_idx);
+                           break;
+                       }
+                   }
+
+                   assert(store_val);
+                   assert(store_val->type->kind == AST_Type_Kind::POINTER);
+
+                   auto offset_val = interpreter_load_temporary(interp, offset_idx);
+                   assert(offset_val->type == Builtin::type_u32);
+                   int64_t offset = offset_val->value.int_literal.u32;
+
+                   auto elem_type = store_val->type->pointer.base;
+                   auto elem_byte_size = elem_type->bit_size / 8;
+                   auto byte_offset = offset * elem_byte_size;
+
+                   auto result = interpreter_push_temporary(interp, store_val->type);
+                   char *result_p = (char*)store_val->value.pointer;
+                   result->value.pointer = &result_p[byte_offset];
+                   break;
+               }
             }
         }
     }

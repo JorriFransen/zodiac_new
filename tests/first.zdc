@@ -62,8 +62,9 @@ main :: func () -> s64
     count := 4;
     while (count > 0)
     {
-        @syscall(1, 1, "Hello World!", 12);
-        println("");
+        println("Hello World!");
+        //@syscall(1, 1, "Hello World!", 12);
+        //println(" ");
         count = count - 1;
     }
     count = 26;
@@ -74,7 +75,7 @@ main :: func () -> s64
         c = c + 1;
         count = count - 1;
     }
-    println("");
+    println(" ");
 
     p1 : Vec2;
     p1.x = 33;
