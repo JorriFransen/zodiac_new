@@ -9,38 +9,40 @@ namespace Zodiac
 {
     enum class Bytecode_Instruction : uint8_t
     {
-        NOP         = 0x00,
+        NOP             = 0x00,
 
-        EXIT        = 0x01,
-        CALL        = 0x02,
-        RET         = 0x03,
-        RET_VOID    = 0x04,
-        ALLOCL      = 0x05,
-        LOAD_IM     = 0x06,
-        LOADL       = 0x07,
-        LOADP       = 0x08,
-        LOAD_PARAM  = 0x09,
-        LOAD_STR    = 0x0A,
-        STOREL      = 0x0B,
-        STOREP      = 0x0C,
-        STORE_PARAM = 0x0D,
+        EXIT            = 0x01,
+        CALL            = 0x02,
+        RET             = 0x03,
+        RET_VOID        = 0x04,
+        ALLOCL          = 0x05,
+        LOAD_IM         = 0x06,
+        LOADL           = 0x07,
+        LOADP           = 0x08,
+        LOAD_PARAM      = 0x09,
+        LOAD_STR        = 0x0A,
+        STOREL          = 0x0B,
+        STOREP          = 0x0C,
+        STORE_PARAM     = 0x0D,
 
-        ADDROF      = 0x0E,
+        ADDROF          = 0x0E,
 
-        PUSH_ARG    = 0x0F,
+        PUSH_ARG        = 0x0F,
 
-        GT          = 0x10,
-        ADD         = 0x11,
-        SUB         = 0x12,
-        REM         = 0x13,
-        MUL         = 0x14,
-        DIV         = 0x15,
+        NEQ             = 0x10,
+        GT              = 0x11,
+        ADD             = 0x12,
+        SUB             = 0x13,
+        REM             = 0x14,
+        MUL             = 0x15,
+        DIV             = 0x16,
 
-        JUMP        = 0x16,
-        JUMP_IF     = 0x17,
-        CAST_INT    = 0x18,
-        SYSCALL     = 0x19,
-        OFFSET_PTR  = 0x1A,
+        JUMP            = 0x17,
+        JUMP_IF         = 0x18,
+        CAST_INT        = 0x19,
+        SYSCALL         = 0x1A,
+        AGG_OFFSET_PTR  = 0x1B,
+        ARR_OFFSET_PTR  = 0x1C,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -102,10 +104,14 @@ namespace Zodiac
 
             union 
             {
-                int64_t s64;
-                int32_t s32;
-                int16_t s16;
-                int8_t s8;
+                int64_t  s64;
+                uint64_t u64;
+                int32_t  s32;
+                uint32_t u32;
+                int16_t  s16;
+                uint16_t u16;
+                int8_t   s8;
+                uint8_t  u8;
 
             } int_literal;
 
@@ -243,8 +249,12 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder, Bytecode_Value *operand_val,
                                            AST_Type *target_type);
 
-    Bytecode_Value *bytecode_emit_offset_pointer(Bytecode_Builder *builder, Bytecode_Value *lvalue,
-                                                 Bytecode_Value *offset_val);
+    Bytecode_Value *bytecode_emit_aggregate_offset_pointer(Bytecode_Builder *builder,
+                                                           Bytecode_Value *lvalue,
+                                                           Bytecode_Value *offset_val);
+    Bytecode_Value *bytecode_emit_array_offset_pointer(Bytecode_Builder *builder,
+                                                           Bytecode_Value *lvalue,
+                                                           Bytecode_Value *offset_val);
 
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Type *type,

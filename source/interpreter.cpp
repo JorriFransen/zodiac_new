@@ -291,7 +291,15 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S8: assert(false);
                         case Bytecode_Size_Specifier::U16: assert(false);
                         case Bytecode_Size_Specifier::S16: assert(false);
-                        case Bytecode_Size_Specifier::U32: assert(false);
+
+                        case Bytecode_Size_Specifier::U32:
+                        {
+                            uint32_t val = interpreter_fetch<uint32_t>(interp);
+                            auto bc_val = interpreter_push_temporary(interp, Builtin::type_u32); 
+                            bc_val->value.int_literal.u32 = val;
+                            break;
+                        }
+
                         case Bytecode_Size_Specifier::S32: assert(false);
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
@@ -547,6 +555,8 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::NEQ: assert(false);
+
                 case Bytecode_Instruction::GT:
                 {
                     auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
@@ -781,7 +791,7 @@ namespace Zodiac
                    break;
                }
 
-               case Bytecode_Instruction::OFFSET_PTR:
+               case Bytecode_Instruction::AGG_OFFSET_PTR:
                {
                    auto store_kind = interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
                    auto store_idx = interpreter_fetch<uint32_t>(interp);
@@ -821,8 +831,8 @@ namespace Zodiac
                           store_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
                    Bytecode_Value *offset_val = interpreter_load_temporary(interp, offset_idx);
-                   assert(offset_val->type == Builtin::type_s64);
-                   int64_t offset = offset_val->value.int_literal.s64;
+                   assert(offset_val->type == Builtin::type_u32);
+                   int64_t offset = offset_val->value.int_literal.u32;
 
                    AST_Type *struct_type = nullptr;
                    if (store_val->type->kind == AST_Type_Kind::STRUCTURE)
@@ -861,6 +871,8 @@ namespace Zodiac
                    result->value.pointer = &result_p[byte_offset];
                    break;
                }
+
+               case Bytecode_Instruction::ARR_OFFSET_PTR: assert(false);
             }
         }
     }

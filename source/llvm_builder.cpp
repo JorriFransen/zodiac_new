@@ -380,7 +380,17 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::S8: assert(false);
                     case Bytecode_Size_Specifier::U16: assert(false);
                     case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
+
+                    case Bytecode_Size_Specifier::U32:
+                    {
+                        auto val = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                      &func_context->ip);
+                        LLVMTypeRef type = LLVMIntType(32);
+                        LLVMValueRef result = LLVMConstInt(type, val, true);
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
                     case Bytecode_Size_Specifier::S32: assert(false);
                     case Bytecode_Size_Specifier::U64: assert(false);
                     case Bytecode_Size_Specifier::S64:
@@ -497,6 +507,8 @@ namespace Zodiac
                 stack_push(&builder->arg_stack, val);
                 break;
             }
+
+            case Bytecode_Instruction::NEQ: assert(false);
 
             case Bytecode_Instruction::GT:
             {
@@ -650,8 +662,7 @@ namespace Zodiac
                 LLVMBasicBlockRef else_block = func_context->llvm_blocks[else_block_idx];
 
 
-                LLVMBuildCondBr(builder->llvm_builder, cond_val, then_block, else_block);
-                break;
+                LLVMBuildCondBr(builder->llvm_builder, cond_val, then_block, else_block); break;
             }
 
             case Bytecode_Instruction::CAST_INT: assert(false);
@@ -664,7 +675,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::OFFSET_PTR:
+            case Bytecode_Instruction::AGG_OFFSET_PTR:
             {
                 auto store_kind =
                     llvm_fetch_from_bytecode<Bytecode_Value_Type_Specifier>(
@@ -677,8 +688,8 @@ namespace Zodiac
 
                 auto store_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
-                auto offset_val = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
-                                                                     &func_context->ip);
+                auto offset_val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                         &func_context->ip);
 
                 LLVMValueRef store_val = nullptr;
                 switch (store_kind)
@@ -706,9 +717,11 @@ namespace Zodiac
                 assert(store_val);
 
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
+                LLVMValueRef llvm_offset_val = builder->temps[offset_val_idx];
+                assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
 
                 LLVMValueRef zero_val = LLVMConstNull(llvm_idx_type);
-                LLVMValueRef llvm_offset_val = LLVMConstInt(llvm_idx_type, offset_val, true);
+                //LLVMValueRef llvm_offset_val = LLVMConstInt(llvm_idx_type, offset_val, true);
                 LLVMValueRef indices[] = { zero_val, llvm_offset_val };
 
 
@@ -718,6 +731,8 @@ namespace Zodiac
                 llvm_push_temporary(builder, result);
                 break;
             }
+
+            case Bytecode_Instruction::ARR_OFFSET_PTR: assert(false);
         }
     }
 
