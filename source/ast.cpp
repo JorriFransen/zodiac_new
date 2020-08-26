@@ -375,6 +375,26 @@ namespace Zodiac
                 return ast_while_statement_new(allocator, cond_expr, body, begin_fp, end_fp);
                 break;
             }
+
+            case Statement_PTN_Kind::IF:
+            {
+                auto cond_expr = ast_create_expression_from_ptn(allocator,
+                                                                ptn->if_stmt.cond_expr);
+                auto then_stmt = ast_create_statement_from_ptn(allocator,
+                                                               ptn->if_stmt.then_stmt,
+                                                               var_decls);
+                AST_Statement *else_stmt = nullptr;
+                if (ptn->if_stmt.else_stmt)
+                {
+                    else_stmt = ast_create_statement_from_ptn(allocator,
+                                                              ptn->if_stmt.else_stmt,
+                                                              var_decls); 
+                }
+
+                return ast_if_statement_new(allocator, cond_expr, then_stmt, else_stmt,
+                                            begin_fp, end_fp);
+                break;
+            }
         }
 
         assert(false);
@@ -1040,6 +1060,22 @@ namespace Zodiac
         return result;
     }
 
+    AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
+                                           AST_Statement *then_stmt, AST_Statement *else_stmt,
+                                           const File_Pos & begin_fp, const File_Pos &end_fp)
+    {
+        assert(cond_expr);
+        assert(then_stmt);
+
+        auto result = ast_statement_new(allocator, AST_Statement_Kind::IF, begin_fp, end_fp);
+
+        result->if_stmt.cond_expr = cond_expr;
+        result->if_stmt.then_stmt = then_stmt;
+        result->if_stmt.else_stmt = else_stmt;
+
+        return result;
+    }
+
     AST_Expression *ast_expression_new(Allocator *allocator, AST_Expression_Kind kind,
                                        const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -1619,6 +1655,8 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::WHILE: assert(false);
+                                            
+            case AST_Statement_Kind::IF: assert(false);
         } 
     }
 

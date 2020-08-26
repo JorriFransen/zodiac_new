@@ -236,6 +236,24 @@ namespace Zodiac
                 scope_populate_statement_ast(allocator, ast_stmt->while_stmt.body, while_scope);
                 break;
             }
+            
+            case AST_Statement_Kind::IF:
+            {
+                scope_populate_expression_ast(allocator, ast_stmt->if_stmt.cond_expr,
+                                              parent_scope);
+                auto then_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                ast_stmt->if_stmt.then_scope = then_scope;
+                scope_populate_statement_ast(allocator, ast_stmt->if_stmt.then_stmt, then_scope);
+
+                if (ast_stmt->if_stmt.else_stmt)
+                {
+                    auto else_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                    ast_stmt->if_stmt.else_scope = else_scope;
+                    scope_populate_statement_ast(allocator, ast_stmt->if_stmt.else_stmt,
+                                                 else_scope);
+                }
+                break;
+            }
         }
     }
 

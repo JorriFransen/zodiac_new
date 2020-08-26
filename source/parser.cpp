@@ -527,6 +527,42 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_KW_IF:
+        {
+            ts->next_token();
+
+            if (!parser_expect_token(parser, ts, TOK_LPAREN))
+            {
+                assert(false);
+            }
+
+            auto cond_expr = parser_parse_expression(parser, ts);
+            assert(cond_expr);
+
+            if (!parser_expect_token(parser, ts, TOK_RPAREN))
+            {
+                assert(false);
+            }
+
+            auto then_stmt = parser_parse_statement(parser, ts);
+            assert(then_stmt);
+
+            Statement_PTN *else_stmt = nullptr;
+
+            auto end_fp = then_stmt->self.end_file_pos;
+
+            if (parser_match_token(ts, TOK_KW_ELSE))
+            {
+                else_stmt = parser_parse_statement(parser, ts);
+                end_fp = then_stmt->self.end_file_pos;
+            }
+
+            return new_if_statement_ptn(parser->allocator, cond_expr, then_stmt, else_stmt,
+                                        begin_fp, end_fp);
+
+            break;
+        }
+
         default:
         {
             auto expr = parser_parse_expression(parser, ts);

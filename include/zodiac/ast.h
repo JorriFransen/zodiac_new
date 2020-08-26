@@ -157,6 +157,7 @@ namespace Zodiac
         EXPRESSION,
 
         WHILE,
+        IF,
     };
 
     struct AST_Statement : public AST_Node
@@ -189,6 +190,16 @@ namespace Zodiac
                 AST_Statement *body;
                 Scope *body_scope;
             } while_stmt;
+
+            struct
+            {
+                AST_Expression *cond_expr;
+                AST_Statement *then_stmt;
+                AST_Statement *else_stmt;
+
+                Scope *then_scope;
+                Scope *else_scope;
+            } if_stmt;
         };
     };
 
@@ -489,10 +500,14 @@ namespace Zodiac
     AST_Statement *ast_while_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *body, const File_Pos & begin_fp,
                                            const File_Pos &end_fp);
+    AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
+                                           AST_Statement *then_stmt, AST_Statement *else_stmt,
+                                           const File_Pos & begin_fp, const File_Pos &end_fp);
     AST_Expression *ast_expression_new(Allocator *allocator, AST_Expression_Kind kind,
                                        const File_Pos & begin_fp, const File_Pos &end_fp);
     AST_Expression *ast_identifier_expression_new(Allocator *allocator, AST_Identifier *identifier,
-                                                  const File_Pos & begin_fp, const File_Pos &end_fp);
+                                                  const File_Pos & begin_fp,
+                                                  const File_Pos &end_fp);
     AST_Expression *ast_poly_identifier_expression_new(Allocator *allocator,
                                                        AST_Declaration *poly_type_decl,
                                                        const File_Pos & begin_fp,

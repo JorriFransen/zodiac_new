@@ -213,6 +213,8 @@ namespace Zodiac
                 bytecode_emit_while_statement(builder, statement);
                 break;
             }
+            
+            case AST_Statement_Kind::IF: assert(false);
         }
     }
 

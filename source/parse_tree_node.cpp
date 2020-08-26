@@ -91,6 +91,20 @@ Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *whi
     return result;
 }
 
+Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_expr,
+                                    Statement_PTN *then_stmt, Statement_PTN *else_stmt,
+                                    const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    assert(cond_expr);
+    assert(then_stmt);
+
+    auto result = new_statement(allocator, Statement_PTN_Kind::IF, begin_fp, end_fp);
+    result->if_stmt.cond_expr = cond_expr;
+    result->if_stmt.then_stmt = then_stmt;
+    result->if_stmt.else_stmt = else_stmt;
+    return result;
+}
+
 Function_Proto_PTN *new_function_prototype_parse_tree_node(Allocator *allocator,
                                                            Array<Parameter_PTN*> parameters,
                                                            Expression_PTN *return_type_expr,
@@ -606,6 +620,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             print_statement_ptn(statement->while_stmt.body, indent);
             break;
         }
+
+        case Statement_PTN_Kind::IF: assert(false);
     }
 }
 

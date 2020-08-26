@@ -1,4 +1,5 @@
 
+check if integer literals fit in the type they're assigned to
 result of cmp ops should be bool
 
 ::TypedStructLiterals

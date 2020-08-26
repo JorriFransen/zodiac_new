@@ -122,7 +122,6 @@ restart:
         __1_CHAR_TOKEN_CASE('[', TOK_LBRACK);
         __1_CHAR_TOKEN_CASE(']', TOK_RBRACK);
 
-        __1_CHAR_TOKEN_CASE('=', TOK_EQ);
         __1_CHAR_TOKEN_CASE('<', TOK_LT);
         __1_CHAR_TOKEN_CASE('>', TOK_GT);
 
@@ -130,6 +129,7 @@ restart:
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
+        __2_CHAR_TOKEN_CASE('=', TOK_EQ, '=', TOK_EQ_EQ);
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
         __2_CHAR_TOKEN_CASE('!', TOK_BANG, '=', TOK_NEQ);
 
@@ -179,8 +179,6 @@ restart:
             break;
         }
     }
-
-#undef __SINGLE_CHAR_TOKEN_CASE
 
     assert(false);
     return {};

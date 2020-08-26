@@ -612,9 +612,36 @@ namespace Zodiac
                     assert(false);
                 }
 
-                if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body, scope))
+                if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body,
+                                             ast_stmt->while_stmt.body_scope))
                 {
                     assert(false); 
+                }
+
+                result = true;
+                break;
+            }
+            
+            case AST_Statement_Kind::IF:
+            {
+                if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.cond_expr, scope))
+                {
+                    assert(false); 
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.then_stmt,
+                                             ast_stmt->if_stmt.then_scope))
+                {
+                    assert(false);
+                }
+
+                if (ast_stmt->if_stmt.else_stmt)
+                {
+                    if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.else_stmt,
+                                                 ast_stmt->if_stmt.else_scope))
+                    {
+                        assert(false);
+                    }
                 }
 
                 result = true;
@@ -1205,7 +1232,10 @@ namespace Zodiac
             case AST_Statement_Kind::BLOCK: 
             {
                 // Blocks hold their own scope
-                assert(scope == nullptr);
+                if (scope)
+                {
+                    assert(scope == ast_stmt->block.scope->parent);
+                }
                 assert(ast_stmt->block.scope);
 
                 bool block_res = true;
@@ -1303,13 +1333,8 @@ namespace Zodiac
                     assert(false);
                 }
 
-                auto body_scope = scope;
-                if (ast_stmt->while_stmt.body->kind == AST_Statement_Kind::BLOCK)
-                {
-                    body_scope = nullptr;
-                }
-
-                if (!try_resolve_types(resolver, ast_stmt->while_stmt.body, body_scope))
+                if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
+                                       ast_stmt->while_stmt.body_scope))
                 {
                     assert(false);
                 }
@@ -1319,6 +1344,33 @@ namespace Zodiac
                 break;
             }
 
+            
+            case AST_Statement_Kind::IF:
+            {
+                if (!try_resolve_types(resolver, ast_stmt->if_stmt.cond_expr, scope))
+                {
+                    assert(false);
+                }
+
+                if (!try_resolve_types(resolver, ast_stmt->if_stmt.then_stmt, 
+                                       ast_stmt->if_stmt.then_scope))
+                {
+                    assert(false);
+                }
+
+                if (ast_stmt->if_stmt.else_stmt)
+                {
+                    if (!try_resolve_types(resolver, ast_stmt->if_stmt.else_stmt, 
+                                           ast_stmt->if_stmt.else_scope))
+                    {
+                        assert(false);
+                    }
+                }
+
+                result = true;
+                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
         }
 
         if (result)
@@ -2223,6 +2275,8 @@ namespace Zodiac
                 break;
             }
 
+            
+            case AST_Statement_Kind::IF: assert(false);
         }
     }
 

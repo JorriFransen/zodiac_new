@@ -66,6 +66,7 @@ enum class Statement_PTN_Kind
     RETURN,
     ASSIGNMENT,
     WHILE,
+    IF,
 };
 
 struct Statement_PTN
@@ -100,6 +101,13 @@ struct Statement_PTN
             Expression_PTN *cond_expr;
             Statement_PTN *body;
         } while_stmt;
+
+        struct
+        {
+            Expression_PTN *cond_expr;
+            Statement_PTN *then_stmt;
+            Statement_PTN *else_stmt;
+        } if_stmt;
     };
 
     Statement_PTN() {}
@@ -317,11 +325,15 @@ Statement_PTN *new_declaration_statement_ptn(Allocator *allocator, Declaration_P
 Statement_PTN *new_return_statement_ptn(Allocator *allocator, Expression_PTN *expr,
                                         const File_Pos &begin_fp, const File_Pos &end_fp);
 Statement_PTN *new_assignment_statement_ptn(Allocator *allocator, Expression_PTN *ident_expression,
-                                            Expression_PTN *rhs_expression, const File_Pos &begin_fp,
+                                            Expression_PTN *rhs_expression,
+                                            const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *while_expr,
                                        Statement_PTN *while_body, const File_Pos &begin_fp,
                                        const File_Pos &end_fp);
+Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_expr,
+                                    Statement_PTN *then_stmt, Statement_PTN *else_stmt,
+                                    const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Function_Proto_PTN *new_function_prototype_parse_tree_node(Allocator *allocator,
                                                            Array<Parameter_PTN*> parameters,
