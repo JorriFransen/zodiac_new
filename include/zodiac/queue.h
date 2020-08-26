@@ -67,9 +67,19 @@ namespace Zodiac
             Element_Type *new_buffer = alloc_array<Element_Type>(queue->allocator, new_cap);
             assert(new_buffer);
 
-            memcpy(new_buffer + queue->front, queue->buffer + queue->front,
-                   queue->used * sizeof(Element_Type));
+            // Copy front to end
+            auto front_to_end_count = queue->capacity - queue->front;
+            auto front_to_end_size = front_to_end_count * sizeof(Element_Type);
+            memcpy(new_buffer, queue->buffer + queue->front, front_to_end_size);
 
+            if (front_to_end_size < (queue->used * sizeof(Element_Type)))
+            {
+                // Copy remaining
+                auto remaining_size = queue->used * sizeof(Element_Type) - front_to_end_size;
+                memcpy(new_buffer + front_to_end_count, queue->buffer, remaining_size);
+            }
+
+            queue->front = 0;
             queue->capacity = new_cap;
             free(queue->allocator, queue->buffer);
             queue->buffer = new_buffer;
