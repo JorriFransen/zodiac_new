@@ -1,6 +1,7 @@
 #include "bytecode.h"
 
 #include "builtin.h"
+#include "temp_allocator.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -1403,6 +1404,8 @@ namespace Zodiac
                                                   Bytecode_Block *block)
     {
         block->index = func->blocks.count;
+        block->name = bytecode_get_unique_block_name(builder, func, block);
+
         array_append(&func->blocks, block);
 
         func->last_block = block;
@@ -1415,6 +1418,32 @@ namespace Zodiac
     {
         auto block = bytecode_new_block(builder, name);
         return bytecode_builder_append_block(builder, func, block);
+    }
+
+    Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Bytecode_Function *func,
+                                        Bytecode_Block *block)
+    {
+        auto ta = temp_allocator_get();
+
+        int name_count = 0;
+        for (uint64_t i = 0; i < func->blocks.count; i++)
+        {
+            if (func->blocks[i]->name == block->name)
+            {
+                name_count++;
+            }
+        }
+
+        if (name_count != 0)
+        {
+            auto name_sr = string_ref(block->name.data, block->name.length);
+            auto num_str = string_from_int(ta, name_count);
+            auto result = string_append(ta, name_sr, num_str);
+            return atom_get(&builder->build_data->atom_table, result.data, result.length);
+        }
+
+        
+        return block->name;
     }
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
@@ -1511,7 +1540,7 @@ namespace Zodiac
     {
         Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
 
-        result->name = string_ref(name);
+        result->name = atom_get(&builder->build_data->atom_table, name);
         result->index = -1;
         result->local_temp_count = 0;
         result->preceding_temp_count = 0;

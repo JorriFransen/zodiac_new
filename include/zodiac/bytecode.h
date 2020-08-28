@@ -124,7 +124,8 @@ namespace Zodiac
 
     struct Bytecode_Block
     {
-        String name = {};
+        Atom name = {};
+
         int64_t index = -1;
         int64_t local_temp_count = 0;
         int64_t preceding_temp_count = 0;
@@ -156,10 +157,13 @@ namespace Zodiac
     struct Bytecode_Function
     {
         Bytecode_Function_Flag flags = BYTECODE_FUNC_FLAG_INVALID;
+
         uint32_t index = 0;
+
         Array<Bytecode_Parameter> parameters = {};
         Array<Bytecode_Value*> local_temps = {};
         Array<Bytecode_Local_Alloc> local_allocs = {};
+
         Array<Bytecode_Block*> blocks = {};
         Bytecode_Block *last_block = nullptr;
 
@@ -285,6 +289,8 @@ namespace Zodiac
                                                   Bytecode_Block *block);
     Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
                                                   Bytecode_Function *func, const char *name);
+    Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Bytecode_Function *func,
+                                        Bytecode_Block *block); 
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
                                                        AST_Declaration *decl);

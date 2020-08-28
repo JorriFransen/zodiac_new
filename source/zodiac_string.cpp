@@ -11,7 +11,8 @@ int64_t string_length(String string)
     return string.length;
 }
 
-const String string_copy(Allocator *allocator, const String& string, int64_t offset, int64_t length)
+const String string_copy(Allocator *allocator, const String& string, int64_t offset,
+                         int64_t length)
 {
     assert(string.length - offset >= length);
 
@@ -32,10 +33,25 @@ const String string_copy(Allocator* allocator, const String& string)
     return string_copy(allocator, string, 0, string.length);
 }
 
+const String string_copy(Allocator *allocator, const char *cstr, int64_t length)
+{
+    return string_copy(allocator, { (char*)cstr, length });
+}
+
 const String string_copy(Allocator *allocator, const char *cstr)
 {
-    String wrapped = { (char*)cstr, (int64_t)strlen(cstr) };
-    return string_copy(allocator, wrapped);
+    return string_copy(allocator, { (char*)cstr, (int64_t)strlen(cstr) });
+}
+
+const String string_append(Allocator *allocator, const String &lhs, const String &rhs)
+{
+    auto new_len = lhs.length + rhs.length;
+    String new_str = { alloc_array<char>(allocator, new_len + 1), new_len };
+    memcpy(new_str.data, lhs.data, lhs.length);
+    memcpy(new_str.data + lhs.length, rhs.data, rhs.length);
+    new_str.data[new_str.length] = '\0';
+
+    return new_str;
 }
 
 const String string_ref(const char* cstr)
@@ -48,6 +64,36 @@ const String string_ref(const char* cstr, int64_t length)
 {
     String result = { (char*)cstr, length };
     return result;
+}
+
+const String string_from_int(Allocator *allocator, int64_t val)
+{
+    assert(val >= 0);
+
+    const auto buf_size = 32;
+    char buf[buf_size];
+    buf[buf_size - 1] = '\0';
+
+    int64_t length = 0;
+
+    if (val != 0)
+    {
+        while (val > 0)
+        {
+            auto d = val % 10;
+            buf[buf_size - 2 - length] = d + '0';
+            val /= 10;
+            length++;
+        }
+    }
+    else
+    {
+        buf[buf_size - 2] = '0';
+        length = 1;
+    }
+
+    return string_copy(allocator, &buf[buf_size - 1 - length], length);
+
 }
 
 int64_t string_last_index_of(const String &string, char c)

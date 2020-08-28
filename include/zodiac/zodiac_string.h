@@ -47,13 +47,19 @@ struct Unicode_String
 };
 
 int64_t string_length(String string);
-const String string_copy(Allocator *allocator, const String& string, int64_t offset, int64_t length);
+const String string_copy(Allocator *allocator, const String& string, int64_t offset,
+                         int64_t length);
 const String string_copy(Allocator *allocator, const String& string, int64_t length);
 const String string_copy(Allocator* allocator, const String& string);
+const String string_copy(Allocator *allocator, const char *cstr, int64_t length);
 const String string_copy(Allocator *allocator, const char *cstr);
+
+const String string_append(Allocator *allocator, const String &lhs, const String &rhs);
 
 const String string_ref(const char* cstr);
 const String string_ref(const char* cstr, int64_t length);
+
+const String string_from_int(Allocator *allocator, int64_t val);
 
 int64_t string_last_index_of(const String &string, char c);
 
