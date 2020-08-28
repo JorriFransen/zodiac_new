@@ -222,6 +222,7 @@ namespace Zodiac
 
         NUMBER_LITERAL,
         STRING_LITERAL,
+        BOOL_LITERAL,
     };
 
     struct AST_Expression : public AST_Node
@@ -301,6 +302,11 @@ namespace Zodiac
             {
                 Atom atom;
             } string_literal;
+
+            struct
+            {
+                bool value;
+            } bool_literal;
         };
     };
 
@@ -542,6 +548,9 @@ namespace Zodiac
     AST_Expression *ast_string_literal_expression_new(Allocator *allocator, Atom& atom,
                                                       const File_Pos & begin_fp,
                                                       const File_Pos &end_fp);
+    AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,
+                                                       const File_Pos & begin_fp,
+                                                       const File_Pos &end_fp);
 
     AST_Type_Spec *ast_type_spec_new(Allocator *allocator, AST_Type_Spec_Kind kind,
                                      const File_Pos & begin_fp, const File_Pos &end_fp);

@@ -10,11 +10,13 @@ namespace Zodiac
 #define KW_TOKEN_LIST                                      \
     DEFINE_KW_TOKEN(TOK_KW_IMPORT, "import"),              \
     DEFINE_KW_TOKEN(TOK_KW_RETURN, "return"),              \
-    DEFINE_KW_TOKEN(TOK_KW_FUNC, "func"),                  \
+    DEFINE_KW_TOKEN(TOK_KW_FUNC,   "func"),                \
     DEFINE_KW_TOKEN(TOK_KW_STRUCT, "struct"),              \
-    DEFINE_KW_TOKEN(TOK_KW_WHILE, "while"),                \
-    DEFINE_KW_TOKEN(TOK_KW_IF, "if"),                      \
-    DEFINE_KW_TOKEN(TOK_KW_ELSE, "else"),                  \
+    DEFINE_KW_TOKEN(TOK_KW_WHILE,  "while"),               \
+    DEFINE_KW_TOKEN(TOK_KW_IF,     "if"),                  \
+    DEFINE_KW_TOKEN(TOK_KW_ELSE,   "else"),                \
+    DEFINE_KW_TOKEN(TOK_KW_TRUE,   "true"),                \
+    DEFINE_KW_TOKEN(TOK_KW_FALSE,  "false"),               \
 
 
 #define TOKEN_LIST                                         \

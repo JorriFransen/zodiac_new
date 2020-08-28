@@ -65,6 +65,10 @@ main :: func () -> s64
         println("Hello World!");
         count = count - 1;
     }
+
+    print_alphabet := true;
+    print_vector : bool = false;
+
     count = 26;
     c := 65;
     while (count > 0)

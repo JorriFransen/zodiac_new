@@ -797,6 +797,8 @@ namespace Zodiac
                 result = true;
                 break;
             }
+
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         if (result)
@@ -1643,6 +1645,8 @@ namespace Zodiac
                 result = true;
                 break;
             }
+
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         if (result)
@@ -2393,6 +2397,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             case AST_Expression_Kind::STRING_LITERAL:
+            case AST_Expression_Kind::BOOL_LITERAL:
             {
                 break;
             }

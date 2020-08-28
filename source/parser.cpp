@@ -802,6 +802,18 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
             break;
         }
 
+        case TOK_KW_TRUE:
+        {
+            result = parser_parse_boolean_literal_expression(parser, ts);
+            break;
+        };
+
+        case TOK_KW_FALSE:
+        {
+            result = parser_parse_boolean_literal_expression(parser, ts);
+            break;
+        };
+
         case TOK_LBRACK:
         {
             result = parser_parse_array_type_expression(parser, ts);
@@ -939,7 +951,21 @@ Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Str
     auto end_fp = string_tok.end_file_pos;
     ts->next_token();
 
-    return new_string_literal_expression_ptn(parser->allocator, string_tok.atom, begin_fp, end_fp);
+    return new_string_literal_expression_ptn(parser->allocator, string_tok.atom, begin_fp,
+                                             end_fp);
+}
+
+Expression_PTN *parser_parse_boolean_literal_expression(Parser *parser, Token_Stream *ts)
+{
+    auto bool_tok = ts->current_token();
+    auto begin_fp = bool_tok.begin_file_pos;
+    auto end_fp = bool_tok.end_file_pos;
+    ts->next_token();
+
+    bool bool_val = bool_tok.kind == TOK_KW_TRUE ? true : false;
+    if (!bool_val) { assert(bool_tok.kind == TOK_KW_FALSE); }
+
+    return new_boolean_literal_expression_ptn(parser->allocator, bool_val, begin_fp, end_fp);
 }
 
 Expression_PTN* parser_parse_array_type_expression(Parser* parser, Token_Stream* ts)

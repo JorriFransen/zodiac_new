@@ -520,6 +520,8 @@ namespace Zodiac
                 return bytecode_emit_load_str(builder, expression->string_literal.atom.data);
                 break;
             }
+
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         assert(false);
@@ -856,6 +858,7 @@ namespace Zodiac
             case AST_Expression_Kind::CAST: assert(false);
             case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         assert(false);

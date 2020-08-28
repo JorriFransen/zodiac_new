@@ -557,6 +557,13 @@ namespace Zodiac
                 break;
             };
 
+            case Expression_PTN_Kind::BOOL_LITERAL:
+            {
+                return ast_boolean_literal_expression_new(allocator, ptn->bool_literal.value,
+                                                          begin_fp, end_fp);
+                break;
+            }
+
             case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
 
             case Expression_PTN_Kind::POINTER_TYPE:
@@ -667,7 +674,8 @@ namespace Zodiac
 
             case PT_Node_Kind::EXPRESSION:
             {
-                return ast_create_type_spec_from_expression_ptn(allocator, (Expression_PTN*)ptn);
+                return ast_create_type_spec_from_expression_ptn(allocator,
+                                                               (Expression_PTN*)ptn);
                 break; 
             }
         }
@@ -692,8 +700,8 @@ namespace Zodiac
             {
                 assert(!ptn->call.is_builtin);
 
-                auto ast_ident_expr = ast_create_expression_from_ptn(allocator,
-                                                                     ptn->call.ident_expression);
+                auto ast_ident_expr =
+                    ast_create_expression_from_ptn(allocator, ptn->call.ident_expression);
                 assert(ast_ident_expr);
 
                 Array<AST_Expression*> ast_arg_exprs = {};
@@ -743,7 +751,8 @@ namespace Zodiac
             case Expression_PTN_Kind::SUBSCRIPT: assert(false);
             case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
             case Expression_PTN_Kind::STRING_LITERAL: assert(false);
-                                                      
+            case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
+
             case Expression_PTN_Kind::ARRAY_TYPE:
             {
                 auto length_ptn = ptn->array_type.length_expression;
@@ -1239,6 +1248,18 @@ namespace Zodiac
                                          begin_fp, end_fp);
 
         result->string_literal.atom = atom;
+
+        return result;
+    }
+
+    AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,
+                                                       const File_Pos & begin_fp,
+                                                       const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::BOOL_LITERAL,
+                                         begin_fp, end_fp);
+
+        result->bool_literal.value = value;
 
         return result;
     }
@@ -1850,6 +1871,8 @@ namespace Zodiac
                 printf("\"%s\"", ast_expr->string_literal.atom.data);
                 break;
             }
+
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
     }
 
