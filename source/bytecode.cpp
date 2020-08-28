@@ -127,6 +127,8 @@ namespace Zodiac
             bytecode_emit_statement(builder, decl->function.body);
         }
 
+        bytecode_fix_jump_records(builder, func);
+
         int64_t temp_count = 0;
         for (int64_t i = 0; i < func->blocks.count; i++)
         {
@@ -135,17 +137,89 @@ namespace Zodiac
             temp_count += block->local_temp_count;
         }
 
+        return func;
+    }
+
+    struct _Block_Replacement
+    {
+        int64_t old_index = 0;
+        Bytecode_Block *new_target = nullptr;
+    };
+
+    void bytecode_fix_jump_records(Bytecode_Builder *builder, Bytecode_Function *func)
+    {
+        // Emit indices for all jumps
         for (int64_t i = 0; i < builder->jump_records.count; i++)
         {
             auto &jr = builder->jump_records[i];
             uint32_t *ptr = (uint32_t*)&jr.from_block->instructions[jr.index_offset];
+
             uint32_t index = jr.target_block->index;
+            assert(index);
             *ptr = index;
         }
 
-        return func;
-    }
+        Array<_Block_Replacement> obsolete_blocks = {};
+        array_init(builder->allocator, &obsolete_blocks);
 
+        // Collect obsolete blocks
+        for (int64_t i = 0; i < func->blocks.count; i++)
+        {
+            auto block = func->blocks[i];
+            if ((Bytecode_Instruction)block->instructions[0] == Bytecode_Instruction::JUMP)
+            {
+                assert(block->instructions.count == 5); // 1 byte for inst, 4 for index
+
+                uint32_t target_index = *((uint32_t*)(&block->instructions[1]));
+                auto target_block = func->blocks[target_index];
+
+                array_append(&obsolete_blocks, { i, target_block });
+            }
+        }
+
+        // Update jump records to the new target blocks
+        //@TODO: Remove unchanged jump records
+        for (int64_t i = 0; i < builder->jump_records.count; i++)
+        {
+            auto &jr = builder->jump_records[i];
+            for (int64_t j = 0; j < obsolete_blocks.count; j++)
+            {
+                auto &br = obsolete_blocks[j];
+                Bytecode_Block *obsolete_block = func->blocks[br.old_index];
+                if (jr.target_block == obsolete_block)
+                {
+                    jr.target_block = br.new_target;
+                    break;
+                }
+            }
+        }
+
+        // Remove obsolete blocks from function
+        for (int64_t i = 0; i < obsolete_blocks.count; i++)
+        {
+            array_ordered_remove(&func->blocks, obsolete_blocks[i].old_index);
+        }
+
+        // Update indices of remaining blocks
+        for (int64_t i = 0; i < func->blocks.count; i++)
+        {
+            func->blocks[i]->index = i; 
+        }
+        
+        // Emit indices for all remaining jumps again
+        for (int64_t i = 0; i < builder->jump_records.count; i++)
+        {
+            auto &jr = builder->jump_records[i];
+            uint32_t *ptr = (uint32_t*)&jr.from_block->instructions[jr.index_offset];
+
+            uint32_t index = jr.target_block->index;
+            assert(index);
+            *ptr = index;
+        }
+
+        array_free(&obsolete_blocks);
+    }
+    
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement)
     {
         switch (statement->kind)

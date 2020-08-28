@@ -88,6 +88,19 @@ void array_append(Array<Element_Type>* array, const Element_Type& element)
 }
 
 template <typename Element_Type>
+void array_ordered_remove(Array<Element_Type> *array, int64_t index)
+{
+    assert(index < array->count);
+
+    if (index != array->count - 1)
+    {
+        memmove(array->data + index, array->data + index + 1,
+                (array->count - index) * sizeof(Element_Type));
+    }
+    array->count -= 1;
+}
+
+template <typename Element_Type>
 Element_Type array_first(Array<Element_Type>* array)
 {
     assert(array->count >= 1);
