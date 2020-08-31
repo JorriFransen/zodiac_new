@@ -1176,6 +1176,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::BOOL: assert(false);
+
             case AST_Type_Kind::POINTER:
             {
                 LLVMTypeRef base_type = llvm_type_from_ast(builder, ast_type->pointer.base);

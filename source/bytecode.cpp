@@ -515,13 +515,18 @@ namespace Zodiac
                 break;     
             }
 
+            case AST_Expression_Kind::BOOL_LITERAL:
+            {
+                return bytecode_emit_number_literal(builder, expression->type, 
+                                                    expression->bool_literal.value); 
+                break;
+            }
+
             case AST_Expression_Kind::STRING_LITERAL:
             {
                 return bytecode_emit_load_str(builder, expression->string_literal.atom.data);
                 break;
             }
-
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         assert(false);
@@ -1005,6 +1010,7 @@ namespace Zodiac
         assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
         assert(allocl->type);
         assert(allocl->type->kind == AST_Type_Kind::INTEGER ||
+               allocl->type->kind == AST_Type_Kind::BOOL ||
                allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
@@ -1278,12 +1284,20 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder,
                                                  AST_Expression *expr)
     {
-        assert(expr->kind == AST_Expression_Kind::NUMBER_LITERAL);
+        assert(expr->kind == AST_Expression_Kind::NUMBER_LITERAL ||
+               expr->kind == AST_Expression_Kind::BOOL_LITERAL);
         assert(expr->type->kind == AST_Type_Kind::INTEGER);
 
         Bytecode_Value *result = nullptr;
         switch (expr->type->bit_size)
         {
+            case 8: 
+            {
+                result = bytecode_emit_number_literal(builder, expr->type,
+                                                      expr->number_literal.s8);
+                break;
+            }
+
             case 64:
             {
                 result = bytecode_emit_number_literal(builder, expr->type,
@@ -1302,11 +1316,18 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Type *type,
                                                  int64_t val)
     {
-        assert(type->kind == AST_Type_Kind::INTEGER);
+        assert(type->kind == AST_Type_Kind::INTEGER ||
+               type->kind == AST_Type_Kind::BOOL);
 
         bytecode_emit_load_im(builder, type->integer.sign, type->bit_size);
         switch (type->bit_size)
         {
+            case 8:
+            {
+                bytecode_emit_byte(builder, val);
+                break; 
+            }
+
             case 32:
             {
                 bytecode_emit_32(builder, val);
@@ -2141,7 +2162,13 @@ namespace Zodiac
         {
             case Bytecode_Size_Specifier::INVALID: assert(false);
             case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-            case Bytecode_Size_Specifier::U8: assert(false);
+
+            case Bytecode_Size_Specifier::U8:
+            {
+                string_builder_append(sb, "U8");
+                break;
+            }
+
             case Bytecode_Size_Specifier::S8: assert(false);
             case Bytecode_Size_Specifier::U16: assert(false);
             case Bytecode_Size_Specifier::S16: assert(false);
@@ -2176,7 +2203,15 @@ namespace Zodiac
         {
             case Bytecode_Size_Specifier::INVALID: assert(false);
             case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-            case Bytecode_Size_Specifier::U8: assert(false);
+
+            case Bytecode_Size_Specifier::U8: 
+            {
+                uint8_t val = bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+                string_builder_appendf(sb, " %" PRIu8, val);
+                break;
+            }
+
             case Bytecode_Size_Specifier::S8: assert(false);
             case Bytecode_Size_Specifier::U16: assert(false);
             case Bytecode_Size_Specifier::S16: assert(false);

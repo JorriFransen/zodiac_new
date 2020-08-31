@@ -225,9 +225,9 @@ namespace Zodiac
                     assert(job->result);
                     if (job->ast_node == entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        //queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result);
+                    //queue_emit_llvm_func_job(resolver, job->result);
                     free_job(resolver, job);
                 }
             }
@@ -442,7 +442,7 @@ namespace Zodiac
                 {
                     if (!try_resolve_identifiers(resolver, ast_decl->variable.type_spec, scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
@@ -624,6 +624,7 @@ namespace Zodiac
             
             case AST_Statement_Kind::IF:
             {
+                result = true;
                 if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.cond_expr, scope))
                 {
                     assert(false); 
@@ -632,7 +633,7 @@ namespace Zodiac
                 if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.then_stmt,
                                              ast_stmt->if_stmt.then_scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 if (ast_stmt->if_stmt.else_stmt)
@@ -643,8 +644,6 @@ namespace Zodiac
                         assert(false);
                     }
                 }
-
-                result = true;
                 break;
             }
         }
@@ -786,19 +785,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST:  assert(false);
 
+
             case AST_Expression_Kind::NUMBER_LITERAL: 
-            {
-                result = true;
-                break;
-            }
-
             case AST_Expression_Kind::STRING_LITERAL:
+            case AST_Expression_Kind::BOOL_LITERAL:
             {
                 result = true;
                 break;
             }
-
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 
         if (result)
@@ -1646,7 +1640,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL:
+            {
+                ast_expr->type = Builtin::type_bool;
+                result = true;
+                break;
+            }
         }
 
         if (result)
@@ -1983,6 +1982,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
 
             case AST_Type_Kind::FUNCTION:

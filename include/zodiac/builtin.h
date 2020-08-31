@@ -10,10 +10,12 @@ enum Builtin_Type_Kind
 
     VOID,
     INTEGER,
+    BOOL,
 };
 
 #define BUILTIN_TYPE_LIST                        \
     DEFINE_BUILTIN_TYPE(void, VOID, 0, false)    \
+    DEFINE_BUILTIN_TYPE(bool, BOOL, 8, false)    \
     DEFINE_BUILTIN_TYPE(s8,  INTEGER,  8, true)  \
     DEFINE_BUILTIN_TYPE(u8,  INTEGER,  8, false) \
     DEFINE_BUILTIN_TYPE(s16, INTEGER, 16, true)  \

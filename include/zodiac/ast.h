@@ -371,6 +371,7 @@ namespace Zodiac
 
         VOID,
         INTEGER,
+        BOOL,
         POINTER,
 
         FUNCTION,
@@ -577,6 +578,7 @@ namespace Zodiac
 
     AST_Type *ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type *ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
+    AST_Type *ast_bool_type_new(Allocator *allocator, uint64_t bit_size);
     AST_Type *ast_pointer_type_new(Allocator *allocator, AST_Type *base_type);
     AST_Type *ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
                                     AST_Type *return_type);

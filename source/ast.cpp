@@ -1385,6 +1385,12 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type *ast_bool_type_new(Allocator *allocator, uint64_t bit_size)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::BOOL, bit_size);
+        return result;
+    }
+
     AST_Type *ast_pointer_type_new(Allocator *allocator, AST_Type *base_type)
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::POINTER, Builtin::pointer_size);
@@ -1999,6 +2005,12 @@ namespace Zodiac
                 else string_builder_append(sb, "u");
 
                 string_builder_appendf(sb, "%" PRIu64, type->bit_size);
+                break;
+            }
+
+            case AST_Type_Kind::BOOL:
+            {
+                string_builder_appendf(sb, "b%" PRIu64, type->bit_size);
                 break;
             }
 

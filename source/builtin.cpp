@@ -66,6 +66,13 @@ AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, 
             result = ast_integer_type_new(allocator, size, sign);
             break;
         }
+
+        case Builtin_Type_Kind::BOOL:
+        {
+            assert(!sign);
+            result = ast_bool_type_new(allocator, size);
+            break;
+        }
     }
 
     assert(result);

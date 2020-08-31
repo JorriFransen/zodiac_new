@@ -291,7 +291,15 @@ namespace Zodiac
                     {
                         case Bytecode_Size_Specifier::INVALID: assert(false);
                         case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                        case Bytecode_Size_Specifier::U8: assert(false);
+
+                        case Bytecode_Size_Specifier::U8:
+                        {
+                            uint8_t val = interpreter_fetch<uint8_t>(interp);
+                            auto bc_val = interpreter_push_temporary(interp, Builtin::type_u8); 
+                            bc_val->value.int_literal.u8 = val;
+                            break;
+                        }
+
                         case Bytecode_Size_Specifier::S8: assert(false);
                         case Bytecode_Size_Specifier::U16: assert(false);
                         case Bytecode_Size_Specifier::S16: assert(false);
@@ -326,6 +334,7 @@ namespace Zodiac
                     auto source_allocl = interpreter_load_allocl(interp, allocl_index);
                     assert(source_allocl);
                     assert(source_allocl->type->kind == AST_Type_Kind::INTEGER ||
+                           source_allocl->type->kind == AST_Type_Kind::BOOL ||
                            source_allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
                     auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
@@ -333,6 +342,7 @@ namespace Zodiac
                     switch (source_allocl->type->kind)
                     {
                         case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::BOOL:
                         {
                             dest_val->value = source_allocl->value;
                             break;
@@ -443,6 +453,7 @@ namespace Zodiac
                     switch (source_val->type->kind)
                     {
                         case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::BOOL:
                         {
                             dest_allocl->value = source_val->value;
                             break;
@@ -1141,7 +1152,9 @@ namespace Zodiac
         auto local_index = frame->pushed_local_count;
         frame->pushed_local_count += 1;
         auto result = interpreter_load_temporary(interp, local_index);
-        assert(result->type == type);
+        assert(result->type == type ||
+               (result->type->kind == AST_Type_Kind::BOOL &&
+                type->kind == AST_Type_Kind::INTEGER));
         return result;
     }
 
