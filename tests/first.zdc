@@ -47,24 +47,24 @@ add_vec2 :: func (v: *Vec2) -> s64
 main :: func () -> s64
 {
     count := 4;
-    //while (count > 0)
-    //{
-        //if (count == 4)
-        //{
-            //println("Welcome!");
-        //}
-        //else if (count == 3)
-        //{
-            //println("Welcome 2");
-        //}
-        //else
-        //{
-            //println("Again...??");
-        //}
+    while (count > 0)
+    {
+        if (count == 4)
+        {
+            println("Welcome!");
+        }
+        else if (count == 3)
+        {
+            println("Welcome 2");
+        }
+        else
+        {
+            println("Again...??");
+        }
 
-        //println("Hello World!");
-        //count = count - 1;
-    //}
+        println("Hello World!");
+        count = count - 1;
+    }
 
     print_alphabet := true;
     print_vector : bool = false;
@@ -81,6 +81,10 @@ main :: func () -> s64
         }
         println(" ");
     }
+    else
+    {
+        println("Not printing alphabet");
+    }
 
     if (print_vector)
     {
@@ -91,6 +95,10 @@ main :: func () -> s64
         print_vec2(*p1);
         p1.y = 55;
         print_vec2(*p1);
+    }
+    else
+    {
+        println("Not printing vector...");
     }
     //return add_vec2(*p1);
     return 0;

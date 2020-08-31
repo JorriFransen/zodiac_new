@@ -450,7 +450,15 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOAD_BOOL: assert(false);
+            case Bytecode_Instruction::LOAD_BOOL:
+            {
+                bool value = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
+                                                               &func_context->ip);
+                LLVMTypeRef llvm_bool_type = llvm_type_from_ast(builder, Builtin::type_bool);
+                LLVMValueRef result = LLVMConstInt(llvm_bool_type, value, false);
+                llvm_push_temporary(builder, result);
+                break;
+            }
 
             case Bytecode_Instruction::LOAD_STR:
             {
