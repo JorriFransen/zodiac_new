@@ -517,8 +517,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::BOOL_LITERAL:
             {
-                return bytecode_emit_number_literal(builder, expression->type, 
-                                                    expression->bool_literal.value); 
+                return bytecode_emit_bool_literal(builder, expression); 
                 break;
             }
 
@@ -1348,6 +1347,23 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_emit_bool_literal(Bytecode_Builder *builder, AST_Expression *expr)
+    {
+        assert(expr->kind == AST_Expression_Kind::BOOL_LITERAL);
+        assert(expr->type->kind == AST_Type_Kind::BOOL);
+        assert(expr->type == Builtin::type_bool);
+
+        assert(expr->type->bit_size == 8);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_BOOL);
+        bytecode_emit_byte(builder, expr->bool_literal.value);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, expr->type);
+        bytecode_push_local_temporary(builder, result);
+
+        return result;
+    }
+
     void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type)
     {
         assert(builder);
@@ -1914,6 +1930,16 @@ namespace Zodiac
                                        bci->local_temp_index, name.data);
                 bci->local_temp_index += 1;
                 break; 
+            }
+
+            case Bytecode_Instruction::LOAD_BOOL:
+            {
+                bool value = bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_BOOL %s",
+                                       bci->local_temp_index++,
+                                       value ? "true" : "false");
+                break;
             }
 
             case Bytecode_Instruction::LOAD_STR:

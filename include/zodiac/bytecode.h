@@ -20,30 +20,31 @@ namespace Zodiac
         LOADL           = 0x07,
         LOADP           = 0x08,
         LOAD_PARAM      = 0x09,
-        LOAD_STR        = 0x0A,
-        STOREL          = 0x0B,
-        STOREP          = 0x0C,
-        STORE_PARAM     = 0x0D,
+        LOAD_BOOL       = 0x0A,
+        LOAD_STR        = 0x0B,
+        STOREL          = 0x0C,
+        STOREP          = 0x0D,
+        STORE_PARAM     = 0x0E,
 
-        ADDROF          = 0x0E,
+        ADDROF          = 0x0F,
 
-        PUSH_ARG        = 0x0F,
+        PUSH_ARG        = 0x10,
 
-        EQ              = 0x10,
-        NEQ             = 0x11,
-        GT              = 0x12,
-        ADD             = 0x13,
-        SUB             = 0x14,
-        REM             = 0x15,
-        MUL             = 0x16,
-        DIV             = 0x17,
+        EQ              = 0x11,
+        NEQ             = 0x12,
+        GT              = 0x13,
+        ADD             = 0x14,
+        SUB             = 0x15,
+        REM             = 0x16,
+        MUL             = 0x17,
+        DIV             = 0x18,
 
-        JUMP            = 0x18,
-        JUMP_IF         = 0x19,
-        CAST_INT        = 0x1A,
-        SYSCALL         = 0x1B,
-        AGG_OFFSET_PTR  = 0x1C,
-        ARR_OFFSET_PTR  = 0x1D,
+        JUMP            = 0x19,
+        JUMP_IF         = 0x1A,
+        CAST_INT        = 0x1B,
+        SYSCALL         = 0x1C,
+        AGG_OFFSET_PTR  = 0x1D,
+        ARR_OFFSET_PTR  = 0x1E,
     };
 
     enum class Bytecode_Size_Specifier : uint8_t
@@ -274,6 +275,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Type *type,
                                                  int64_t val);
+    Bytecode_Value *bytecode_emit_bool_literal(Bytecode_Builder *builder, AST_Expression *expr);
     void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type);
     void bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Instruction op);
     uint64_t bytecode_emit_16(Bytecode_Builder *builder, uint16_t val);

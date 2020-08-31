@@ -429,6 +429,14 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::LOAD_BOOL:
+                {
+                    bool value = interpreter_fetch<uint8_t>(interp);
+                    auto result_value = interpreter_push_temporary(interp, Builtin::type_bool);
+                    result_value->value.boolean = value;
+                    break;
+                }
+
                 case Bytecode_Instruction::LOAD_STR:
                 {
                     auto str_idx = interpreter_fetch<uint32_t>(interp);

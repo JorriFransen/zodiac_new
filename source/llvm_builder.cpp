@@ -378,7 +378,17 @@ namespace Zodiac
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
+
+                    case Bytecode_Size_Specifier::U8: 
+                    {
+                        auto val = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+                        LLVMTypeRef type = LLVMIntType(8);
+                        LLVMValueRef result = LLVMConstInt(type, val, true);
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
                     case Bytecode_Size_Specifier::S8: assert(false);
                     case Bytecode_Size_Specifier::U16: assert(false);
                     case Bytecode_Size_Specifier::S16: assert(false);
@@ -439,6 +449,8 @@ namespace Zodiac
                 llvm_push_temporary(builder, result);
                 break;
             }
+
+            case Bytecode_Instruction::LOAD_BOOL: assert(false);
 
             case Bytecode_Instruction::LOAD_STR:
             {
@@ -1176,7 +1188,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::BOOL:
+            {
+                return LLVMIntType(1);
+                break;
+            }
 
             case AST_Type_Kind::POINTER:
             {
