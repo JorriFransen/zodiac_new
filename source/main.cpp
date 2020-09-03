@@ -27,31 +27,7 @@ int main(int argc, char** argv)
     builtin_initialize_atoms(&build_data.atom_table);
     builtin_initialize_types(ca, &build_data);
 
-    //Lexer lexer = lexer_create(ca, &build_data);
     String file_path = string_ref(argv[1]);
-    //Lexed_File lexed_file = lexer_lex_file(&lexer, file_path);
-    //if (!lexed_file.valid) return 1;
-
-     //lexed_file_print(&lexed_file);
-
-    //Token_Stream* token_stream = lexer_new_token_stream(ca, &lexed_file);
-
-    //Parser parser = parser_create(ca, &build_data);
-    //Parsed_File parsed_file = parser_parse_file(&parser, token_stream);
-
-    //parsed_file_print(&parsed_file);
-
-    //@TODO: initialize with builtin global count
-    //Scope *global_scope = scope_new(ca, Scope_Kind::GLOBAL, nullptr);
-
-    //AST_Node* ast_root = ast_create_from_parsed_file(ca, &parsed_file);
-    //assert(ast_root);
-
-    //builtin_populate_scope(ca, global_scope);
-    //scope_populate_ast(ca, ast_root, global_scope);
-
-    //printf("\nSCOPE DUMP:\n");
-    //ast_print_scope(ca, ast_root);
 
     Resolver resolver = {};
     resolver_init(ca, ca, &resolver, &build_data, file_path);
@@ -59,7 +35,7 @@ int main(int argc, char** argv)
     start_resolving(&resolver, true);
     Resolve_Result rr = finish_resolving(&resolver);
     assert(rr.error_count == 0);
-    //if (rr.llvm_error) return 1;
+    if (rr.llvm_error) return 1;
 
     bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);

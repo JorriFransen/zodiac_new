@@ -67,55 +67,8 @@ namespace Zodiac
     void start_resolving(Resolver *resolver, bool blocking)
     {
         assert(resolver);
-        //assert(resolver->root_node);
 
         assert(blocking);
-
-        //auto ast_node = resolver->root_node;
-        //assert(ast_node->kind == AST_Node_Kind::MODULE);
-
-        //AST_Declaration *entry_decl = nullptr;
-        //AST_Declaration *bytecode_entry_decl = nullptr;;
-
-        //auto ast_module = static_cast<AST_Module*>(ast_node);
-        //for (int64_t i = 0; i < ast_module->declarations.count; i++)
-        //{
-            //AST_Declaration *decl = ast_module->declarations[i];
-            //queue_ident_job(resolver, decl, ast_module->module_scope);
-
-            //if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::LINUX)
-            //{
-                //if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                    //decl->identifier->atom == Builtin::atom__start &&
-                    //(decl->decl_flags & AST_DECL_FLAG_IS_NAKED))
-                //{
-                    //assert(!entry_decl);
-                    //entry_decl = decl;
-                    //decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
-                //}
-            //}
-            //else if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::WINDOWS)
-            //{
-                //if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                    //decl->identifier->atom == Builtin::atom_mainCRTStartup)
-                //{
-                    //assert(!entry_decl);
-                    //entry_decl = decl;
-                    //decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
-                //}
-            //}
-            //else assert(false);
-            //if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                //decl->identifier->atom == Builtin::atom_main)
-            //{
-                //assert(!bytecode_entry_decl);
-                //bytecode_entry_decl = decl;
-                //decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
-            //}
-        //}
-
-        //assert(entry_decl);
-        //assert(bytecode_entry_decl);
 
         if (blocking)
         {
@@ -151,9 +104,6 @@ namespace Zodiac
 
     void start_resolve_pump(Resolver *resolver)
     {
-        //assert(entry_decl);
-        //assert(entry_decl->kind == AST_Declaration_Kind::FUNCTION);
-
         bool done = false;
 
         while (!done)
@@ -332,7 +282,8 @@ namespace Zodiac
                 Lexed_File lexed_file = lexer_lex_file(&resolver->lexer, job->parse.module_path);
                 assert(lexed_file.valid);
 
-                Token_Stream *token_stream = lexer_new_token_stream(resolver->allocator, &lexed_file);
+                Token_Stream *token_stream = lexer_new_token_stream(resolver->allocator,
+                                                                    &lexed_file);
                 Parsed_File parsed_file = parser_parse_file(&resolver->parser, token_stream);
 
                 auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file);
