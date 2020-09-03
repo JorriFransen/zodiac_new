@@ -155,24 +155,17 @@ namespace Zodiac
                 {
                     auto decl = job->declaration;
                     assert(decl);
-                    if (is_entry_decl(resolver, decl))
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION)
                     {
-                        assert(!resolver->entry_decl);
-                        decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
-                        resolver->entry_decl = decl;
-                        queue_emit_bytecode_jobs_from_declaration(resolver, decl,
-                                                                  job->node_scope);
-                    }
-                    else if (is_bc_entry_decl(resolver, decl))
-                    {
-                        assert(!resolver->bc_entry_decl);
-                        decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
-                        resolver->bc_entry_decl = decl;
-                    }
-                    else if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                             (decl->decl_flags & AST_DECL_FLAG_FOREIGN))
-                    {
-                        queue_emit_bytecode_job(resolver, decl, job->node_scope);
+                        if (decl == resolver->entry_decl)
+                        {
+                            queue_emit_bytecode_jobs_from_declaration(resolver, decl,
+                                                                      job->node_scope);
+                        }
+                        else if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
+                        {
+                            queue_emit_bytecode_job(resolver, decl, job->node_scope);
+                        }
                     }
 
                     // Size jobs are queued when types are first created
@@ -294,6 +287,26 @@ namespace Zodiac
                 result = true;
 
                 job->result.ast_module = module_ast;
+
+                for (int64_t i = 0; i < module_ast->declarations.count; i++)
+                {
+                    auto decl = module_ast->declarations[i];
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION)
+                    {
+                        if (is_entry_decl(resolver, decl))
+                        {
+                            assert(!resolver->entry_decl);
+                            decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                            resolver->entry_decl = decl;
+                        }
+                        else if (is_bc_entry_decl(resolver, decl))
+                        {
+                            assert(!resolver->bc_entry_decl);
+                            decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
+                            resolver->bc_entry_decl = decl;
+                        }
+                    }
+                }
 
                 //@TODO: Free stuff
                 // Free lexed file
