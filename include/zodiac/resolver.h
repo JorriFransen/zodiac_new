@@ -4,6 +4,8 @@
 #include "bytecode.h"
 #include "struct_predecls.h"
 #include "queue.h"
+#include "parser.h"
+#include "lexer.h"
 #include "llvm_builder.h"
 
 #include <cstdarg>
@@ -36,11 +38,17 @@ namespace Zodiac
         String first_file_name = {}; // File name without extension
 
         Build_Data *build_data = nullptr;
+        Lexer lexer = {};
+        Parser parser = {};
+        Scope *global_scope = nullptr;
         Bytecode_Builder bytecode_builder = {};
         LLVM_Builder llvm_builder = {};
 
         AST_Node *root_node = nullptr;
+        AST_Declaration *entry_decl = nullptr;
+        AST_Declaration *bc_entry_decl = nullptr;
 
+        Queue<Resolve_Job*> parse_job_queue = {};
         Queue<Resolve_Job*> ident_job_queue = {};
         Queue<Resolve_Job*> type_job_queue = {};
         Queue<Resolve_Job*> size_job_queue = {};
@@ -61,6 +69,7 @@ namespace Zodiac
     enum class Resolve_Job_Kind
     {
         INVALID,
+        PARSE,
         IDENTIFIER,
         TYPE,
         SIZE,
@@ -72,6 +81,7 @@ namespace Zodiac
     struct Resolve_Job
     {
         Resolve_Job_Kind kind = Resolve_Job_Kind::INVALID;
+        Scope *node_scope = nullptr;
 
         union
         {
@@ -84,23 +94,35 @@ namespace Zodiac
 
             struct
             {
+                String module_name;
+                String module_path;
+            } parse;
+
+            struct
+            {
                 const char *output_file_name;
             } llvm_bin;
         };
 
-        Bytecode_Function *result = nullptr;
 
-        Scope *node_scope = nullptr;
+        union
+        {
+            AST_Module *ast_module = nullptr;
+            Bytecode_Function *bc_func;
+        } result;
+       
+
+
+        Resolve_Job() {};
     };
 
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
                        Build_Data *build_data, String first_file_path);
 
-    void start_resolving(Resolver *resolver, AST_Node *ast_node, bool blocking);
+    void start_resolving(Resolver *resolver, bool blocking);
     Resolve_Result finish_resolving(Resolver *resolver);
 
-    void start_resolve_pump(Resolver *resolver, AST_Declaration *entry_decl,
-                            AST_Declaration *bytecode_entry_decl);
+    void start_resolve_pump(Resolver *resolver);
 
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
 
@@ -130,6 +152,7 @@ namespace Zodiac
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope);
 
+    void queue_parse_job(Resolver *resolver, String module_name, String module_path);
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
@@ -149,6 +172,7 @@ namespace Zodiac
                                  Scope *scope);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
+    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path);
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
@@ -157,6 +181,9 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name);
+
+    bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
+    bool is_bc_entry_decl(Resolver *resolver, AST_Declaration *decl);
 
     void free_job(Resolver *resolver, Resolve_Job *job);
 

@@ -28,7 +28,7 @@ namespace Zodiac
         ast_node->end_file_pos = end_fp;
     }
 
-    AST_Node *ast_create_from_parsed_file(Allocator *allocator, Parsed_File *parsed_file)
+    AST_Module *ast_create_from_parsed_file(Allocator *allocator, Parsed_File *parsed_file)
     {
         assert(allocator);
         assert(parsed_file);

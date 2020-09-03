@@ -1,4 +1,6 @@
 
+//std :: import std;
+
 Vec2 :: struct 
 {
     x : s64;
