@@ -507,7 +507,8 @@ namespace Zodiac
                     assert(is_regular_file(file_path));
 
                     //@TODO: Do we still need to pass ast_decl?
-                    queue_parse_job(resolver, module_name, string_copy(resolver->allocator, file_path),
+                    queue_parse_job(resolver, module_name,
+                                    string_copy(resolver->allocator, file_path),
                                     ast_decl);
                     ast_decl->import.parse_queued = true;
                     result = false;
@@ -815,9 +816,19 @@ namespace Zodiac
                                                 scope))
                     {
                         auto ident_expr = ast_expr->call.ident_expression;
-                        assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
-                        assert(ident_expr->identifier->declaration);
-                        ast_expr->call.callee_declaration = ident_expr->identifier->declaration;
+                        AST_Declaration *callee_decl = nullptr;
+                        if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                        {
+                            callee_decl = ident_expr->identifier->declaration;
+                        }
+                        else if (ident_expr->kind == AST_Expression_Kind::DOT)
+                        {
+                            callee_decl = ident_expr->dot.child_decl; 
+                        }
+                        else assert(false);
+                        assert(callee_decl);
+                        assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+                        ast_expr->call.callee_declaration = callee_decl;
                     } 
                     else
                     {
@@ -928,12 +939,20 @@ namespace Zodiac
             {
                 if (!parent_decl->import.ast_module)
                 {
-                    return false;
+                    result = false;
                 }
-                assert(false);
+                else
+                {
+                    auto module = parent_decl->import.ast_module;
+                    auto decl = scope_find_declaration(module->module_scope,
+                                                       ast_expr->dot.child_identifier);
+                    assert(decl);
+                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                    ast_expr->dot.child_decl = decl;
+                    result = true;
+                }
             }
-
-            if (parent_decl->type)
+            else if (parent_decl->type)
             {
                 AST_Type *var_type = parent_decl->type;
                 assert(var_type);
@@ -1515,9 +1534,16 @@ namespace Zodiac
                 assert(ident->declaration);
                 if (ident->declaration->flags & AST_NODE_FLAG_TYPED)
                 {
-                    assert(ident->declaration->type);
-                    ast_expr->type = ident->declaration->type;
-                    result = true;
+                    if (ident->declaration->type)
+                    {
+                        ast_expr->type = ident->declaration->type;
+                        result = true;
+                    }
+                    else
+                    {
+                        assert(ident->declaration->kind == AST_Declaration_Kind::IMPORT);
+                        result = true;
+                    }
                 }
                 else
                 {
@@ -1534,22 +1560,42 @@ namespace Zodiac
                 bool parent_res = try_resolve_types(resolver, parent_expr, scope);
                 assert(parent_res);
 
-                auto parent_type = parent_expr->type;
-                assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
-                       (parent_type->kind == AST_Type_Kind::POINTER && 
-                        parent_type->pointer.base->kind == AST_Type_Kind::STRUCTURE));
+                if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER &&
+                    parent_expr->identifier->declaration->kind == AST_Declaration_Kind::IMPORT)
+                {
+                    auto child_decl = ast_expr->dot.child_decl;
+                    assert(child_decl);
+                    assert(child_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-                auto member_ident = ast_expr->dot.child_identifier;
-                assert(member_ident);
-                assert(member_ident->declaration);
-                auto mem_decl = member_ident->declaration;
+                    auto func_type = child_decl->type;
+                    if (func_type)
+                    {
+                        assert(func_type);
+                        assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
-                assert(mem_decl->type);
-                //assert(mem_decl->type->kind == AST_Type_Kind::STRUCTURE);
+                        ast_expr->type = func_type;
+                        result = true;
+                    }
+                }
+                else
+                {
+                    auto parent_type = parent_expr->type;
+                    assert(parent_type);
+                    assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
+                           (parent_type->kind == AST_Type_Kind::POINTER && 
+                            parent_type->pointer.base->kind == AST_Type_Kind::STRUCTURE));
 
-                ast_expr->type = mem_decl->type;
-                result = true;
+                    auto member_ident = ast_expr->dot.child_identifier;
+                    assert(member_ident);
+                    assert(member_ident->declaration);
+                    auto mem_decl = member_ident->declaration;
+
+                    assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
+                    assert(mem_decl->type);
+
+                    ast_expr->type = mem_decl->type;
+                    result = true;
+                }
                 break;
             }
 
@@ -1765,7 +1811,9 @@ namespace Zodiac
 
         if (result)
         {
-            assert(ast_expr->type);
+            assert(ast_expr->type ||
+                   (ast_expr->kind == AST_Expression_Kind::IDENTIFIER &&
+                    ast_expr->identifier->declaration->kind == AST_Declaration_Kind::IMPORT));
             ast_expr->flags |= AST_NODE_FLAG_TYPED;
         }
 
@@ -2303,7 +2351,8 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
     }
 
-    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
+    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver,
+                                                   AST_Declaration *entry_decl,
                                                    Scope *scope)
     {
         switch (entry_decl->kind)

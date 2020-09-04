@@ -1,4 +1,6 @@
 
+Infer return type from functions.
+
 make jump if more like llvm's condbr
 
 check if integer literals fit in the type they're assigned to

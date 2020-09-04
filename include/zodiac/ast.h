@@ -250,6 +250,8 @@ namespace Zodiac
             {
                 AST_Expression *parent_expression;
                 AST_Identifier *child_identifier;
+
+                AST_Declaration *child_decl;
                 int64_t child_index;
             } dot;
 

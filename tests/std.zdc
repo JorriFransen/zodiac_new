@@ -10,7 +10,7 @@
 //}
 
 
-ret_77 :: func () 
+ret_77 :: func () -> s64
 {
     return 77;
 }
