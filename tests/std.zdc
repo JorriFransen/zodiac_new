@@ -1,0 +1,16 @@
+
+//strlen :: func (cstr: *u8) -> s64
+//{
+    //i := 0;
+    //while (cstr[i] != 0)
+    //{
+        //i = i + 1;
+    //}
+    //return i;
+//}
+
+
+ret_77 :: func () 
+{
+    return 77;
+}

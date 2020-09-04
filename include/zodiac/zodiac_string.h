@@ -57,6 +57,7 @@ const String string_copy(Allocator *allocator, const char *cstr);
 void string_free(Allocator *allocator, String &str);
 
 const String string_append(Allocator *allocator, const String &lhs, const String &rhs);
+const String string_append(Allocator *allocator, const String &lhs, const char *cstr);
 
 const String string_ref(const char* cstr);
 const String string_ref(const char* cstr, int64_t length);
@@ -70,6 +71,8 @@ bool string_contains(const String &str, const String &sub_str);
 
 bool string_ends_with(const String &a, const char *b);
 bool string_ends_with(const String &a, const String &b);
+
+bool string_equal(const String &a, const String &b);
 
 const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count);
 }

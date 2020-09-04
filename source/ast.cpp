@@ -863,6 +863,8 @@ namespace Zodiac
                                           begin_fp, end_fp);
 
         result->import.ident_expression = ident_expr;
+        result->import.ast_module = nullptr;
+        result->import.parse_queued = false;
 
         return result;
     }

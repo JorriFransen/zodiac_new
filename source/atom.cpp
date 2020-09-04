@@ -108,4 +108,9 @@ uint64_t atom_to_u64(const Atom& atom, uint64_t base /*= 10*/)
     return result;
 }
 
+String string_ref(const Atom &atom)
+{
+    return string_ref(atom.data, atom.length);
+}
+
 }

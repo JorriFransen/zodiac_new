@@ -38,7 +38,12 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
     switch (ptn->kind)
     {
         case Declaration_PTN_Kind::INVALID: assert(false);
-        case Declaration_PTN_Kind::IMPORT: assert(false);
+
+        case Declaration_PTN_Kind::IMPORT:
+        {
+            free_ptn(allocator, ptn->import.module_ident_expr); 
+            break;
+        }
 
         case Declaration_PTN_Kind::VARIABLE:
         {

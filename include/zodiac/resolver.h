@@ -29,13 +29,20 @@ namespace Zodiac
         AST_Node *ast_node = nullptr;
     };
 
+    struct Parsed_Module
+    {
+        String full_path = {};
+        AST_Module *ast;
+    };
+
     struct Resolver
     {
         Allocator *allocator = nullptr;
         Allocator *err_allocator = nullptr;
 
-        String first_file_path = {}; 
+        String first_file_path = {}; // Full absolute path with extension
         String first_file_name = {}; // File name without extension
+        String first_file_dir = {};; // Full absolute path without file name
 
         Build_Data *build_data = nullptr;
         Lexer lexer = {};
@@ -55,6 +62,8 @@ namespace Zodiac
         Queue<Resolve_Job*> emit_bytecode_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_func_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_binary_job_queue = {};
+
+        Array<Parsed_Module> parsed_modules = {};
 
         bool llvm_error = false;
         Array<Resolve_Error> errors = {};
@@ -96,6 +105,7 @@ namespace Zodiac
             {
                 String module_name;
                 String module_path;
+                AST_Declaration *import_decl;
             } parse;
 
             struct
@@ -130,14 +140,16 @@ namespace Zodiac
     bool try_resolve_identifiers(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Expression* ast_expr, Scope *scope);
-    bool try_resolve_identifiers_dot_expr(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
+    bool try_resolve_identifiers_dot_expr(Resolver *resolver, AST_Expression *ast_expr,
+                                          Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts, Scope *scope);
 
     bool try_resolve_types(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
-    bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr, Scope *scope);
+    bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr,
+                                        Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,
                            AST_Type **type_target);
 
@@ -152,7 +164,8 @@ namespace Zodiac
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope);
 
-    void queue_parse_job(Resolver *resolver, String module_name, String module_path);
+    void queue_parse_job(Resolver *resolver, String module_name, String module_path,
+                         AST_Declaration *import_decl);
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
@@ -172,7 +185,8 @@ namespace Zodiac
                                  Scope *scope);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
-    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path);
+    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path,
+                                 AST_Declaration *import_decl);
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);

@@ -105,6 +105,8 @@ namespace Zodiac
             struct 
             {
                 AST_Expression *ident_expression;                
+                AST_Module *ast_module;
+                bool parse_queued;
             } import;
 
             struct

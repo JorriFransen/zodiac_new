@@ -35,6 +35,8 @@ namespace Zodiac
         assert(string_ends_with(first_file_path, ".zdc"));
         resolver->first_file_name = string_copy(allocator, file_name, file_name.length - 4);
 
+        resolver->first_file_dir = get_file_dir(allocator, first_file_path);
+
         resolver->build_data = build_data;
         assert(build_data);
         resolver->lexer = lexer_create(allocator, build_data);
@@ -52,6 +54,8 @@ namespace Zodiac
         queue_init(allocator, &resolver->emit_llvm_func_job_queue);
         queue_init(allocator, &resolver->emit_llvm_binary_job_queue);
 
+        array_init(err_allocator, &resolver->parsed_modules);
+
         resolver->llvm_error = false;
         array_init(err_allocator, &resolver->errors);
 
@@ -60,7 +64,7 @@ namespace Zodiac
         resolver->global_scope = scope_new(allocator, Scope_Kind::GLOBAL, nullptr);
         builtin_populate_scope(allocator, resolver->global_scope);
 
-        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path);
+        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, nullptr);
 
     }
 
@@ -311,6 +315,9 @@ namespace Zodiac
                 lexer_free_lexed_file(&resolver->lexer, &lexed_file);
                 token_stream->free();
                 parser_free_parsed_file(&resolver->parser, &parsed_file);
+
+                array_append(&resolver->parsed_modules, { job->parse.module_path, module_ast });
+
                 break;
             }
 
@@ -486,11 +493,43 @@ namespace Zodiac
                 assert(ident_expr);
                 assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
 
-                Atom module_name = ident_expr->identifier->atom;
+                auto module_name = string_ref(ident_expr->identifier->atom);
                 assert(module_name.data);
 
-                assert(false);
+                auto ta = temp_allocator_get();
+                auto file_name = string_append(ta, module_name, ".zdc");
+                String file_path = string_append(ta, resolver->first_file_dir, file_name);
 
+                if (!ast_decl->import.parse_queued)
+                {
+
+                    //@TODO: Report error
+                    assert(is_regular_file(file_path));
+
+                    //@TODO: Do we still need to pass ast_decl?
+                    queue_parse_job(resolver, module_name, string_copy(resolver->allocator, file_path),
+                                    ast_decl);
+                    ast_decl->import.parse_queued = true;
+                    result = false;
+                }
+                else
+                {
+                    AST_Module *ast_module = nullptr;
+                    for (int64_t i = 0; i < resolver->parsed_modules.count; i++)
+                    {
+                        auto &pm = resolver->parsed_modules[i];
+                        if (string_equal(pm.full_path, file_path))
+                        {
+                            ast_module = pm.ast;
+                        }
+                    }
+
+                    if (ast_module)
+                    {
+                        ast_decl->import.ast_module = ast_module;
+                        result = true;
+                    }
+                }
                 break;
             }
 
@@ -882,7 +921,18 @@ namespace Zodiac
 
             assert(parent_decl);
             assert(parent_decl->kind == AST_Declaration_Kind::VARIABLE ||
-                   parent_decl->kind == AST_Declaration_Kind::PARAMETER);
+                   parent_decl->kind == AST_Declaration_Kind::PARAMETER ||
+                   parent_decl->kind == AST_Declaration_Kind::IMPORT);
+
+            if (parent_decl->kind == AST_Declaration_Kind::IMPORT)
+            {
+                if (!parent_decl->import.ast_module)
+                {
+                    return false;
+                }
+                assert(false);
+            }
+
             if (parent_decl->type)
             {
                 AST_Type *var_type = parent_decl->type;
@@ -1053,7 +1103,8 @@ namespace Zodiac
                 if (!(decl->flags & AST_NODE_FLAG_TYPED))
                 {
                     result = try_resolve_types(resolver, decl, scope);
-                    if (result) assert(decl->type);
+                    if (result)
+                        assert(decl->type || decl->kind == AST_Declaration_Kind::IMPORT);
                 }
                 break;
             }
@@ -1089,7 +1140,11 @@ namespace Zodiac
         {
             case AST_Declaration_Kind::INVALID: assert(false);
 
-            case AST_Declaration_Kind::IMPORT: assert(false);
+            case AST_Declaration_Kind::IMPORT:
+            {
+                ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
 
             case AST_Declaration_Kind::VARIABLE:
             {
@@ -1260,7 +1315,8 @@ namespace Zodiac
         if (result)
         {
             assert(ast_decl->flags & AST_NODE_FLAG_TYPED);
-            assert(ast_decl->type);
+            assert(ast_decl->type ||
+                   ast_decl->kind == AST_Declaration_Kind::IMPORT);
         }
 
         return result;
@@ -1383,34 +1439,35 @@ namespace Zodiac
 
             case AST_Statement_Kind::WHILE:
             {
+                result = true;
                 if (!try_resolve_types(resolver, ast_stmt->while_stmt.cond_expr, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
                                        ast_stmt->while_stmt.body_scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
-                result = true;
-                ast_stmt->flags |= AST_NODE_FLAG_TYPED; 
+                if (result) ast_stmt->flags |= AST_NODE_FLAG_TYPED; 
                 break;
             }
 
             
             case AST_Statement_Kind::IF:
             {
+                result = true;
                 if (!try_resolve_types(resolver, ast_stmt->if_stmt.cond_expr, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->if_stmt.then_stmt, 
                                        ast_stmt->if_stmt.then_scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 if (ast_stmt->if_stmt.else_stmt)
@@ -1418,12 +1475,11 @@ namespace Zodiac
                     if (!try_resolve_types(resolver, ast_stmt->if_stmt.else_stmt, 
                                            ast_stmt->if_stmt.else_scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
-                result = true;
-                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                if (result) ast_stmt->flags |= AST_NODE_FLAG_TYPED;
                 break;
             }
         }
@@ -2162,9 +2218,13 @@ namespace Zodiac
         return result;
     }
 
-    void queue_parse_job(Resolver *resolver, String module_name, String module_path)
+    void queue_parse_job(Resolver *resolver, String module_name, String module_path,
+                         AST_Declaration *import_decl)
     {
-        auto job = resolve_job_new(resolver->allocator, module_name, module_path);
+        if (import_decl) assert(import_decl->kind == AST_Declaration_Kind::IMPORT);
+
+        auto job = resolve_job_new(resolver->allocator, module_name, module_path,
+                                    import_decl);
         assert(job);
         queue_enqueue(&resolver->parse_job_queue, job);
     }
@@ -2502,11 +2562,15 @@ namespace Zodiac
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path)
+    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path,
+                                 AST_Declaration *import_decl)
     {
+        if (import_decl) assert(import_decl->kind == AST_Declaration_Kind::IMPORT);
+
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::PARSE);
         result->parse.module_name = module_name;
         result->parse.module_path = module_path;
+        result->parse.import_decl = import_decl;
         return result;
     }
 

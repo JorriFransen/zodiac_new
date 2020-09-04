@@ -59,6 +59,11 @@ const String string_append(Allocator *allocator, const String &lhs, const String
     return new_str;
 }
 
+const String string_append(Allocator *allocator, const String &lhs, const char *cstr)
+{
+    return string_append(allocator, lhs, string_ref(cstr));
+}
+
 const String string_ref(const char* cstr)
 {
     String result = { (char*)cstr, (int64_t)strlen(cstr) };
@@ -157,6 +162,19 @@ bool string_ends_with(const String &a, const String &b)
     for (int64_t i = 0; i < b.length; i++)
     {
         if (a[i + offset] != b[i]) return false;
+    }
+
+    return true;
+}
+
+bool string_equal(const String &a, const String &b)
+{
+    if (a == b) return true;
+    if (a.length != b.length) return false;
+
+    for (int64_t i = 0; i < a.length; i++)
+    {
+        if (a[i] != b[i]) return false;
     }
 
     return true;
