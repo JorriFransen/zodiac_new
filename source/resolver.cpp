@@ -422,7 +422,7 @@ namespace Zodiac
                     {
                         queue_ident_job(resolver, decl, module->module_scope);
                     }
-                    else
+                    else if (decl->flags & AST_NODE_FLAG_RESOLVED_ID)
                     {
                         queue_type_job(resolver, decl, module->module_scope); 
                     }
@@ -482,6 +482,7 @@ namespace Zodiac
         if (ast_decl->flags & AST_NODE_FLAG_RESOLVED_ID) return true;
 
         bool result = true;
+        bool apply_flag = true;
 
         switch (ast_decl->kind)
         {
@@ -511,7 +512,9 @@ namespace Zodiac
                                     string_copy(resolver->allocator, file_path),
                                     ast_decl);
                     ast_decl->import.parse_queued = true;
-                    result = false;
+                    result = true;
+                    apply_flag = false;
+                    queue_ident_job(resolver, ast_decl, scope);
                 }
                 else
                 {
@@ -625,7 +628,7 @@ namespace Zodiac
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
 
-        if (result) ast_decl->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        if (result && apply_flag) ast_decl->flags |= AST_NODE_FLAG_RESOLVED_ID;
         return result;
     }
 
@@ -949,7 +952,8 @@ namespace Zodiac
                                                        ast_expr->dot.child_identifier);
                     if (decl)
                     {
-                        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                        assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
+                               decl->kind == AST_Declaration_Kind::STRUCTURE);
                         ast_expr->dot.child_decl = decl;
                         result = true;
                     }
@@ -1022,6 +1026,7 @@ namespace Zodiac
             result = false;
         }
 
+        if (result) ast_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
         return result;
     }
 
@@ -1056,7 +1061,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT: assert(false);
+            case AST_Type_Spec_Kind::DOT:
+            {
+                result = true;
+                if (!try_resolve_identifiers_dot_expr(resolver, ast_ts->dot_expression, scope))
+                {
+                    result = false;
+                }
+
+                break;
+            }
 
             case AST_Type_Spec_Kind::FUNCTION:
             {
@@ -1182,7 +1196,7 @@ namespace Zodiac
                     if (!try_resolve_types(resolver, ast_decl->variable.type_spec, scope,
                                            &ts_type))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
 
@@ -1229,7 +1243,7 @@ namespace Zodiac
                 {
                     result = try_resolve_types(resolver, ast_decl->parameter.type_spec, scope,
                                                &ast_decl->type);
-                    assert(ast_decl->type);
+                    if (result) assert(ast_decl->type);
                 } else assert(false);
 
                 if (result)
@@ -1574,16 +1588,27 @@ namespace Zodiac
                 {
                     auto child_decl = ast_expr->dot.child_decl;
                     assert(child_decl);
-                    assert(child_decl->kind == AST_Declaration_Kind::FUNCTION);
-
-                    auto func_type = child_decl->type;
-                    if (func_type)
+                    if (child_decl->kind == AST_Declaration_Kind::FUNCTION)
                     {
-                        assert(func_type);
-                        assert(func_type->kind == AST_Type_Kind::FUNCTION);
+                        auto func_type = child_decl->type;
+                        if (func_type)
+                        {
+                            assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                        ast_expr->type = func_type;
-                        result = true;
+                            ast_expr->type = func_type;
+                            result = true;
+                        }
+                    }
+                    else if (child_decl->kind == AST_Declaration_Kind::STRUCTURE)
+                    {
+                        auto struct_type = child_decl->type;
+                        if (struct_type)
+                        {
+                            assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+                            
+                            ast_expr->type = struct_type;
+                            result = true;
+                        }
                     }
                 }
                 else
@@ -1930,11 +1955,28 @@ namespace Zodiac
                     assert(*type_target);
                     ts->type = *type_target;
                 }
-                else assert(false);
+                else
+                {
+                    result = false;
+                }
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT: assert(false);
+            case AST_Type_Spec_Kind::DOT:
+            {
+                if (!try_resolve_types(resolver, ts->dot_expression, scope))
+                {
+                    result = false;
+                }
+                else
+                {
+                    auto type = ts->dot_expression->type;
+                    ts->type = type;
+                    *type_target = type;
+                    result = true;
+                }
+                break;
+            }
 
             case AST_Type_Spec_Kind::FUNCTION:
             {
