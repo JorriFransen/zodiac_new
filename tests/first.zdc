@@ -1,108 +1,93 @@
 
 std :: import std;
 
-//Vec2 :: struct 
-//{
-    //x : s64;
-    //y : s64;
-//}
+Vec2 :: struct
+{
+    x : s64;
+    y : s64;
+}
 
-//print :: func (cstr: *u8)
-//{
-    //@syscall(1, 1, cstr, std.strlen(cstr));
-    //return;
-//}
+print_vec2 :: func (v: *Vec2)
+{
+    std.print("x: ");
+    print_num(v.x);
+    std.print(", y: ");
+    print_num(v.y);
+    std.println(" ");
+    return;
+}
 
-//println :: func (cstr: *u8)
-//{
-    //print(cstr);
-    //nl := 10;
-    //@syscall(1, 1, *nl, 1);
-    //return;
-//}
-
-//print_vec2 :: func (v: *Vec2)
-//{
-    //print("x: ");
-    //print_num(v.x);
-    //print(", y: ");
-    //print_num(v.y);
-    //println(" ");
-    //return;
-//}
-
-//add_vec2 :: func (v: *Vec2) -> s64
-//{
-    //return v.x + v.y;
-//}
+add_vec2 :: func (v: *Vec2) -> s64
+{
+    return v.x + v.y;
+}
 
 main :: func () -> s64
 {
-    //count := 4;
-    //while (count > 0)
-    //{
-        //if (count == 4)
-        //{
-            //println("Welcome!");
-        //}
-        //else if (count == 3)
-        //{
-            //println("Welcome 2");
-        //}
-        //else
-        //{
-            //println("Again...??");
-        //}
+    count := 4;
+    while (count > 0)
+    {
+        if (count == 4)
+        {
+            std.println("Welcome!");
+        }
+        else if (count == 3)
+        {
+            std.println("Welcome 2");
+        }
+        else
+        {
+            std.println("Again...??");
+        }
 
-        //println("Hello World!");
-        //count = count - 1;
-    //}
+        std.println("Hello World!");
+        count = count - 1;
+    }
 
-    //print_alphabet := true;
-    //print_vector : bool = false;
+    print_alphabet := true;
+    print_vector : bool = false;
 
-    //if (print_alphabet)
-    //{
-        //count = 26;
-        //c := 65;
-        //while (count > 0)
-        //{
-            //@syscall(1, 1, *c, 1);
-            //c = c + 1;
-            //count = count - 1;
-        //}
-        //println(" ");
-    //}
-    //else
-    //{
-        //println("Not printing alphabet");
-    //}
+    if (print_alphabet)
+    {
+        count = 26;
+        c := 65;
+        while (count > 0)
+        {
+            @syscall(1, 1, *c, 1);
+            c = c + 1;
+            count = count - 1;
+        }
+        std.println(" ");
+    }
+    else
+    {
+        std.println("Not printing alphabet");
+    }
 
-    //if (print_vector)
-    //{
-        //p1 : Vec2;
-        //p1.x = 33;
-        //p1.y = 44;
+    if (print_vector)
+    {
+        p1 : Vec2;
+        p1.x = 33;
+        p1.y = 44;
 
-        //print_vec2(*p1);
-        //p1.y = 55;
-        //print_vec2(*p1);
-    //}
-    //else
-    //{
-        //println("Not printing vector...");
-    //}
-    ////return add_vec2(*p1);
-    return std.ret_77();
+        print_vec2(*p1);
+        p1.y = 55;
+        print_vec2(*p1);
+    }
+    else
+    {
+        std.println("Not printing vector...");
+    }
+    return 0;
 }
 
-//#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
+#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
-//mainCRTStartup :: func () -> s32
-//{
-    //exit_code := main();
-    //@exit(exit_code);
-//}
+mainCRTStartup :: func () -> s32
+{
+    exit_code := main();
+    @exit(exit_code);
+}
 
 #naked #noreturn _start :: func ()
 {
@@ -115,24 +100,24 @@ main :: func () -> s64
     @exit(exit_code);
 }
 
-//print_num :: func (n: s64)
-//{
-    //buf : [32]s64;
-    //i := 0;
-    //while (n > 0)
-    //{
-        //nc := n % 10; 
-        //buf[i] = nc + 48;
-        //i = i + 1;
-        //n = n / 10;
-    //}
+print_num :: func (n: s64)
+{
+    buf : [32]s64;
+    i := 0;
+    while (n > 0)
+    {
+        nc := n % 10;
+        buf[i] = nc + 48;
+        i = i + 1;
+        n = n / 10;
+    }
 
-    //while (i > 0)
-    //{
-        //@syscall(1, 1, *buf[i - 1], 1);
-        //i = i - 1;
-    //}
-    //return;
-//}
+    while (i > 0)
+    {
+        @syscall(1, 1, *buf[i - 1], 1);
+        i = i - 1;
+    }
+    return;
+}
 
 

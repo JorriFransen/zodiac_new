@@ -1,16 +1,25 @@
 
-//strlen :: func (cstr: *u8) -> s64
-//{
-    //i := 0;
-    //while (cstr[i] != 0)
-    //{
-        //i = i + 1;
-    //}
-    //return i;
-//}
-
-
-ret_77 :: func () -> s64
+strlen :: func (cstr: *u8) -> s64
 {
-    return 77;
+    i := 0;
+    while (cstr[i] != 0)
+    {
+        i = i + 1;
+    }
+    return i;
 }
+
+print :: func (cstr: *u8)
+{
+    @syscall(1, 1, cstr, strlen(cstr));
+    return;
+}
+
+println :: func (cstr: *u8)
+{
+    print(cstr);
+    nl := 10;
+    @syscall(1, 1, *nl, 1);
+    return;
+}
+

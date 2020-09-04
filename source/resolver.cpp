@@ -705,6 +705,8 @@ namespace Zodiac
 
             case AST_Statement_Kind::WHILE:
             {
+                result = true;
+
                 if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.cond_expr, scope))
                 {
                     assert(false);
@@ -713,10 +715,9 @@ namespace Zodiac
                 if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body,
                                              ast_stmt->while_stmt.body_scope))
                 {
-                    assert(false); 
+                    result = false;
                 }
 
-                result = true;
                 break;
             }
             
@@ -739,7 +740,7 @@ namespace Zodiac
                     if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.else_stmt,
                                                  ast_stmt->if_stmt.else_scope))
                     {
-                        assert(false);
+                        result = false;
                     }
                 }
                 break;
@@ -946,10 +947,18 @@ namespace Zodiac
                     auto module = parent_decl->import.ast_module;
                     auto decl = scope_find_declaration(module->module_scope,
                                                        ast_expr->dot.child_identifier);
-                    assert(decl);
-                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                    ast_expr->dot.child_decl = decl;
-                    result = true;
+                    if (decl)
+                    {
+                        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                        ast_expr->dot.child_decl = decl;
+                        result = true;
+                    }
+                    else
+                    {
+                        resolver_report_undeclared_identifier(resolver,
+                                                              ast_expr->dot.child_identifier);
+                        result = false;
+                    }
                 }
             }
             else if (parent_decl->type)
