@@ -13,7 +13,8 @@ PTN_Kind Expression_List_PTN::_kind = PTN_Kind::EXPRESSION_LIST;
 PTN_Kind Expression_PTN::_kind = PTN_Kind::EXPRESSION;
 PTN_Kind Parameter_PTN::_kind = PTN_Kind::PARAMETER;
 
-void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const File_Pos &end_file_pos)
+void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos,
+              const File_Pos &end_file_pos)
 {
     assert(ptn);
     ptn->kind = kind;
@@ -21,6 +22,235 @@ void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const Fil
     ptn->end_file_pos = end_file_pos;
 }
 
+void free_ptn(Allocator *allocator, PTN *ptn)
+{
+    assert(allocator);
+    assert(ptn);
+    // placeholder
+}
+
+void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+    free_ptn(allocator, ptn->identifier);
+
+    switch (ptn->kind)
+    {
+        case Declaration_PTN_Kind::INVALID: assert(false);
+        case Declaration_PTN_Kind::IMPORT: assert(false);
+
+        case Declaration_PTN_Kind::VARIABLE:
+        {
+            if (ptn->variable.init_expression)
+                free_ptn(allocator, ptn->variable.init_expression);
+
+            if (ptn->variable.type_expression) 
+                free_ptn(allocator, ptn->variable.type_expression);
+            break;
+        }
+
+        case Declaration_PTN_Kind::CONSTANT: assert(false);
+
+        case Declaration_PTN_Kind::FUNCTION:
+        {
+            free_ptn(allocator, ptn->function.prototype);
+            if (ptn->function.body) free_ptn(allocator, ptn->function.body);
+            break;
+        }
+
+        case Declaration_PTN_Kind::STRUCT:
+        {
+            for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++)
+            {
+                free_ptn(allocator, ptn->structure.member_declarations[i]);
+            }
+
+            array_free(&ptn->structure.member_declarations);
+
+            for (int64_t i = 0; i < ptn->structure.parameters.count; i++)
+            {
+                free_ptn(allocator, ptn->structure.parameters[i]);
+            }
+
+            array_free(&ptn->structure.parameters);
+            break;
+        }
+    }
+}
+
+void free_ptn(Allocator *allocator, Function_Proto_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+
+    for (int64_t i = 0; i < ptn->parameters.count; i++)
+    {
+        free_ptn(allocator, ptn->parameters[i]);
+    }
+    
+    array_free(&ptn->parameters);
+
+    if (ptn->return_type_expression) free_ptn(allocator, ptn->return_type_expression);
+}
+
+void free_ptn(Allocator *allocator, Parameter_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+
+    free_ptn(allocator, ptn->identifier);
+    free_ptn(allocator, ptn->type_expression);
+}
+
+void free_ptn(Allocator *allocator, Statement_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+
+    switch (ptn->kind)
+    {
+        case Statement_PTN_Kind::INVALID: assert(false);
+
+        case Statement_PTN_Kind::BLOCK:
+        {
+            for (int64_t i = 0; i < ptn->block.statements.count; i++)
+            {
+                free_ptn(allocator, ptn->block.statements[i]);
+            }
+
+            array_free(&ptn->block.statements);
+            break;
+        }
+
+        case Statement_PTN_Kind::DECLARATION:
+        {
+            free_ptn(allocator, ptn->declaration);
+            break;
+        }
+
+        case Statement_PTN_Kind::EXPRESSION:
+        {
+            free_ptn(allocator, ptn->expression);
+            break;
+        }
+
+        case Statement_PTN_Kind::RETURN:
+        {
+            if (ptn->return_stmt.expression) free_ptn(allocator, ptn->return_stmt.expression);
+            break;
+        }
+
+        case Statement_PTN_Kind::ASSIGNMENT:
+        {
+            free_ptn(allocator, ptn->assignment.ident_expression);
+            free_ptn(allocator, ptn->assignment.rhs_expression);
+            break;
+        }
+
+        case Statement_PTN_Kind::WHILE:
+        {
+            free_ptn(allocator, ptn->while_stmt.cond_expr);
+            free_ptn(allocator, ptn->while_stmt.body);
+            break;
+        }
+
+        case Statement_PTN_Kind::IF:
+        {
+            free_ptn(allocator, ptn->if_stmt.cond_expr);
+            free_ptn(allocator, ptn->if_stmt.then_stmt);
+            if (ptn->if_stmt.else_stmt) free_ptn(allocator, ptn->if_stmt.else_stmt);
+            break;
+        }
+    }
+}
+
+void free_ptn(Allocator *allocator, Expression_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+    
+    switch (ptn->kind)
+    {
+        case Expression_PTN_Kind::INVALID: assert(false);
+
+        case Expression_PTN_Kind::CALL:
+        {
+            free_ptn(allocator, ptn->call.ident_expression);
+            if (ptn->call.arg_list) free_ptn(allocator, ptn->call.arg_list);
+            break;
+        }
+
+        case Expression_PTN_Kind::IDENTIFIER:
+        {
+            free_ptn(allocator, ptn->identifier);
+            break;
+        }
+
+        case Expression_PTN_Kind::BINARY:
+        {
+            free_ptn(allocator, ptn->binary.lhs);
+            free_ptn(allocator, ptn->binary.rhs);
+            break;
+        }
+
+        case Expression_PTN_Kind::UNARY: assert(false);
+
+        case Expression_PTN_Kind::DOT:
+        {
+            free_ptn(allocator, ptn->dot.parent_expression);
+            free_ptn(allocator, ptn->dot.child_identifier);
+            break;
+        }
+
+        case Expression_PTN_Kind::COMPOUND: assert(false);
+
+        case Expression_PTN_Kind::SUBSCRIPT:
+        {
+            free_ptn(allocator, ptn->subscript.pointer_expression);
+            free_ptn(allocator, ptn->subscript.index_expression);
+            break;
+        }
+
+        case Expression_PTN_Kind::NUMBER_LITERAL: break;
+        case Expression_PTN_Kind::STRING_LITERAL: break;
+        case Expression_PTN_Kind::BOOL_LITERAL: break;;
+
+        case Expression_PTN_Kind::ARRAY_TYPE:
+        {
+            free_ptn(allocator, ptn->array_type.length_expression);
+            free_ptn(allocator, ptn->array_type.element_type_expression);
+            break;
+        }
+
+        case Expression_PTN_Kind::POINTER_TYPE:
+        {
+            free_ptn(allocator, ptn->pointer_type.pointee_type_expression);
+            break;
+        }
+
+        case Expression_PTN_Kind::POLY_TYPE: assert(false);
+    }
+}
+
+void free_ptn(Allocator *allocator, Expression_List_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+
+    for (int64_t i = 0; i < ptn->expressions.count; i++)
+    {
+        free_ptn(allocator, ptn->expressions[i]);
+    }
+
+    array_free(&ptn->expressions);
+}
+
+void free_ptn(Allocator *allocator, Identifier_PTN *ptn)
+{
+    assert(ptn);
+    free_ptn(allocator, &ptn->self);
+}
 
 Statement_PTN *new_statement(Allocator *allocator, Statement_PTN_Kind kind,
                              const File_Pos &begin_fp, const File_Pos &end_fp)

@@ -43,6 +43,11 @@ const String string_copy(Allocator *allocator, const char *cstr)
     return string_copy(allocator, { (char*)cstr, (int64_t)strlen(cstr) });
 }
 
+void string_free(Allocator *allocator, String &str)
+{
+    free(allocator, str.data);
+}
+
 const String string_append(Allocator *allocator, const String &lhs, const String &rhs)
 {
     auto new_len = lhs.length + rhs.length;

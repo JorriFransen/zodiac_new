@@ -50,7 +50,10 @@ void array_init(Allocator* allocator, Array<Element_Type>* array, int64_t capaci
 template <typename Element_Type>
 void array_free(Array<Element_Type>* array)
 {
-    free(array->allocator, array->data);
+    if (array->allocator && array->data)
+    {
+        free(array->allocator, array->data);
+    }
     array->count = 0;
     array->capacity = 0;
     array->allocator = nullptr;

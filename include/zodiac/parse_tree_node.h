@@ -307,7 +307,8 @@ struct Expression_PTN
     Expression_PTN() {}
 };
 
-void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos, const File_Pos &end_file_pos);
+void init_ptn(PTN *ptn, PTN_Kind kind, const File_Pos &begin_file_pos,
+              const File_Pos &end_file_pos);
 
 template <typename T>
 T *new_ptn(Allocator *allocator, const File_Pos &begin_file_pos, const File_Pos &end_file_pos)
@@ -317,10 +318,20 @@ T *new_ptn(Allocator *allocator, const File_Pos &begin_file_pos, const File_Pos 
     return result;
 }
 
-Statement_PTN *new_statement(Allocator *allocator, Statement_PTN_Kind kind, const File_Pos &begin_fp,                              const File_Pos &end_fp);
+void free_ptn(Allocator *allocator, PTN *ptn);
+void free_ptn(Allocator *allocator, Declaration_PTN *ptn);
+void free_ptn(Allocator *allocator, Function_Proto_PTN *ptn);
+void free_ptn(Allocator *allocator, Parameter_PTN *ptn);
+void free_ptn(Allocator *allocator, Statement_PTN *ptn);
+void free_ptn(Allocator *allocator, Expression_PTN *ptn);
+void free_ptn(Allocator *allocator, Expression_List_PTN *ptn);
+void free_ptn(Allocator *allocator, Identifier_PTN *ptn);
 
-Identifier_PTN *new_identifier_ptn(Allocator *allocator, const Atom& atom, const File_Pos &begin_fp,
-                                   const File_Pos &end_fp);
+Statement_PTN *new_statement(Allocator *allocator, Statement_PTN_Kind kind,
+                             const File_Pos &begin_fp, const File_Pos &end_fp);
+
+Identifier_PTN *new_identifier_ptn(Allocator *allocator, const Atom& atom,
+                                   const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements, 
                                        const File_Pos &begin_fp, const File_Pos &end_fp);

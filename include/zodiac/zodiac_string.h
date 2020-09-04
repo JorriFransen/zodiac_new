@@ -54,6 +54,8 @@ const String string_copy(Allocator* allocator, const String& string);
 const String string_copy(Allocator *allocator, const char *cstr, int64_t length);
 const String string_copy(Allocator *allocator, const char *cstr);
 
+void string_free(Allocator *allocator, String &str);
+
 const String string_append(Allocator *allocator, const String &lhs, const String &rhs);
 
 const String string_ref(const char* cstr);

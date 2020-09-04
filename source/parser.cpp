@@ -38,6 +38,16 @@ Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts)
     return result;
 }
 
+void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file)
+{
+    for (int64_t i = 0; i < parsed_file->declarations.count; i++)
+    {
+        free_ptn(parser->allocator, parsed_file->declarations[i]);
+    }
+
+    array_free(&parsed_file->declarations);
+}
+
 Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
 {
     assert(parser);

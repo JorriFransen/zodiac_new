@@ -44,7 +44,6 @@ Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
 
     result.path = string_copy(lexer->allocator, file_path);
     array_init(lexer->allocator, &result.tokens);
-    hash_table_init(lexer->allocator, &result.file_positions, *token_equal);
 
     result.valid = true;
 
@@ -57,6 +56,12 @@ Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
     }
 
     return ld.lexed_file;
+}
+
+void lexer_free_lexed_file(Lexer *lexer, Lexed_File *lexed_file)
+{
+    string_free(lexer->allocator, lexed_file->path);
+    array_free(&lexed_file->tokens);    
 }
 
 Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size)
@@ -411,3 +416,4 @@ Token Lexed_File_Token_Stream::peek_token(uint64_t offset)
 
     return lexed_file->tokens[current_index + offset];
 }
+

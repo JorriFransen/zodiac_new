@@ -417,7 +417,8 @@ namespace Zodiac
         scope->current_block = new_block;
     }
 
-    Scope *scope_new(Allocator* allocator, Scope_Kind kind, Scope *parent, int64_t initial_cap/*=4*/)
+    Scope *scope_new(Allocator* allocator, Scope_Kind kind, Scope *parent,
+                     int64_t initial_cap/*=4*/)
     {
         auto mem = (uint8_t*)alloc(allocator,
                                    sizeof(Scope) + (initial_cap * sizeof(AST_Declaration*)));

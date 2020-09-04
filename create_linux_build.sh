@@ -11,7 +11,7 @@ check_cmake_result () {
 }
 
 call_cmake () {
-    cmake .. ../.. -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}"
+    cmake .. -G Ninja ../.. -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}"
     check_cmake_result
     echo
 }

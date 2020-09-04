@@ -308,11 +308,9 @@ namespace Zodiac
                     }
                 }
 
-                //@TODO: Free stuff
-                // Free lexed file
-                // Free token stream
-                // Free parsed file
-                //assert(false);
+                lexer_free_lexed_file(&resolver->lexer, &lexed_file);
+                token_stream->free();
+                parser_free_parsed_file(&resolver->parser, &parsed_file);
                 break;
             }
 

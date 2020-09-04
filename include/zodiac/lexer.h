@@ -23,7 +23,6 @@ struct Lexed_File
 {
     String path = {};
     Array<Token> tokens = {};
-    Hash_Table<Token, File_Pos> file_positions = {};
     bool valid = false;
 };
 
@@ -53,11 +52,13 @@ struct Lexed_File_Token_Stream : public Token_Stream
     Token next_token();
     Token peek_token(uint64_t offset);
 
+    void free() {};
 };
 
 Lexer lexer_create(Allocator* allocator, Build_Data* build_data);
 void lexer_init(Allocator* allocator, Build_Data* build_data, Lexer* lexer);
 Lexed_File lexer_lex_file(Lexer* lexer, const String& file_path);
+void lexer_free_lexed_file(Lexer *lexer, Lexed_File *lexed_file);
 
 Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size);
 
