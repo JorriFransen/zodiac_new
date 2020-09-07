@@ -5,6 +5,7 @@
       pkgs.cmake
       pkgs.ninja
       pkgs.clang
+      pkgs.gdb
       pkgs.llvm_10
 
       pkgs.zlib

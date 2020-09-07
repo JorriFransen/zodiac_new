@@ -18,11 +18,10 @@ print :: func (cstr: *u8)
 println :: func (cstr: *u8)
 {
     print(cstr);
-    nl := 10;
+    nl := @cast(u8, 10);
     @syscall(1, 1, *nl, 1);
     return;
 }
-
 
 print_num :: func (n: s64)
 {
@@ -31,6 +30,7 @@ print_num :: func (n: s64)
     while (n > 0)
     {
         nc := n % 10;
+        //buf[i] = @cast(u8, nc + 48);
         buf[i] = nc + 48;
         i = i + 1;
         n = n / 10;
@@ -43,6 +43,7 @@ print_num :: func (n: s64)
     }
     return;
 }
+
 print_num :: func (n: s64)
 {
     buf : [32]s64;

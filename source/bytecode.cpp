@@ -73,6 +73,8 @@ namespace Zodiac
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
+        printf("Emitting function decl: %s\n", decl->identifier->atom.data);
+
         for (int64_t i = 0; i < builder->program.functions.count; i++)
         {
             if (builder->program.functions[i]->ast_decl == decl) assert(false);

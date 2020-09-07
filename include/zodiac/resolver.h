@@ -148,6 +148,8 @@ namespace Zodiac
     bool try_resolve_types(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
+    bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, AST_Type* suggested_type,
+                           Scope *scope);
     bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr,
                                         Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,

@@ -662,20 +662,19 @@ namespace Zodiac
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                if (!try_resolve_identifiers(resolver,
-                                             ast_stmt->assignment.identifier_expression, scope))
+                result = true;
+
+                auto lhs = ast_stmt->assignment.identifier_expression;
+                auto rhs = ast_stmt->assignment.rhs_expression;
+
+                if (!try_resolve_identifiers(resolver, lhs, scope))
                 {
                     result = false;
                 }
-                else
-                {
-                    if (!try_resolve_identifiers(resolver, ast_stmt->assignment.rhs_expression,
-                                                 scope))
-                    {
-                        assert(false);
-                    }
 
-                    result = true;
+                if (!try_resolve_identifiers(resolver, rhs, scope))
+                {
+                    result = false;
                 }
 
                 break;
@@ -842,14 +841,9 @@ namespace Zodiac
                 else
                 {
                     auto atom = ast_expr->call.ident_expression->identifier->atom;
-                    if (atom == Builtin::atom_exit)
-                    {
-                        // okay
-                    }
-                    else if (atom == Builtin::atom_syscall)
-                    {
-                        // okay
-                    }
+                    if (atom == Builtin::atom_exit) { }
+                    else if (atom == Builtin::atom_syscall) { }
+                    else if (atom == Builtin::atom_cast) {} 
                     else assert(false);
                 }
 
@@ -1411,23 +1405,27 @@ namespace Zodiac
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                if (try_resolve_types(resolver, ast_stmt->assignment.identifier_expression,
-                                      scope))
-                {
-                    if (try_resolve_types(resolver, ast_stmt->assignment.rhs_expression, scope))
-                    {
-                        result = true;
-                    }
-                    else result = false;
-                }
-                else
+                result = true;
+
+                auto lhs = ast_stmt->assignment.identifier_expression;
+                auto rhs = ast_stmt->assignment.rhs_expression;
+
+                if (!try_resolve_types(resolver, lhs, scope))
                 {
                     result = false;
                 }
 
+                if (!try_resolve_types(resolver, rhs, lhs->type, scope))
+                {
+                    result = false;
+                }
 
                 if (result)
                 {
+                    assert(lhs->type);
+                    assert(rhs->type);
+                    assert(lhs->type == rhs->type);
+
                     ast_stmt->flags |= AST_NODE_FLAG_TYPED;
                 }
                 break;
@@ -1534,7 +1532,13 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Expression* ast_expr, Scope *scope)
+    bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, Scope *scope)
+    {
+        return try_resolve_types(resolver, ast_expr, nullptr, scope);
+    }
+
+    bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, AST_Type* suggested_type,
+                           Scope *scope)
     {
         assert(resolver);
         assert(ast_expr);
@@ -1867,9 +1871,11 @@ namespace Zodiac
 
         auto ident_atom = ident_expr->identifier->atom;
 
+        auto &args = call_expr->call.arg_expressions;
+
         if (ident_atom == Builtin::atom_exit)
         {
-            assert(call_expr->call.arg_expressions.count == 1);
+            assert(args.count == 1);
             auto arg = call_expr->call.arg_expressions[0];
             
             if (!try_resolve_types(resolver, arg, scope))
@@ -1883,13 +1889,12 @@ namespace Zodiac
         }
         else if (ident_atom == Builtin::atom_syscall)
         {
-            assert(call_expr->call.arg_expressions.count >= 1);
+            assert(args.count >= 1);
 
             bool arg_res = true;
-            for (int64_t i = 0;  i < call_expr->call.arg_expressions.count; i++)
+            for (int64_t i = 0;  i < args.count; i++)
             {
-                auto arg = call_expr->call.arg_expressions[i];
-                if (!try_resolve_types(resolver, arg, scope))
+                if (!try_resolve_types(resolver, args[i], scope))
                 {
                     arg_res = false;
                 }
@@ -1902,6 +1907,27 @@ namespace Zodiac
 
             call_expr->type = Builtin::type_s64;
             return true;
+        }
+        else if (ident_atom == Builtin::atom_cast)
+        {
+            bool result = true;
+
+            if (!try_resolve_types(resolver, args[0], scope))
+            {
+                result = false;
+            } 
+
+            if (!try_resolve_types(resolver, args[1], scope))
+            {
+                result = false;
+            }
+
+            if (result)
+            {
+                assert(args[0]->type);
+                call_expr->type = args[0]->type;
+            } 
+            return result;
         }
         else assert(false);
 
@@ -2537,9 +2563,12 @@ namespace Zodiac
             {
                 auto ident = expr->identifier;
                 assert(ident->declaration);
+                
+                auto decl_kind = ident->declaration->kind;
 
-                if (ident->declaration->kind != AST_Declaration_Kind::VARIABLE &&
-                    ident->declaration->kind != AST_Declaration_Kind::PARAMETER)
+                if (decl_kind != AST_Declaration_Kind::VARIABLE &&
+                    decl_kind != AST_Declaration_Kind::PARAMETER &&
+                    decl_kind != AST_Declaration_Kind::TYPE)
                 {
                     assert(false); 
                 }
