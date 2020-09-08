@@ -2042,4 +2042,17 @@ namespace Zodiac
         }
     }
 
+    String ast_type_to_string(Allocator *allocator, AST_Type *type)
+    {
+        String_Builder sb;
+        string_builder_init(allocator, &sb, 32);
+
+        ast_print_type(&sb, type);
+
+        auto result = string_builder_to_string(allocator, &sb);
+
+        string_builder_free(&sb);
+
+        return result;
+    }
 }

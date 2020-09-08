@@ -18,6 +18,7 @@ namespace Zodiac
     {
         INVALID,
         UNDECLARED_IDENTIFIER,
+        MISMATCHING_TYPES,
     };
 
     struct Resolve_Error
@@ -206,6 +207,8 @@ namespace Zodiac
     void free_job(Resolver *resolver, Resolve_Job *job);
 
     void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier);
+    void resolver_report_mismatching_types(Resolver *resolver, AST_Expression *expr,
+                                           AST_Type *expected_type, AST_Type *actual_type);
     void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
                                const char *fmt, ...);
     void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,

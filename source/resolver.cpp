@@ -1425,9 +1425,15 @@ namespace Zodiac
                 {
                     assert(lhs->type);
                     assert(rhs->type);
-                    assert(lhs->type == rhs->type);
-
-                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                    if (lhs->type != rhs->type)
+                    {
+                        resolver_report_mismatching_types(resolver, rhs, lhs->type, rhs->type);
+                        result = false;
+                    }
+                    else
+                    {
+                        ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                    }
                 }
                 break;
             }
@@ -2845,6 +2851,22 @@ namespace Zodiac
                               identifier,
                               "Reference to undeclared identifier: '%.*s'",
                               (int)atom.length, atom.data);
+    }
+
+    void resolver_report_mismatching_types(Resolver *resolver, AST_Expression *expr,
+                                           AST_Type *expected_type, AST_Type *actual_type)
+    {
+        auto ta = temp_allocator_get();
+
+        auto expected_type_str = ast_type_to_string(ta, expected_type);
+        auto actual_type_str = ast_type_to_string(ta, actual_type);
+
+        resolver_report_error(resolver,
+                              Resolve_Error_Kind::MISMATCHING_TYPES,
+                              expr, 
+                              "Mismatching types: expected '%s', got '%s'",
+                              expected_type_str.data,
+                              actual_type_str.data);
     }
 
     void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
