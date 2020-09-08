@@ -18,7 +18,8 @@ print :: func (cstr: *u8)
 println :: func (cstr: *u8)
 {
     print(cstr);
-    nl := @cast(u8, 10);
+    //nl := @cast(u8, 10);
+    nl : u8 = 10;
     @syscall(1, 1, *nl, 1);
     return;
 }

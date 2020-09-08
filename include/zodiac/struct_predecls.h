@@ -34,7 +34,6 @@ namespace Zodiac
     struct Number_Literal
     {
         int64_t s64 = 0;
-        int8_t s8;
     };
 }
 

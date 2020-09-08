@@ -1196,7 +1196,8 @@ namespace Zodiac
 
                 if (ast_decl->variable.init_expression)
                 {
-                    if (!try_resolve_types(resolver, ast_decl->variable.init_expression, scope))
+                    if (!try_resolve_types(resolver, ast_decl->variable.init_expression, ts_type,
+                                           scope))
                     {
                         result = false;
                     }
@@ -1537,8 +1538,8 @@ namespace Zodiac
         return try_resolve_types(resolver, ast_expr, nullptr, scope);
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, AST_Type* suggested_type,
-                           Scope *scope)
+    bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr,
+                           AST_Type* suggested_type, Scope *scope)
     {
         assert(resolver);
         assert(ast_expr);
@@ -1827,8 +1828,21 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             {
-                ast_expr->type = Builtin::type_s64;
-                result = true;
+                if (suggested_type)
+                {
+                    assert(suggested_type->kind == AST_Type_Kind::INTEGER);
+                    if (resolver_literal_fits_in_type(ast_expr->number_literal, suggested_type))
+                    {
+                        ast_expr->type = suggested_type;
+                        result = true;
+                    }
+                    else assert(false);
+                }
+                else
+                {
+                    ast_expr->type = Builtin::type_s64;
+                    result = true;
+                }
                 break;
             }
 
@@ -1940,10 +1954,16 @@ namespace Zodiac
     {
         assert(resolver);
         assert(ts);
-        assert(ts->type == nullptr);
         assert(scope);
         assert(type_target);
         assert(*type_target == nullptr);
+
+        if (ts->type)
+        {
+            *type_target = ts->type;
+            assert(ts->flags & AST_NODE_FLAG_TYPED);
+            return true;
+        }
 
         assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(!(ts->flags & AST_NODE_FLAG_TYPED));
@@ -2733,6 +2753,34 @@ namespace Zodiac
                                                   const char *output_file_name)
     {
         return resolve_job_new(allocator,  output_file_name);
+    }
+
+    bool resolver_literal_fits_in_type(const Number_Literal &number_literal, AST_Type *type)
+    {
+        assert(type->kind == AST_Type_Kind::INTEGER);
+
+        auto val = number_literal.s64;
+
+#define CHECK_BIT_WIDTH_CASE(bit_width) \
+        case bit_width: { \
+            if (type->integer.sign) { \
+                return val >= INT##bit_width##_MIN && val <= INT##bit_width##_MAX; \
+            } else {\
+                return val >= 0 && val <= UINT##bit_width##_MAX; \
+            } \
+        }
+
+        switch (type->bit_size)
+        {
+            CHECK_BIT_WIDTH_CASE(8);
+            CHECK_BIT_WIDTH_CASE(16);
+            CHECK_BIT_WIDTH_CASE(32);
+            CHECK_BIT_WIDTH_CASE(64);
+
+            default: assert(false);
+        }
+
+#undef CHECK_BIT_WIDTH_CASE
     }
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)

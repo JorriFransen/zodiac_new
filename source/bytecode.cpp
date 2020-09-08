@@ -1327,7 +1327,7 @@ namespace Zodiac
             case 8: 
             {
                 result = bytecode_emit_number_literal(builder, expr->type,
-                                                      expr->number_literal.s8);
+                                                      (int8_t)expr->number_literal.s64);
                 break;
             }
 
