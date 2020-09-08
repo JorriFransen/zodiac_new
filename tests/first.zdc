@@ -35,7 +35,7 @@ main :: func () -> s64
             std.println("Again...??");
         }
 
-        std.println("Hello World!");
+        std.print("Hello World!\n");
         count = count - 1;
     }
 

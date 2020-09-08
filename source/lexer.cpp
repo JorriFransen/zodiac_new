@@ -278,8 +278,10 @@ Token lex_string_literal(Lexer_Data* ld)
     auto end_fp = get_file_pos(ld);
     auto length = end_fp.index - begin_fp.index;
     assert(length >= 2);
-    Atom atom = atom_get(&ld->lexer->build_data->atom_table, &ld->file_data[begin_fp.index] + 1,
-                         length - 2);
+    auto ta = temp_allocator_get();
+    String string = lexer_replace_character_literals(ta, &ld->file_data[begin_fp.index] + 1,
+                                                     length - 2);
+    Atom atom = atom_get(&ld->lexer->build_data->atom_table, string);
 
     return token_create(begin_fp, end_fp, TOK_STRING_LITERAL, atom);
 }
@@ -380,6 +382,37 @@ void lexed_file_print(Lexed_File* lf)
     {
         token_print(lf->tokens[i]);
     }
+}
+
+String lexer_replace_character_literals(Allocator *allocator, const char* str, int64_t length)
+{
+    auto buf = alloc_array<char>(allocator, length + 1);
+    int64_t actual_length = 0;
+
+    for (int64_t i = 0; i < length; i++)
+    {
+        char c = str[i];
+        if (c == '\\')
+        {
+            assert(i + 1 < length);
+            char c2 = str[i + 1];
+
+            switch (c2)
+            {
+                case 'n': c = '\n'; break;
+
+                default: assert(false);
+            }
+
+            i += 1;
+        }
+
+        buf[actual_length++] = c;
+    }
+
+    buf[actual_length] = '\0';
+
+    return string_ref(buf, actual_length);
 }
 
 Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)

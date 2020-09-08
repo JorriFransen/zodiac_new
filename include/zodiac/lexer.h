@@ -87,6 +87,8 @@ bool is_newline(char c);
 
 File_Pos get_file_pos(Lexer_Data* ld);
 
+String lexer_replace_character_literals(Allocator *allocator, const char* str, int64_t length);
+
 void lexed_file_print(Lexed_File* lf);
 
 Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf);
