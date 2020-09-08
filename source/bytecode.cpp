@@ -937,6 +937,9 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)
@@ -1497,7 +1500,7 @@ namespace Zodiac
         auto ta = temp_allocator_get();
 
         int name_count = 0;
-        for (uint64_t i = 0; i < func->blocks.count; i++)
+        for (int64_t i = 0; i < func->blocks.count; i++)
         {
             if (func->blocks[i]->name == block->name)
             {
