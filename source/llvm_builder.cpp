@@ -866,15 +866,16 @@ namespace Zodiac
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
+
+                    case Bytecode_Size_Specifier::U8:  target_type = Builtin::type_u8;  break;
+                    case Bytecode_Size_Specifier::S8:  target_type = Builtin::type_s8;  break;
+                    case Bytecode_Size_Specifier::U16: target_type = Builtin::type_u16; break;
+                    case Bytecode_Size_Specifier::S16: target_type = Builtin::type_s16; break;
                     case Bytecode_Size_Specifier::U32: target_type = Builtin::type_u32; break;
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S32: target_type = Builtin::type_s32; break;
+                    case Bytecode_Size_Specifier::U64: target_type = Builtin::type_u64; break;
                     case Bytecode_Size_Specifier::S64: target_type = Builtin::type_s64; break;
-                    default: assert(false);
+                                                       
                 }
 
                 assert(target_type);
