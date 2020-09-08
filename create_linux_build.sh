@@ -29,11 +29,11 @@ pushd debug
 call_cmake Debug
 
 popd
-pushd release
+#pushd release
 
-call_cmake Release
+#call_cmake Release
 
-popd
+#popd
 popd
 
 
@@ -46,11 +46,11 @@ pushd debug
 CC=clang CXX=clang++ call_cmake Debug
 
 popd
-pushd release
+#pushd release
 
-CC=clang CXX=clang++ call_cmake Release
+#CC=clang CXX=clang++ call_cmake Release
 
-popd
+#popd
 popd
 
 ln -s build_clang/debug build

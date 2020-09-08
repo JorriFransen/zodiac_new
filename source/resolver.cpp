@@ -2783,7 +2783,8 @@ namespace Zodiac
             if (type->integer.sign) { \
                 return val >= INT##bit_width##_MIN && val <= INT##bit_width##_MAX; \
             } else {\
-                return val >= 0 && val <= UINT##bit_width##_MAX; \
+                return (uint##bit_width##_t)val >= 0 && \
+                       (uint##bit_width##_t)val <= UINT##bit_width##_MAX; \
             } \
         }
 
