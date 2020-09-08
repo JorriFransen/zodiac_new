@@ -452,26 +452,36 @@ namespace Zodiac
 
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom& atom,
                                        const File_Pos & begin_fp, const File_Pos &end_fp);
+
     AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls, 
                                const File_Pos & begin_fp, const File_Pos &end_fp);
 
     AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind, 
                                          AST_Identifier *identifier, const File_Pos & begin_fp,
                                          const File_Pos &end_fp);
+
     AST_Declaration *ast_import_declaration_new(Allocator *allocator, AST_Identifier *identifier,
-                                                AST_Expression *ident_expr, const File_Pos & begin_fp,
+                                                AST_Expression *ident_expr,
+                                                const File_Pos & begin_fp,
                                                 const File_Pos &end_fp);
+
     AST_Declaration *ast_variable_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
-                                                  const File_Pos & begin_fp, const File_Pos &end_fp);
+                                                  const File_Pos & begin_fp,
+                                                  const File_Pos &end_fp);
+
     AST_Declaration *ast_constant_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
-                                                  const File_Pos & begin_fp, const File_Pos &end_fp);
+                                                  const File_Pos & begin_fp,
+                                                  const File_Pos &end_fp);
+
     AST_Declaration *ast_parameter_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                    AST_Type_Spec *type_spec,
-                                                   const File_Pos & begin_fp, const File_Pos &end_fp);
+                                                   const File_Pos & begin_fp,
+                                                   const File_Pos &end_fp);
+
     AST_Declaration *ast_function_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec, 
                                                   Array<AST_Declaration*> parameter_declarations,
@@ -480,13 +490,17 @@ namespace Zodiac
                                                   bool is_naked, bool is_noreturn, bool is_foreign,
                                                   const File_Pos & begin_fp,
                                                   const File_Pos &end_fp);
+
     AST_Declaration *ast_type_declaration_new(Allocator *allocator, AST_Type *type,
                                               AST_Identifier *identifier);
+
     AST_Declaration *ast_structure_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters,
-                                                   const File_Pos & begin_fp, const File_Pos &end_fp);
+                                                   const File_Pos & begin_fp,
+                                                   const File_Pos &end_fp);
+
     AST_Declaration *ast_poly_type_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
                                                    AST_Identifier *spec_ident,

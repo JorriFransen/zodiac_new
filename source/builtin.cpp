@@ -94,6 +94,7 @@ void builtin_populate_scope(Allocator *allocator, Scope *global_scope)
     #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) { \
         auto ident = ast_identifier_new(allocator, Builtin::atom_##name, fp, fp); \
         auto decl = ast_type_declaration_new(allocator, Builtin::type_##name, ident); \
+        decl->flags |= AST_NODE_FLAG_TYPED; \
         scope_add_declaration(allocator, global_scope, decl); \
     } 
 

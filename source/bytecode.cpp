@@ -73,8 +73,6 @@ namespace Zodiac
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        printf("Emitting function decl: %s\n", decl->identifier->atom.data);
-
         for (int64_t i = 0; i < builder->program.functions.count; i++)
         {
             if (builder->program.functions[i]->ast_decl == decl) assert(false);
@@ -616,6 +614,13 @@ namespace Zodiac
             bytecode_emit_instruction(builder, Bytecode_Instruction::SYSCALL);
             bytecode_emit_32(builder, arg_exprs.count);
         }
+        else if (atom == Builtin::atom_cast)
+        {
+            auto target_type = arg_exprs[0]->type;
+            auto operand = arg_exprs[1];
+
+            return bytecode_emit_cast(builder, operand, target_type);
+        }
         else assert(false);
 
         return return_value;
@@ -908,6 +913,30 @@ namespace Zodiac
         result->name = name;
 
         return result;
+    }
+
+    Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand_expr,
+                                       AST_Type *target_type)
+    {
+        switch (target_type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
+                auto operand_val = bytecode_emit_expression(builder, operand_expr);
+                return bytecode_emit_cast_int(builder, operand_val, target_type);
+                break;
+            }
+
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
     }
 
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)

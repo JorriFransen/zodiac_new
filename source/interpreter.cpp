@@ -877,48 +877,65 @@ namespace Zodiac
 
                    switch (size_spec)
                    {
+                        
                        case Bytecode_Size_Specifier::INVALID: assert(false);
-                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                        case Bytecode_Size_Specifier::U8: assert(false);
-                        case Bytecode_Size_Specifier::S8: assert(false);
-                        case Bytecode_Size_Specifier::U16: assert(false);
-                        case Bytecode_Size_Specifier::S16: assert(false);
+                       case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
-                        case Bytecode_Size_Specifier::U32:
-                        {
-                            auto result = interpreter_push_temporary(interp, Builtin::type_u32);
-                            uint32_t new_val = 0;
-                            switch (val->type->bit_size)
-                            {
-                                case 8: assert(false);
-                                case 16: assert(false);
-                                case 32: assert(false);
-                                case 64: new_val = (uint32_t)val->value.int_literal.s64; break;
-                                default: assert(false);
-                            }
-                            result->value.int_literal.u32 = new_val;
-                            break;
-                        }
+                       case Bytecode_Size_Specifier::U8:
+                       {
+                           auto result = interpreter_push_temporary(interp, Builtin::type_u8);
+                           uint8_t new_val = 0;
+                           switch (val->type->bit_size)
+                           {
+                               case 8: assert(false);
+                               case 16: assert(false);
+                               case 32: assert(false);
+                               case 64: new_val = (uint8_t)val->value.int_literal.s64; break;
+                               default: assert(false);
+                           }
+                           result->value.int_literal.u8 = new_val;
+                           break;
+                       }
 
-                        case Bytecode_Size_Specifier::S32: assert(false);
-                        case Bytecode_Size_Specifier::U64: assert(false);
-                        case Bytecode_Size_Specifier::S64:
-                        {
-                            auto result = interpreter_push_temporary(interp, Builtin::type_s64);
-                            int64_t new_val = 0;
-                            switch (val->type->bit_size)
-                            {
-                                case 8: new_val = (int64_t)val->value.int_literal.s8; break;
-                                case 16: assert(false);
-                                case 32: assert(false);
-                                case 64: new_val = (int64_t)val->value.int_literal.s64; break;
-                                default: assert(false);
-                            }
-                            result->value.int_literal.s64 = new_val;
-                            break;
-                        }
+                       case Bytecode_Size_Specifier::S8: assert(false);
+                       case Bytecode_Size_Specifier::U16: assert(false);
+                       case Bytecode_Size_Specifier::S16: assert(false);
 
-                        default: assert(false);
+                       case Bytecode_Size_Specifier::U32:
+                       {
+                           auto result = interpreter_push_temporary(interp, Builtin::type_u32);
+                           uint32_t new_val = 0;
+                           switch (val->type->bit_size)
+                           {
+                               case 8: assert(false);
+                               case 16: assert(false);
+                               case 32: assert(false);
+                               case 64: new_val = (uint32_t)val->value.int_literal.s64; break;
+                               default: assert(false);
+                           }
+                           result->value.int_literal.u32 = new_val;
+                           break;
+                       }
+
+                       case Bytecode_Size_Specifier::S32: assert(false);
+                       case Bytecode_Size_Specifier::U64: assert(false);
+                       case Bytecode_Size_Specifier::S64:
+                       {
+                           auto result = interpreter_push_temporary(interp, Builtin::type_s64);
+                           int64_t new_val = 0;
+                           switch (val->type->bit_size)
+                           {
+                               case 8: new_val = (int64_t)val->value.int_literal.s8; break;
+                               case 16: assert(false);
+                               case 32: assert(false);
+                               case 64: new_val = (int64_t)val->value.int_literal.s64; break;
+                               default: assert(false);
+                           }
+                           result->value.int_literal.s64 = new_val;
+                           break;
+                       }
+
+                       default: assert(false);
 
                    }
 
