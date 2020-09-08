@@ -1185,6 +1185,9 @@ namespace Zodiac
             case AST_Declaration_Kind::VARIABLE:
             {
                 AST_Type *ts_type = nullptr;
+
+                auto init_expr = ast_decl->variable.init_expression;
+
                 if (ast_decl->variable.type_spec)
                 {
                     if (!try_resolve_types(resolver, ast_decl->variable.type_spec, scope,
@@ -1207,19 +1210,27 @@ namespace Zodiac
                 {
                     if (ts_type && ast_decl->variable.init_expression)
                     {
-                        assert(ts_type == ast_decl->variable.init_expression->type);
+                        if (ts_type != ast_decl->variable.init_expression->type)
+                        {
+                            resolver_report_mismatching_types(resolver, init_expr,
+                                                              ts_type, init_expr->type);
+                            result = false;
+                        }
                     }
 
-                    AST_Type *var_type = ts_type;
-                    if (var_type == nullptr && ast_decl->variable.init_expression)
+                    if (result)
                     {
-                        var_type = ast_decl->variable.init_expression->type;
+                        AST_Type *var_type = ts_type;
+                        if (var_type == nullptr && ast_decl->variable.init_expression)
+                        {
+                            var_type = ast_decl->variable.init_expression->type;
+                        }
+
+                        assert(var_type);
+
+                        ast_decl->type = var_type;
+                        ast_decl->flags |= AST_NODE_FLAG_TYPED;
                     }
-
-                    assert(var_type);
-
-                    ast_decl->type = var_type;
-                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
                 break;
             }
@@ -1649,11 +1660,11 @@ namespace Zodiac
                 auto lhs = ast_expr->binary.lhs;
                 auto rhs = ast_expr->binary.rhs;
 
-                if (!try_resolve_types(resolver, lhs, scope))
+                if (!try_resolve_types(resolver, lhs, suggested_type, scope))
                 {
                     assert(false);
                 }
-                if (!try_resolve_types(resolver, rhs, scope))
+                if (!try_resolve_types(resolver, rhs, suggested_type, scope))
                 {
                     assert(false);
                 }
@@ -2856,6 +2867,16 @@ namespace Zodiac
     void resolver_report_mismatching_types(Resolver *resolver, AST_Expression *expr,
                                            AST_Type *expected_type, AST_Type *actual_type)
     {
+        for (int64_t i = 0; i < resolver->errors.count; i++)
+        {
+            auto &err = resolver->errors[i];
+            if (err.kind == Resolve_Error_Kind::MISMATCHING_TYPES &&
+                    err.ast_node == expr)
+            {
+                return;
+            }
+        }
+
         auto ta = temp_allocator_get();
 
         auto expected_type_str = ast_type_to_string(ta, expected_type);

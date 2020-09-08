@@ -710,7 +710,14 @@ namespace Zodiac
                     {
                         case Bytecode_Size_Specifier::INVALID: assert(false);
                         case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                        case Bytecode_Size_Specifier::U8: assert(false);
+
+                        case Bytecode_Size_Specifier::U8: 
+                        {
+                            result_val->value.int_literal.u8 =
+                                lhs_val->value.int_literal.u8 + rhs_val->value.int_literal.u8;
+                            break;
+                        }
+
                         case Bytecode_Size_Specifier::S8: assert(false);
                         case Bytecode_Size_Specifier::U16: assert(false);
                         case Bytecode_Size_Specifier::S16: assert(false);
