@@ -224,6 +224,7 @@ namespace Zodiac
 
         NUMBER_LITERAL,
         STRING_LITERAL,
+        CHAR_LITERAL,
         BOOL_LITERAL,
     };
 
@@ -306,6 +307,11 @@ namespace Zodiac
             {
                 Atom atom;
             } string_literal;
+
+            struct
+            {
+                char c;
+            } char_literal;
 
             struct
             {
@@ -565,6 +571,9 @@ namespace Zodiac
                                                       const File_Pos & begin_fp,
                                                       const File_Pos &end_fp);
     AST_Expression *ast_string_literal_expression_new(Allocator *allocator, Atom& atom,
+                                                      const File_Pos & begin_fp,
+                                                      const File_Pos &end_fp);
+    AST_Expression *ast_char_literal_expression_new(Allocator *allocator, char c,
                                                       const File_Pos & begin_fp,
                                                       const File_Pos &end_fp);
     AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,

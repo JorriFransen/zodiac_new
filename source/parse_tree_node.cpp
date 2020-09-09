@@ -219,6 +219,7 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
 
         case Expression_PTN_Kind::NUMBER_LITERAL: break;
         case Expression_PTN_Kind::STRING_LITERAL: break;
+        case Expression_PTN_Kind::CHAR_LITERAL: break;
         case Expression_PTN_Kind::BOOL_LITERAL: break;;
 
         case Expression_PTN_Kind::ARRAY_TYPE:
@@ -509,6 +510,18 @@ Expression_PTN *new_string_literal_expression_ptn(Allocator *allocator, Atom ato
     return result;
 }
 
+Expression_PTN *new_char_literal_expression_ptn(Allocator *allocator, char c,
+                                                const File_Pos &begin_file_pos,
+                                                const File_Pos &end_file_pos)
+{
+    auto result = new_ptn<Expression_PTN>(allocator, begin_file_pos, end_file_pos);
+    result->kind = Expression_PTN_Kind::CHAR_LITERAL;
+
+    result->char_literal.c = c;
+
+    return result;
+}
+
 Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool value,
                                                    const File_Pos &begin_file_pos,
                                                    const File_Pos &end_file_pos)
@@ -696,6 +709,7 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
         case Expression_PTN_Kind::SUBSCRIPT: assert(false);
         case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
         case Expression_PTN_Kind::STRING_LITERAL: assert(false);
+        case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
         case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
         case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
         case Expression_PTN_Kind::POINTER_TYPE: assert(false);
@@ -1105,6 +1119,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
+        case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
         case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
 
         case Expression_PTN_Kind::ARRAY_TYPE:

@@ -324,6 +324,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL: break;
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
 
         }

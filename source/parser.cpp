@@ -812,6 +812,12 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
             break;
         }
 
+        case TOK_CHAR_LITERAL:
+        {
+            result = parser_parse_character_literal_expression(parser, ts);
+            break;
+        }
+
         case TOK_KW_TRUE:
         {
             result = parser_parse_boolean_literal_expression(parser, ts);
@@ -962,6 +968,16 @@ Expression_PTN* parser_parse_string_literal_expression(Parser* parser, Token_Str
 
     return new_string_literal_expression_ptn(parser->allocator, string_tok.atom, begin_fp,
                                              end_fp);
+}
+
+Expression_PTN *parser_parse_character_literal_expression(Parser *parser, Token_Stream *ts)
+{
+    auto char_tok = ts->current_token();
+    auto begin_fp = char_tok.begin_file_pos;
+    auto end_fp = char_tok.end_file_pos;
+    ts->next_token();
+
+    return new_char_literal_expression_ptn(parser->allocator, char_tok.c, begin_fp, end_fp);
 }
 
 Expression_PTN *parser_parse_boolean_literal_expression(Parser *parser, Token_Stream *ts)

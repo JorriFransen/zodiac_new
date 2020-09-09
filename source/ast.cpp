@@ -557,6 +557,12 @@ namespace Zodiac
                 break;
             };
 
+            case Expression_PTN_Kind::CHAR_LITERAL:
+            {
+                return ast_char_literal_expression_new(allocator, ptn->char_literal.c,
+                                                       begin_fp, end_fp);
+            }
+
             case Expression_PTN_Kind::BOOL_LITERAL:
             {
                 return ast_boolean_literal_expression_new(allocator, ptn->bool_literal.value,
@@ -751,6 +757,7 @@ namespace Zodiac
             case Expression_PTN_Kind::SUBSCRIPT: assert(false);
             case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
             case Expression_PTN_Kind::STRING_LITERAL: assert(false);
+            case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
             case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
 
             case Expression_PTN_Kind::ARRAY_TYPE:
@@ -1250,6 +1257,18 @@ namespace Zodiac
                                          begin_fp, end_fp);
 
         result->string_literal.atom = atom;
+
+        return result;
+    }
+
+    AST_Expression *ast_char_literal_expression_new(Allocator *allocator, char c,
+                                                      const File_Pos & begin_fp,
+                                                      const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::CHAR_LITERAL,
+                                         begin_fp, end_fp);
+
+        result->char_literal.c = c;
 
         return result;
     }
@@ -1880,6 +1899,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
     }

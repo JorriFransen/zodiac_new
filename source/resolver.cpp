@@ -894,6 +894,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL: 
             case AST_Expression_Kind::STRING_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 result = true;
@@ -1870,6 +1871,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 ast_expr->type = Builtin::type_bool;
@@ -2689,6 +2692,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NUMBER_LITERAL:
             case AST_Expression_Kind::STRING_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 break;

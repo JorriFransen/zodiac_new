@@ -515,6 +515,8 @@ namespace Zodiac
                 break;     
             }
 
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 return bytecode_emit_bool_literal(builder, expression); 
@@ -869,6 +871,7 @@ namespace Zodiac
             case AST_Expression_Kind::CAST: assert(false);
             case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
 

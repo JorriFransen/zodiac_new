@@ -211,6 +211,7 @@ enum class Expression_PTN_Kind
 
     NUMBER_LITERAL,
     STRING_LITERAL,
+    CHAR_LITERAL,
     BOOL_LITERAL,
 
     ARRAY_TYPE,
@@ -262,6 +263,11 @@ struct Expression_PTN
         {
             Atom atom;
         } string_literal;
+
+        struct
+        {
+            char c;
+        } char_literal;
 
         struct
         {
@@ -410,6 +416,9 @@ Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom ato
 Expression_PTN *new_string_literal_expression_ptn(Allocator *allocator, Atom atom,
                                                   const File_Pos &begin_file_pos,
                                                   const File_Pos &end_file_pos);
+Expression_PTN *new_char_literal_expression_ptn(Allocator *allocator, char c,
+                                                const File_Pos &begin_file_pos,
+                                                const File_Pos &end_file_pos);
 Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool value,
                                                    const File_Pos &begin_file_pos,
                                                    const File_Pos &end_file_pos);
