@@ -510,12 +510,11 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL:
             {
                 return bytecode_emit_number_literal(builder, expression);
-                break;     
+                break;
             }
-
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
 
             case AST_Expression_Kind::BOOL_LITERAL:
             {
@@ -1321,7 +1320,8 @@ namespace Zodiac
                                                  AST_Expression *expr)
     {
         assert(expr->kind == AST_Expression_Kind::NUMBER_LITERAL ||
-               expr->kind == AST_Expression_Kind::BOOL_LITERAL);
+               expr->kind == AST_Expression_Kind::BOOL_LITERAL ||
+               expr->kind == AST_Expression_Kind::CHAR_LITERAL);
         assert(expr->type->kind == AST_Type_Kind::INTEGER);
 
         Bytecode_Value *result = nullptr;
