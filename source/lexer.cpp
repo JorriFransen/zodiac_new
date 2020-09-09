@@ -169,6 +169,10 @@ restart:
             {
                 return lex_string_literal(ld);
             }
+            else if (c == '\'')
+            {
+                return lex_character_literal(ld);
+            }
             else if (is_alpha(c) || c == '_')
             {
                 return lex_keyword_or_identifier(ld);
@@ -255,6 +259,32 @@ Token lex_number_literal(Lexer_Data* ld)
                          length);
 
     return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, atom);
+}
+
+Token lex_character_literal(Lexer_Data* ld)
+{
+    auto  fc = current_char(ld);
+    assert(fc == '\'');
+
+    auto begin_fp = get_file_pos(ld);
+
+    advance(ld);
+
+    char c = current_char(ld);
+
+    if (c == '\\')
+    {
+        advance(ld);
+        char c2 = current_char(ld);
+        c = lexer_get_escape_char(c2);
+    }
+
+    advance(ld);
+    assert(current_char(ld) == '\'');
+    auto end_fp = get_file_pos(ld);
+    advance(ld);
+
+    return token_create(begin_fp, end_fp, TOK_CHAR_LITERAL, c);
 }
 
 Token lex_string_literal(Lexer_Data* ld)
@@ -397,12 +427,7 @@ String lexer_replace_character_literals(Allocator *allocator, const char* str, i
             assert(i + 1 < length);
             char c2 = str[i + 1];
 
-            switch (c2)
-            {
-                case 'n': c = '\n'; break;
-
-                default: assert(false);
-            }
+            c = lexer_get_escape_char(c2);
 
             i += 1;
         }
@@ -413,6 +438,15 @@ String lexer_replace_character_literals(Allocator *allocator, const char* str, i
     buf[actual_length] = '\0';
 
     return string_ref(buf, actual_length);
+}
+
+char lexer_get_escape_char(char ident)
+{
+    switch (ident)
+    {
+        case 'n': return '\n';
+        default: assert(false);
+    }
 }
 
 Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)

@@ -67,6 +67,7 @@ Token next_token(Lexer_Data* ld);
 Token lex_keyword_or_identifier(Lexer_Data* ld);
 Token lex_identifier(Lexer_Data* ld);
 Token lex_number_literal(Lexer_Data* ld);
+Token lex_character_literal(Lexer_Data* ld);
 Token lex_string_literal(Lexer_Data* ld);
 
 void advance(Lexer_Data* ld, uint64_t count = 1);
@@ -88,6 +89,7 @@ bool is_newline(char c);
 File_Pos get_file_pos(Lexer_Data* ld);
 
 String lexer_replace_character_literals(Allocator *allocator, const char* str, int64_t length);
+char lexer_get_escape_char(char ident);
 
 void lexed_file_print(Lexed_File* lf);
 

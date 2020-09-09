@@ -860,8 +860,7 @@ Expression_PTN* parser_parse_base_expression(Parser* parser, Token_Stream* ts,
         default:
         {
             auto ct = ts->current_token();
-            parser_report_error(parser, ts, "Unexpected token when parsing expression: '%s', '%s'",
-                                token_kind_name(ct.kind), ct.atom.data);
+            parser_report_unexpected_token(parser, ts, ct);
             break;
         }
     }
@@ -1299,6 +1298,48 @@ void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, v
             bfp.file_name.data, bfp.line, bfp.column);
     vfprintf(stderr, format, args);
     fprintf(stderr, "\n");
+}
+
+void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Token &tok)
+{
+    auto tok_kind_name = token_kind_name(tok.kind);
+
+    if (tok.kind == TOK_CHAR_LITERAL)
+    {
+        int c_prefix_len = 0;
+        auto c_prefix = "\\";
+        char c = tok.c;
+        if (parser_make_escape_char(tok.c, &c))
+        {
+            c_prefix_len = 1;
+        }
+        parser_report_error(parser, ts,
+                            "Unexpected token when parsing expression: '%s', (%d), '%.*s%c'",
+                            tok_kind_name, (int)tok.c,
+                            (int)c_prefix_len, c_prefix,
+                            c);
+    }
+    else
+    {
+        parser_report_error(parser, ts,
+                            "Unexpectd token when parsing expression: '%s', '%.*s'",
+                            tok_kind_name, tok.atom.length, tok.atom.data);
+    }
+}
+
+bool parser_make_escape_char(char c, char *dest)
+{
+    switch (c)
+    {
+        case '\n':
+        {
+            *dest = 'n';
+            return true;
+        }
+
+    }
+
+    return false;
 }
 
 void parsed_file_print(Parsed_File* parsed_file)

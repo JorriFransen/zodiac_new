@@ -60,6 +60,7 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_IDENTIFIER),                          \
     DEFINE_TOKEN(TOK_NUMBER_LITERAL),                      \
     DEFINE_TOKEN(TOK_STRING_LITERAL),                      \
+    DEFINE_TOKEN(TOK_CHAR_LITERAL),                        \
                                                            \
     DEFINE_TOKEN(TOK_EOF),                                 \
 
@@ -92,11 +93,16 @@ struct Token
     File_Pos begin_file_pos = {};
     File_Pos end_file_pos = {};
 
-    Atom atom = {};
+    union
+    {
+        Atom atom = {};
+        char c;
+    };
 };
 
 Token token_create(File_Pos file_pos, Token_Kind kind, Atom atom);
 Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom atom);
+Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, char c);
 
 bool token_equal(const Token& a, const Token& b);
 

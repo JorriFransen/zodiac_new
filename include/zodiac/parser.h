@@ -83,6 +83,9 @@ Unary_Operator parser_parse_unary_op(Token_Stream* ts);
 
 void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, ...);
 void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, va_list args);
+void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Token &tok);
+
+bool parser_make_escape_char(char c, char *dest);
 
 void parsed_file_print(Parsed_File* parsed_file);
 }

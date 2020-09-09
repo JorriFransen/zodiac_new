@@ -7,13 +7,18 @@ namespace Zodiac
 
 Token token_create(File_Pos file_pos, Token_Kind kind, Atom atom)
 {
-    Token result = { kind, file_pos, file_pos, atom };
+    Token result = { kind, file_pos, file_pos, { .atom = atom } };
     return result;
 }
 
 Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom atom)
 {
-    return { kind, begin_fp, end_fp, atom };
+    return { kind, begin_fp, end_fp, { .atom = atom } };
+}
+
+Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, char c)
+{
+    return { kind, begin_fp, end_fp, { .c = c }  };
 }
 
 bool token_equal(const Token& a, const Token& b)
