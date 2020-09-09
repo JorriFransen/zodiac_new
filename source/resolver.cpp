@@ -1871,7 +1871,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL:
+            {
+                ast_expr->type = Builtin::type_u8;
+                result = true;
+                break;
+            }
 
             case AST_Expression_Kind::BOOL_LITERAL:
             {
