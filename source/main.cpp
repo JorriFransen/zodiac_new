@@ -16,6 +16,7 @@ using namespace Zodiac;
 int main(int argc, char** argv)
 {
     auto options = parse_command_line(argc, argv);
+    if (!options.valid) return 1;
     
     auto ca = c_allocator_get();
 
@@ -23,7 +24,6 @@ int main(int argc, char** argv)
     build_data_init(ca, &build_data, &options);
     builtin_initialize_atoms(&build_data.atom_table);
     builtin_initialize_types(ca, &build_data);
-
 
     Resolver resolver = {};
     resolver_init(ca, ca, &resolver, &build_data, options.file_path);

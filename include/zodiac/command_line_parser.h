@@ -40,7 +40,8 @@ struct Option_Template
 
 struct Options
 {
-    String file_path;    
+    bool valid = true;
+    String file_path = {};
 
 #define DEFINE_OPTION(type, name, default_value) type name = (default_value);
     CMD_OPTION_LIST
@@ -65,15 +66,7 @@ static const Option_Template option_templates[] =
 
 };
 
-struct OPC
-{
-    Array<String> tokens = {};
-    int64_t current_index = 0;
-};
-
 Options parse_command_line(int argc, char **argv);
-void tokenize_command_line(int argc, char **argv, Array<String> *tokens);
-void parse_command_line(Options *options, Array<String> tokens);
 
 #undef EMPTY_STRING
 }
