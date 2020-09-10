@@ -20,12 +20,19 @@ namespace Zodiac
     static bool tokens_remaining(OPC *opc);
     static String current_token(OPC *opc);
     static void advance(OPC *opc);
+    static void print_usage();
 
     Options parse_command_line(int argc, char **argv)
     {
-        assert(argc > 1);
 
         Options result = {};
+        if (argc < 2)
+        {
+            fprintf(stderr, "zodiac: Expected FILE_PATH as first argument\n");
+            result.valid = false; 
+            print_usage();
+            return result;
+        }
 
         String file_path = string_ref(argv[1]);
         assert(is_regular_file(file_path));
@@ -40,6 +47,11 @@ namespace Zodiac
 
             tokenize_command_line(argc - 2, argv + 2, &option_tokens); 
             result.valid = parse_command_line(&result, option_tokens);
+
+            if (!result.valid)
+            {
+                print_usage();
+            }
 
             array_free(&option_tokens);
         }
@@ -122,9 +134,8 @@ namespace Zodiac
 
             if (!valid)
             {
-                fprintf(stderr, "Invalid option: '%.*s'\n",
+                fprintf(stderr, "zodiac: Invalid option format: '%.*s'\n",
                         (int)option.length, option.data);
-                fprintf(stderr, "Options should start with a single '-'\n");
                 return false;
             }
 
@@ -142,7 +153,7 @@ namespace Zodiac
 
             if (!ot)
             {
-                fprintf(stderr, "Unknown option: '%.*s'\n",
+                fprintf(stderr, "zodiac: Unknown option: '%.*s'\n",
                         (int)option.length, option.data);
                 return false;
             }
@@ -173,14 +184,13 @@ namespace Zodiac
                             }
                             else
                             {
-                                fprintf(stderr, "Invalid value for boolean option: '%.*s'\n",
+                                fprintf(stderr,
+                                        "zodiac: Invalid value for boolean option: '%.*s'\n",
                                         (int)val_str.length, val_str.data);
-                                fprintf(stderr, "Expected 'true' or 'false'\n");
                                 return false;
                             }
 
                             advance(&opc);
-
                         }
                     }
 
@@ -215,4 +225,34 @@ namespace Zodiac
         }
     }
 
+    static void print_usage()
+    {
+        printf("Usage: zodiac FILE_PATH [options]\n");
+        printf("\noptions:\n");
+
+        int longest_option_length = 0;
+        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++)
+        {
+            auto len = strlen(option_templates[i].name);
+            if (len > longest_option_length) longest_option_length = len;
+        }
+
+        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++)
+        {
+            auto &ot = option_templates[i];
+            printf("-%s", ot.name);
+
+            auto name_len = strlen(ot.name);
+            auto space_count = longest_option_length + 4 - name_len;
+            printf("%*s", (int)space_count, "");
+
+            if (ot.description)
+            {
+                printf("%s", ot.description);
+            }
+            printf("\n");
+        }
+
+        printf("\n");
+    }
 }
