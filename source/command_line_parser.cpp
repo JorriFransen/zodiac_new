@@ -35,9 +35,24 @@ namespace Zodiac
         }
 
         String file_path = string_ref(argv[1]);
-        assert(is_regular_file(file_path));
 
-        result.file_path = file_path;
+        if (string_equal(file_path, "-help")) // This is a bit of a hack, works for now 
+        {
+            print_usage();
+            result.help = true; 
+            result.valid = false;
+            return result;
+        }
+        else
+        {
+            if (!is_regular_file(file_path))
+            {
+                print_usage();
+                result.valid = false;
+                return result;
+            }
+            result.file_path = file_path;
+        }
 
         if (argc > 2)
         {

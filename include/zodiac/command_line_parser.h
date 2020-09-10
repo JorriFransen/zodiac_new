@@ -9,6 +9,7 @@ namespace Zodiac
 #define EMPTY_STRING ( (String){ nullptr, 0 } )
 
 #define CMD_OPTION_LIST                                                             \
+    DEFINE_OPTION(bool, help, false, "Print this message")                          \
     DEFINE_OPTION(bool, verbose, false, "")                                         \
                                                                                     \
     DEFINE_OPTION(bool, run_bytecode, false,                                        \
