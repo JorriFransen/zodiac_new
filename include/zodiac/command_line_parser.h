@@ -16,7 +16,8 @@ namespace Zodiac
                                                                                     \
     DEFINE_OPTION(bool, print_link_command, false, "Print the linker invocation")   \
     DEFINE_OPTION(bool, print_llvm, false, "Print the genereted llvm ir")           \
-    DEFINE_OPTION(String, exe_file_name, EMPTY_STRING, "Output executable name") 
+    DEFINE_OPTION(String, exe_file_name, EMPTY_STRING, "Output executable name")    \
+
 
 
 enum Option_Template_Kind

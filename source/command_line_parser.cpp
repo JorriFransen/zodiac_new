@@ -85,14 +85,13 @@ namespace Zodiac
 
                     array_append(tokens, string_ref("="));
                 }
-                else if (c == '-' || c == '_' || is_alpha(c))
+                else if (c == '-' || c == '_' || c == '.' || is_alpha(c))
                 {
                     length++;
                 }
                 else
                 {
-                    length = 0;
-                    begin = j;
+                    assert(false);
                 }
             }
 
@@ -199,7 +198,43 @@ namespace Zodiac
                     break;
                 }
 
-                case OT_Kind_String: assert(false);
+                case OT_Kind_String:
+                {
+                    bool valid = true;
+                    if (!tokens_remaining(&opc))
+                    {
+                        valid = false;
+                    }
+                    else
+                    {
+                        auto eq = current_token(&opc);
+                        if (!string_equal(eq, "="))
+                        {
+                            valid = false;
+                        }
+                        else advance(&opc);
+                    }
+
+                    if (!tokens_remaining(&opc))
+                    {
+                        valid = false;
+                    }
+
+                    if (!valid)
+                    {
+                        fprintf(stderr, "zodiac: Execpted '=value' after string option: '-%s'\n",
+                                ot->name);
+                        return false;
+                    }
+
+                    auto value = current_token(&opc);
+                    advance(&opc);
+
+                    String *lval = (String*)(((uint8_t*)options) + ot->option_offset);
+                    *lval = value;
+
+                    break;
+                }
             }
         }
 

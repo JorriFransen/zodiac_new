@@ -83,14 +83,14 @@ namespace Zodiac
         auto features = "";
 
         LLVMTargetMachineRef llvm_target_machine = LLVMCreateTargetMachine(
-                llvm_target,
-                builder->target_triple.data,
-                cpu,
-                features,
-                LLVMCodeGenLevelNone,
-                LLVMRelocPIC,
-                LLVMCodeModelDefault
-            );
+            llvm_target,
+            builder->target_triple.data,
+            cpu,
+            features,
+            LLVMCodeGenLevelNone,
+            LLVMRelocPIC,
+            LLVMCodeModelDefault
+        );
 
         String_Builder sb = {};
         string_builder_init(builder->allocator, &sb);

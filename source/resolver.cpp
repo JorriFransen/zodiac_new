@@ -208,7 +208,13 @@ namespace Zodiac
                     assert(job->result.bc_func);
                     if (job->ast_node == resolver->entry_decl)
                     {
-                        queue_emit_llvm_binary_job(resolver, resolver->first_file_name.data);
+                        auto exe_file_name = resolver->first_file_name.data;
+                        auto options = resolver->build_data->options;
+                        if (options->exe_file_name.data)
+                        {
+                            exe_file_name = options->exe_file_name.data;
+                        }
+                        queue_emit_llvm_binary_job(resolver, exe_file_name);
                     }
                     queue_emit_llvm_func_job(resolver, job->result.bc_func);
                     free_job(resolver, job);
