@@ -147,6 +147,24 @@ bool string_contains(const String &str, const String &sub_str)
     return false;
 }
 
+bool string_starts_with(const String &a, const char *b)
+{
+    return string_starts_with(a, string_ref(b));
+}
+
+bool string_starts_with(const String &a, const String &b)
+{
+    if (b.length > a.length) return false;
+    if (a == b) return true;
+
+    for (int64_t i = 0; i < b.length; i++)
+    {
+        if (a[i] != b[i]) return false;
+    }
+
+    return true;
+}
+
 bool string_ends_with(const String &a, const char *b)
 {
     return string_ends_with(a, string_ref(b));
@@ -165,6 +183,11 @@ bool string_ends_with(const String &a, const String &b)
     }
 
     return true;
+}
+
+bool string_equal(const String &a, const char *b)
+{
+    return string_equal(a, string_ref(b));
 }
 
 bool string_equal(const String &a, const String &b)

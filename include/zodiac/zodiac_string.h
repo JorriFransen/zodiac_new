@@ -69,9 +69,13 @@ int64_t string_last_index_of(const String &string, char c);
 bool string_contains(const String &str, const char *cstr);
 bool string_contains(const String &str, const String &sub_str);
 
+bool string_starts_with(const String &a, const char *b);
+bool string_starts_with(const String &a, const String &b);
+
 bool string_ends_with(const String &a, const char *b);
 bool string_ends_with(const String &a, const String &b);
 
+bool string_equal(const String &a, const char *b);
 bool string_equal(const String &a, const String &b);
 
 const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count);
