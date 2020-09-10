@@ -280,7 +280,7 @@ namespace Zodiac
         printf("Usage: zodiac FILE_PATH [options]\n");
         printf("\noptions:\n");
 
-        int longest_option_length = 0;
+        size_t longest_option_length = 0;
         for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++)
         {
             auto len = strlen(option_templates[i].name);
