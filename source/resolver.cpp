@@ -44,7 +44,7 @@ namespace Zodiac
 
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
         llvm_builder_init(allocator, &resolver->llvm_builder,
-                          &resolver->bytecode_builder.program);
+                          build_data, &resolver->bytecode_builder.program);
 
         queue_init(allocator, &resolver->parse_job_queue);
         queue_init(allocator, &resolver->ident_job_queue);

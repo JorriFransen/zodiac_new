@@ -13,12 +13,14 @@
 namespace Zodiac
 { 
     void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder,
-                           Bytecode_Program *bc_program)
+                           Build_Data *build_data, Bytecode_Program *bc_program)
     {
         assert(allocator);
         assert(llvm_builder);
+        assert(build_data);
 
         llvm_builder->allocator = allocator;
+        llvm_builder->build_data = build_data;
         llvm_builder->llvm_module = LLVMModuleCreateWithName("root_module");
         llvm_builder->llvm_builder = LLVMCreateBuilder();
 
@@ -55,7 +57,8 @@ namespace Zodiac
         assert(output_file_name);
 
         char *error = nullptr;
-        bool verify_error = LLVMVerifyModule(builder->llvm_module, LLVMAbortProcessAction, &error);
+        bool verify_error = LLVMVerifyModule(builder->llvm_module, LLVMAbortProcessAction,
+                                             &error);
         
         if (verify_error)
         {
@@ -114,23 +117,25 @@ namespace Zodiac
 
         LLVMDisposeTargetMachine(llvm_target_machine);
 
-        return llvm_run_linker(builder->allocator, output_file_name);
+        return llvm_run_linker(builder, output_file_name);
     }
 
-    bool llvm_run_linker(Allocator *allocator, const char *output_file_name)
+    bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name)
     {
-        assert(allocator);
         assert(output_file_name);
 
         String_Builder _sb = {};
         auto sb = &_sb;
-        string_builder_init(allocator, sb);
+        string_builder_init(builder->allocator, sb);
+
+        auto options = builder->build_data->options;
+        bool print_command = options->print_link_command || options->verbose;
 
 #if linux
         string_builder_appendf(sb, "ld -static %s.o -o %s", output_file_name, output_file_name);
 
-        auto link_cmd = string_builder_to_string(allocator, sb);
-        printf("Running linker: %s\n", link_cmd.data);
+        auto link_cmd = string_builder_to_string(builder->allocator, sb);
+        if (print_command) printf("Running linker: %s\n", link_cmd.data);
         char out_buf[1024];
         FILE *link_process_handle = popen(link_cmd.data, "r");
         assert(link_process_handle);
@@ -151,8 +156,6 @@ namespace Zodiac
             fprintf(stderr, "Link command failed with exit code: %d\n", close_ret);
         }
 
-        free(allocator, link_cmd.data);
-
         string_builder_free(sb);
 
         return result;
@@ -168,7 +171,7 @@ namespace Zodiac
         string_builder_appendf(sb, " %s.o", output_file_name);
 
         auto arg_str = string_builder_to_string(allocator, sb);
-        printf("Running link command: %s\n", arg_str.data);
+        if (print_command) printf("Running link command: %s\n", arg_str.data);
         auto result = execute_process(allocator, {}, arg_str);
         free(allocator, arg_str.data);
 

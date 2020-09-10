@@ -18,7 +18,6 @@ call_cmake () {
 
 rm -rf build_gcc
 rm -rf build_clang
-rm -rf build
 
 mkdir -p build_gcc/debug
 mkdir -p build_gcc/release
@@ -52,5 +51,6 @@ popd
 
 #popd
 popd
+
 
 ln -s build_clang/debug build

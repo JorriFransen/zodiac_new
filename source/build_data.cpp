@@ -4,8 +4,10 @@
 
 namespace Zodiac
 {
-    void build_data_init(Allocator* allocator, Build_Data* build_data)
+    void build_data_init(Allocator* allocator, Build_Data* build_data, Options *options)
     {
+        build_data->options = options;
+
         atom_table_init(allocator, &build_data->atom_table);
 
         const auto kw_token_count = sizeof(KW_Tokens) / sizeof(KW_Token);
