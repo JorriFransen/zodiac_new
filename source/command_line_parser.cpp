@@ -103,7 +103,7 @@ namespace Zodiac
 
             const Option_Template *ot = nullptr;
 
-            for (int64_t ti = 0; ti < STATIC_ARRAY_LENGTH(option_templates); ti++)
+            for (uint64_t ti = 0; ti < STATIC_ARRAY_LENGTH(option_templates); ti++)
             {
                 auto cot = &option_templates[ti];
                 if (string_equal(string_ref(cot->name), option_name))
