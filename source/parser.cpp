@@ -76,6 +76,20 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
         ts->next_token();
     }
 
+    if (ts->current_token().kind == TOK_KW_USING)
+    {
+	ts->next_token();
+	auto import_ident = parser_parse_identifier(parser, ts);
+	assert(import_ident);
+
+	if (!parser_expect_token(parser, ts, TOK_SEMICOLON)
+	{
+		return nullptr;
+	}
+
+	assert(false);
+    }
+
     auto identifier = parser_parse_identifier(parser, ts);
     if (!identifier) return nullptr;
 

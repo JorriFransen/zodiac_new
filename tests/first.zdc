@@ -2,7 +2,9 @@
 std :: import std;
 math :: import math;
 
-print_vec2 :: func (v: *math.Vec2)
+using math;
+
+print_vec2 :: func (v: *Vec2)
 {
     std.print("x: ");
     std.print_num(v.x);
@@ -12,7 +14,7 @@ print_vec2 :: func (v: *math.Vec2)
     return;
 }
 
-add_vec2 :: func (v: *math.Vec2) -> s64
+add_vec2 :: func (v: *Vec2) -> s64
 {
     return v.x + v.y;
 }
@@ -61,7 +63,7 @@ main :: func () -> s64
 
     if (print_vector)
     {
-        p1 : math.Vec2;
+        p1 : Vec2;
         p1.x = 33;
         p1.y = 44;
 

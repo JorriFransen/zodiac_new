@@ -17,6 +17,7 @@ namespace Zodiac
     DEFINE_KW_TOKEN(TOK_KW_ELSE,   "else"),                \
     DEFINE_KW_TOKEN(TOK_KW_TRUE,   "true"),                \
     DEFINE_KW_TOKEN(TOK_KW_FALSE,  "false"),               \
+    DEFINE_KW_TOKEN(TOK_KW_USING,  "using"),               \
 
 
 #define TOKEN_LIST                                         \

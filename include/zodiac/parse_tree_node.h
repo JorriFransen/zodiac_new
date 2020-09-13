@@ -118,6 +118,7 @@ enum class Declaration_PTN_Kind
     INVALID,
 
     IMPORT,
+    USING,
 
     VARIABLE,
     CONSTANT,
@@ -152,6 +153,11 @@ struct Declaration_PTN
         {
             Expression_PTN *module_ident_expr;
         } import;
+
+	struct
+	{
+	    Identifier_PTN *import_ident;
+	} using_decl;
 
         struct
         {
