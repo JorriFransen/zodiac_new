@@ -1145,7 +1145,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             print_indent(indent);
 
             printf("\"");
-            for (int64_t i = 0; i < expression->string_literal.atom.length; i++)
+            for (uint64_t i = 0; i < expression->string_literal.atom.length; i++)
             {
                 char c;
                 if (parser_make_escape_char(expression->string_literal.atom.data[i], &c))

@@ -1984,7 +1984,7 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL:
             {
                 printf("\"");
-                for (int64_t i = 0; i < ast_expr->string_literal.atom.length; i++)
+                for (uint64_t i = 0; i < ast_expr->string_literal.atom.length; i++)
                 {
                     char c;
                     if (parser_make_escape_char(ast_expr->string_literal.atom.data[i], &c))
