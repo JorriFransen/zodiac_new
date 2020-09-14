@@ -1,6 +1,7 @@
 #include "parse_tree_node.h"
 
 #include <inttypes.h>
+#include "parser.h"
 
 namespace Zodiac
 {
@@ -906,7 +907,23 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
-        case Statement_PTN_Kind::IF: assert(false);
+        case Statement_PTN_Kind::IF:
+        {
+            print_indent(indent);
+            printf("if (");
+            print_expression_ptn(statement->if_stmt.cond_expr, 0);
+            printf(")\n");
+            print_statement_ptn(statement->if_stmt.then_stmt, indent);
+
+            if (statement->if_stmt.else_stmt)
+            {
+                print_indent(indent);
+                printf("else\n");
+                print_statement_ptn(statement->if_stmt.else_stmt, indent);
+            }
+
+            break;
+        }
     }
 }
 
@@ -946,7 +963,17 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             break;
         }
 
-        case Declaration_PTN_Kind::USING: assert(false);
+        case Declaration_PTN_Kind::USING:
+        {
+            print_indent(indent);
+
+            printf("using ");
+            print_expression_ptn(decl->using_decl.ident_expr, 0);
+            printf(";");
+            if (newline) printf("\n");
+
+            break;
+        }
 
         case Declaration_PTN_Kind::VARIABLE:
         {
@@ -1116,7 +1143,21 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         case Expression_PTN_Kind::STRING_LITERAL:
         {
             print_indent(indent);
-            printf("\"%s\"", expression->string_literal.atom.data);
+
+            printf("\"");
+            for (int64_t i = 0; i < expression->string_literal.atom.length; i++)
+            {
+                char c;
+                if (parser_make_escape_char(expression->string_literal.atom.data[i], &c))
+                {
+                    printf("\\%c", c);
+                }
+                else
+                {
+                    printf("%c", c); 
+                }
+            }
+            printf("\"");
             break;
         }
 
@@ -1144,8 +1185,19 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
-        case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
+        case Expression_PTN_Kind::CHAR_LITERAL:
+        {
+            print_indent(indent);
+            printf("%c", expression->char_literal.c);
+            break;
+        }
+
+        case Expression_PTN_Kind::BOOL_LITERAL:
+        {
+            print_indent(indent);
+            printf("%s", expression->bool_literal.value ? "true" : "false");
+            break;
+        }
 
         case Expression_PTN_Kind::ARRAY_TYPE:
         {

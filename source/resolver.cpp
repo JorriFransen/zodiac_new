@@ -323,6 +323,9 @@ namespace Zodiac
                                                                     &lexed_file);
                 Parsed_File parsed_file = parser_parse_file(&resolver->parser, token_stream);
 
+                if (resolver->build_data->options->print_parse_tree)
+                    parsed_file_print(&parsed_file);
+
                 auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file);
                 assert(module_ast);
 

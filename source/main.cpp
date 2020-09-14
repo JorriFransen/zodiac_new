@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     assert(rr.error_count == 0);
     if (rr.llvm_error) return 1;
 
-    //bytecode_print(ca, &resolver.bytecode_builder);
+    if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
 
     if (options.run_bytecode)

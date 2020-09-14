@@ -1372,6 +1372,8 @@ bool parser_make_escape_char(char c, char *dest)
 
     }
 
+    *dest = c;
+
     return false;
 }
 
