@@ -5,6 +5,7 @@
 #include "parse_tree_node.h"
 #include "string_builder.h"
 #include "scope.h"
+#include "parser.h"
 
 #include <inttypes.h>
 
@@ -39,7 +40,8 @@ namespace Zodiac
         for (int64_t i = 0; i < parsed_file->declarations.count; i++)
         {
             AST_Declaration *ast_decl =
-                ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i], nullptr);
+                ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i],
+                                                nullptr);
             assert(ast_decl);
             array_append(&global_decls, ast_decl);
         }
@@ -1579,7 +1581,7 @@ namespace Zodiac
             printf("$");
         }
 
-        printf("%s", ast_decl->identifier->atom.data);
+        if (ast_decl->identifier) printf("%s", ast_decl->identifier->atom.data);
 
         switch (ast_decl->kind)
         {
@@ -1593,7 +1595,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::USING: assert(false);
+            case AST_Declaration_Kind::USING:
+            {
+                printf("using ");
+                ast_print_expression(ast_decl->using_decl.ident_expr, 0);
+                printf(";\n");
+                break;
+            }
 
             case AST_Declaration_Kind::VARIABLE:
             case AST_Declaration_Kind::CONSTANT:
@@ -1732,8 +1740,8 @@ namespace Zodiac
                 {
                     printf(" ");
                     ast_print_expression(ast_stmt->expression, 0);
-                    printf(";\n");
                 }
+                printf(";\n");
                 break;
             }
 
@@ -1747,11 +1755,32 @@ namespace Zodiac
             {
                 ast_print_expression(ast_stmt->expression, 0);
                 printf(";\n");
+                break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE:
+            {
+                printf("while (");
+                ast_print_expression(ast_stmt->while_stmt.cond_expr, 0);
+                printf(")");
+                ast_print_statement(ast_stmt->while_stmt.body, indent);
+                break;
+            }
                                             
-            case AST_Statement_Kind::IF: assert(false);
+            case AST_Statement_Kind::IF:
+            {
+                printf("if (");
+                ast_print_expression(ast_stmt->if_stmt.cond_expr, 0);
+                printf(")");
+                ast_print_statement(ast_stmt->if_stmt.then_stmt, indent);
+                if (ast_stmt->if_stmt.else_stmt)
+                {
+                    ast_print_indent(indent);
+                    printf("else\n");
+                    ast_print_statement(ast_stmt->if_stmt.else_stmt, indent);
+                }
+                break;
+            }
         } 
     }
 
@@ -1909,7 +1938,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::ADDROF:
+            {
+                printf("*");
+                ast_print_expression(ast_expr->addrof.operand_expr, 0);
+                break;
+            }
 
             case AST_Expression_Kind::COMPOUND:
             {
@@ -1930,7 +1964,14 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                ast_print_expression(ast_expr->subscript.pointer_expression, indent);
+                printf("[");
+                ast_print_expression(ast_expr->subscript.index_expression, 0);
+                printf("]");
+                break;
+            }
 
             case AST_Expression_Kind::CAST: assert(false);
 
@@ -1942,12 +1983,41 @@ namespace Zodiac
 
             case AST_Expression_Kind::STRING_LITERAL:
             {
-                printf("\"%s\"", ast_expr->string_literal.atom.data);
+                printf("\"");
+                for (int64_t i = 0; i < ast_expr->string_literal.atom.length; i++)
+                {
+                    char c;
+                    if (parser_make_escape_char(ast_expr->string_literal.atom.data[i], &c))
+                    {
+                        printf("\\%c", c); 
+                    }
+                    else
+                    {
+                        printf("%c", c);
+                    }
+                }
+                printf("\"");
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL:
+            {
+                const char *prefix = "";
+                char c;
+                if (parser_make_escape_char(ast_expr->char_literal.c, &c))
+                {
+                    prefix = "\\";
+                }
+                printf("'%s%c'", prefix, c);
+                break;
+            }
+
+            case AST_Expression_Kind::BOOL_LITERAL:
+            {
+                printf("%s", ast_expr->bool_literal.value ? "true" : "false");
+                break;
+            }
+
         }
     }
 
@@ -2001,7 +2071,8 @@ namespace Zodiac
         for (int64_t i = 0; i < indent; i ++) string_builder_append(sb, "    ");
     }
 
-    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl, int64_t indent)
+    void ast_print_declaration_scopes(String_Builder *sb, AST_Declaration *ast_decl,
+                                      int64_t indent)
     {
         assert(sb);
         switch (ast_decl->kind)

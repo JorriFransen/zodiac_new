@@ -27,13 +27,9 @@ Custom allocator for stack frame allocls in interpreter
 Linking with c runtime (entry point main instead of _start)
 
 Command line option parsing
-  - general verbose option
-  - output file name
   - -cruntime
   - -print-ast
   - -print-scope
-  - -print-parse_tree
-  - -print-link-command
 
 Optional semicolon at the end of foreign function declarations.
 Print parameter types in bytecode printer

@@ -1188,7 +1188,15 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         case Expression_PTN_Kind::CHAR_LITERAL:
         {
             print_indent(indent);
-            printf("%c", expression->char_literal.c);
+            char c;
+            if (parser_make_escape_char(expression->char_literal.c, &c))
+            {
+                printf("'\\%c'", c);
+            }
+            else
+            {
+                printf("'%c'", c);
+            }
             break;
         }
 

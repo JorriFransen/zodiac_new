@@ -308,6 +308,8 @@ namespace Zodiac
         assert(resolver);
         assert(job);
 
+        auto options = resolver->build_data->options;
+
         bool result = false;
 
         switch (job->kind)
@@ -323,11 +325,12 @@ namespace Zodiac
                                                                     &lexed_file);
                 Parsed_File parsed_file = parser_parse_file(&resolver->parser, token_stream);
 
-                if (resolver->build_data->options->print_parse_tree)
-                    parsed_file_print(&parsed_file);
+                if (options->print_parse_tree) parsed_file_print(&parsed_file);
 
                 auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file);
                 assert(module_ast);
+
+                if (options->print_ast) ast_print(module_ast);
 
 
                 scope_populate_ast(resolver->allocator, module_ast, resolver->global_scope);
