@@ -36,6 +36,17 @@ namespace Zodiac
         AST_Module *ast;
     };
 
+    struct Resolver_Progression
+    {
+        int64_t parse_job_count = 0;
+        int64_t ident_job_count = 0;
+        int64_t type_job_count = 0;
+        int64_t size_job_count = 0;
+        int64_t bytecode_job_count = 0;
+        int64_t llvm_job_count = 0;
+        int64_t binary_job_count = 0;
+    };
+
     struct Resolver
     {
         Allocator *allocator = nullptr;
@@ -63,6 +74,8 @@ namespace Zodiac
         Queue<Resolve_Job*> emit_bytecode_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_func_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_binary_job_queue = {};
+
+        Resolver_Progression progression = {};
 
         Array<Parsed_Module> parsed_modules = {};
 
@@ -134,6 +147,9 @@ namespace Zodiac
     Resolve_Result finish_resolving(Resolver *resolver);
 
     void start_resolve_pump(Resolver *resolver);
+
+    bool resolver_has_progressed(Resolver *resolver);
+    void resolver_save_progression(Resolver *resolver);
 
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
 
@@ -215,6 +231,7 @@ namespace Zodiac
                                const char *fmt, va_list args);
 
     void resolver_report_errors(Resolver *resolver);
+    void resolver_clear_errors(Resolver *resolver);
 
     Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
                                       int64_t message_size, AST_Node *ast_node);

@@ -59,15 +59,26 @@ namespace Zodiac
     {
         assert(allocator);
 
-        auto id_begin_fp = ptn->identifier->self.begin_file_pos;
-        auto id_end_fp = ptn->identifier->self.end_file_pos;
+        AST_Identifier *ast_ident = nullptr;
+        File_Pos begin_fp;
 
-        assert(ptn->identifier);
-        AST_Identifier *ast_ident = ast_identifier_new(allocator, ptn->identifier->atom,
-                                                       id_begin_fp, id_end_fp);
-        assert(ast_ident);
+        if (ptn->identifier)
+        {
+            auto id_begin_fp = ptn->identifier->self.begin_file_pos;
 
-        auto begin_fp = ast_ident->begin_file_pos;
+            auto id_end_fp = ptn->identifier->self.end_file_pos;
+
+            assert(ptn->identifier);
+            ast_ident = ast_identifier_new(allocator, ptn->identifier->atom, id_begin_fp,
+                                           id_end_fp);
+            assert(ast_ident);
+            begin_fp = ast_ident->begin_file_pos;
+        }
+        else
+        {
+            begin_fp = ptn->self.begin_file_pos; 
+        }
+
 
         switch (ptn->kind)
         {
@@ -84,6 +95,17 @@ namespace Zodiac
                 return ast_import_declaration_new(allocator, ast_ident, ast_ident_expr, begin_fp,
                                                   end_fp);
                 break;
+            }
+
+            case Declaration_PTN_Kind::USING:
+            {
+                auto import_ident_expr =
+                    ast_create_expression_from_ptn(allocator, ptn->using_decl.ident_expr); 
+                assert(import_ident_expr);
+
+                auto end_fp = ptn->self.end_file_pos;
+
+                return ast_using_declaration_new(allocator, import_ident_expr, begin_fp, end_fp);
             }
 
             case Declaration_PTN_Kind::VARIABLE:
@@ -137,8 +159,8 @@ namespace Zodiac
                 AST_Expression *ast_init_expr = nullptr;
                 if (ptn->constant.init_expression)
                 {
-                    ast_init_expr = ast_create_expression_from_ptn(allocator,
-                                                                   ptn->constant.init_expression);
+                    ast_init_expr =
+                        ast_create_expression_from_ptn(allocator, ptn->constant.init_expression);
                     assert(ast_init_expr);
                 }
 
@@ -148,8 +170,8 @@ namespace Zodiac
                 if (ast_init_expr) end_fp = ast_init_expr->end_file_pos;
                 else end_fp = ast_type->end_file_pos;
 
-                return ast_constant_declaration_new(allocator, ast_ident, ast_type, ast_init_expr,
-                                                    begin_fp, end_fp);
+                return ast_constant_declaration_new(allocator, ast_ident, ast_type,
+                                                    ast_init_expr, begin_fp, end_fp);
                 break;
             }
 
@@ -218,10 +240,10 @@ namespace Zodiac
 
                     for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++)
                     {
-                        auto ast_mem_decl =
-                            ast_create_declaration_from_ptn(allocator,
-                                                            ptn->structure.member_declarations[i],
-                                                            nullptr);
+                        auto ptn_mem_decl = ptn->structure.member_declarations[i];
+                        auto ast_mem_decl = ast_create_declaration_from_ptn(allocator,
+                                                                            ptn_mem_decl,
+                                                                            nullptr);
                         assert(ast_mem_decl);
 
                         array_append(&ast_member_decls, ast_mem_decl);
@@ -240,9 +262,9 @@ namespace Zodiac
 
                         if (ptn_param->type_expression)
                         {
+                            auto type_expr = ptn_param->type_expression;
                             ast_param_ts =
-                                ast_create_type_spec_from_expression_ptn(allocator,
-                                                                         ptn_param->type_expression);
+                                ast_create_type_spec_from_expression_ptn(allocator, type_expr);
                         }
 
 
@@ -876,10 +898,26 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_variable_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_using_declaration_new(Allocator *allocator,
+                                               AST_Expression *import_ident_expr,
+                                               const File_Pos &begin_fp,
+                                               const File_Pos &end_fp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::USING, nullptr,
+                                          begin_fp, end_fp);
+
+        result->using_decl.ident_expr = import_ident_expr;
+        result->using_decl.import_scope = nullptr;
+
+        return result;
+    }
+
+    AST_Declaration *ast_variable_declaration_new(Allocator *allocator,
+                                                  AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
-                                                  const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                  const File_Pos &begin_fp,
+                                                  const File_Pos &end_fp)
     {
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::VARIABLE, identifier,
                                           begin_fp, end_fp);
@@ -890,10 +928,12 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_constant_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_constant_declaration_new(Allocator *allocator,
+                                                  AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
-                                                  const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                  const File_Pos &begin_fp,
+                                                  const File_Pos &end_fp)
     {
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::CONSTANT, identifier,
                                           begin_fp, end_fp);
@@ -903,9 +943,11 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_parameter_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_parameter_declaration_new(Allocator *allocator,
+                                                   AST_Identifier *identifier,
                                                    AST_Type_Spec *type_spec,
-                                                   const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                   const File_Pos &begin_fp,
+                                                   const File_Pos &end_fp)
     {
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::PARAMETER, identifier,
                                           begin_fp, end_fp);
@@ -915,17 +957,20 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_function_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_function_declaration_new(Allocator *allocator,
+                                                  AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec, 
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,
                                                   AST_Statement *body,
-                                                  bool is_naked, bool is_noreturn, bool is_foreign,
+                                                  bool is_naked, bool is_noreturn,
+                                                  bool is_foreign,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
     {
         if (body) assert(body->kind == AST_Statement_Kind::BLOCK);
 
+        assert(identifier);
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::FUNCTION, identifier,
                                           begin_fp, end_fp);
 
@@ -1548,6 +1593,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::USING: assert(false);
+
             case AST_Declaration_Kind::VARIABLE:
             case AST_Declaration_Kind::CONSTANT:
             {
@@ -1966,6 +2013,8 @@ namespace Zodiac
                 string_builder_append(sb, " (import)");
                 break;
             }
+
+            case AST_Declaration_Kind::USING: assert(false);
 
             case AST_Declaration_Kind::VARIABLE:
             {

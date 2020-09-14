@@ -54,6 +54,8 @@ namespace Zodiac
         queue_init(allocator, &resolver->emit_llvm_func_job_queue);
         queue_init(allocator, &resolver->emit_llvm_binary_job_queue);
 
+        resolver->progression = {};
+
         array_init(err_allocator, &resolver->parsed_modules);
 
         resolver->llvm_error = false;
@@ -261,12 +263,44 @@ namespace Zodiac
             }
 
 
-            if (resolver->errors.count)
+            if (resolver_has_progressed(resolver))
+            {
+                resolver_clear_errors(resolver);
+            } 
+            else if (resolver->errors.count)
             {
                 resolver_report_errors(resolver);
                 done = true;
             }
+
+            resolver_save_progression(resolver);
         }
+    }
+
+    bool resolver_has_progressed(Resolver *resolver)
+    {
+        auto p = &resolver->progression;
+
+        return (queue_count(&resolver->parse_job_queue) != p->parse_job_count) ||
+               (queue_count(&resolver->ident_job_queue) != p->ident_job_count) ||
+               (queue_count(&resolver->type_job_queue) != p->type_job_count) ||
+               (queue_count(&resolver->size_job_queue) != p->size_job_count) ||
+               (queue_count(&resolver->emit_bytecode_job_queue) != p->bytecode_job_count) ||
+               (queue_count(&resolver->emit_llvm_func_job_queue) != p->llvm_job_count) ||
+               (queue_count(&resolver->emit_llvm_binary_job_queue) != p->binary_job_count);
+    }
+
+    void resolver_save_progression(Resolver *resolver)
+    {
+        auto p = &resolver->progression;
+
+        p->parse_job_count = queue_count(&resolver->parse_job_queue);
+        p->ident_job_count = queue_count(&resolver->ident_job_queue);
+        p->type_job_count = queue_count(&resolver->type_job_queue);
+        p->size_job_count = queue_count(&resolver->size_job_queue);
+        p->bytecode_job_count = queue_count(&resolver->emit_bytecode_job_queue);
+        p->llvm_job_count = queue_count(&resolver->emit_llvm_func_job_queue);
+        p->binary_job_count = queue_count(&resolver->emit_llvm_binary_job_queue);
     }
 
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
@@ -540,6 +574,44 @@ namespace Zodiac
                         result = true;
                     }
                 }
+                break;
+            }
+
+            case AST_Declaration_Kind::USING:
+            {
+                auto ident_expr = ast_decl->using_decl.ident_expr;
+
+                result = try_resolve_identifiers(resolver, ident_expr, scope);
+
+                if (result)
+                {
+                    AST_Declaration *import_decl = nullptr;
+
+                    if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                    {
+                        import_decl = ident_expr->identifier->declaration;
+                    } 
+                    else if (ident_expr->kind == AST_Expression_Kind::DOT)
+                    {
+                        assert(false); 
+                    }
+                    else assert(false);
+
+                    assert(import_decl);
+                    assert(import_decl->kind == AST_Declaration_Kind::IMPORT);
+
+                    auto module = import_decl->import.ast_module;
+                    if (!module)
+                    {
+                        result = false;
+                    }
+                    else
+                    {
+                        assert(module->module_scope);
+                        ast_decl->using_decl.import_scope = module->module_scope;
+                    }
+                }
+
                 break;
             }
 
@@ -1147,7 +1219,9 @@ namespace Zodiac
                 {
                     result = try_resolve_types(resolver, decl, scope);
                     if (result)
-                        assert(decl->type || decl->kind == AST_Declaration_Kind::IMPORT);
+                        assert(decl->type ||
+                               decl->kind == AST_Declaration_Kind::IMPORT ||
+                               decl->kind == AST_Declaration_Kind::USING);
                 }
                 break;
             }
@@ -1186,6 +1260,35 @@ namespace Zodiac
             case AST_Declaration_Kind::IMPORT:
             {
                 ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
+
+            case AST_Declaration_Kind::USING:
+            {
+                auto ident_expr = ast_decl->using_decl.ident_expr;
+                AST_Declaration *import_decl = nullptr;
+
+                if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                {
+                    import_decl = ident_expr->identifier->declaration;
+                }
+                else if (ident_expr->kind == AST_Expression_Kind::DOT)
+                {
+                    assert(false);
+                }
+                else assert(false);
+
+                assert(import_decl->kind == AST_Declaration_Kind::IMPORT);
+
+                if (import_decl->flags & AST_NODE_FLAG_TYPED)
+                {
+                    result = true;
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
+                else
+                {
+                    result = false;
+                }
                 break;
             }
 
@@ -1371,7 +1474,8 @@ namespace Zodiac
         {
             assert(ast_decl->flags & AST_NODE_FLAG_TYPED);
             assert(ast_decl->type ||
-                   ast_decl->kind == AST_Declaration_Kind::IMPORT);
+                   ast_decl->kind == AST_Declaration_Kind::IMPORT ||
+                   ast_decl->kind == AST_Declaration_Kind::USING);
         }
 
         return result;
@@ -2012,10 +2116,16 @@ namespace Zodiac
                 assert(decl);
                 assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
                        decl->kind == AST_Declaration_Kind::TYPE);
-                assert(decl->type);
+                if (decl->type)
+                {
                 *type_target = decl->type;
                 ts->type = decl->type;
                 result = true;
+                }
+                else
+                {
+                    result = false;
+                }
                 break;
             }
 
@@ -2201,6 +2311,8 @@ namespace Zodiac
                 {
                     case AST_Declaration_Kind::INVALID: assert(false);
                     case AST_Declaration_Kind::IMPORT: assert(false);
+
+                    case AST_Declaration_Kind::USING: assert(false);
 
                     case AST_Declaration_Kind::VARIABLE:
                     {
@@ -2487,6 +2599,8 @@ namespace Zodiac
         {
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false);
+
+            case AST_Declaration_Kind::USING: assert(false);
 
             case AST_Declaration_Kind::VARIABLE:
             {
@@ -2950,6 +3064,17 @@ namespace Zodiac
                     (int)err.message_size, err.message);
         }
         fprintf(stderr, "\n");
+    }
+
+    void resolver_clear_errors(Resolver *resolver)
+    {
+        for (int64_t i = 0; i < resolver->errors.count; i++)
+        {
+            auto &err = resolver->errors[i];
+            free(resolver->err_allocator, err.message);
+        }
+
+        resolver->errors.count = 0;
     }
 
     Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,

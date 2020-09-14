@@ -64,6 +64,7 @@ namespace Zodiac
         INVALID,
 
         IMPORT,
+        USING,
 
         VARIABLE,
         CONSTANT,
@@ -108,6 +109,12 @@ namespace Zodiac
                 AST_Module *ast_module;
                 bool parse_queued;
             } import;
+
+            struct
+            {
+                AST_Expression *ident_expr; 
+                Scope *import_scope;
+            } using_decl;
 
             struct
             {
@@ -470,6 +477,10 @@ namespace Zodiac
                                                 AST_Expression *ident_expr,
                                                 const File_Pos & begin_fp,
                                                 const File_Pos &end_fp);
+
+    AST_Declaration *ast_using_declaration_new(Allocator *allocator,
+                                               AST_Expression *import_ident_expr,
+                                               const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Declaration *ast_variable_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,

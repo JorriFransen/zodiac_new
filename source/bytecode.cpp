@@ -37,6 +37,8 @@ namespace Zodiac
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false);
 
+            case AST_Declaration_Kind::USING: assert(false);
+
             case AST_Declaration_Kind::VARIABLE:
             {
                 if (decl->variable.init_expression)
@@ -725,6 +727,8 @@ namespace Zodiac
         {
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false);
+
+            case AST_Declaration_Kind::USING:  assert(false);
 
             case AST_Declaration_Kind::VARIABLE: 
             {

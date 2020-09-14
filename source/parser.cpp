@@ -78,16 +78,19 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts)
 
     if (ts->current_token().kind == TOK_KW_USING)
     {
-	ts->next_token();
-	auto import_ident = parser_parse_identifier(parser, ts);
-	assert(import_ident);
+        auto begin_fp = ts->current_token().begin_file_pos;
+        ts->next_token();
+        auto import_expr = parser_parse_expression(parser, ts);
+        assert(import_expr);
 
-	if (!parser_expect_token(parser, ts, TOK_SEMICOLON)
-	{
-		return nullptr;
-	}
+        auto end_fp = ts->current_token().end_file_pos;
 
-	assert(false);
+        if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+        {
+            return nullptr;
+        }
+
+        return new_using_declaration_ptn(parser->allocator, import_expr, begin_fp, end_fp);
     }
 
     auto identifier = parser_parse_identifier(parser, ts);

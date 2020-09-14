@@ -154,10 +154,10 @@ struct Declaration_PTN
             Expression_PTN *module_ident_expr;
         } import;
 
-	struct
-	{
-	    Identifier_PTN *import_ident;
-	} using_decl;
+        struct
+        {
+            Expression_PTN *ident_expr;
+        } using_decl;
 
         struct
         {
@@ -392,6 +392,10 @@ Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_P
                                               Expression_PTN *type_expr,
                                               Expression_PTN *init_expr,
                                               const File_Pos &begin_fp, const File_Pos &enf_fp);
+
+
+Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN *ident_expr,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,

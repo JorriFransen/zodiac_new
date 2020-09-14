@@ -30,6 +30,12 @@ struct Allocator
 void* alloc(Allocator* allocator, int64_t size);
 void* free(Allocator* allocator, void* ptr);
 
+template <typename T>
+T *free(Allocator *allocator, T *ptr)
+{
+    return (T*)(free(allocator, (void*)ptr));
+}
+
 template <typename Type>
 Type* alloc_type(Allocator* allocator)
 {

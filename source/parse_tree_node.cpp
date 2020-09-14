@@ -33,7 +33,11 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
 {
     assert(ptn);
     free_ptn(allocator, &ptn->self);
-    free_ptn(allocator, ptn->identifier);
+
+    if (ptn->identifier)
+    {
+        free_ptn(allocator, ptn->identifier);
+    }
 
     switch (ptn->kind)
     {
@@ -42,6 +46,12 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
         case Declaration_PTN_Kind::IMPORT:
         {
             free_ptn(allocator, ptn->import.module_ident_expr); 
+            break;
+        }
+
+        case Declaration_PTN_Kind::USING:
+        {
+            free_ptn(allocator, ptn->using_decl.ident_expr);
             break;
         }
 
@@ -423,6 +433,17 @@ Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_P
     return result;
 }
 
+Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN *ident_expr,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::USING;
+    result->identifier = nullptr;
+    result->using_decl.ident_expr = ident_expr;
+
+    return result;
+}
+
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -641,6 +662,8 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
     {
         case Declaration_PTN_Kind::INVALID: assert(false);
         case Declaration_PTN_Kind::IMPORT: assert(false);
+
+        case Declaration_PTN_Kind::USING: assert(false);
 
         case Declaration_PTN_Kind::VARIABLE:
         {
@@ -922,6 +945,8 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             if (newline) printf("\n");
             break;
         }
+
+        case Declaration_PTN_Kind::USING: assert(false);
 
         case Declaration_PTN_Kind::VARIABLE:
         {

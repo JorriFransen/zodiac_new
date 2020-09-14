@@ -19,7 +19,16 @@ namespace Zodiac
             for (int64_t i = 0; i < scope_block->decl_count; i++)
             {
                 AST_Declaration *decl = scope_block->declarations[i];
-                if (decl->identifier->atom == identifier->atom)
+                if (decl->kind == AST_Declaration_Kind::USING)
+                {
+                    if (decl->using_decl.import_scope)
+                    {
+                        auto using_import = scope_find_declaration(decl->using_decl.import_scope,
+                                                                   identifier);
+                        if (using_import) return using_import;
+                    }
+                }
+                else if (decl->identifier->atom == identifier->atom)
                 {
                     identifier->declaration = decl;
                     return decl;
@@ -94,6 +103,8 @@ namespace Zodiac
         switch (ast_decl->kind)
         {
             case AST_Declaration_Kind::INVALID: assert(false);
+
+            case AST_Declaration_Kind::USING: break;
 
             case AST_Declaration_Kind::IMPORT:
             case AST_Declaration_Kind::VARIABLE:
