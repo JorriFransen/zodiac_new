@@ -33,6 +33,8 @@ int main(int argc, char** argv)
     assert(rr.error_count == 0);
     if (rr.llvm_error) return 1;
 
+    if (options.print_scope) scope_print(resolver.global_scope);
+
     if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
     assert(resolver.bytecode_builder.program.entry_function);
 

@@ -334,6 +334,7 @@ namespace Zodiac
 
 
                 scope_populate_ast(resolver->allocator, module_ast, resolver->global_scope);
+
                 result = true;
 
                 job->result.ast_module = module_ast;

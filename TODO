@@ -3,8 +3,6 @@ Infer return type from functions.
 
 make jump if more like llvm's condbr
 
-check if integer literals fit in the type they're assigned to
-
 result of cmp ops should be bool
 
 ::TypedStructLiterals
@@ -28,8 +26,7 @@ Linking with c runtime (entry point main instead of _start)
 
 Command line option parsing
   - -cruntime
-  - -print-ast
-  - -print-scope
+  - -print_scope (Scopes need to be parented to the global scope to make this work)
 
 Optional semicolon at the end of foreign function declarations.
 Print parameter types in bytecode printer

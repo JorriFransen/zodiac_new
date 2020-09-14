@@ -3,6 +3,9 @@
 
 #include "ast.h"
 #include "string_builder.h"
+#include "temp_allocator.h"
+
+#include <stdio.h>
 
 namespace Zodiac
 {
@@ -459,6 +462,19 @@ namespace Zodiac
         }
     }
 
+    void scope_print(Scope *scope)
+    {
+        auto ta = temp_allocator_get();
+
+        String_Builder sb = {};
+        string_builder_init(ta, &sb); 
+
+        scope_print(&sb, scope, 0);
+
+        auto str = string_builder_to_string(ta, &sb);
+        printf("%s\n", str.data);
+    }
+
     void scope_print(String_Builder *sb, Scope *scope, int64_t indent/*=0*/)
     {
         assert(sb);
@@ -519,6 +535,11 @@ namespace Zodiac
             }
 
             block = block->next_block;
+        }
+
+        if (scope->kind == Scope_Kind::GLOBAL)
+        {
+            assert(false); // Print children 
         }
     }
 }
