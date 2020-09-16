@@ -134,7 +134,7 @@ namespace Zodiac
             {
                 if (string_starts_with(option, "--"))
                 {
-                    valid = false;
+                    option_name = string_ref(option.data + 2, option.length - 2);
                 }
                 else
                 {

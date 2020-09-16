@@ -1,7 +1,5 @@
 
 
-Print character literals correctly in bytecode
-
 make jump if more like llvm's condbr
 
 result of cmp ops should be bool
@@ -16,7 +14,6 @@ result of cmp ops should be bool
 recursive functions
 recursive structs
 Syscall return values
-Replace escaped characters in string/character literals
 Check call arg types
 Copy structs on return (bytecode)
 function overloads
