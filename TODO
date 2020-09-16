@@ -1,5 +1,11 @@
 
+
+
 Infer return type from functions.
+
+Inherit noreturn when a noreturn function is called
+
+Print string/character literals correctly in bytecode
 
 make jump if more like llvm's condbr
 

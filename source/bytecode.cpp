@@ -370,14 +370,20 @@ namespace Zodiac
 
         bytecode_builder_set_insert_point(builder, then_block);
         bytecode_emit_statement(builder, stmt->if_stmt.then_stmt);
-        bytecode_emit_jump(builder, post_if_block);
+
+        then_block = builder->insert_block;
+        if (!bytecode_block_ends_with_terminator(then_block))
+            bytecode_emit_jump(builder, post_if_block);
 
         if (stmt->if_stmt.else_stmt)
         {
             bytecode_builder_append_block(builder, current_func, else_block);
             bytecode_builder_set_insert_point(builder, else_block);
             bytecode_emit_statement(builder, stmt->if_stmt.else_stmt);
-            bytecode_emit_jump(builder, post_if_block);
+
+            else_block = builder->insert_block;
+            if (!bytecode_block_ends_with_terminator(else_block))
+                bytecode_emit_jump(builder, post_if_block);
         }
 
         bytecode_builder_append_block(builder, current_func, post_if_block);
@@ -1436,7 +1442,11 @@ namespace Zodiac
 
     void bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Instruction op)
     {
+        assert(builder->insert_block);
+
         bytecode_emit_byte(builder, (uint8_t)op);
+
+        builder->insert_block->last_instruction = op;
     }
 
     uint64_t bytecode_emit_16(Bytecode_Builder *builder, uint16_t val)
@@ -1591,6 +1601,27 @@ namespace Zodiac
     {
         auto current_block = builder->insert_block;
         array_append(&builder->jump_records, { current_block, target_block, offset });
+    }
+
+    bool bytecode_block_ends_with_terminator(Bytecode_Block *block)
+    {
+        assert(block);
+
+        if (!block->instructions.count)
+            return false;
+
+        auto op = block->last_instruction;
+
+        switch (op)
+        {
+            case Bytecode_Instruction::EXIT:
+            case Bytecode_Instruction::RET:
+            case Bytecode_Instruction::RET_VOID:
+            case Bytecode_Instruction::JUMP:
+            case Bytecode_Instruction::JUMP_IF: return true;
+
+            default: return false;
+        }
     }
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration *decl)

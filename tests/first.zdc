@@ -14,7 +14,7 @@ print_vec2 :: func (v: *Vec2)
     return;
 }
 
-add_vec2 :: func (v: *Vec2) -> s64
+add_vec2 :: func (v: *Vec2)
 {
     return v.x + v.y;
 }
@@ -70,17 +70,19 @@ main :: func () -> s64
         print_vec2(*p1);
         p1.y = 55;
         print_vec2(*p1);
+        return add_vec2(*p1);
     }
     else
     {
         std.println("Not printing vector...");
     }
+
     return 0;
 }
 
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
-mainCRTStartup :: func () -> s32
+ #noreturn mainCRTStartup :: func ()
 {
     exit_code := main();
     @exit(exit_code);

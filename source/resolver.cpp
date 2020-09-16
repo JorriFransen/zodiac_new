@@ -112,6 +112,8 @@ namespace Zodiac
     {
         bool done = false;
 
+        auto options = resolver->build_data->options;
+
         while (!done)
         {
             auto parse_job_count = queue_count(&resolver->parse_job_queue);
@@ -216,9 +218,14 @@ namespace Zodiac
                         {
                             exe_file_name = options->exe_file_name.data;
                         }
-                        queue_emit_llvm_binary_job(resolver, exe_file_name);
+
+                        if (!options->dont_emit_llvm)
+                            queue_emit_llvm_binary_job(resolver, exe_file_name);
                     }
-                    queue_emit_llvm_func_job(resolver, job->result.bc_func);
+
+                    if (!options->dont_emit_llvm)
+                        queue_emit_llvm_func_job(resolver, job->result.bc_func);
+
                     free_job(resolver, job);
                 }
             }
@@ -380,7 +387,7 @@ namespace Zodiac
 
             case Resolve_Job_Kind::TYPE:
             {
-                result = try_resolve_types(resolver, job->ast_node, job->node_scope);
+                result = try_resolve_types(resolver, job->ast_node, job->node_scope, nullptr);
                 if (result)
                 {
                     assert(job->ast_node->flags & AST_NODE_FLAG_TYPED);
@@ -1201,11 +1208,11 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Node *ast_node, Scope *scope)
+    bool try_resolve_types(Resolver *resolver, AST_Node *ast_node, Scope *scope, 
+                           AST_Type **inferred_return_type)
     {
         assert(resolver);
         assert(ast_node);
-        assert(scope);
 
         assert(ast_node->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(!(ast_node->flags & AST_NODE_FLAG_TYPED));  
@@ -1220,6 +1227,7 @@ namespace Zodiac
 
             case AST_Node_Kind::DECLARATION:
             {
+                assert(scope);
                 auto decl = static_cast<AST_Declaration*>(ast_node);
                 //assert(decl->type == nullptr);
                 if (!(decl->flags & AST_NODE_FLAG_TYPED))
@@ -1234,7 +1242,14 @@ namespace Zodiac
             }
 
             case AST_Node_Kind::EXPRESSION: assert(false);
-            case AST_Node_Kind::STATEMENT: assert(false);
+
+            case AST_Node_Kind::STATEMENT:
+            {
+                auto stmt = static_cast<AST_Statement*>(ast_node);
+                result = try_resolve_types(resolver, stmt, scope, nullptr);
+                break;
+            }
+
             case AST_Node_Kind::TYPE_SPEC: assert(false);
             case AST_Node_Kind::TYPE: assert(false);
         }
@@ -1308,7 +1323,7 @@ namespace Zodiac
                 if (ast_decl->variable.type_spec)
                 {
                     if (!try_resolve_types(resolver, ast_decl->variable.type_spec, scope,
-                                           &ts_type))
+                                           &ts_type, nullptr))
                     {
                         result = false;
                     }
@@ -1365,7 +1380,7 @@ namespace Zodiac
                 else if (!ast_decl->parameter.type_spec->type)
                 {
                     result = try_resolve_types(resolver, ast_decl->parameter.type_spec, scope,
-                                               &ast_decl->type);
+                                               &ast_decl->type, nullptr);
                     if (result) assert(ast_decl->type);
                 } else assert(false);
 
@@ -1380,17 +1395,17 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                if (!ast_decl->function.type_spec->type &&
-                    !try_resolve_types(resolver, ast_decl->function.type_spec, scope,
-                                       &ast_decl->type))
-                {
-                    result = false;
-                    break;
-                }
-                else
-                {
-                    assert(ast_decl->type);
-                }
+                //if (!ast_decl->function.type_spec->type &&
+                    //!try_resolve_types(resolver, ast_decl->function.type_spec, scope,
+                                       //&ast_decl->type))
+                //{
+                    //result = false;
+                    //break;
+                //}
+                //else
+                //{
+                    //assert(ast_decl->type);
+                //}
 
                 int param_fail_count = 0;
 
@@ -1410,10 +1425,30 @@ namespace Zodiac
 
                 // Passing a null scope since the block holds it's own scope
                 auto body = ast_decl->function.body;
-                if (body && !try_resolve_types(resolver, body, nullptr))
+                AST_Type *inferred_return_type = nullptr;
+                if (body && !try_resolve_types(resolver, body, nullptr, &inferred_return_type))
                 {
                     result = false;
                     break;
+                }
+
+                //if (body) assert(inferred_return_type);
+                
+                if (!ast_decl->function.type_spec->type &&
+                    !try_resolve_types(resolver, ast_decl->function.type_spec, scope,
+                                       &ast_decl->type, inferred_return_type))
+                {
+                    result = false;
+                    break;
+                }
+                else
+                {
+                    assert(ast_decl->type);
+
+                    if (body && !(ast_decl->decl_flags & AST_DECL_FLAG_NORETURN))
+                        assert(ast_decl->type->function.return_type == inferred_return_type ||
+                               (ast_decl->type->function.return_type == Builtin::type_void &&
+                                inferred_return_type == nullptr));
                 }
 
                 if (result)
@@ -1488,7 +1523,8 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Statement* ast_stmt, Scope *scope)
+    bool try_resolve_types(Resolver *resolver, AST_Statement* ast_stmt, Scope *scope,
+                           AST_Type **inferred_return_type)
     {
         assert(resolver);
         assert(ast_stmt);
@@ -1520,7 +1556,8 @@ namespace Zodiac
                 auto nodes = ast_stmt->block.statements;
                 for (int64_t i = 0; i < nodes.count; i++)
                 {
-                    if (!try_resolve_types(resolver, nodes[i], ast_stmt->block.scope))
+                    if (!try_resolve_types(resolver, nodes[i], ast_stmt->block.scope,
+                                           inferred_return_type))
                     {
                         block_res = false;
                         break;
@@ -1571,11 +1608,21 @@ namespace Zodiac
             {
                 if (ast_stmt->expression)
                 {
+                    assert(inferred_return_type);
                     result = try_resolve_types(resolver, ast_stmt->expression, scope);
                     if (result && (ast_stmt->expression->flags & AST_NODE_FLAG_TYPED))
                     {
                         assert(ast_stmt->expression->type);
                         ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+
+                        if (*inferred_return_type)
+                        {
+                            assert(*inferred_return_type == ast_stmt->expression->type);
+                        }
+                        else
+                        {
+                            *inferred_return_type = ast_stmt->expression->type;
+                        }
                     }
                 } 
                 else
@@ -1622,7 +1669,7 @@ namespace Zodiac
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
-                                       ast_stmt->while_stmt.body_scope))
+                                       ast_stmt->while_stmt.body_scope, inferred_return_type))
                 {
                     result = false;
                 }
@@ -1641,7 +1688,7 @@ namespace Zodiac
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->if_stmt.then_stmt, 
-                                       ast_stmt->if_stmt.then_scope))
+                                       ast_stmt->if_stmt.then_scope, inferred_return_type))
                 {
                     result = false;
                 }
@@ -1649,7 +1696,7 @@ namespace Zodiac
                 if (ast_stmt->if_stmt.else_stmt)
                 {
                     if (!try_resolve_types(resolver, ast_stmt->if_stmt.else_stmt, 
-                                           ast_stmt->if_stmt.else_scope))
+                                           ast_stmt->if_stmt.else_scope, inferred_return_type))
                     {
                         result = false;
                     }
@@ -2092,7 +2139,7 @@ namespace Zodiac
     }
 
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec* ts, Scope* scope,
-                           AST_Type **type_target)
+                           AST_Type **type_target, AST_Type *suggested_type)
     {
         assert(resolver);
         assert(ts);
@@ -2139,7 +2186,8 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POINTER:
             {
                 AST_Type *base_type = nullptr;
-                result = try_resolve_types(resolver, ts->base_type_spec, scope, &base_type);
+                result = try_resolve_types(resolver, ts->base_type_spec, scope, &base_type,
+                                           nullptr);
                 if (result)
                 {
                     assert(base_type);
@@ -2192,7 +2240,7 @@ namespace Zodiac
                     }
                     else
                     {
-                        if (!try_resolve_types(resolver, param_ts, scope, &param_type))
+                        if (!try_resolve_types(resolver, param_ts, scope, &param_type, nullptr))
                         {
                             assert(false);
                         }
@@ -2215,13 +2263,18 @@ namespace Zodiac
                 if (ts->function.return_type_spec)
                 {
                     if (!try_resolve_types(resolver, ts->function.return_type_spec, scope,
-                                           &return_type))
+                                           &return_type, nullptr))
                     {
                         assert(false);
                     }
 
                     assert(return_type);
+                    if (suggested_type) assert(return_type == suggested_type);
                 } 
+                else if (suggested_type)
+                {
+                    return_type = suggested_type; 
+                }
                 else
                 {
                     return_type = Builtin::type_void; 
@@ -2240,7 +2293,7 @@ namespace Zodiac
             {
                 AST_Type *element_type = nullptr;
                 if (!try_resolve_types(resolver, ts->array.element_type_spec, scope,
-                                       &element_type))
+                                       &element_type, nullptr))
                 {
                     assert(false);
                 }

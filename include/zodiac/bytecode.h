@@ -131,6 +131,8 @@ namespace Zodiac
         int64_t local_temp_count = 0;
         int64_t preceding_temp_count = 0;
         Array<uint8_t> instructions = {};
+
+        Bytecode_Instruction last_instruction = Bytecode_Instruction::NOP;
     };
 
     struct Bytecode_Parameter
@@ -306,6 +308,8 @@ namespace Zodiac
 
     void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *from_block,
                               int64_t offset);
+
+    bool bytecode_block_ends_with_terminator(Bytecode_Block *block);
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration* decl);
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char* name);
