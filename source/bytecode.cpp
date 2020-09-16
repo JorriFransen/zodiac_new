@@ -2,6 +2,7 @@
 
 #include "builtin.h"
 #include "temp_allocator.h"
+#include "parser.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -532,7 +533,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::STRING_LITERAL:
             {
-                return bytecode_emit_load_str(builder, expression->string_literal.atom.data);
+                return bytecode_emit_load_str(builder, expression->string_literal.atom);
                 break;
             }
         }
@@ -1095,7 +1096,7 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const char *cstr)
+    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const Atom &atom)
     {
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_STR);
 
@@ -1103,7 +1104,7 @@ namespace Zodiac
 
         for (int64_t i = 0; i < builder->program.strings.count; i++)
         {
-            if (cstr == builder->program.strings[i])
+            if (atom == builder->program.strings[i])
             {
                 string_index = i;
                 break;
@@ -1113,7 +1114,7 @@ namespace Zodiac
         if (string_index == -1)
         {
             string_index = builder->program.strings.count;
-            array_append(&builder->program.strings, cstr);
+            array_append(&builder->program.strings, atom);
         }
 
         bytecode_emit_32(builder, string_index);
@@ -2018,9 +2019,22 @@ namespace Zodiac
             {
                 uint32_t str_index = bytecode_iterator_fetch_32(bci);
 
-                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_STR %" PRIu32 " (\"%s\")",
-                                       bci->local_temp_index++, str_index,
-                                       bci->builder->program.strings[str_index]);
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_STR %" PRIu32 " (\"",
+                                       bci->local_temp_index++, str_index);
+                auto str = bci->builder->program.strings[str_index]; 
+                for (int64_t i = 0; i < str.length; i++)
+                {
+                    char c;
+                    if (parser_make_escape_char(str.data[i], &c))
+                    {
+                        string_builder_appendf(sb, "\\%c", c);
+                    }
+                    else
+                    {
+                        string_builder_appendf(sb, "%c", c);
+                    }
+                }
+                string_builder_append(sb, "\")");
                 break;
             }
 
@@ -2307,6 +2321,21 @@ namespace Zodiac
                 uint8_t val = bytecode_iterator_fetch_byte(bci);
                 bytecode_iterator_advance_ip(bci);
                 string_builder_appendf(sb, " %" PRIu8, val);
+
+                if (val > 9)
+                {
+                    string_builder_append(sb, " ('");
+                    char c;
+                    if (parser_make_escape_char(val, &c))
+                    {
+                        string_builder_appendf(sb, "\\%c", c);
+                    }
+                    else
+                    {
+                        string_builder_appendf(sb, "%c", c);
+                    }
+                    string_builder_append(sb, "')");
+                }
                 break;
             }
 

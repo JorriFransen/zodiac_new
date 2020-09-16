@@ -176,7 +176,7 @@ namespace Zodiac
     struct Bytecode_Program
     {
         Array<Bytecode_Function*> functions = {};
-        Array<const char*> strings = {};
+        Array<Atom> strings = {};
         Bytecode_Function *entry_function = nullptr;
         Bytecode_Function *bytecode_entry_function = nullptr;
     };
@@ -255,7 +255,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
-    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const char *cstr);
+    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const Atom &atom);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
     void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,

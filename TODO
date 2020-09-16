@@ -1,11 +1,6 @@
 
 
-
-Infer return type from functions.
-
-Inherit noreturn when a noreturn function is called
-
-Print string/character literals correctly in bytecode
+Print character literals correctly in bytecode
 
 make jump if more like llvm's condbr
 
@@ -29,6 +24,8 @@ function overloads
 Custom allocator for stack frame allocls in interpreter
 
 Linking with c runtime (entry point main instead of _start)
+
+Inherit noreturn when a noreturn function is called
 
 Command line option parsing
   - -cruntime

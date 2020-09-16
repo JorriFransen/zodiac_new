@@ -441,7 +441,7 @@ namespace Zodiac
                 {
                     auto str_idx = interpreter_fetch<uint32_t>(interp);
                     auto result_value = interpreter_push_temporary(interp, Builtin::type_ptr_u8);
-                    result_value->value.pointer = (void*)interp->program->strings[str_idx];
+                    result_value->value.pointer = (void*)interp->program->strings[str_idx].data;
                     break;
                 }
 

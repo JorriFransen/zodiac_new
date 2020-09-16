@@ -467,8 +467,8 @@ namespace Zodiac
             {
                 auto str_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
-                auto cstr = builder->bc_program->strings[str_idx];
-                LLVMValueRef llvm_str = LLVMConstString(cstr, strlen(cstr), false);
+                auto str = builder->bc_program->strings[str_idx];
+                LLVMValueRef llvm_str = LLVMConstString(str.data, str.length, false);
                 LLVMValueRef llvm_str_glob = LLVMAddGlobal(builder->llvm_module,
                                                            LLVMTypeOf(llvm_str),
                                                            "_string_const");
