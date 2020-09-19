@@ -215,7 +215,8 @@ enum class Expression_PTN_Kind
     COMPOUND,
     SUBSCRIPT,
 
-    NUMBER_LITERAL,
+    INTEGER_LITERAL,
+    FLOAT_LITERAL,
     STRING_LITERAL,
     CHAR_LITERAL,
     BOOL_LITERAL,
@@ -263,7 +264,15 @@ struct Expression_PTN
                 int64_t s64;
                 uint64_t u64;
             } value;
-        } number_literal;
+        } integer_literal;
+
+        struct
+        {
+            union
+            {
+                float r32;
+            };
+        } float_literal;
 
         struct
         {

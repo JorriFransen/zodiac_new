@@ -43,3 +43,7 @@ print_num :: func (n: s64)
     return;
 }
 
+print_float :: func (f: float)
+{
+
+}

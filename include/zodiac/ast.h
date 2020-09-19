@@ -229,7 +229,8 @@ namespace Zodiac
         SUBSCRIPT,
         CAST,
 
-        NUMBER_LITERAL,
+        INTEGER_LITERAL,
+        FLOAT_LITERAL,
         STRING_LITERAL,
         CHAR_LITERAL,
         BOOL_LITERAL,
@@ -308,7 +309,12 @@ namespace Zodiac
                 AST_Type *target_type;
             } cast;
 
-            Number_Literal number_literal;
+            Integer_Literal integer_literal;
+
+            struct
+            {
+                float r32;
+            } float_literal;
 
             struct
             {
@@ -388,6 +394,7 @@ namespace Zodiac
 
         VOID,
         INTEGER,
+        FLOAT,
         BOOL,
         POINTER,
 
@@ -578,9 +585,12 @@ namespace Zodiac
     AST_Expression *ast_cast_expression_new(Allocator *allocator, AST_Expression *operand_expr,
                                             AST_Type *target_type, const File_Pos &bfp,
                                             const File_Pos &efp);
-    AST_Expression *ast_number_literal_expression_new(Allocator *allocator, int64_t value,
-                                                      const File_Pos & begin_fp,
-                                                      const File_Pos &end_fp);
+    AST_Expression *ast_integer_literal_expression_new(Allocator *allocator, int64_t value,
+                                                       const File_Pos & begin_fp,
+                                                       const File_Pos &end_fp);
+    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float value,
+                                                     const File_Pos & begin_fp,
+                                                     const File_Pos &end_fp);
     AST_Expression *ast_string_literal_expression_new(Allocator *allocator, Atom& atom,
                                                       const File_Pos & begin_fp,
                                                       const File_Pos &end_fp);
@@ -616,6 +626,7 @@ namespace Zodiac
 
     AST_Type *ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type *ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
+    AST_Type *ast_float_type_new(Allocator *allocator, uint64_t bit_size);
     AST_Type *ast_bool_type_new(Allocator *allocator, uint64_t bit_size);
     AST_Type *ast_pointer_type_new(Allocator *allocator, AST_Type *base_type);
     AST_Type *ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,

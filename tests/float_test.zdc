@@ -1,0 +1,28 @@
+
+_math :: import math;
+using _math;
+
+main :: func() -> s64
+{
+    v3 : Vec3;
+
+    v3.x = 1.2;
+    v3.y = 2.3;
+    v3.z = 4.5;
+
+    sum := v3.x + v3.y + v3.z;
+
+    return @cast(s64, sum);
+}
+
+#naked #noreturn _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+#noreturn posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+

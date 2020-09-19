@@ -31,7 +31,7 @@ namespace Zodiac
     struct AST_Type_Spec;
     struct AST_Type;
 
-    struct Number_Literal
+    struct Integer_Literal
     {
         int64_t s64 = 0;
     };

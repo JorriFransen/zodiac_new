@@ -10,20 +10,23 @@ enum Builtin_Type_Kind
 
     VOID,
     INTEGER,
+    FLOAT,
     BOOL,
 };
 
-#define BUILTIN_TYPE_LIST                        \
-    DEFINE_BUILTIN_TYPE(void, VOID, 0, false)    \
-    DEFINE_BUILTIN_TYPE(bool, BOOL, 8, false)    \
-    DEFINE_BUILTIN_TYPE(s8,  INTEGER,  8, true)  \
-    DEFINE_BUILTIN_TYPE(u8,  INTEGER,  8, false) \
-    DEFINE_BUILTIN_TYPE(s16, INTEGER, 16, true)  \
-    DEFINE_BUILTIN_TYPE(u16, INTEGER, 16, false) \
-    DEFINE_BUILTIN_TYPE(s32, INTEGER, 32, true)  \
-    DEFINE_BUILTIN_TYPE(u32, INTEGER, 32, false) \
-    DEFINE_BUILTIN_TYPE(s64, INTEGER, 64, true)  \
-    DEFINE_BUILTIN_TYPE(u64, INTEGER, 64, false) \
+#define BUILTIN_TYPE_LIST                          \
+    DEFINE_BUILTIN_TYPE(void, VOID, 0, false)      \
+    DEFINE_BUILTIN_TYPE(bool, BOOL, 8, false)      \
+    DEFINE_BUILTIN_TYPE(float,  FLOAT,  32, true)  \
+    DEFINE_BUILTIN_TYPE(double,  FLOAT,  64, true) \
+    DEFINE_BUILTIN_TYPE(s8,  INTEGER,  8, true)    \
+    DEFINE_BUILTIN_TYPE(u8,  INTEGER,  8, false)   \
+    DEFINE_BUILTIN_TYPE(s16, INTEGER, 16, true)    \
+    DEFINE_BUILTIN_TYPE(u16, INTEGER, 16, false)   \
+    DEFINE_BUILTIN_TYPE(s32, INTEGER, 32, true)    \
+    DEFINE_BUILTIN_TYPE(u32, INTEGER, 32, false)   \
+    DEFINE_BUILTIN_TYPE(s64, INTEGER, 64, true)    \
+    DEFINE_BUILTIN_TYPE(u64, INTEGER, 64, false)   \
 
 #define BUILTIN_ATOM_LIST                \
     DEFINE_BUILTIN_ATOM(_start)          \

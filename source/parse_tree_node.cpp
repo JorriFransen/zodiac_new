@@ -228,7 +228,8 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
             break;
         }
 
-        case Expression_PTN_Kind::NUMBER_LITERAL: break;
+        case Expression_PTN_Kind::INTEGER_LITERAL: break;
+        case Expression_PTN_Kind::FLOAT_LITERAL: break;
         case Expression_PTN_Kind::STRING_LITERAL: break;
         case Expression_PTN_Kind::CHAR_LITERAL: break;
         case Expression_PTN_Kind::BOOL_LITERAL: break;;
@@ -504,17 +505,28 @@ Expression_PTN *new_unary_expression_ptn(Allocator *allocator, Unary_Operator op
 }
 
 Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom atom,
-                                                  const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                  const File_Pos &begin_fp,
+                                                  const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
-    result->kind = Expression_PTN_Kind::NUMBER_LITERAL;
-    if (atom.data[0] == '-')
+
+    auto str = string_ref(atom);
+    if (string_contains(str, "."))
     {
-        result->number_literal.value.s64 = atom_to_s64(atom);
+        result->kind = Expression_PTN_Kind::FLOAT_LITERAL;
+        result->float_literal.r32 = atom_to_float(atom);
     }
     else
     {
-        result->number_literal.value.u64 = atom_to_u64(atom);
+        result->kind = Expression_PTN_Kind::INTEGER_LITERAL;
+        if (atom.data[0] == '-')
+        {
+            result->integer_literal.value.s64 = atom_to_s64(atom);
+        }
+        else
+        {
+            result->integer_literal.value.u64 = atom_to_u64(atom);
+        }
     }
 
     return result;
@@ -731,7 +743,8 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
         case Expression_PTN_Kind::DOT: assert(false);
         case Expression_PTN_Kind::COMPOUND: assert(false);
         case Expression_PTN_Kind::SUBSCRIPT: assert(false);
-        case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
+        case Expression_PTN_Kind::INTEGER_LITERAL: assert(false);
+        case Expression_PTN_Kind::FLOAT_LITERAL: assert(false);
         case Expression_PTN_Kind::STRING_LITERAL: assert(false);
         case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
         case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
@@ -1133,10 +1146,17 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::NUMBER_LITERAL:
+        case Expression_PTN_Kind::INTEGER_LITERAL:
         {
             print_indent(indent);
-            printf("%" PRId64, expression->number_literal.value.s64);
+            printf("%" PRId64, expression->integer_literal.value.s64);
+            break;
+        }
+
+        case Expression_PTN_Kind::FLOAT_LITERAL:
+        {
+            print_indent(indent);
+            printf("%f", expression->float_literal.r32);
             break;
         }
 

@@ -217,7 +217,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name);
 
-    bool resolver_literal_fits_in_type(const Number_Literal &number_literal, AST_Type *type);
+    bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type);
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
     bool is_bc_entry_decl(Resolver *resolver, AST_Declaration *decl);
@@ -225,7 +225,7 @@ namespace Zodiac
     void free_job(Resolver *resolver, Resolve_Job *job);
 
     void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier);
-    void resolver_report_mismatching_types(Resolver *resolver, AST_Expression *expr,
+    void resolver_report_mismatching_types(Resolver *resolver, AST_Node *node,
                                            AST_Type *expected_type, AST_Type *actual_type);
     void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
                                const char *fmt, ...);

@@ -5,3 +5,9 @@ Vec2 :: struct
     y : s64;
 }
 
+Vec3 :: struct
+{
+    x : float;
+    y : float;
+    z : float;
+}

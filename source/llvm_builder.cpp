@@ -372,7 +372,9 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOAD_IM:
+            case Bytecode_Instruction::LOAD_FLOAT: assert(false);
+
+            case Bytecode_Instruction::LOAD_INT:
             {
                 auto size_spec =
                     llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
@@ -873,6 +875,7 @@ namespace Zodiac
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
 
                     case Bytecode_Size_Specifier::U8:  target_type = Builtin::type_u8;  break;
                     case Bytecode_Size_Specifier::S8:  target_type = Builtin::type_s8;  break;
@@ -883,6 +886,9 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::U64: target_type = Builtin::type_u64; break;
                     case Bytecode_Size_Specifier::S64: target_type = Builtin::type_s64; break;
                                                        
+                    case Bytecode_Size_Specifier::R32: assert(false);
+                    case Bytecode_Size_Specifier::R64: assert(false);
+
                 }
 
                 assert(target_type);
@@ -893,6 +899,8 @@ namespace Zodiac
                 llvm_push_temporary(builder, result);
                 break;
             }
+
+            case Bytecode_Instruction::CAST_FLOAT: assert(false);
 
             case Bytecode_Instruction::SYSCALL:
             {
@@ -1203,6 +1211,8 @@ namespace Zodiac
                 return LLVMIntType(ast_type->bit_size);
                 break;
             }
+
+            case AST_Type_Kind::FLOAT: assert(false);
 
             case AST_Type_Kind::BOOL:
             {

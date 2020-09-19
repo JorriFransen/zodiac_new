@@ -423,7 +423,7 @@ namespace Zodiac
 
                 Bytecode_Value *ptr = nullptr;
 
-                Bytecode_Value *index_val = bytecode_emit_number_literal(builder,
+                Bytecode_Value *index_val = bytecode_emit_integer_literal(builder,
                                                                          Builtin::type_u32,
                                                                          index);
 
@@ -497,7 +497,7 @@ namespace Zodiac
                 assert(index_val->type->kind == AST_Type_Kind::INTEGER);
                 if (index_val->type != Builtin::type_u32)
                 {
-                    index_val = bytecode_emit_cast_int(builder, index_val, Builtin::type_u32); 
+                    index_val = bytecode_emit_cast_int_int(builder, index_val, Builtin::type_u32); 
                 }
 
                 auto result = bytecode_emit_array_offset_pointer(builder, ptr_val, index_val);
@@ -512,16 +512,22 @@ namespace Zodiac
                 {
                     auto op_val = bytecode_emit_expression(builder,
                                                            expression->cast.operand_expression);
-                    return bytecode_emit_cast_int(builder, op_val, target_type);
+                    return bytecode_emit_cast_int_int(builder, op_val, target_type);
                 }
                 else assert(false);
                 break;
             }
 
-            case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::FLOAT_LITERAL:
+            {
+                return bytecode_emit_float_literal(builder, expression); 
+                break;
+            }
+
+            case AST_Expression_Kind::INTEGER_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             {
-                return bytecode_emit_number_literal(builder, expression);
+                return bytecode_emit_integer_literal(builder, expression);
                 break;
             }
 
@@ -650,7 +656,8 @@ namespace Zodiac
         auto rhs = expr->binary.rhs;
 
         assert(lhs->type == rhs->type);
-        assert(lhs->type->kind == AST_Type_Kind::INTEGER);
+        assert(lhs->type->kind == AST_Type_Kind::INTEGER ||
+               lhs->type->kind == AST_Type_Kind::FLOAT);
 
         auto lhs_val = bytecode_emit_expression(builder, lhs);
         assert(lhs_val);
@@ -711,7 +718,7 @@ namespace Zodiac
         }    
 
         auto type = lhs->type;
-        bytecode_emit_size_spec(builder, type->integer.sign, type->bit_size);
+        bytecode_emit_size_spec(builder, type);
 
         bytecode_emit_32(builder, lhs_val->local_index);
         bytecode_emit_32(builder, rhs_val->local_index);
@@ -836,7 +843,7 @@ namespace Zodiac
                 assert(lvalue_expr->dot.child_index >= 0);
 
                 Bytecode_Value *index_val =
-                    bytecode_emit_number_literal(builder, Builtin::type_u32,
+                    bytecode_emit_integer_literal(builder, Builtin::type_u32,
                                                  lvalue_expr->dot.child_index);
                 auto pointer_val = bytecode_emit_aggregate_offset_pointer(builder,
                                                                           parent_lvalue,
@@ -864,8 +871,8 @@ namespace Zodiac
                 assert(index_value->type->kind == AST_Type_Kind::INTEGER);
                 if (index_value->type != Builtin::type_u32)
                 {
-                    index_value = bytecode_emit_cast_int(builder, index_value,
-                                                         Builtin::type_u32); 
+                    index_value = bytecode_emit_cast_int_int(builder, index_value,
+                                                             Builtin::type_u32); 
                 }
 
                 if (parent_lvalue->type->kind == AST_Type_Kind::ARRAY)
@@ -879,7 +886,8 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::CAST: assert(false);
-            case AST_Expression_Kind::NUMBER_LITERAL: assert(false);
+            case AST_Expression_Kind::INTEGER_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
@@ -931,16 +939,20 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand_expr,
                                        AST_Type *target_type)
     {
-        switch (target_type->kind)
+        switch (operand_expr->type->kind)
         {
             case AST_Type_Kind::INVALID: assert(false);
             case AST_Type_Kind::VOID: assert(false);
 
             case AST_Type_Kind::INTEGER:
             {
-                assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
-                auto operand_val = bytecode_emit_expression(builder, operand_expr);
-                return bytecode_emit_cast_int(builder, operand_val, target_type);
+                return bytecode_emit_cast_int(builder, operand_expr, target_type);
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT:
+            {
+                return bytecode_emit_cast_float(builder, operand_expr, target_type);
                 break;
             }
 
@@ -953,6 +965,62 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
+    }
+
+    Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder,
+                                           AST_Expression *operand_expr,
+                                           AST_Type *target_type)
+    {
+        assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
+
+        auto operand_val = bytecode_emit_expression(builder, operand_expr);
+
+        switch (target_type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            { 
+                return bytecode_emit_cast_int_int(builder, operand_val, target_type);
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+    }
+
+    Bytecode_Value *bytecode_emit_cast_float(Bytecode_Builder *builder,
+                                             AST_Expression *operand_expr,
+                                             AST_Type *target_type)
+    {
+         assert(operand_expr->type->kind == AST_Type_Kind::FLOAT);
+
+        auto operand_val = bytecode_emit_expression(builder, operand_expr);
+        assert(operand_val);
+
+        switch (target_type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                return bytecode_emit_cast_float_int(builder, operand_val, target_type);
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+       
     }
 
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)
@@ -994,8 +1062,27 @@ namespace Zodiac
         value->alloc_index = alloc_index;
     }
 
-    void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, uint8_t size)
+    void bytecode_emit_size_spec(Bytecode_Builder *builder, AST_Type *type)
     {
+        bool sign = true;
+        bool real = false;
+
+        if (type->kind == AST_Type_Kind::INTEGER)
+        {
+            sign = type->integer.sign;
+        }
+        else if (type->kind == AST_Type_Kind::FLOAT)
+        {
+            real = true;
+        }
+
+        bytecode_emit_size_spec(builder, sign, real, type->bit_size);
+    }
+
+    void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, bool real, uint8_t size)
+    {
+        if (real) assert(sign);
+
         Bytecode_Size_Specifier size_spec = Bytecode_Size_Specifier::INVALID;
 
         switch (size)
@@ -1009,11 +1096,19 @@ namespace Zodiac
 
         if (sign)
         {
-            size_spec = (Bytecode_Size_Specifier)(((uint8_t)size_spec) |
-                                                  ((uint8_t)Bytecode_Size_Specifier::SIGN_FLAG));
+            size_spec =
+                (Bytecode_Size_Specifier)(((uint16_t)size_spec) |
+                                          ((uint16_t)Bytecode_Size_Specifier::SIGN_FLAG));
         }
 
-        bytecode_emit_byte(builder, (uint8_t)size_spec);
+        if (real)
+        {
+            size_spec =
+                (Bytecode_Size_Specifier)(((uint16_t)size_spec) | 
+                                          ((uint16_t)Bytecode_Size_Specifier::FLOAT_FLAG));
+        }
+
+        bytecode_emit_16(builder, (uint16_t)size_spec);
     }
 
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *lvalue)
@@ -1045,10 +1140,16 @@ namespace Zodiac
         return nullptr;
     }
 
-    void bytecode_emit_load_im(Bytecode_Builder *builder, bool sign, uint8_t size)
+    void bytecode_emit_load_float(Bytecode_Builder *builder, uint8_t size)
     {
-        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_IM);
-        bytecode_emit_size_spec(builder, sign, size);
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_FLOAT);
+        bytecode_emit_size_spec(builder, true, true, size);
+    }
+
+    void bytecode_emit_load_int(Bytecode_Builder *builder, bool sign, uint8_t size)
+    {
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_INT);
+        bytecode_emit_size_spec(builder, sign, false, size);
     }
 
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
@@ -1056,6 +1157,7 @@ namespace Zodiac
         assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
         assert(allocl->type);
         assert(allocl->type->kind == AST_Type_Kind::INTEGER ||
+               allocl->type->kind == AST_Type_Kind::FLOAT ||
                allocl->type->kind == AST_Type_Kind::BOOL ||
                allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
@@ -1179,9 +1281,9 @@ namespace Zodiac
         bytecode_record_jump(builder, block, offset);
     }
 
-    Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder,
-                                           Bytecode_Value *operand_val,
-                                           AST_Type *target_type)
+    Bytecode_Value *bytecode_emit_cast_int_int(Bytecode_Builder *builder,
+                                               Bytecode_Value *operand_val,
+                                               AST_Type *target_type)
     {
         assert(target_type->kind == AST_Type_Kind::INTEGER);
 
@@ -1191,13 +1293,31 @@ namespace Zodiac
         assert(op_type->kind == AST_Type_Kind::INTEGER);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_INT);
-        bytecode_emit_size_spec(builder, target_type->integer.sign, target_type->bit_size);
+        bytecode_emit_size_spec(builder, target_type);
         bytecode_emit_32(builder, operand_val->local_index);
 
         auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
         bytecode_push_local_temporary(builder, result);
         return result;
+    }
 
+    Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
+                                                 Bytecode_Value *operand_val,
+                                                 AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::INTEGER);
+        assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
+
+        auto op_type = operand_val->type;
+        assert(op_type->kind == AST_Type_Kind::FLOAT);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_FLOAT);
+        bytecode_emit_size_spec(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
     }
 
     Bytecode_Value *bytecode_emit_aggregate_offset_pointer(Bytecode_Builder *builder,
@@ -1327,10 +1447,64 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder,
+    Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Expression *expr)
+    {
+        assert(expr->kind == AST_Expression_Kind::FLOAT_LITERAL);
+        assert(expr->type->kind == AST_Type_Kind::FLOAT);
+
+        Bytecode_Value *result = nullptr;
+
+        if (expr->type->bit_size == 32)
+        {
+            float val = expr->float_literal.r32;
+            result = bytecode_emit_float_literal(builder, expr->type, val, (double)val);
+        }
+        else if (expr->type->bit_size == 64)
+        {
+            assert(false);
+            // double val = expr->float_literal.r64;
+            //result = bytecode_emit_float_literal(builder, expr->type, (float)val, val);
+
+        }
+        else assert(false);
+
+        assert(result);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Type *type,
+                                                float f, double d)
+    {
+        assert(type->kind == AST_Type_Kind::FLOAT);
+
+        bytecode_emit_load_float(builder, type->bit_size);
+        
+        if (type->bit_size == 32)
+        {
+            uint32_t val;
+            float *val_p = (float*)&val;
+            *val_p = f;
+            bytecode_emit_32(builder, val);
+        }
+        else if (type->bit_size == 64)
+        {
+            uint64_t val;
+            double *val_p = (double*)&val;
+            *val_p = d;
+            bytecode_emit_64(builder, val);
+        }
+        else assert(false);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+
+    }
+
+    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder,
                                                  AST_Expression *expr)
     {
-        assert(expr->kind == AST_Expression_Kind::NUMBER_LITERAL ||
+        assert(expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
                expr->kind == AST_Expression_Kind::BOOL_LITERAL ||
                expr->kind == AST_Expression_Kind::CHAR_LITERAL);
         assert(expr->type->kind == AST_Type_Kind::INTEGER);
@@ -1340,15 +1514,15 @@ namespace Zodiac
         {
             case 8: 
             {
-                result = bytecode_emit_number_literal(builder, expr->type,
-                                                      (int8_t)expr->number_literal.s64);
+                result = bytecode_emit_integer_literal(builder, expr->type,
+                                                      (int8_t)expr->integer_literal.s64);
                 break;
             }
 
             case 64:
             {
-                result = bytecode_emit_number_literal(builder, expr->type,
-                                                      expr->number_literal.s64);
+                result = bytecode_emit_integer_literal(builder, expr->type,
+                                                      expr->integer_literal.s64);
                 break;
             }
 
@@ -1360,13 +1534,13 @@ namespace Zodiac
 
     }
 
-    Bytecode_Value *bytecode_emit_number_literal(Bytecode_Builder *builder, AST_Type *type,
+    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder, AST_Type *type,
                                                  int64_t val)
     {
         assert(type->kind == AST_Type_Kind::INTEGER ||
                type->kind == AST_Type_Kind::BOOL);
 
-        bytecode_emit_load_im(builder, type->integer.sign, type->bit_size);
+        bytecode_emit_load_int(builder, type->integer.sign, type->bit_size);
         switch (type->bit_size)
         {
             case 8:
@@ -1772,6 +1946,16 @@ namespace Zodiac
         return block->instructions[bci->instruction_index];
     }
 
+    uint16_t bytecode_iterator_fetch_16(Bytecode_Iterator *bci)
+    {
+        auto block = bytecode_iterator_get_block(bci);
+        uint16_t result = *((uint16_t*)(&block->instructions[bci->instruction_index]));
+
+        bytecode_iterator_advance_ip(bci, 2);
+
+        return result;
+    }
+
     uint32_t bytecode_iterator_fetch_32(Bytecode_Iterator *bci)
     {
         auto block = bytecode_iterator_get_block(bci);
@@ -1958,14 +2142,24 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOAD_IM:
+            case Bytecode_Instruction::LOAD_FLOAT:
+            {
+                string_builder_appendf(sb, "%%%" PRId64, bci->local_temp_index);
+                bci->local_temp_index += 1;
+
+                string_builder_append(sb, " = LOAD_FLOAT ");
+                bytecode_print_im_float(sb, bci);
+                break;
+            }
+
+            case Bytecode_Instruction::LOAD_INT:
             {
                 string_builder_appendf(sb, "%%%" PRId64, bci->local_temp_index);
                 bci->local_temp_index += 1;
 
 
-                string_builder_append(sb, " = LOAD_IM ");
-                bytecode_print_im(sb, bci);
+                string_builder_append(sb, " = LOAD_INT ");
+                bytecode_print_im_int(sb, bci);
                 break;
             }
 
@@ -2103,8 +2297,7 @@ namespace Zodiac
             case Bytecode_Instruction::MUL:
             case Bytecode_Instruction::DIV:
             {
-                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
-                bytecode_iterator_advance_ip(bci);
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
 
                 uint32_t lhs_idx = bytecode_iterator_fetch_32(bci);
                 uint32_t rhs_idx = bytecode_iterator_fetch_32(bci);
@@ -2150,11 +2343,22 @@ namespace Zodiac
 
             case Bytecode_Instruction::CAST_INT:
             {
-                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
-                bytecode_iterator_advance_ip(bci);
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
                 auto val_idx = bytecode_iterator_fetch_32(bci);
 
                 string_builder_appendf(sb, "%%%" PRId64 " = CAST_INT ",
+                                       bci->local_temp_index++);
+                bytecode_print_size_spec(sb, size_spec); 
+                string_builder_appendf(sb, " %%%" PRIu32, val_idx);
+                break;
+            }
+
+            case Bytecode_Instruction::CAST_FLOAT:
+            {
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+                auto val_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = CAST_FLOAT ",
                                        bci->local_temp_index++);
                 bytecode_print_size_spec(sb, size_spec); 
                 string_builder_appendf(sb, " %%%" PRIu32, val_idx);
@@ -2291,23 +2495,39 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Size_Specifier::S32: assert(false);
+            case Bytecode_Size_Specifier::S32:
+            {
+                string_builder_append(sb, "S32");
+                break;
+            }
+
+            case Bytecode_Size_Specifier::R32:
+            {
+                string_builder_append(sb, "R32");
+                break;
+            }
+
             case Bytecode_Size_Specifier::U64: assert(false);
             case Bytecode_Size_Specifier::S64:
             {
                 string_builder_append(sb, "S64");
                 break;
             }
+
+            case Bytecode_Size_Specifier::R64:
+            {
+                string_builder_append(sb, "R64");
+                break;
+            }
             default: assert(false);
         }
     }
 
-    void bytecode_print_im(String_Builder *sb, Bytecode_Iterator *bci)
+    void bytecode_print_im_int(String_Builder *sb, Bytecode_Iterator *bci)
     {
         assert(sb);
 
-        auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_byte(bci);
-        bytecode_iterator_advance_ip(bci);
+        auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
 
         bytecode_print_size_spec(sb, size_spec); 
 
@@ -2360,5 +2580,25 @@ namespace Zodiac
             }
             default: assert(false);
         }
+    }
+
+    void bytecode_print_im_float(String_Builder *sb, Bytecode_Iterator *bci)
+    {
+        auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+
+        if (size_spec == Bytecode_Size_Specifier::R32)
+        {
+            uint32_t raw_val = bytecode_iterator_fetch_32(bci);
+            float val = *((float*)&raw_val);
+
+            string_builder_appendf(sb, "float %f", val);
+        }
+        else if (size_spec == Bytecode_Size_Specifier::R64)
+        {
+            uint64_t raw_val = bytecode_iterator_fetch_64(bci);
+            double val = *((double*)&raw_val);
+            string_builder_append(sb, "double %f", val);
+        }
+        else assert(false);
     }
 }

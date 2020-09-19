@@ -55,15 +55,21 @@ AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, 
     {
         case Builtin_Type_Kind::INVALID: assert(false);
 
-        case Builtin_Type_Kind::VOID: 
+        case Builtin_Type_Kind::VOID:
         {
             result = ast_type_new(allocator, AST_Type_Kind::VOID, size);
             break;
         }
 
-        case Builtin_Type_Kind::INTEGER: 
+        case Builtin_Type_Kind::INTEGER:
         {
             result = ast_integer_type_new(allocator, size, sign);
+            break;
+        }
+
+        case Builtin_Type_Kind::FLOAT:
+        {
+            result = ast_float_type_new(allocator, size);
             break;
         }
 

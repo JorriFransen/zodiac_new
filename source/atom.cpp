@@ -1,6 +1,7 @@
 #include "atom.h"
 
 #include <stdio.h>
+#include <cstdlib>
 
 namespace Zodiac
 {
@@ -103,6 +104,18 @@ uint64_t atom_to_u64(const Atom& atom, uint64_t base /*= 10*/)
         result *= base;
         uint64_t digit_value = _digit_value(atom.data[i]);
         result += digit_value;
+    }
+
+    return result;
+}
+
+float atom_to_float(const Atom &atom)
+{
+    char *end_ptr;
+    float result = strtof(atom.data, &end_ptr);
+    if (result == 0.0 && end_ptr != atom.data + atom.length)
+    {
+        assert(false);
     }
 
     return result;

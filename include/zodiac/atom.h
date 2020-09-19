@@ -31,6 +31,8 @@ bool operator==(const Atom& a, const Atom& b);
 int64_t atom_to_s64(const Atom& atom, uint64_t base = 10);
 uint64_t atom_to_u64(const Atom& atom, uint64_t base = 10);
 
+float atom_to_float(const Atom &atom);
+
 String string_ref(const Atom &atom);
 
 }

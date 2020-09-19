@@ -564,13 +564,20 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::NUMBER_LITERAL:
+            case Expression_PTN_Kind::INTEGER_LITERAL:
             {
-                assert(((int64_t)ptn->number_literal.value.u64) ==
-                       ptn->number_literal.value.s64);
-                return ast_number_literal_expression_new(allocator,
-                                                         ptn->number_literal.value.s64,
-                                                         begin_fp, end_fp);
+                assert(((int64_t)ptn->integer_literal.value.u64) ==
+                       ptn->integer_literal.value.s64);
+                return ast_integer_literal_expression_new(allocator,
+                                                          ptn->integer_literal.value.s64,
+                                                          begin_fp, end_fp);
+                break;
+            }
+
+            case Expression_PTN_Kind::FLOAT_LITERAL:
+            {
+                return ast_float_literal_expression_new(allocator, ptn->float_literal.r32,
+                                                        begin_fp, end_fp);
                 break;
             }
 
@@ -779,7 +786,8 @@ namespace Zodiac
 
             case Expression_PTN_Kind::COMPOUND: assert(false);
             case Expression_PTN_Kind::SUBSCRIPT: assert(false);
-            case Expression_PTN_Kind::NUMBER_LITERAL: assert(false);
+            case Expression_PTN_Kind::INTEGER_LITERAL: assert(false);
+            case Expression_PTN_Kind::FLOAT_LITERAL: assert(false);
             case Expression_PTN_Kind::STRING_LITERAL: assert(false);
             case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
             case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
@@ -1283,16 +1291,26 @@ namespace Zodiac
         return result;
     }
 
-    AST_Expression *ast_number_literal_expression_new(Allocator *allocator, int64_t value,
-                                                      const File_Pos &begin_fp,
-                                                      const File_Pos &end_fp)
+    AST_Expression *ast_integer_literal_expression_new(Allocator *allocator, int64_t value,
+                                                       const File_Pos &begin_fp,
+                                                       const File_Pos &end_fp)
     {
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::NUMBER_LITERAL,
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::INTEGER_LITERAL,
                                          begin_fp, end_fp);
         
         result->is_const = true;
-        result->number_literal.s64 = value;
+        result->integer_literal.s64 = value;
 
+        return result;
+    }
+
+    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float value,
+                                                     const File_Pos & begin_fp,
+                                                     const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::FLOAT_LITERAL,
+                                         begin_fp, end_fp);
+        result->float_literal.r32 = value;
         return result;
     }
 
@@ -1450,6 +1468,12 @@ namespace Zodiac
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::INTEGER, bit_size);
         result->integer.sign = sign;
+        return result;
+    }
+
+    AST_Type *ast_float_type_new(Allocator *allocator, uint64_t bit_size)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::FLOAT, bit_size);
         return result;
     }
 
@@ -1975,9 +1999,15 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST: assert(false);
 
-            case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::INTEGER_LITERAL:
             {
-                printf("%" PRId64, ast_expr->number_literal.s64);
+                printf("%" PRId64, ast_expr->integer_literal.s64);
+                break;
+            }
+
+            case AST_Expression_Kind::FLOAT_LITERAL:
+            {
+                printf("%f", ast_expr->float_literal.r32);
                 break;
             }
 
@@ -2154,13 +2184,26 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::FLOAT:
+            {
+                if (type->bit_size == 32) string_builder_append(sb, "float");
+                else if (type->bit_size == 64) string_builder_append(sb, "double");
+                else assert(false);
+                break; 
+            }
+
             case AST_Type_Kind::BOOL:
             {
                 string_builder_appendf(sb, "b%" PRIu64, type->bit_size);
                 break;
             }
 
-            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::POINTER:
+            {
+                string_builder_append(sb, "*");
+                ast_print_type(sb, type->pointer.base);
+                break;
+            }
 
             case AST_Type_Kind::VOID:
             {

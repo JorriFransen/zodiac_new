@@ -984,7 +984,8 @@ namespace Zodiac
             case AST_Expression_Kind::CAST:  assert(false);
 
 
-            case AST_Expression_Kind::NUMBER_LITERAL: 
+            case AST_Expression_Kind::INTEGER_LITERAL: 
+            case AST_Expression_Kind::FLOAT_LITERAL: 
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
@@ -1445,10 +1446,21 @@ namespace Zodiac
                 {
                     assert(ast_decl->type);
 
+                    auto ret_type = ast_decl->type->function.return_type;
+
                     if (body && !(ast_decl->decl_flags & AST_DECL_FLAG_NORETURN))
-                        assert(ast_decl->type->function.return_type == inferred_return_type ||
-                               (ast_decl->type->function.return_type == Builtin::type_void &&
-                                inferred_return_type == nullptr));
+                    {
+                        if (!(ret_type == inferred_return_type ||
+                               (ret_type == Builtin::type_void &&
+                                inferred_return_type == nullptr)))
+                        {
+                            AST_Type *ac_type = inferred_return_type;
+                            if (!ac_type) ac_type = Builtin::type_void;
+                            resolver_report_mismatching_types(resolver, ast_decl, ret_type,
+                                                              ac_type);
+                            result = false;
+                        }
+                    }
                 }
 
                 if (result)
@@ -2008,12 +2020,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::INTEGER_LITERAL:
             {
                 if (suggested_type)
                 {
                     assert(suggested_type->kind == AST_Type_Kind::INTEGER);
-                    if (resolver_literal_fits_in_type(ast_expr->number_literal, suggested_type))
+                    if (resolver_literal_fits_in_type(ast_expr->integer_literal, suggested_type))
                     {
                         ast_expr->type = suggested_type;
                         result = true;
@@ -2025,6 +2037,13 @@ namespace Zodiac
                     ast_expr->type = Builtin::type_s64;
                     result = true;
                 }
+                break;
+            }
+
+            case AST_Expression_Kind::FLOAT_LITERAL:
+            {
+                ast_expr->type = Builtin::type_float;
+                result = true;
                 break;
             }
 
@@ -2260,6 +2279,7 @@ namespace Zodiac
                 }
 
                 AST_Type *return_type = nullptr;
+                bool ret_mismatch = false;
                 if (ts->function.return_type_spec)
                 {
                     if (!try_resolve_types(resolver, ts->function.return_type_spec, scope,
@@ -2269,7 +2289,17 @@ namespace Zodiac
                     }
 
                     assert(return_type);
-                    if (suggested_type) assert(return_type == suggested_type);
+                    if (suggested_type)
+                    {
+                        if (return_type != suggested_type)
+                        {
+                            ret_mismatch = true;
+                            resolver_report_mismatching_types(resolver,
+                                                              ts->function.return_type_spec,
+                                                              suggested_type,
+                                                              return_type);
+                        }
+                    }
                 } 
                 else if (suggested_type)
                 {
@@ -2280,12 +2310,15 @@ namespace Zodiac
                     return_type = Builtin::type_void; 
                 }
 
-                auto func_type = find_or_create_function_type(resolver, param_types,
-                                                              return_type, scope);
-                assert(func_type);
-                result = true;
-                ts->type = func_type;
-                *type_target = func_type;
+                if (!ret_mismatch)
+                {
+                    auto func_type = find_or_create_function_type(resolver, param_types,
+                                                                  return_type, scope);
+                    assert(func_type);
+                    result = true;
+                    ts->type = func_type;
+                    *type_target = func_type;
+                }
                 break;
             }
 
@@ -2445,6 +2478,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::FLOAT: assert(false);
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
 
@@ -2875,7 +2909,8 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::INTEGER_LITERAL:
+            case AST_Expression_Kind::FLOAT_LITERAL:
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
@@ -2961,7 +2996,7 @@ namespace Zodiac
         return resolve_job_new(allocator,  output_file_name);
     }
 
-    bool resolver_literal_fits_in_type(const Number_Literal &number_literal, AST_Type *type)
+    bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)
     {
         assert(type->kind == AST_Type_Kind::INTEGER);
 
@@ -3054,14 +3089,14 @@ namespace Zodiac
                               (int)atom.length, atom.data);
     }
 
-    void resolver_report_mismatching_types(Resolver *resolver, AST_Expression *expr,
+    void resolver_report_mismatching_types(Resolver *resolver, AST_Node *node,
                                            AST_Type *expected_type, AST_Type *actual_type)
     {
         for (int64_t i = 0; i < resolver->errors.count; i++)
         {
             auto &err = resolver->errors[i];
             if (err.kind == Resolve_Error_Kind::MISMATCHING_TYPES &&
-                    err.ast_node == expr)
+                    err.ast_node == node)
             {
                 return;
             }
@@ -3074,7 +3109,7 @@ namespace Zodiac
 
         resolver_report_error(resolver,
                               Resolve_Error_Kind::MISMATCHING_TYPES,
-                              expr, 
+                              node, 
                               "Mismatching types: expected '%s', got '%s'",
                               expected_type_str.data,
                               actual_type_str.data);

@@ -26,16 +26,17 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST: assert(false);
 
-            case AST_Expression_Kind::NUMBER_LITERAL:
+            case AST_Expression_Kind::INTEGER_LITERAL:
             {
                 assert(expr->type == Builtin::type_s64);
                 Const_Value result = {};
                 result.type = expr->type;
-                result.s64 = expr->number_literal.s64;
+                result.s64 = expr->integer_literal.s64;
                 return result;
                 break;
             }
 
+            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
