@@ -681,7 +681,12 @@ namespace Zodiac
                 break;
             }
 
-            case BINOP_LT: assert(false);
+            case BINOP_LT:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::LT);
+                break;
+            }
+
             case BINOP_LTEQ: assert(false);
             case BINOP_GT: 
             {
@@ -1900,6 +1905,28 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type *bytecode_type_from_size_spec(Bytecode_Size_Specifier sp)
+    {
+        switch (sp)
+        {
+            case Bytecode_Size_Specifier::INVALID: assert(false);
+            case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+            case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
+            case Bytecode_Size_Specifier::U8: return Builtin::type_u8;
+            case Bytecode_Size_Specifier::S8: return Builtin::type_s8;
+            case Bytecode_Size_Specifier::U16: return Builtin::type_u16;
+            case Bytecode_Size_Specifier::S16: return Builtin::type_s16;
+            case Bytecode_Size_Specifier::U32: return Builtin::type_u32;
+            case Bytecode_Size_Specifier::S32: return Builtin::type_s32;
+            case Bytecode_Size_Specifier::R32: return Builtin::type_float;
+            case Bytecode_Size_Specifier::U64: return Builtin::type_u64;
+            case Bytecode_Size_Specifier::S64: return Builtin::type_s64; 
+            case Bytecode_Size_Specifier::R64: return Builtin::type_double;
+        }
+
+        return nullptr;
+    }
+
     Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder)
     {
         assert(builder);
@@ -2337,6 +2364,7 @@ namespace Zodiac
             case Bytecode_Instruction::EQ:
             case Bytecode_Instruction::NEQ:
             case Bytecode_Instruction::GT:
+            case Bytecode_Instruction::LT:
             case Bytecode_Instruction::ADD:
             case Bytecode_Instruction::SUB:
             case Bytecode_Instruction::REM: 
@@ -2350,6 +2378,7 @@ namespace Zodiac
 
                 const char *op_name;
                 if (inst == Bytecode_Instruction::GT) op_name = "GT";
+                else if (inst == Bytecode_Instruction::LT) op_name = "LT";
                 else if (inst == Bytecode_Instruction::EQ) op_name = "EQ";
                 else if (inst == Bytecode_Instruction::NEQ) op_name = "NEQ";
                 else if (inst == Bytecode_Instruction::ADD) op_name = "ADD";

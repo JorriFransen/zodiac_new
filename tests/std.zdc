@@ -49,15 +49,21 @@ print_float :: func (f: float)
     print_num(@cast(s64, int_part));
     print(".");
 
+    it := 6;
+
     rem := f - int_part;
     rem = rem * 10;
-    while (rem > @cast(s32, 0))
+
+    while (rem > 0.001)
     {
         int_part = @cast(s32, rem);
         print_num(@cast(s64, int_part));
 
-        rem = rem - int_part;
+        rem = rem - @cast(float, int_part);
         rem = rem * 10;
+        it = it - 1;
+
+        if (it < 1) return;
     }
     return;
 }

@@ -738,6 +738,54 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::LT:
+                {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto lhs_index = interpreter_fetch<uint32_t>(interp);
+                    auto rhs_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto lhs_val = interpreter_load_temporary(interp, lhs_index);
+                    auto rhs_val = interpreter_load_temporary(interp, rhs_index);
+
+
+                    auto result_val = interpreter_push_temporary(interp, lhs_val->type);
+
+                    assert(lhs_val->type == rhs_val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::S8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::S16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::S32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.boolean =
+                                lhs_val->value.int_literal.s64 < rhs_val->value.int_literal.s64;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::R32:
+                        {
+                            result_val->value.boolean = 
+                                lhs_val->value.float_literal.r32 <
+                                rhs_val->value.float_literal.r32;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::R64: assert(false);
+                        default: assert(false);
+
+                    }
+                    break;
+                }
+
                 case Bytecode_Instruction::ADD:
                 {
                     auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);

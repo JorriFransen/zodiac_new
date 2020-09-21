@@ -693,9 +693,65 @@ namespace Zodiac
                         llvm_push_temporary(builder, result);
                         break;
                     }
+
+                    case Bytecode_Size_Specifier::R32:
+                    case Bytecode_Size_Specifier::R64:
+                    {
+                        LLVMValueRef result = LLVMBuildFCmp(builder->llvm_builder, LLVMRealOGT,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
                     default: assert(false);
                 }
                 break;
+            }
+
+            case Bytecode_Instruction::LT:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntSLT,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
+                    case Bytecode_Size_Specifier::R32:
+                    case Bytecode_Size_Specifier::R64:
+                    {
+                        LLVMValueRef result = LLVMBuildFCmp(builder->llvm_builder, LLVMRealOLT,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
+                    default: assert(false);
+                }
                 break;
             }
 
@@ -780,6 +836,16 @@ namespace Zodiac
                         llvm_push_temporary(builder, result);
                         break;
                     }
+
+                    case Bytecode_Size_Specifier::R32:
+                    case Bytecode_Size_Specifier::R64:
+                    {
+                        LLVMValueRef result = LLVMBuildFSub(builder->llvm_builder,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
                     default: assert(false);
                 }
                 break;
@@ -822,7 +888,52 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::MUL: assert(false);
+            case Bytecode_Instruction::MUL:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+
+                auto lhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                LLVMValueRef lhs_val = builder->temps[lhs_idx];
+                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+
+                switch (size_spec)
+                {
+                    case Bytecode_Size_Specifier::INVALID: assert(false);
+                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                    case Bytecode_Size_Specifier::U8: assert(false);
+                    case Bytecode_Size_Specifier::S8: assert(false);
+                    case Bytecode_Size_Specifier::U16: assert(false);
+                    case Bytecode_Size_Specifier::S16: assert(false);
+                    case Bytecode_Size_Specifier::U32: assert(false);
+                    case Bytecode_Size_Specifier::S32: assert(false);
+                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::S64:
+                    {
+                        LLVMValueRef result = LLVMBuildMul(builder->llvm_builder,
+                                                           lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
+                    case Bytecode_Size_Specifier::R32:
+                    case Bytecode_Size_Specifier::R64:
+                    {
+                        LLVMValueRef result = LLVMBuildFMul(builder->llvm_builder,
+                                                            lhs_val, rhs_val, "");
+                        llvm_push_temporary(builder, result);
+                        break;
+                    }
+
+                    default: assert(false);
+                }
+                break;
+            }
 
             case Bytecode_Instruction::DIV:
             {
@@ -913,35 +1024,36 @@ namespace Zodiac
                 auto val = builder->temps[val_idx];
                 assert(LLVMGetTypeKind(LLVMTypeOf(val)) == LLVMIntegerTypeKind);
 
-                AST_Type *target_type = nullptr;
+                AST_Type *target_type = bytecode_type_from_size_spec(size_spec);
+                assert(target_type);
+
+                LLVMValueRef result = nullptr;
 
                 bool is_signed = false;
-
-                switch (size_spec)
-                {
-                    case Bytecode_Size_Specifier::INVALID: assert(false);
-                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
-
-                    case Bytecode_Size_Specifier::U8:  target_type = Builtin::type_u8;  break;
-                    case Bytecode_Size_Specifier::S8:  target_type = Builtin::type_s8;  break;
-                    case Bytecode_Size_Specifier::U16: target_type = Builtin::type_u16; break;
-                    case Bytecode_Size_Specifier::S16: target_type = Builtin::type_s16; break;
-                    case Bytecode_Size_Specifier::U32: target_type = Builtin::type_u32; break;
-                    case Bytecode_Size_Specifier::S32: target_type = Builtin::type_s32; break;
-                    case Bytecode_Size_Specifier::U64: target_type = Builtin::type_u64; break;
-                    case Bytecode_Size_Specifier::S64: target_type = Builtin::type_s64; break;
-                                                       
-                    case Bytecode_Size_Specifier::R32: assert(false);
-                    case Bytecode_Size_Specifier::R64: assert(false);
-
-                }
-
-                assert(target_type);
                 if (target_type->integer.sign) is_signed = true;
+
                 LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder, target_type);
-                LLVMValueRef result = LLVMBuildIntCast2(builder->llvm_builder, val,
-                                                        llvm_dest_ty, is_signed, "");
+
+                if (target_type->kind == AST_Type_Kind::INTEGER)
+                {
+
+                    result = LLVMBuildIntCast2(builder->llvm_builder, val, llvm_dest_ty,
+                                               is_signed, "");
+                }
+                else if (target_type->kind == AST_Type_Kind::FLOAT)
+                {
+                    if (is_signed)
+                    {
+                        result = LLVMBuildSIToFP(builder->llvm_builder, val, llvm_dest_ty, "");
+                    }
+                    else
+                    {
+                        result = LLVMBuildUIToFP(builder->llvm_builder, val, llvm_dest_ty, "");
+                    }
+                }
+                else assert(false);
+
+                assert(result);
                 llvm_push_temporary(builder, result);
                 break;
             }
@@ -970,12 +1082,13 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::U16: assert(false);
                     case Bytecode_Size_Specifier::S16: assert(false);
                     case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
                     case Bytecode_Size_Specifier::U64: assert(false);
+
+                    case Bytecode_Size_Specifier::S32:
                     case Bytecode_Size_Specifier::S64:
                     {
-                        LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder,
-                                                                      Builtin::type_s64);
+                        auto dest_ty = bytecode_type_from_size_spec(size_spec);
+                        LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder, dest_ty);
                         LLVMValueRef result = LLVMBuildFPToSI(builder->llvm_builder, val,
                                                               llvm_dest_ty, "");
                         llvm_push_temporary(builder, result);

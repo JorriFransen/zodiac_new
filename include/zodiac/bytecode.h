@@ -34,19 +34,20 @@ namespace Zodiac
         EQ              = 0x12,
         NEQ             = 0x13,
         GT              = 0x14,
-        ADD             = 0x15,
-        SUB             = 0x16,
-        REM             = 0x17,
-        MUL             = 0x18,
-        DIV             = 0x19,
+        LT              = 0x15,
+        ADD             = 0x16,
+        SUB             = 0x17,
+        REM             = 0x18,
+        MUL             = 0x19,
+        DIV             = 0x1A,
 
-        JUMP            = 0x1A,
-        JUMP_IF         = 0x1B,
-        CAST_INT        = 0x1C,
-        CAST_FLOAT      = 0x1D,
-        SYSCALL         = 0x1E,
-        AGG_OFFSET_PTR  = 0x1F,
-        ARR_OFFSET_PTR  = 0x20,
+        JUMP            = 0x1B,
+        JUMP_IF         = 0x1C,
+        CAST_INT        = 0x1D,
+        CAST_FLOAT      = 0x1E,
+        SYSCALL         = 0x1F,
+        AGG_OFFSET_PTR  = 0x20,
+        ARR_OFFSET_PTR  = 0x21,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -346,6 +347,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_new_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                        AST_Type *type);
     Bytecode_Value *bytecode_new_integer_literal(Bytecode_Builder *builder, AST_Type *type);
+
+    AST_Type *bytecode_type_from_size_spec(Bytecode_Size_Specifier sp);
 
     Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder);
     void bytecode_iterator_free(Bytecode_Iterator *bci);
