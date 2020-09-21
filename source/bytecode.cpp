@@ -687,14 +687,23 @@ namespace Zodiac
                 break;
             }
 
-            case BINOP_LTEQ: assert(false);
+            case BINOP_LTEQ:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::LTEQ);
+                break;
+            }
+
             case BINOP_GT: 
             {
                 bytecode_emit_instruction(builder, Bytecode_Instruction::GT);
                 break;
             }
 
-            case BINOP_GTEQ: assert(false);
+            case BINOP_GTEQ:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::GTEQ);
+                break;
+            }
 
             case BINOP_ADD: 
             {
@@ -2364,7 +2373,9 @@ namespace Zodiac
             case Bytecode_Instruction::EQ:
             case Bytecode_Instruction::NEQ:
             case Bytecode_Instruction::GT:
+            case Bytecode_Instruction::GTEQ:
             case Bytecode_Instruction::LT:
+            case Bytecode_Instruction::LTEQ:
             case Bytecode_Instruction::ADD:
             case Bytecode_Instruction::SUB:
             case Bytecode_Instruction::REM: 
@@ -2377,15 +2388,17 @@ namespace Zodiac
                 uint32_t rhs_idx = bytecode_iterator_fetch_32(bci);
 
                 const char *op_name;
-                if (inst == Bytecode_Instruction::GT) op_name = "GT";
-                else if (inst == Bytecode_Instruction::LT) op_name = "LT";
-                else if (inst == Bytecode_Instruction::EQ) op_name = "EQ";
-                else if (inst == Bytecode_Instruction::NEQ) op_name = "NEQ";
-                else if (inst == Bytecode_Instruction::ADD) op_name = "ADD";
-                else if (inst == Bytecode_Instruction::SUB) op_name = "SUB";
-                else if (inst == Bytecode_Instruction::REM) op_name = "REM";
-                else if (inst == Bytecode_Instruction::MUL) op_name = "MUL";
-                else if (inst == Bytecode_Instruction::DIV) op_name = "DIV";
+                if      (inst == Bytecode_Instruction::EQ)   op_name = "EQ";
+                else if (inst == Bytecode_Instruction::NEQ)  op_name = "NEQ";
+                else if (inst == Bytecode_Instruction::GT)   op_name = "GT";
+                else if (inst == Bytecode_Instruction::GTEQ) op_name = "GTEQ";
+                else if (inst == Bytecode_Instruction::LT)   op_name = "LT";
+                else if (inst == Bytecode_Instruction::LTEQ) op_name = "LT";
+                else if (inst == Bytecode_Instruction::ADD)  op_name = "ADD";
+                else if (inst == Bytecode_Instruction::SUB)  op_name = "SUB";
+                else if (inst == Bytecode_Instruction::REM)  op_name = "REM";
+                else if (inst == Bytecode_Instruction::MUL)  op_name = "MUL";
+                else if (inst == Bytecode_Instruction::DIV)  op_name = "DIV";
                 else assert(false);
 
                 string_builder_appendf(sb, "%%%" PRIu64 " = %s ", bci->local_temp_index,
