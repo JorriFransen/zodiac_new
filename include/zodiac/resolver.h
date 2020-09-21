@@ -217,6 +217,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name);
 
+    bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type);
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);

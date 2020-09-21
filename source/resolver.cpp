@@ -1935,19 +1935,46 @@ namespace Zodiac
                         auto func_type = ast_expr->call.ident_expression->type;
                         assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
+                        bool arg_res = true;
+
+                        assert(ast_expr->call.arg_expressions.count ==
+                               func_type->function.param_types.count);
+
                         for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
                         {
                             auto arg_expr = ast_expr->call.arg_expressions[i];
                             if (!try_resolve_types(resolver, arg_expr, scope))
                             {
+                                arg_res = false;
                                 assert(false);
                             }
 
-                            if (result)
+                            auto param_type = func_type->function.param_types[i];
+                            assert(param_type);
+                            if (arg_res &&
+                                !(arg_expr->type == param_type))
                             {
-                                assert(arg_expr->type == func_type->function.param_types[i]);
+                                if (resolver_valid_type_conversion(arg_expr->type, param_type))
+                                {
+                                    auto new_arg_expr =
+                                        ast_cast_expression_new(resolver->allocator,
+                                                                arg_expr, param_type,
+                                                                arg_expr->begin_file_pos,
+                                                                arg_expr->end_file_pos);
+                                    new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                                    ast_expr->call.arg_expressions[i] = new_arg_expr;
+
+                                    if (!try_resolve_types(resolver, new_arg_expr, scope))
+                                    {
+                                        assert(false); 
+                                    }
+                                }
+                                else assert(false);
                             }
+                            else if (!arg_res) assert(false);
                         }
+
+                        assert(arg_res);
 
                         ast_expr->type = func_type->function.return_type;
                         result = true;
@@ -3028,6 +3055,40 @@ namespace Zodiac
                                                   const char *output_file_name)
     {
         return resolve_job_new(allocator,  output_file_name);
+    }
+
+    bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type)
+    {
+        assert(type);
+        assert(target_type);
+
+        switch (type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                if (target_type->kind == AST_Type_Kind::INTEGER)
+                {
+                    if (type->integer.sign == target_type->integer.sign)
+                    {
+                        return type->bit_size < target_type->bit_size;
+                    } 
+                    else assert(false);
+                }
+                else assert(false);
+
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
     }
 
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)
