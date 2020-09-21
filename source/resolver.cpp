@@ -1969,15 +1969,23 @@ namespace Zodiac
                                         assert(false); 
                                     }
                                 }
-                                else assert(false);
+                                else 
+                                {
+                                    resolver_report_mismatching_types(resolver, arg_expr,
+                                                                     param_type, arg_expr->type);
+                                    arg_res = false;
+                                    result = false;
+                                }
                             }
                             else if (!arg_res) assert(false);
                         }
 
-                        assert(arg_res);
 
-                        ast_expr->type = func_type->function.return_type;
-                        result = true;
+                        if (arg_res)
+                        {
+                            ast_expr->type = func_type->function.return_type;
+                            result = true;
+                        }
                     }
                 }
 
@@ -3082,7 +3090,15 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT:
+            {
+                if (target_type->kind == AST_Type_Kind::INTEGER) 
+                {
+                    return false;
+                }
+                else assert(false);
+            }
+
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
