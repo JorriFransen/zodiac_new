@@ -127,13 +127,12 @@ restart:
         __1_CHAR_TOKEN_CASE('[', TOK_LBRACK);
         __1_CHAR_TOKEN_CASE(']', TOK_RBRACK);
 
-        __1_CHAR_TOKEN_CASE('<', TOK_LT);
-        __1_CHAR_TOKEN_CASE('>', TOK_GT);
-
         __1_CHAR_TOKEN_CASE('+', TOK_PLUS);
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
+        __2_CHAR_TOKEN_CASE('<', TOK_LT, '=', TOK_LTEQ);
+        __2_CHAR_TOKEN_CASE('>', TOK_GT, '=', TOK_GTEQ);
         __2_CHAR_TOKEN_CASE('=', TOK_EQ, '=', TOK_EQ_EQ);
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
         __2_CHAR_TOKEN_CASE('!', TOK_BANG, '=', TOK_NEQ);
