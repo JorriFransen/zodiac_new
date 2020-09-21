@@ -45,5 +45,19 @@ print_num :: func (n: s64)
 
 print_float :: func (f: float)
 {
+    int_part := @cast(s32, f);
+    print_num(@cast(s64, int_part));
+    print(".");
 
+    rem := f - int_part;
+    rem = rem * 10;
+    while (rem > @cast(s32, 0))
+    {
+        int_part = @cast(s32, rem);
+        print_num(@cast(s64, int_part));
+
+        rem = rem - int_part;
+        rem = rem * 10;
+    }
+    return;
 }

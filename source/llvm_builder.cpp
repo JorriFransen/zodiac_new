@@ -972,7 +972,7 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::U32: assert(false);
                     case Bytecode_Size_Specifier::S32: assert(false);
                     case Bytecode_Size_Specifier::U64: assert(false);
-                    case Bytecode_Size_Specifier::S64: 
+                    case Bytecode_Size_Specifier::S64:
                     {
                         LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder,
                                                                       Builtin::type_s64);

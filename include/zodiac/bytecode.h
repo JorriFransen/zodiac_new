@@ -288,6 +288,9 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast_int_int(Bytecode_Builder *builder,
                                                Bytecode_Value *operand_val,
                                                AST_Type *target_type);
+    Bytecode_Value *bytecode_emit_cast_int_float(Bytecode_Builder *builder,
+                                                 Bytecode_Value *operand_val,
+                                                 AST_Type *target_type);
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type);

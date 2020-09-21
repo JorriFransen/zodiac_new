@@ -1848,10 +1848,10 @@ namespace Zodiac
 
                 AST_Type *result_type = nullptr;
 
-                if (lhs->type != rhs->type)
+                if (lhs->type != rhs->type &&
+                    lhs->type->kind == AST_Type_Kind::INTEGER)
                 {
-                    assert(lhs->type->kind == AST_Type_Kind::INTEGER);
-                    assert(rhs->type->kind == AST_Type_Kind::INTEGER);
+                    assert(lhs->type->kind == rhs->type->kind);
 
                     if (lhs->type->bit_size == rhs->type->bit_size)
                     {
@@ -1878,8 +1878,34 @@ namespace Zodiac
                     }
                     else assert(false);
                 }
+                else if (lhs->type != rhs->type)
+                {
+                    if (lhs->type->kind == AST_Type_Kind::FLOAT &&
+                        lhs->type->bit_size >= rhs->type->bit_size &&
+                        rhs->type->kind == AST_Type_Kind::INTEGER &&
+                        rhs->type->integer.sign)
+                    {
+                        result_type = lhs->type;
+                        ast_expr->binary.rhs = ast_cast_expression_new(resolver->allocator,
+                                                                       rhs, result_type,
+                                                                       rhs->begin_file_pos,
+                                                                       rhs->end_file_pos);
+                        ast_expr->binary.rhs->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                        if (!try_resolve_types(resolver, ast_expr->binary.rhs, scope))
+                        {
+                            assert(false);
+                        }
+                    }
+                    else
+                    {
+                        resolver_report_mismatching_types(resolver, ast_expr, lhs->type,
+                                                          rhs->type);
+                        return false;
+                    }
+                }
                 else
                 {
+                    assert(lhs->type == rhs->type);
                     result_type = lhs->type;
                 }
 
@@ -2008,6 +2034,13 @@ namespace Zodiac
                         result = true;
                         result_type = target_type;
                     }
+                    else if (target_type->kind == AST_Type_Kind::FLOAT)
+                    {
+                        assert(operand->type->kind == AST_Type_Kind::FLOAT ||
+                               operand->type->kind == AST_Type_Kind::INTEGER);
+                        result = true;
+                        result_type = target_type;
+                    }
                     else assert(false);
                 }
 
@@ -2024,7 +2057,8 @@ namespace Zodiac
             {
                 if (suggested_type)
                 {
-                    assert(suggested_type->kind == AST_Type_Kind::INTEGER);
+                    assert(suggested_type->kind == AST_Type_Kind::INTEGER ||
+                           suggested_type->kind == AST_Type_Kind::FLOAT);
                     if (resolver_literal_fits_in_type(ast_expr->integer_literal, suggested_type))
                     {
                         ast_expr->type = suggested_type;
@@ -2998,31 +3032,60 @@ namespace Zodiac
 
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)
     {
-        assert(type->kind == AST_Type_Kind::INTEGER);
 
-        auto val = number_literal.s64;
+        if (type->kind == AST_Type_Kind::INTEGER)
+        {
+            auto val = number_literal.s64;
 
 #define CHECK_BIT_WIDTH_CASE(bit_width) \
-        case bit_width: { \
-            if (type->integer.sign) { \
-                return val >= INT##bit_width##_MIN && val <= INT##bit_width##_MAX; \
-            } else {\
-                return (uint##bit_width##_t)val >= 0 && \
-                       (uint##bit_width##_t)val <= UINT##bit_width##_MAX; \
-            } \
-        }
+            case bit_width: { \
+                if (type->integer.sign) { \
+                    return val >= INT##bit_width##_MIN && val <= INT##bit_width##_MAX; \
+                } else {\
+                    return (uint##bit_width##_t)val >= 0 && \
+                           (uint##bit_width##_t)val <= UINT##bit_width##_MAX; \
+                } \
+            }
 
-        switch (type->bit_size)
-        {
-            CHECK_BIT_WIDTH_CASE(8);
-            CHECK_BIT_WIDTH_CASE(16);
-            CHECK_BIT_WIDTH_CASE(32);
-            CHECK_BIT_WIDTH_CASE(64);
+            switch (type->bit_size)
+            {
+                CHECK_BIT_WIDTH_CASE(8);
+                CHECK_BIT_WIDTH_CASE(16);
+                CHECK_BIT_WIDTH_CASE(32);
+                CHECK_BIT_WIDTH_CASE(64);
 
-            default: assert(false);
-        }
+                default: assert(false);
+            }
 
 #undef CHECK_BIT_WIDTH_CASE
+        }
+        else if (type->kind == AST_Type_Kind::FLOAT)
+        {
+            
+            auto val = number_literal.s64;
+
+#define FLOAT_INT_MAX 0x1000000
+#define DOUBLE_INT_MAX 0x20000000000000
+
+            switch (type->bit_size)
+            {
+                case 32:
+                {
+                    return val >= (-FLOAT_INT_MAX) && val <= FLOAT_INT_MAX; 
+                }
+
+                case 64: assert(false);
+                {
+                    return val >= (-DOUBLE_INT_MAX) && val <= DOUBLE_INT_MAX; 
+                }
+
+                default: assert(false); 
+            }
+
+#undef FLOAT_INT_MAX 
+#undef DOUBLE_INT_MAX 
+        }
+        else assert(false);
     }
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)

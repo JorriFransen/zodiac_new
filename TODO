@@ -1,4 +1,7 @@
 
+Check call arg types agains param types
+
+float to int cast should make smarter use of the bitflags in the type specifier.
 
 Statements (function bodies) should remember their inferred return type, since an error might be reported on this in a later cycle. At the momement inferred return type will be null or type_void if the statement has been resolved in a previous cycle.
 

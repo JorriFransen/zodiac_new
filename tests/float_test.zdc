@@ -2,17 +2,36 @@
 _math :: import math;
 using _math;
 
+std :: import std;
+
 main :: func() -> s64
 {
     v3 : Vec3;
 
-    v3.x = 1.2;
-    v3.y = 2.3;
-    v3.z = 4.5;
+    v3.x = 1.23;
+    v3.y = 2.34;
+    v3.z = 4.55;
+
+    print_vec3(*v3);
 
     sum := v3.x + v3.y + v3.z;
 
+    std.print("sum: ");
+    std.print_float(sum);
+    std.println(" ");
     return @cast(s64, sum);
+}
+
+print_vec3 :: func (v: *Vec3)
+{
+    std.print("x: ");
+    std.print_float(v.x);
+    std.print(", y: ");
+    std.print_float(v.y);
+    std.print(", z: ");
+    std.print_float(v.z);
+    std.println(" ");
+    return;
 }
 
 #naked #noreturn _start :: func ()

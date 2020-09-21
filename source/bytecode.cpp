@@ -507,14 +507,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST:
             {
-                auto target_type = expression->cast.target_type;
-                if (target_type->kind == AST_Type_Kind::INTEGER)
-                {
-                    auto op_val = bytecode_emit_expression(builder,
-                                                           expression->cast.operand_expression);
-                    return bytecode_emit_cast_int_int(builder, op_val, target_type);
-                }
-                else assert(false);
+                return bytecode_emit_cast(builder, expression->cast.operand_expression,
+                                          expression->cast.target_type);
                 break;
             }
 
@@ -527,7 +521,14 @@ namespace Zodiac
             case AST_Expression_Kind::INTEGER_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             {
-                return bytecode_emit_integer_literal(builder, expression);
+                if (expression->type->kind == AST_Type_Kind::INTEGER)
+                {
+                    return bytecode_emit_integer_literal(builder, expression);
+                }
+                else if (expression->type->kind == AST_Type_Kind::FLOAT)
+                {
+                    return bytecode_emit_float_literal(builder, expression);
+                }
                 break;
             }
 
@@ -708,7 +709,11 @@ namespace Zodiac
                 break;
             }
 
-            case BINOP_MUL: assert(false);
+            case BINOP_MUL:
+            {
+                bytecode_emit_instruction(builder, Bytecode_Instruction::MUL);
+                break;
+            }
 
             case BINOP_DIV:
             {
@@ -985,7 +990,11 @@ namespace Zodiac
                 return bytecode_emit_cast_int_int(builder, operand_val, target_type);
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT:
+            {
+                return bytecode_emit_cast_int_float(builder, operand_val, target_type);
+            }
+
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
@@ -1301,6 +1310,25 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_emit_cast_int_float(Bytecode_Builder *builder,
+                                                 Bytecode_Value *operand_val,
+                                                 AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::FLOAT);
+        assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
+
+        auto op_type = operand_val->type;
+        assert(op_type->kind == AST_Type_Kind::INTEGER);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_INT);
+        bytecode_emit_size_spec(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type)
@@ -1449,24 +1477,42 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Expression *expr)
     {
-        assert(expr->kind == AST_Expression_Kind::FLOAT_LITERAL);
         assert(expr->type->kind == AST_Type_Kind::FLOAT);
 
         Bytecode_Value *result = nullptr;
 
-        if (expr->type->bit_size == 32)
+        if (expr->kind == AST_Expression_Kind::FLOAT_LITERAL)
         {
-            float val = expr->float_literal.r32;
-            result = bytecode_emit_float_literal(builder, expr->type, val, (double)val);
-        }
-        else if (expr->type->bit_size == 64)
-        {
-            assert(false);
-            // double val = expr->float_literal.r64;
-            //result = bytecode_emit_float_literal(builder, expr->type, (float)val, val);
+            if (expr->type->bit_size == 32)
+            {
+                float val = expr->float_literal.r32;
+                result = bytecode_emit_float_literal(builder, expr->type, val, (double)val);
+            }
+            else if (expr->type->bit_size == 64)
+            {
+                assert(false);
+                // double val = expr->float_literal.r64;
+                //result = bytecode_emit_float_literal(builder, expr->type, (float)val, val);
 
+            }
+            else assert(false);
         }
-        else assert(false);
+        if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL)
+        {
+            switch (expr->type->bit_size)
+            {
+                case 8: assert(false);
+                case 16: assert(false);
+                case 32: 
+                {
+                    float val = expr->integer_literal.s64;
+                    result = bytecode_emit_float_literal(builder, expr->type, val, (double)val);
+                    break;
+                }
+                case 64: assert(false);
+                default: assert(false);
+            }
+        }
 
         assert(result);
         return result;
