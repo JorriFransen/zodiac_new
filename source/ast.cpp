@@ -366,14 +366,16 @@ namespace Zodiac
                 AST_Expression *return_val_expr = nullptr;
                 if (ptn->return_stmt.expression)
                 {
-                    return_val_expr = ast_create_expression_from_ptn(allocator,
-                                                                     ptn->return_stmt.expression);
+                    return_val_expr =
+                        ast_create_expression_from_ptn(allocator, ptn->return_stmt.expression);
                     assert(return_val_expr);
                 }
 
                 return ast_return_statement_new(allocator, return_val_expr, begin_fp, end_fp);
                 break;
             }
+
+            case Statement_PTN_Kind::BREAK: assert(false);
 
             case Statement_PTN_Kind::ASSIGNMENT:
             {

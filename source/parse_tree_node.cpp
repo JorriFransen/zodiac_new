@@ -157,6 +157,8 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
             break;
         }
 
+        case Statement_PTN_Kind::BREAK: assert(false);
+
         case Statement_PTN_Kind::ASSIGNMENT:
         {
             free_ptn(allocator, ptn->assignment.ident_expression);
@@ -315,6 +317,13 @@ Statement_PTN *new_return_statement_ptn(Allocator *allocator, Expression_PTN *ex
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::RETURN, begin_fp, end_fp);
     result->return_stmt.expression = expr;
+    return result;
+}
+
+Statement_PTN *new_break_statement_ptn(Allocator *allocator, const File_Pos &begin_fp,
+                                       const File_Pos &end_fp)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::BREAK, begin_fp, end_fp);
     return result;
 }
 
@@ -900,6 +909,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             printf(";\n");
             break;
         }
+
+        case Statement_PTN_Kind::BREAK: assert(false);
 
         case Statement_PTN_Kind::ASSIGNMENT:
         {

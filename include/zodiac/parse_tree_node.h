@@ -64,6 +64,7 @@ enum class Statement_PTN_Kind
     DECLARATION,
     EXPRESSION,
     RETURN,
+    BREAK,
     ASSIGNMENT,
     WHILE,
     IF,
@@ -362,6 +363,8 @@ Statement_PTN *new_declaration_statement_ptn(Allocator *allocator, Declaration_P
                                              const File_Pos &begin_fp, const File_Pos &end_fp);
 Statement_PTN *new_return_statement_ptn(Allocator *allocator, Expression_PTN *expr,
                                         const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN *new_break_statement_ptn(Allocator *allocator, const File_Pos &begin_fp,
+                                       const File_Pos &end_fp);
 Statement_PTN *new_assignment_statement_ptn(Allocator *allocator, Expression_PTN *ident_expression,
                                             Expression_PTN *rhs_expression,
                                             const File_Pos &begin_fp,

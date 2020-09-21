@@ -59,6 +59,7 @@ namespace Zodiac
         array_init(err_allocator, &resolver->parsed_modules);
 
         resolver->llvm_error = false;
+        resolver->parse_error = false;
         array_init(err_allocator, &resolver->errors);
 
         
@@ -90,7 +91,9 @@ namespace Zodiac
     {
         assert(resolver);
 
-        if (resolver->errors.count == 0)
+        if (resolver->errors.count == 0 &&
+            !resolver->parse_error &&
+            !resolver->llvm_error)
         {
             assert(queue_count(&resolver->parse_job_queue) == 0);
             assert(queue_count(&resolver->ident_job_queue) == 0);
@@ -104,6 +107,7 @@ namespace Zodiac
 
         Resolve_Result result = {};
         result.error_count = resolver->errors.count;
+        result.parse_error = resolver->parse_error;
         result.llvm_error = resolver->llvm_error;
         return result;
     }
@@ -122,10 +126,19 @@ namespace Zodiac
                 auto job = queue_dequeue(&resolver->parse_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
 
-                assert(job_done);
-                auto ast_module = job->result.ast_module;
-                assert(ast_module);
-                queue_ident_job(resolver, ast_module, ast_module->module_scope);
+                if (!job_done)
+                {
+                    done = true;
+                    resolver->parse_error = true;
+                    break;
+                }
+                else
+                {
+                    assert(job_done);
+                    auto ast_module = job->result.ast_module;
+                    assert(ast_module);
+                    queue_ident_job(resolver, ast_module, ast_module->module_scope);
+                }
             }
 
             auto ident_job_count = queue_count(&resolver->ident_job_queue);
@@ -331,6 +344,11 @@ namespace Zodiac
                 Token_Stream *token_stream = lexer_new_token_stream(resolver->allocator,
                                                                     &lexed_file);
                 Parsed_File parsed_file = parser_parse_file(&resolver->parser, token_stream);
+                if (!parsed_file.valid) 
+                {
+                    result = false;
+                    break;
+                }
 
                 if (options->print_parse_tree) parsed_file_print(&parsed_file);
 

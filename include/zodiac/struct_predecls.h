@@ -17,6 +17,7 @@ namespace Zodiac
 
     struct Parsed_File
     {
+        bool valid = true;
         Array<Declaration_PTN*> declarations = {};
     };
 

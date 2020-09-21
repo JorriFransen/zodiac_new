@@ -14,6 +14,7 @@ struct Parser
 {
     Allocator *allocator = nullptr;
     Build_Data *build_data = nullptr;
+    int64_t error_count = 0;
 };
 
 Parser parser_create(Allocator* allocator, Build_Data *build_data);

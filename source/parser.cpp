@@ -22,6 +22,7 @@ void parser_init(Allocator* allocator, Parser* parser, Build_Data *build_data)
 {
     parser->allocator = allocator;
     parser->build_data = build_data;
+    parser->error_count = 0;
 }
 
 Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts)
@@ -35,6 +36,7 @@ Parsed_File parser_parse_file(Parser* parser, Token_Stream* ts)
         array_append(&result.declarations, ptn);
     }
 
+    result.valid = parser->error_count == 0;
     return result;
 }
 
@@ -527,6 +529,22 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_KW_BREAK:
+        {
+            auto break_tok = ts->current_token();
+            ts->next_token();
+
+            auto end_fp = break_tok.end_file_pos;
+
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+            {
+                return nullptr;
+            }
+
+            return new_break_statement_ptn(parser->allocator, begin_fp, end_fp);
+            break;
+        }
+
         case TOK_KW_WHILE:
         {
             ts->next_token();
@@ -572,7 +590,7 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             }
 
             auto then_stmt = parser_parse_statement(parser, ts);
-            assert(then_stmt);
+            if (!then_stmt) return nullptr;
 
             Statement_PTN *else_stmt = nullptr;
 
@@ -1221,11 +1239,8 @@ bool parser_expect_token(Parser* parser, Token_Stream* ts, Token_Kind kind)
     if (!parser_match_token(ts, kind))
     {
         auto ct = ts->current_token();
-        auto fp = ct.begin_file_pos;
-        fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": ", fp.file_name.data, fp.line, fp.column);
-        fprintf(stderr, "Error: Expected token: \"%s\", got: \"%s\"\n",
-                token_kind_name(kind), token_kind_name(ct.kind));
-        assert(false); // report error
+        parser_report_error(parser, ts, "Expected token: \"%s\", got: \"%s\"",
+                            token_kind_name(kind), token_kind_name(ct.kind));
         return false;
     }
 
@@ -1326,6 +1341,8 @@ void parser_report_error(Parser* parser, Token_Stream* ts, const char* format, v
 
     auto ct = ts->current_token();
     auto bfp = ct.begin_file_pos;
+
+    parser->error_count += 1;
 
     fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: ",
             bfp.file_name.data, bfp.line, bfp.column);

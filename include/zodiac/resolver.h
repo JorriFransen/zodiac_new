@@ -79,6 +79,7 @@ namespace Zodiac
 
         Array<Parsed_Module> parsed_modules = {};
 
+        bool parse_error = false;
         bool llvm_error = false;
         Array<Resolve_Error> errors = {};
     };
@@ -86,6 +87,7 @@ namespace Zodiac
     struct Resolve_Result
     {
         uint64_t error_count = 0;
+        bool parse_error = false;
         bool llvm_error = false;
     };
 
