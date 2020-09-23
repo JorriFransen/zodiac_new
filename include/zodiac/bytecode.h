@@ -255,6 +255,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
                                          Atom name);
 
+    Bytecode_Value *bytecode_emit_constant(Bytecode_Builder *builder, AST_Declaration *decl);
+
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand_expr,
                                        AST_Type *target_type);
     Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder, AST_Expression *operand_expr,

@@ -674,7 +674,24 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                if (ast_decl->constant.type_spec)
+                {
+                    result = try_resolve_identifiers(resolver, ast_decl->constant.type_spec,
+                                                     scope);
+                }
+
+                assert(ast_decl->constant.init_expression);
+                if (result)
+                {
+                    result = try_resolve_identifiers(resolver,
+                                                     ast_decl->constant.init_expression,
+                                                     scope);
+                }
+
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER:
             {
@@ -784,10 +801,30 @@ namespace Zodiac
                 {
                     result = false;
                 }
-
-                if (!try_resolve_identifiers(resolver, rhs, scope))
+                else
                 {
-                    result = false;
+                    AST_Declaration *lhs_decl = resolver_get_declaration(lhs);
+                    assert(lhs_decl);
+
+                    if (lhs_decl->kind == AST_Declaration_Kind::CONSTANT)
+                    {
+                        resolver_report_error(resolver, Resolve_Error_Kind::ASSIGNING_TO_CONST,
+                                              ast_stmt, "Assigning to a constant value");
+                        result = false;
+                    }
+                    else
+                    {
+                        assert(lhs_decl->kind == AST_Declaration_Kind::VARIABLE ||
+                               lhs_decl->kind == AST_Declaration_Kind::PARAMETER);
+                    }
+                }
+
+                if (result)
+                {
+                    if (!try_resolve_identifiers(resolver, rhs, scope))
+                    {
+                        result = false;
+                    }
                 }
 
                 break;
@@ -1135,6 +1172,7 @@ namespace Zodiac
                     assert(index >= 0);
                     
                     ast_expr->dot.child_index = index;
+                    ast_expr->dot.child_decl = child_decl;
                 }
 
                 result = true;
@@ -1400,7 +1438,39 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                AST_Type *ts_type = nullptr;
+                auto init_expr = ast_decl->constant.init_expression;
+
+                if (ast_decl->constant.type_spec)
+                {
+                    result = try_resolve_types(resolver, ast_decl->constant.type_spec, scope, 
+                                               &ts_type, nullptr);
+                }
+
+                if (result)
+                {
+                    result = try_resolve_types(resolver, init_expr, ts_type, scope);
+                }
+
+                if (result)
+                {
+                    if (ts_type && (ts_type != init_expr->type))
+                    {
+                        resolver_report_mismatching_types(resolver, init_expr, ts_type,
+                                                          init_expr->type);
+                        result = false;
+                    }
+                    else
+                    {
+                        assert(init_expr->type);
+                        ast_decl->type = init_expr->type;
+                        ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                    }
+                }
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER:
             {
@@ -2966,6 +3036,7 @@ namespace Zodiac
 
                 if (decl_kind != AST_Declaration_Kind::VARIABLE &&
                     decl_kind != AST_Declaration_Kind::PARAMETER &&
+                    decl_kind != AST_Declaration_Kind::CONSTANT &&
                     decl_kind != AST_Declaration_Kind::TYPE)
                 {
                     assert(false); 
@@ -3133,6 +3204,41 @@ namespace Zodiac
                                                   const char *output_file_name)
     {
         return resolve_job_new(allocator,  output_file_name);
+    }
+
+    AST_Declaration *resolver_get_declaration(AST_Expression *expr)
+    {
+        assert(expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+
+        switch (expr->kind)
+        {
+            case AST_Expression_Kind::INVALID: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER: return expr->identifier->declaration;
+
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+
+            case AST_Expression_Kind::DOT: return expr->dot.child_decl;
+
+            case AST_Expression_Kind::BINARY: assert(false);
+            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::COMPOUND: assert(false);
+
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                return resolver_get_declaration(expr->subscript.pointer_expression);
+                break;
+            }
+
+            case AST_Expression_Kind::CAST: assert(false);
+            case AST_Expression_Kind::INTEGER_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+        }
     }
 
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type)

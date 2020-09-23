@@ -66,7 +66,14 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::CONSTANT: assert(false);
+        case Declaration_PTN_Kind::CONSTANT:
+        {
+            if (ptn->constant.type_expression)
+                free_ptn(allocator, ptn->constant.type_expression);
+
+            free_ptn(allocator, ptn->constant.init_expression);
+            break;
+        }
 
         case Declaration_PTN_Kind::FUNCTION:
         {

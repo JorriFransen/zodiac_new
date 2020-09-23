@@ -781,7 +781,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                decl_val = bytecode_emit_constant(builder, decl);
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER:
             {
@@ -801,7 +805,12 @@ namespace Zodiac
         {
             case Bytecode_Value_Kind::INVALID: assert(false);
             case Bytecode_Value_Kind::NUMBER_LITERAL: assert(false);
-            case Bytecode_Value_Kind::TEMPORARY: assert(false);
+
+            case Bytecode_Value_Kind::TEMPORARY:
+            {
+                return decl_val;
+                break;
+            }
 
             case Bytecode_Value_Kind::ALLOCL:
             {
@@ -963,6 +972,16 @@ namespace Zodiac
                                                     decl->type);
         bytecode_push_local_alloc(builder, result, decl);
         result->name = name;
+
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_constant(Bytecode_Builder *builder, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+
+        auto result = bytecode_emit_expression(builder, decl->constant.init_expression);
+        assert(result->type == decl->type);
 
         return result;
     }

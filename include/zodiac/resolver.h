@@ -19,6 +19,7 @@ namespace Zodiac
         INVALID,
         UNDECLARED_IDENTIFIER,
         MISMATCHING_TYPES,
+        ASSIGNING_TO_CONST,
     };
 
     struct Resolve_Error
@@ -223,6 +224,8 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name);
+
+    AST_Declaration *resolver_get_declaration(AST_Expression *expr);
 
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type);
