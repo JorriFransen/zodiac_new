@@ -19,13 +19,20 @@ add_vec2 :: func (v: *Vec2)
     return v.x + v.y;
 }
 
-glob_int :: 5;
+glob_int_const :: 5;
 
 main :: func () -> s64
 {
-    std.print("glob_int: ");
-    std.print_num(glob_int);
+    std.print("glob_int_const: ");
+    std.print_num(glob_int_const);
     std.println(" ");
+    //glob_int_const = 4; // Illegal
+
+    loc_int_const :: 14;
+    std.print("loc_int_const: ");
+    std.print_num(loc_int_const);
+    std.println(" ");
+    //loc_int_const = 1; // Illegal
 
     count := 4;
     while (count > 0)

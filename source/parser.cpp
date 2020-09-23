@@ -176,6 +176,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
             result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr,
                                                   const_expr, identifier->self.begin_file_pos,
                                                   end_fp);
+            result->flags |= DPTN_FLAG_SEMICOLON;
         }
     }
     else if (parser_match_token(ts, TOK_EQ))
@@ -487,9 +488,14 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
                 }
             }
             assert(result);
-            if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+            if ((result->kind == Statement_PTN_Kind::DECLARATION && 
+                !(result->declaration->flags & DPTN_FLAG_SEMICOLON)) ||
+                 result->kind != Statement_PTN_Kind::DECLARATION)
             {
-                assert(false);
+                if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+                {
+                    assert(false);
+                }
             }
             return result;
             break;

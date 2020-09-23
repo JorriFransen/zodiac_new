@@ -2902,17 +2902,22 @@ namespace Zodiac
 
             case AST_Declaration_Kind::VARIABLE:
             {
-                //queue_emit_bytecode_job(resolver, entry_decl, scope);                
-                if (entry_decl->variable.init_expression)
+                auto init_expr = entry_decl->variable.init_expression;
+                if (init_expr)
                 {
-                    queue_emit_bytecode_jobs_from_expression(resolver,
-                                                             entry_decl->variable.init_expression,
-                                                             scope);
+                    queue_emit_bytecode_jobs_from_expression(resolver, init_expr, scope);
                 }
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         entry_decl->constant.init_expression,
+                                                         scope);
+                break;
+            }
+
             case AST_Declaration_Kind::PARAMETER: assert(false);
 
             case AST_Declaration_Kind::FUNCTION:
