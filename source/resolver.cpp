@@ -42,6 +42,8 @@ namespace Zodiac
         resolver->lexer = lexer_create(allocator, build_data);
         resolver->parser = parser_create(allocator, build_data);
 
+        resolver->break_node = nullptr;
+
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
         llvm_builder_init(allocator, &resolver->llvm_builder,
                           build_data, &resolver->bytecode_builder.program);
@@ -103,6 +105,7 @@ namespace Zodiac
             assert(queue_count(&resolver->emit_llvm_func_job_queue) == 0);
             assert(queue_count(&resolver->emit_llvm_binary_job_queue) == 0);
 
+            assert(resolver->break_node == nullptr);
         }
 
         Resolve_Result result = {};
@@ -803,6 +806,13 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Statement_Kind::BREAK:
+            {
+                assert(resolver->break_node);
+                result = true;
+                break;
+            }
+
             case AST_Statement_Kind::DECLARATION:
             {
                 result = try_resolve_identifiers(resolver, ast_stmt->declaration, scope);
@@ -824,11 +834,15 @@ namespace Zodiac
                     assert(false);
                 }
 
+                resolver_push_break_node(resolver, ast_stmt->while_stmt.body);
+
                 if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body,
                                              ast_stmt->while_stmt.body_scope))
                 {
                     result = false;
                 }
+
+                resolver_pop_break_node(resolver);
 
                 break;
             }
@@ -1667,6 +1681,14 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Statement_Kind::BREAK:
+            {
+                assert(resolver->break_node);
+                result = true;
+                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
+
             case AST_Statement_Kind::DECLARATION:
             {
                 auto decl = ast_stmt->declaration;
@@ -1698,11 +1720,15 @@ namespace Zodiac
                     result = false;
                 }
 
+                resolver_push_break_node(resolver, ast_stmt->while_stmt.body);
+
                 if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
                                        ast_stmt->while_stmt.body_scope, inferred_return_type))
                 {
                     result = false;
                 }
+
+                resolver_pop_break_node(resolver);
 
                 if (result) ast_stmt->flags |= AST_NODE_FLAG_TYPED; 
                 break;
@@ -2618,6 +2644,27 @@ namespace Zodiac
         return result;
     }
 
+    void resolver_push_break_node(Resolver *resolver, AST_Node *node)
+    {
+        assert(resolver);
+        assert(resolver->break_node == nullptr);
+
+        assert(node->kind == AST_Node_Kind::STATEMENT);
+
+        auto stmt = static_cast<AST_Statement*>(node);
+
+        assert(stmt->kind == AST_Statement_Kind::BLOCK);
+
+        resolver->break_node = node;
+    }
+
+    void resolver_pop_break_node(Resolver *resolver)
+    {
+        assert(resolver);
+        assert(resolver->break_node);
+        resolver->break_node = nullptr;
+    }
+
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope)
     {
@@ -2854,6 +2901,11 @@ namespace Zodiac
                 {
                     queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
                 }
+                break;
+            }
+
+            case AST_Statement_Kind::BREAK:
+            {
                 break;
             }
 

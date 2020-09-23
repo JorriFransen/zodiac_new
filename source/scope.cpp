@@ -200,19 +200,16 @@ namespace Zodiac
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
                 {
                     auto node = ast_stmt->block.statements[i];
-                    //if (node->kind == AST_Node_Kind::STATEMENT)
-                    //{
-                        auto stmt = static_cast<AST_Statement*>(node);
-                        scope_populate_statement_ast(allocator, stmt, ast_stmt->block.scope);
-                    //}
-                    //else assert(false);
+                    auto stmt = static_cast<AST_Statement*>(node);
+                    scope_populate_statement_ast(allocator, stmt, ast_stmt->block.scope);
                 }
                 break;
             }
 
             case AST_Statement_Kind::ASSIGNMENT:
             {
-                scope_populate_expression_ast(allocator, ast_stmt->assignment.identifier_expression,
+                scope_populate_expression_ast(allocator,
+                                              ast_stmt->assignment.identifier_expression,
                                               parent_scope);
                 scope_populate_expression_ast(allocator, ast_stmt->assignment.rhs_expression,
                                               parent_scope);
@@ -225,6 +222,11 @@ namespace Zodiac
                 {
                     scope_populate_expression_ast(allocator, ast_stmt->expression, parent_scope);
                 }
+                break;
+            }
+
+            case AST_Statement_Kind::BREAK:
+            {
                 break;
             }
 

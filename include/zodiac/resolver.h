@@ -67,6 +67,8 @@ namespace Zodiac
         AST_Declaration *entry_decl = nullptr;
         AST_Declaration *bc_entry_decl = nullptr;
 
+        AST_Node *break_node = nullptr;
+
         Queue<Resolve_Job*> parse_job_queue = {};
         Queue<Resolve_Job*> ident_job_queue = {};
         Queue<Resolve_Job*> type_job_queue = {};
@@ -178,6 +180,9 @@ namespace Zodiac
 
     bool try_resolve_sizes(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     bool try_resolve_sizes(Resolver *resolver, AST_Type *ast_type, Scope *scope);
+
+    void resolver_push_break_node(Resolver *resolver, AST_Node *node);
+    void resolver_pop_break_node(Resolver *resolver);
 
     AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope);

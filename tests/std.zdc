@@ -56,7 +56,7 @@ print_float :: func (f: float)
 
     while (rem > 0.001)
     {
-        if (it <= 0) break
+        if (it <= 0) break;
 
         int_part = @cast(s32, rem);
         print_num(int_part);

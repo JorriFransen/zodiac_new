@@ -29,6 +29,7 @@ namespace Zodiac
 
         builder->insert_block = nullptr;
         builder->current_function = nullptr;
+        builder->break_block = nullptr;
     }
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
@@ -284,6 +285,13 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Statement_Kind::BREAK:
+            {
+                assert(builder->break_block);
+                bytecode_emit_jump(builder, builder->break_block);
+                break;
+            }
+
             case AST_Statement_Kind::DECLARATION:
             {
                 bytecode_emit_declaration(builder, statement->declaration);
@@ -344,7 +352,11 @@ namespace Zodiac
 
         bytecode_builder_append_block(builder, current_func, body_block);
         bytecode_builder_set_insert_point(builder, body_block);
+
+        bytecode_push_break_block(builder, post_while_block);
         bytecode_emit_statement(builder, stmt->while_stmt.body);
+        bytecode_pop_break_block(builder);
+
         bytecode_emit_jump(builder, cond_block);
 
         bytecode_builder_append_block(builder, current_func, post_while_block);
@@ -1829,6 +1841,21 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
+    }
+
+    void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *break_block)
+    {
+        assert(builder);
+        assert(break_block);
+        assert(builder->break_block == nullptr);
+        builder->break_block = break_block;
+    }
+
+    void bytecode_pop_break_block(Bytecode_Builder *builder)
+    {
+        assert(builder);
+        assert(builder->break_block);
+        builder->break_block = nullptr;
     }
 
     void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *target_block,

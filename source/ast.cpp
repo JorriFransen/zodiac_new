@@ -375,7 +375,11 @@ namespace Zodiac
                 break;
             }
 
-            case Statement_PTN_Kind::BREAK: assert(false);
+            case Statement_PTN_Kind::BREAK:
+            {
+                return ast_break_statement_new(allocator, begin_fp, end_fp);
+                break;
+            }
 
             case Statement_PTN_Kind::ASSIGNMENT:
             {
@@ -1099,9 +1103,17 @@ namespace Zodiac
         return result;
     }
 
+    AST_Statement *ast_break_statement_new(Allocator *allocator, const File_Pos & begin_fp,
+                                           const File_Pos &end_fp)
+    {
+        auto result = ast_statement_new(allocator, AST_Statement_Kind::BREAK, begin_fp, end_fp);
+        return result;
+    }
+
     AST_Statement *ast_declaration_statement_new(Allocator *allocator,
                                                  AST_Declaration *declaration,
-                                                 const File_Pos &begin_fp, const File_Pos &end_fp)
+                                                 const File_Pos &begin_fp,
+                                                 const File_Pos &end_fp)
     {
         auto result = ast_statement_new(allocator, AST_Statement_Kind::DECLARATION, begin_fp,
                                         end_fp);
@@ -1770,6 +1782,8 @@ namespace Zodiac
                 printf(";\n");
                 break;
             }
+
+            case AST_Statement_Kind::BREAK: assert(false);
 
             case AST_Statement_Kind::DECLARATION:
             {

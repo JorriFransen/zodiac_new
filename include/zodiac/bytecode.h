@@ -214,6 +214,8 @@ namespace Zodiac
         Bytecode_Block *insert_block = nullptr;
         Bytecode_Function *current_function = nullptr;
 
+        Bytecode_Block *break_block = nullptr;
+
         Array<Bytecode_Jump_Record> jump_records = {};
     };
 
@@ -337,6 +339,9 @@ namespace Zodiac
                                                       AST_Declaration *decl);
     Bytecode_Value *bytecode_find_value_for_variable(Bytecode_Builder *builder,
                                                      AST_Declaration *decl);
+
+    void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *break_block); 
+    void bytecode_pop_break_block(Bytecode_Builder *builder); 
 
     void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *from_block,
                               int64_t offset);

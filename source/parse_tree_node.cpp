@@ -157,7 +157,10 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
             break;
         }
 
-        case Statement_PTN_Kind::BREAK: assert(false);
+        case Statement_PTN_Kind::BREAK:
+        {
+            break;
+        }
 
         case Statement_PTN_Kind::ASSIGNMENT:
         {

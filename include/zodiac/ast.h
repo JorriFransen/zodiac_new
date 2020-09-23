@@ -161,6 +161,7 @@ namespace Zodiac
 
         ASSIGNMENT,
         RETURN,
+        BREAK,
 
         DECLARATION,
         EXPRESSION,
@@ -540,6 +541,8 @@ namespace Zodiac
                                                 const File_Pos & begin_fp, const File_Pos &end_fp);
     AST_Statement *ast_return_statement_new(Allocator *allocator, AST_Expression *return_expr,
                                             const File_Pos & begin_fp, const File_Pos &end_fp);
+    AST_Statement *ast_break_statement_new(Allocator *allocator, const File_Pos & begin_fp,
+                                           const File_Pos &end_fp);
     AST_Statement *ast_declaration_statement_new(Allocator *allocator,
                                                  AST_Declaration *declaration,
                                                  const File_Pos & begin_fp, const File_Pos &end_fp);
