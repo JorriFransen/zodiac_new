@@ -42,6 +42,7 @@ namespace Zodiac
             AST_Declaration *ast_decl =
                 ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i],
                                                 nullptr);
+            ast_decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
             assert(ast_decl);
             array_append(&global_decls, ast_decl);
         }

@@ -462,6 +462,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::LOADG: assert(false);
+
             case Bytecode_Instruction::LOADL: 
             {
                 auto allocl_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

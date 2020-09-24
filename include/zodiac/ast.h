@@ -8,7 +8,6 @@
 
 namespace Zodiac
 {
-
     enum class AST_Node_Kind
     {
         INVALID,
@@ -87,6 +86,7 @@ namespace Zodiac
         AST_DECL_FLAG_IS_BYTECODE_ENTRY = 0x04,
         AST_DECL_FLAG_NORETURN          = 0x08,
         AST_DECL_FLAG_FOREIGN           = 0x10,
+        AST_DECL_FLAG_GLOBAL            = 0x20,
     };
 
     struct AST_Declaration : public AST_Node

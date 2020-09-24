@@ -19,7 +19,9 @@ add_vec2 :: func (v: *Vec2)
     return v.x + v.y;
 }
 
-glob_int_const :: 5;
+glob_int_const : s64 : 5;
+
+global_int := 41;
 
 main :: func () -> s64
 {
@@ -33,6 +35,16 @@ main :: func () -> s64
     std.print_num(loc_int_const);
     std.println(" ");
     //loc_int_const = 1; // Illegal
+
+    std.print("global_int: ");
+    std.print_num(global_int);
+     std.println(" ");
+
+    global_int = global_int * 3;
+    std.print("global_int: ");
+    std.print_num(global_int);
+    std.println(" ");
+
 
     count := 4;
     while (count > 0)

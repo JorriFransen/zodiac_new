@@ -30,6 +30,8 @@ namespace Zodiac
 
         bool running = false;
 
+        Array<Bytecode_Value> globals = {};
+
         Stack<Stack_Frame> stack_frames = {};
         Stack<Bytecode_Value> temp_stack = {};
         Stack<Bytecode_Value> allocl_stack = {};

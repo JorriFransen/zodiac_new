@@ -182,10 +182,21 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
     else if (parser_match_token(ts, TOK_EQ))
     {
         auto expression = parser_parse_expression(parser, ts);
+        auto sc_efp = ts->current_token().end_file_pos;
+        auto end_fp = expression->self.end_file_pos;
+        if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+        {
+            assert(false);
+        }
+        else
+        {
+            end_fp = sc_efp;
+        }
 
         result = new_variable_declaration_ptn(parser->allocator, identifier, specified_type,
                                               expression, identifier->self.begin_file_pos,
-                                              expression->self.end_file_pos);
+                                              end_fp);
+        result->flags |= DPTN_FLAG_SEMICOLON;
     }
     else
     {

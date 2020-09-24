@@ -1,6 +1,7 @@
 #pragma once
 
 #include "build_data.h"
+#include "const_interpreter.h"
 #include "common.h"
 #include "stack.h"
 #include "string_builder.h"
@@ -18,38 +19,39 @@ namespace Zodiac
         ALLOCL          = 0x05,
         LOAD_FLOAT      = 0x06,
         LOAD_INT        = 0x07,
-        LOADL           = 0x08,
-        LOADP           = 0x09,
-        LOAD_PARAM      = 0x0A,
-        LOAD_BOOL       = 0x0B,
-        LOAD_STR        = 0x0C,
-        STOREL          = 0x0D,
-        STOREP          = 0x0E,
-        STORE_PARAM     = 0x0F,
+        LOADG           = 0x08,
+        LOADL           = 0x09,
+        LOADP           = 0x0A,
+        LOAD_PARAM      = 0x0B,
+        LOAD_BOOL       = 0x0C,
+        LOAD_STR        = 0x0D,
+        STOREL          = 0x0E,
+        STOREP          = 0x0F,
+        STORE_PARAM     = 0x10,
 
-        ADDROF          = 0x10,
+        ADDROF          = 0x11,
 
-        PUSH_ARG        = 0x11,
+        PUSH_ARG        = 0x12,
 
-        EQ              = 0x12,
-        NEQ             = 0x13,
-        GT              = 0x14,
-        GTEQ            = 0x15,
-        LT              = 0x16,
-        LTEQ            = 0x17,
-        ADD             = 0x18,
-        SUB             = 0x19,
-        REM             = 0x1A,
-        MUL             = 0x1B,
-        DIV             = 0x1C,
+        EQ              = 0x13,
+        NEQ             = 0x14,
+        GT              = 0x15,
+        GTEQ            = 0x16,
+        LT              = 0x17,
+        LTEQ            = 0x18,
+        ADD             = 0x19,
+        SUB             = 0x1A,
+        REM             = 0x1B,
+        MUL             = 0x1C,
+        DIV             = 0x1D,
 
-        JUMP            = 0x1D,
-        JUMP_IF         = 0x1E,
-        CAST_INT        = 0x1F,
-        CAST_FLOAT      = 0x20,
-        SYSCALL         = 0x21,
-        AGG_OFFSET_PTR  = 0x22,
-        ARR_OFFSET_PTR  = 0x23,
+        JUMP            = 0x1E,
+        JUMP_IF         = 0x1F,
+        CAST_INT        = 0x20,
+        CAST_FLOAT      = 0x21,
+        SYSCALL         = 0x22,
+        AGG_OFFSET_PTR  = 0x23,
+        ARR_OFFSET_PTR  = 0x24,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -86,7 +88,7 @@ namespace Zodiac
     {
         INVALID,
 
-        NUMBER_LITERAL,
+        GLOBAL,
         TEMPORARY,
         ALLOCL,
         PARAMETER,
@@ -103,6 +105,7 @@ namespace Zodiac
             uint32_t local_index = 0;
             uint32_t alloc_index;
             uint32_t param_index;
+            uint32_t glob_index;
         };
 
         AST_Type *type = nullptr;
@@ -187,9 +190,16 @@ namespace Zodiac
         AST_Declaration *ast_decl = nullptr;
     };
 
+    struct Bytecode_Global
+    {
+        AST_Declaration *decl = nullptr;
+        Bytecode_Value *value = nullptr;
+    };
+
     struct Bytecode_Program
     {
         Array<Bytecode_Function*> functions = {};
+        Array<Bytecode_Global> globals = {};
         Array<Atom> strings = {};
         Bytecode_Function *entry_function = nullptr;
         Bytecode_Function *bytecode_entry_function = nullptr;
@@ -237,6 +247,7 @@ namespace Zodiac
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
                                                           AST_Declaration *decl);
+    void bytecode_emit_global_variable(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_fix_jump_records(Bytecode_Builder *builder, Bytecode_Function *func);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement);
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
@@ -277,6 +288,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *lvalue);
     void bytecode_emit_load_float(Bytecode_Builder *builder, uint8_t size);
     void bytecode_emit_load_int(Bytecode_Builder *builder, bool sign, uint8_t size);
+    Bytecode_Value *bytecode_emit_loadg(Bytecode_Builder *builder, Bytecode_Value *glob);
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
@@ -355,7 +367,8 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_new_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                        AST_Type *type);
-    Bytecode_Value *bytecode_new_integer_literal(Bytecode_Builder *builder, AST_Type *type);
+    Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,
+                                                        const Const_Value &const_val);
 
     AST_Type *bytecode_type_from_size_spec(Bytecode_Size_Specifier sp);
 

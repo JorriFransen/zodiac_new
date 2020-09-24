@@ -186,10 +186,15 @@ namespace Zodiac
                             queue_emit_bytecode_jobs_from_declaration(resolver, decl,
                                                                       job->node_scope);
                         }
-                        else if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
+                        else if (decl->decl_flags & AST_DECL_FLAG_FOREIGN) 
                         {
                             queue_emit_bytecode_job(resolver, decl, job->node_scope);
                         }
+                    }
+                    else if (decl->kind == AST_Declaration_Kind::VARIABLE &&
+                             (decl->decl_flags & AST_DECL_FLAG_GLOBAL))
+                    {
+                        queue_emit_bytecode_job(resolver, decl, job->node_scope);
                     }
 
                     // Size jobs are queued when types are first created
@@ -225,22 +230,29 @@ namespace Zodiac
                 }
                 else
                 {
-                    assert(job->result.bc_func);
-                    if (job->ast_node == resolver->entry_decl)
+                    if (job->ast_node->kind == AST_Node_Kind::DECLARATION)
                     {
-                        auto exe_file_name = resolver->first_file_name.data;
-                        auto options = resolver->build_data->options;
-                        if (options->exe_file_name.data)
+                        auto decl = static_cast<AST_Declaration*>(job->ast_node);
+                        if (decl->kind == AST_Declaration_Kind::FUNCTION)
                         {
-                            exe_file_name = options->exe_file_name.data;
+                            assert(job->result.bc_func);
+                            if (job->ast_node == resolver->entry_decl)
+                            {
+                                auto exe_file_name = resolver->first_file_name.data;
+                                auto options = resolver->build_data->options;
+                                if (options->exe_file_name.data)
+                                {
+                                    exe_file_name = options->exe_file_name.data;
+                                }
+
+                                if (!options->dont_emit_llvm)
+                                    queue_emit_llvm_binary_job(resolver, exe_file_name);
+                            }
+
+                            if (!options->dont_emit_llvm)
+                                queue_emit_llvm_func_job(resolver, job->result.bc_func);
                         }
-
-                        if (!options->dont_emit_llvm)
-                            queue_emit_llvm_binary_job(resolver, exe_file_name);
                     }
-
-                    if (!options->dont_emit_llvm)
-                        queue_emit_llvm_func_job(resolver, job->result.bc_func);
 
                     free_job(resolver, job);
                 }
@@ -443,10 +455,17 @@ namespace Zodiac
                 {
                     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
                     auto decl = static_cast<AST_Declaration*>(job->ast_node);
-                    assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-                    auto bc_func =
-                        bytecode_emit_function_declaration(&resolver->bytecode_builder, decl);
-                    job->result.bc_func = bc_func;
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION)
+                    {
+                        auto bc_func =
+                            bytecode_emit_function_declaration(&resolver->bytecode_builder, decl);
+                        job->result.bc_func = bc_func;
+                    }
+                    else if (decl->kind == AST_Declaration_Kind::VARIABLE)
+                    {
+                        assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+                        bytecode_emit_global_variable(&resolver->bytecode_builder, decl);
+                    }
                     result = true;
                 }
                 break;
@@ -497,7 +516,8 @@ namespace Zodiac
                     {
                         queue_ident_job(resolver, decl, module->module_scope);
                     }
-                    else if (decl->flags & AST_NODE_FLAG_RESOLVED_ID)
+                    else if ((decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
+                             decl->kind != AST_Declaration_Kind::VARIABLE)
                     {
                         queue_type_job(resolver, decl, module->module_scope); 
                     }

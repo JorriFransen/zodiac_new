@@ -19,6 +19,8 @@ namespace Zodiac
         interp->running = false;
         interp->exited = false;
 
+        array_init(allocator, &interp->globals);
+
         stack_init(allocator, &interp->stack_frames);
         stack_init(allocator, &interp->temp_stack);
         stack_init(allocator, &interp->allocl_stack);
@@ -46,6 +48,19 @@ namespace Zodiac
         interp->running = true;
         interp->program = program;
 
+        for (int64_t i = 0; i < program->globals.count; i++)
+        {
+            auto &glob = program->globals[i];
+
+            auto type = glob.value->type;
+            assert(type->kind == AST_Type_Kind::INTEGER ||
+                   type->kind == AST_Type_Kind::FLOAT ||
+                   type->kind == AST_Type_Kind::BOOL);
+
+            Bytecode_Value new_glob = *glob.value;
+            array_append(&interp->globals, new_glob);
+        }
+
         interpreter_execute_function(interp, program->bytecode_entry_function, 0);
 
         if (!interp->exited)
@@ -55,6 +70,13 @@ namespace Zodiac
             assert(frame.returned);
             interp->exit_code_value = frame.return_value;
         }
+
+        for (int64_t i = 0; i < interp->globals.count; i++)
+        {
+            auto &glob = interp->globals[i];
+            if (glob.type->kind == AST_Type_Kind::STRUCTURE) assert(false);
+        }
+        interp->globals.count = 0;
     }
 
     void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
@@ -353,6 +375,35 @@ namespace Zodiac
                         default: assert(false);
                     }
 
+                    break;
+                }
+
+                case Bytecode_Instruction::LOADG:
+                {
+                    auto glob_index = interpreter_fetch<uint32_t>(interp);
+
+                    assert(interp->globals.count >= glob_index);
+
+                    auto global = &interp->globals[glob_index];
+
+                    assert(global->type->kind == AST_Type_Kind::INTEGER ||
+                           global->type->kind == AST_Type_Kind::FLOAT ||
+                           global->type->kind == AST_Type_Kind::BOOL);
+
+                    auto dest_val = interpreter_push_temporary(interp, global->type);
+
+                    switch (global->type->kind)
+                    {
+                        case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::FLOAT:
+                        case AST_Type_Kind::BOOL:
+                        {
+                            dest_val->value = global->value;
+                            break;
+                        }
+
+                        default: assert(false);
+                     }
                     break;
                 }
 

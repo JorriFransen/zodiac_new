@@ -20,6 +20,7 @@ namespace Zodiac
         builder->build_data = bd;
 
         array_init(allocator, &builder->program.functions);
+        array_init(allocator, &builder->program.globals);
         array_init(allocator, &builder->program.strings);
         builder->program.entry_function = nullptr;
         builder->program.bytecode_entry_function = nullptr;
@@ -149,6 +150,26 @@ namespace Zodiac
         return func;
     }
 
+    void bytecode_emit_global_variable(Bytecode_Builder *builder, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+        assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
+        auto const_val = const_interpret_expression(decl->variable.init_expression);
+        Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
+        value->kind = Bytecode_Value_Kind::GLOBAL;
+        value->name = decl->identifier->atom;
+
+        Bytecode_Global bg = {
+            .decl = decl,
+            .value = value,
+        };
+
+        auto index = builder->program.globals.count;
+        array_append(&builder->program.globals, bg);
+        value->glob_index = index;
+    }
+
     struct _Block_Replacement
     {
         int64_t old_index = 0;
@@ -258,6 +279,12 @@ namespace Zodiac
                 {
                     assert(lvalue->type == rhs_value->type);
                     bytecode_emit_storel(builder, lvalue, rhs_value);
+                }
+                else if (lvalue->kind == Bytecode_Value_Kind::GLOBAL)
+                {
+                    assert(lvalue->type == rhs_value->type);
+                    assert(false);
+                    // bytecode_emit_storeg(builder, lvalue, rhs_value);
                 }
                 else if (lvalue->kind == Bytecode_Value_Kind::PARAMETER)
                 {
@@ -808,7 +835,14 @@ namespace Zodiac
         switch (decl_val->kind)
         {
             case Bytecode_Value_Kind::INVALID: assert(false);
-            case Bytecode_Value_Kind::NUMBER_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::GLOBAL:
+            {
+                auto result = bytecode_emit_loadg(builder, decl_val);
+                assert(result);
+                return result;
+                break;
+            }
 
             case Bytecode_Value_Kind::TEMPORARY:
             {
@@ -855,7 +889,12 @@ namespace Zodiac
                     {
                         auto result = bytecode_find_value_for_variable(builder, idecl);
                         assert(result);
-                        assert(result->kind == Bytecode_Value_Kind::ALLOCL);
+
+                        if (idecl->decl_flags & AST_DECL_FLAG_GLOBAL)
+                            assert(result->kind == Bytecode_Value_Kind::GLOBAL);
+                        else
+                            assert(result->kind == Bytecode_Value_Kind::ALLOCL);
+
                         return result;
                         break;
                     }
@@ -1210,6 +1249,23 @@ namespace Zodiac
         bytecode_emit_size_spec(builder, sign, false, size);
     }
 
+    Bytecode_Value *bytecode_emit_loadg(Bytecode_Builder *builder, Bytecode_Value *glob)
+    {
+        assert(glob->kind == Bytecode_Value_Kind::GLOBAL);
+        assert(glob->type);
+        assert(glob->type->kind == AST_Type_Kind::INTEGER ||
+               glob->type->kind == AST_Type_Kind::FLOAT ||
+               glob->type->kind == AST_Type_Kind::BOOL);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOADG);
+        bytecode_emit_32(builder, glob->glob_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, glob->type);
+        bytecode_push_local_temporary(builder, result);
+
+        return result;
+    }
+
     Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl)
     {
         assert(allocl->kind == Bytecode_Value_Kind::ALLOCL);
@@ -1222,8 +1278,7 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
         bytecode_emit_32(builder, allocl->alloc_index);
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
-                                         allocl->type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, allocl->type);
         bytecode_push_local_temporary(builder, result);
 
         return result;
@@ -1851,14 +1906,27 @@ namespace Zodiac
     {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
-        assert(builder->current_function);
-        auto func = builder->current_function;
-
-        for (int64_t i = 0; i < func->local_allocs.count; i++)
+        if (decl->decl_flags & AST_DECL_FLAG_GLOBAL)
         {
-            if (func->local_allocs[i].ast_decl == decl)
+            for (int64_t i = 0; i < builder->program.globals.count; i++)
             {
-                return func->local_allocs[i].value;
+                if (builder->program.globals[i].decl == decl)
+                {
+                    return builder->program.globals[i].value;
+                }
+            }
+        }
+        else
+        {
+            assert(builder->current_function);
+            auto func = builder->current_function;
+
+            for (int64_t i = 0; i < func->local_allocs.count; i++)
+            {
+                if (func->local_allocs[i].ast_decl == decl)
+                {
+                    return func->local_allocs[i].value;
+                }
             }
         }
 
@@ -1957,10 +2025,30 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Value *bytecode_new_integer_literal(Bytecode_Builder *builder, AST_Type *type)
+    Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,
+                                                        const Const_Value &const_val)
     {
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::NUMBER_LITERAL, type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::INVALID, const_val.type);
 
+        switch (const_val.type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                result->value.int_literal.s64 = const_val.s64;
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+        
         return result;
     }
 
@@ -2130,8 +2218,18 @@ namespace Zodiac
         assert(sb);
         assert(builder);
 
-        auto bci = bytecode_iterator_create(builder);
 
+        for (int64_t i = 0; i < builder->program.globals.count; i++)
+        {
+            auto &glob = builder->program.globals[i];
+            string_builder_appendf(sb, "%%%s: ", glob.value->name.data);
+            ast_print_type(sb, glob.value->type);
+            string_builder_append(sb, "\n");
+        }
+
+        string_builder_append(sb, "\n");
+
+        auto bci = bytecode_iterator_create(builder);
         while (bci.function_index < builder->program.functions.count)
         {
             bytecode_print_function(sb, &bci);
@@ -2292,6 +2390,19 @@ namespace Zodiac
 
                 string_builder_append(sb, " = LOAD_INT ");
                 bytecode_print_im_int(sb, bci);
+                break;
+            }
+
+            case Bytecode_Instruction::LOADG: 
+            {
+                uint32_t glob_idx = bytecode_iterator_fetch_32(bci);
+
+                auto value = bci->builder->program.globals[glob_idx].value;
+                auto name = value->name;
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOADG %%%s", bci->local_temp_index,
+                                       name.data);
+                bci->local_temp_index += 1;
                 break;
             }
 
