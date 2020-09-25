@@ -2040,6 +2040,7 @@ namespace Zodiac
     {
         auto result = alloc_type<Bytecode_Value>(builder->allocator);
         result->kind = kind;
+        result->is_const = false;
         result->type = type;
         result->local_index = 0;
 
@@ -2070,6 +2071,7 @@ namespace Zodiac
             case AST_Type_Kind::ARRAY: assert(false);
         }
         
+        result->is_const = true;
         return result;
     }
 
@@ -2245,6 +2247,8 @@ namespace Zodiac
             auto &glob = builder->program.globals[i];
             string_builder_appendf(sb, "%%%s: ", glob.value->name.data);
             ast_print_type(sb, glob.value->type);
+            string_builder_append(sb, " = ");
+            bytecode_print_const_val(sb, glob.value);
             string_builder_append(sb, "\n");
         }
 
@@ -2260,6 +2264,42 @@ namespace Zodiac
         }
 
         bytecode_iterator_free(&bci);
+    }
+
+    void bytecode_print_const_val(String_Builder *sb, Bytecode_Value *val)
+    {
+        assert(val->is_const);
+
+        auto type = val->type;
+        switch (type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+            case AST_Type_Kind::INTEGER:
+            {
+                bool sign = type->integer.sign;
+                switch (type->bit_size)
+                {
+                    case 64:
+                    {
+                        if (sign)
+                            string_builder_appendf(sb, "%" PRId64, val->value.int_literal.s64);
+                        else
+                            string_builder_appendf(sb, "%" PRIu64, val->value.int_literal.u64);
+                        break;
+                    }
+                    default: assert(false); 
+                }
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
     }
 
     void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci)

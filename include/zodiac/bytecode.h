@@ -99,6 +99,8 @@ namespace Zodiac
     {
         Bytecode_Value_Kind kind = Bytecode_Value_Kind::INVALID; 
 
+        bool is_const = false;
+
         Atom name = {};
 
         union
@@ -390,6 +392,7 @@ namespace Zodiac
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print(String_Builder *sb, Bytecode_Builder *builder);
+    void bytecode_print_const_val(String_Builder *sb, Bytecode_Value *val);
     void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci);
     void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci);
     void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci);
