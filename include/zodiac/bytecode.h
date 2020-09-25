@@ -196,6 +196,7 @@ namespace Zodiac
     struct Bytecode_Global
     {
         AST_Declaration *decl = nullptr;
+        AST_Type *type = nullptr;
         Bytecode_Value *value = nullptr;
     };
 

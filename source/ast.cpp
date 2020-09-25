@@ -645,10 +645,9 @@ namespace Zodiac
                     assert(ast_spec_ident);
                 }
 
-                AST_Declaration *poly_type_decl = ast_poly_type_declaration_new(allocator,
-                                                                                ast_ident,
-                                                                                ast_spec_ident,
-                                                                                begin_fp, end_fp);
+                AST_Declaration *poly_type_decl =
+                    ast_poly_type_declaration_new(allocator, ast_ident, ast_spec_ident,
+                                                  begin_fp, end_fp);
                 assert(poly_type_decl);
                 return ast_poly_identifier_expression_new(allocator, poly_type_decl, begin_fp,
                                                           end_fp);

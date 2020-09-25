@@ -267,23 +267,27 @@ namespace Zodiac
 
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob)
     {
-        auto bc_val = bc_glob.value;
-        assert(bc_val->kind == Bytecode_Value_Kind::GLOBAL);
-
         auto decl = bc_glob.decl;
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
 
-        auto bc_idx = bc_glob.value->glob_index;
-        auto dest_idx = builder->globals.count;
-        assert(bc_idx == dest_idx);
+        auto name = decl->identifier->atom.data;
 
         LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
-        LLVMValueRef llvm_glob = LLVMAddGlobal(builder->llvm_module, llvm_type, bc_val->name.data);
+        LLVMValueRef llvm_glob = LLVMAddGlobal(builder->llvm_module, llvm_type, name);
         LLVMSetLinkage(llvm_glob, LLVMPrivateLinkage);
 
-        LLVMValueRef init_val = llvm_emit_constant(builder, bc_val);
-        LLVMSetInitializer(llvm_glob, init_val);
+        auto bc_val = bc_glob.value;
+        if (bc_val)
+        {
+            auto bc_idx = bc_glob.value->glob_index;
+            auto dest_idx = builder->globals.count;
+            assert(bc_idx == dest_idx);
+
+            assert(bc_val->kind == Bytecode_Value_Kind::GLOBAL);
+            LLVMValueRef init_val = llvm_emit_constant(builder, bc_val);
+            LLVMSetInitializer(llvm_glob, init_val);
+        }
 
         array_append(&builder->globals, llvm_glob);
     }

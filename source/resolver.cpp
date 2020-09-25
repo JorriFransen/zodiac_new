@@ -1466,7 +1466,7 @@ namespace Zodiac
 
                         assert(var_type);
 
-                        if (ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL)
+                        if (init_expr && (ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
                         {
                             assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
                         }
@@ -2924,7 +2924,7 @@ namespace Zodiac
     void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob)
     {
         assert(bc_glob.decl);
-        assert(bc_glob.value);
+        assert(bc_glob.type);
 
         auto job = resolve_job_emit_llvm_global_new(resolver->allocator, bc_glob);
         assert(job);

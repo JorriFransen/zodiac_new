@@ -157,21 +157,27 @@ namespace Zodiac
         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
 
         auto init_expr = decl->variable.init_expression;
-        assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
-
-        auto const_val = const_interpret_expression(init_expr);
-        Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
-        value->kind = Bytecode_Value_Kind::GLOBAL;
-        value->name = decl->identifier->atom;
 
         Bytecode_Global bg = {
             .decl = decl,
-            .value = value,
+            .type = decl->type,
         };
 
-        auto index = builder->program.globals.count;
+        if (init_expr && (init_expr->expr_flags & AST_EXPR_FLAG_CONST))
+        {
+
+            auto const_val = const_interpret_expression(init_expr);
+            Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
+            value->kind = Bytecode_Value_Kind::GLOBAL;
+            value->name = decl->identifier->atom;
+
+            auto index = builder->program.globals.count;
+            value->glob_index = index;
+
+            bg.value = value;
+        }
+
         array_append(&builder->program.globals, bg);
-        value->glob_index = index;
 
         return bg;
     }
