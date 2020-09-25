@@ -8,7 +8,7 @@ namespace Zodiac
     Const_Value const_interpret_expression(AST_Expression *expr)
     {
         assert(expr);
-        assert(expr->is_const);
+        assert(expr->expr_flags & AST_EXPR_FLAG_CONST);
 
         switch (expr->kind)
         {
@@ -16,7 +16,13 @@ namespace Zodiac
             case AST_Expression_Kind::IDENTIFIER: assert(false);
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY: 
+            {
+                return const_interpret_binary_expression(expr);
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
@@ -45,4 +51,62 @@ namespace Zodiac
         assert(false);
         return {};
     }
+
+    Const_Value const_interpret_binary_expression(AST_Expression *expr)
+    {
+        assert(expr->kind == AST_Expression_Kind::BINARY);
+
+        auto lhs_val = const_interpret_expression(expr->binary.lhs);
+        auto rhs_val = const_interpret_expression(expr->binary.rhs);
+
+        assert(lhs_val.type == rhs_val.type);
+        auto type = lhs_val.type;
+
+        assert(type->kind == AST_Type_Kind::INTEGER);
+        bool sign = type->integer.sign;
+
+        Const_Value result = {};
+        result.type = type;
+
+        switch (expr->binary.op)
+        {
+            case Binary_Operator::BINOP_INVALID: assert(false);
+            case Binary_Operator::BINOP_EQ: assert(false);
+            case Binary_Operator::BINOP_NEQ: assert(false);
+            case Binary_Operator::BINOP_LT: assert(false);
+            case Binary_Operator::BINOP_LTEQ: assert(false);
+            case Binary_Operator::BINOP_GT: assert(false);
+            case Binary_Operator::BINOP_GTEQ: assert(false);
+
+            case Binary_Operator::BINOP_ADD:
+            {
+                switch (type->bit_size)
+                {
+                    case 64:
+                    {
+                        if (sign)
+                        {
+                            result.s64 = lhs_val.s64 + rhs_val.s64;
+                        }
+                        else
+                        {
+                            assert(false);
+                        }
+                        break;
+                    }
+
+                    default: assert(false); 
+                }
+                break; 
+            }
+
+            case Binary_Operator::BINOP_SUB: assert(false);
+            case Binary_Operator::BINOP_REMAINDER: assert(false);
+            case Binary_Operator::BINOP_MUL: assert(false);
+            case Binary_Operator::BINOP_DIV: assert(false);
+        }
+
+        return result;
+    }
+
 }

@@ -21,7 +21,7 @@ add_vec2 :: func (v: *Vec2)
 
 glob_int_const : s64 : 5;
 
-global_int := 41;
+global_int := 4 + 1;
 
 main :: func () -> s64
 {

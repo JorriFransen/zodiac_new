@@ -156,7 +156,10 @@ namespace Zodiac
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
 
-        auto const_val = const_interpret_expression(decl->variable.init_expression);
+        auto init_expr = decl->variable.init_expression;
+        assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+        auto const_val = const_interpret_expression(init_expr);
         Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
         value->kind = Bytecode_Value_Kind::GLOBAL;
         value->name = decl->identifier->atom;

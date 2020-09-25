@@ -237,6 +237,14 @@ namespace Zodiac
         BOOL_LITERAL,
     };
 
+    typedef uint64_t AST_Expression_Flags;
+
+    enum AST_Expression_Flags_ : AST_Expression_Flags
+    {
+        AST_EXPR_FLAG_NONE  = 0x00,
+        AST_EXPR_FLAG_CONST = 0x01,
+    };
+
     struct AST_Expression : public AST_Node
     {
         AST_Expression() {};
@@ -245,7 +253,7 @@ namespace Zodiac
         AST_Expression_Kind kind = AST_Expression_Kind::INVALID;
         AST_Type *type = nullptr;
 
-        bool is_const = false;
+        AST_Expression_Flags expr_flags = AST_EXPR_FLAG_NONE;
 
         union
         {

@@ -231,6 +231,8 @@ namespace Zodiac
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
 
+    void resolver_inherit_const(AST_Expression *expr);
+
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type);
 

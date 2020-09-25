@@ -1170,7 +1170,7 @@ namespace Zodiac
         auto result = ast_node_new<AST_Expression>(allocator, begin_fp, end_fp); 
 
         result->kind = kind;
-        result->is_const = false;
+        result->expr_flags = AST_EXPR_FLAG_NONE;
 
         return result;
     }
@@ -1313,8 +1313,8 @@ namespace Zodiac
         auto result = ast_expression_new(allocator, AST_Expression_Kind::INTEGER_LITERAL,
                                          begin_fp, end_fp);
         
-        result->is_const = true;
         result->integer_literal.s64 = value;
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
 
         return result;
     }
@@ -1326,6 +1326,7 @@ namespace Zodiac
         auto result = ast_expression_new(allocator, AST_Expression_Kind::FLOAT_LITERAL,
                                          begin_fp, end_fp);
         result->float_literal.r32 = value;
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
         return result;
     }
 
@@ -1337,6 +1338,7 @@ namespace Zodiac
                                          begin_fp, end_fp);
 
         result->string_literal.atom = atom;
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
 
         return result;
     }
@@ -1349,6 +1351,7 @@ namespace Zodiac
                                          begin_fp, end_fp);
 
         result->char_literal.c = c;
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
 
         return result;
     }
@@ -1361,6 +1364,7 @@ namespace Zodiac
                                          begin_fp, end_fp);
 
         result->bool_literal.value = value;
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
 
         return result;
     }

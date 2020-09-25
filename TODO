@@ -1,6 +1,4 @@
 
-globals
-ensure global initializer expressions are constant
 Print init values for globals in bytecode
 enums
 switch statements

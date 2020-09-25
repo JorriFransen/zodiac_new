@@ -1466,6 +1466,11 @@ namespace Zodiac
 
                         assert(var_type);
 
+                        if (ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL)
+                        {
+                            assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+                        }
+
                         ast_decl->type = var_type;
                         ast_decl->flags |= AST_NODE_FLAG_TYPED;
                     }
@@ -2292,6 +2297,7 @@ namespace Zodiac
             assert(ast_expr->type ||
                    (ast_expr->kind == AST_Expression_Kind::IDENTIFIER &&
                     ast_expr->identifier->declaration->kind == AST_Declaration_Kind::IMPORT));
+            resolver_inherit_const(ast_expr);
             ast_expr->flags |= AST_NODE_FLAG_TYPED;
         }
 
@@ -2563,7 +2569,7 @@ namespace Zodiac
                     assert(length_expr->type);
                     assert(length_expr->type->kind == AST_Type_Kind::INTEGER);
 
-                    assert(length_expr->is_const);
+                    assert(length_expr->flags & AST_EXPR_FLAG_CONST);
 
                     Const_Value length_val = const_interpret_expression(length_expr);
                     assert(length_val.type == length_expr->type);
@@ -3305,6 +3311,89 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
+    }
+
+    void resolver_inherit_const(AST_Expression *expr)
+    {
+        if (expr->expr_flags & AST_EXPR_FLAG_CONST) return;
+
+        bool is_const = false;
+
+        switch (expr->kind)
+        {
+            case AST_Expression_Kind::INVALID: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER:
+            case AST_Expression_Kind::DOT:
+            {
+                auto decl = resolver_get_declaration(expr);
+                assert(expr);
+
+                switch (decl->kind)
+                {
+                    case AST_Declaration_Kind::VARIABLE:
+                    case AST_Declaration_Kind::PARAMETER: break;
+
+                    case AST_Declaration_Kind::CONSTANT:
+                    case AST_Declaration_Kind::FUNCTION:
+                    case AST_Declaration_Kind::IMPORT:
+                    case AST_Declaration_Kind::TYPE: is_const = true; break;
+
+                    default: assert(false);
+                }
+                break;
+            }
+
+
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+
+            case AST_Expression_Kind::BINARY:
+            {
+                auto lhs = expr->binary.lhs;
+                auto rhs = expr->binary.rhs;
+
+                is_const = ((lhs->flags & AST_EXPR_FLAG_CONST) &&
+                            (rhs->flags & AST_EXPR_FLAG_CONST));
+                break;
+            }
+
+            case AST_Expression_Kind::UNARY:
+            {
+                assert(false);
+                break;
+            }
+
+            case AST_Expression_Kind::CALL:
+            case AST_Expression_Kind::ADDROF: break;
+            case AST_Expression_Kind::COMPOUND: assert(false);
+
+            case AST_Expression_Kind::SUBSCRIPT:
+            {
+                auto pointer_expr = expr->subscript.pointer_expression;
+                auto index_expr = expr->subscript.index_expression;
+
+                is_const = ((pointer_expr->expr_flags & AST_EXPR_FLAG_CONST) &&
+                            (index_expr->expr_flags & AST_EXPR_FLAG_CONST));
+                break;
+            }
+
+            case AST_Expression_Kind::CAST: 
+            {
+                is_const = (expr->cast.operand_expression->expr_flags & AST_EXPR_FLAG_CONST);
+                break;
+            }
+
+            case AST_Expression_Kind::INTEGER_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+        }
+
+        if (is_const)
+        {
+            expr->expr_flags |= AST_EXPR_FLAG_CONST; 
+        }
     }
 
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type)
