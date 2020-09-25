@@ -252,6 +252,11 @@ namespace Zodiac
                             if (!options->dont_emit_llvm)
                                 queue_emit_llvm_func_job(resolver, job->result.bc_func);
                         }
+                        else if (decl->kind == AST_Declaration_Kind::VARIABLE)
+                        {
+                            assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+                            queue_emit_llvm_global_job(resolver, job->result.bc_global);
+                        }
                     }
 
                     free_job(resolver, job);
@@ -464,7 +469,9 @@ namespace Zodiac
                     else if (decl->kind == AST_Declaration_Kind::VARIABLE)
                     {
                         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
-                        bytecode_emit_global_variable(&resolver->bytecode_builder, decl);
+                        auto bc_glob = bytecode_emit_global_variable(&resolver->bytecode_builder,
+                                                                     decl);
+                        job->result.bc_global = bc_glob;
                     }
                     result = true;
                 }
@@ -475,6 +482,14 @@ namespace Zodiac
             {
                 auto bc_func = job->bc_func;
                 llvm_emit_function(&resolver->llvm_builder, bc_func);
+                result = true;
+                break;
+            }
+
+            case Resolve_Job_Kind::EMIT_LLVM_GLOB:
+            {
+                auto bc_glob = job->bc_glob;
+                llvm_emit_global(&resolver->llvm_builder, bc_glob);
                 result = true;
                 break;
             }
@@ -2900,6 +2915,17 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
     }
 
+    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob)
+    {
+        assert(bc_glob.decl);
+        assert(bc_glob.value);
+
+        auto job = resolve_job_emit_llvm_global_new(resolver->allocator, bc_glob);
+        assert(job);
+
+        queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
+    }
+
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name)
     {
         assert(resolver->allocator);
@@ -3180,6 +3206,13 @@ namespace Zodiac
         return result;
     }
 
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob)
+    {
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_GLOB);
+        result->bc_glob = bc_glob;
+        return result;
+    }
+
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name)
     {
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY);
@@ -3223,6 +3256,11 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func)
     {
         return resolve_job_new(allocator, bc_func);
+    }
+
+    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Global bc_glob)
+    {
+        return resolve_job_new(allocator, bc_glob); 
     }
 
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,

@@ -103,11 +103,14 @@ namespace Zodiac
         SIZE,
         EMIT_BYTECODE,
         EMIT_LLVM_FUNC,
+        EMIT_LLVM_GLOB,
         EMIT_LLVM_BINARY,
     };
 
     struct Resolve_Job
     {
+        Resolve_Job() {};
+
         Resolve_Job_Kind kind = Resolve_Job_Kind::INVALID;
         Scope *node_scope = nullptr;
 
@@ -119,6 +122,7 @@ namespace Zodiac
             AST_Expression *expression;
             AST_Identifier *identifier;
             Bytecode_Function *bc_func;
+            Bytecode_Global bc_glob;
 
             struct
             {
@@ -138,11 +142,8 @@ namespace Zodiac
         {
             AST_Module *ast_module = nullptr;
             Bytecode_Function *bc_func;
-        } result;
-       
-
-
-        Resolve_Job() {};
+            Bytecode_Global bc_global;
+        } result = {};
     };
 
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
@@ -200,6 +201,7 @@ namespace Zodiac
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func);
+    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob);
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name);
 
     void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
@@ -213,6 +215,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
                                  Scope *scope);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob);
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
     Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path,
                                  AST_Declaration *import_decl);
@@ -222,6 +225,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope);
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
+    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Global bc_glob);
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name);
 

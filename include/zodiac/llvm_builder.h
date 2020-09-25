@@ -32,6 +32,7 @@ namespace Zodiac
         Array<LLVMValueRef> temps = {};
         Array<LLVMValueRef> allocas = {};
         Array<LLVMValueRef> params = {};
+        Array<LLVMValueRef> globals = {};
 
         Stack<LLVMValueRef> arg_stack = {};
 
@@ -61,10 +62,12 @@ namespace Zodiac
     bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name);
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
+    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob);
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context);
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction inst,
                                LLVM_Function_Context *func_context);
 
+    LLVMValueRef llvm_emit_constant(LLVM_Builder *builder, Bytecode_Value *value);
     void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context);
     void llvm_emit_syscall(LLVM_Builder *builder, int32_t arg_count);
 

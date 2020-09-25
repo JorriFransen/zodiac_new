@@ -150,7 +150,8 @@ namespace Zodiac
         return func;
     }
 
-    void bytecode_emit_global_variable(Bytecode_Builder *builder, AST_Declaration *decl)
+    Bytecode_Global bytecode_emit_global_variable(Bytecode_Builder *builder,
+                                                  AST_Declaration *decl)
     {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
@@ -168,6 +169,8 @@ namespace Zodiac
         auto index = builder->program.globals.count;
         array_append(&builder->program.globals, bg);
         value->glob_index = index;
+
+        return bg;
     }
 
     struct _Block_Replacement

@@ -38,7 +38,7 @@ main :: func () -> s64
 
     std.print("global_int: ");
     std.print_num(global_int);
-     std.println(" ");
+    std.println(" ");
 
     global_int = global_int * 3;
     std.print("global_int: ");

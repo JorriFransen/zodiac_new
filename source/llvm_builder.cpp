@@ -28,6 +28,7 @@ namespace Zodiac
         array_init(allocator, &llvm_builder->temps);
         array_init(allocator, &llvm_builder->allocas);
         array_init(allocator, &llvm_builder->params);
+        array_init(allocator, &llvm_builder->globals);
 
         stack_init(allocator, &llvm_builder->arg_stack);
 
@@ -264,6 +265,29 @@ namespace Zodiac
         //printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
     }
 
+    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob)
+    {
+        auto bc_val = bc_glob.value;
+        assert(bc_val->kind == Bytecode_Value_Kind::GLOBAL);
+
+        auto decl = bc_glob.decl;
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+        assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
+        auto bc_idx = bc_glob.value->glob_index;
+        auto dest_idx = builder->globals.count;
+        assert(bc_idx == dest_idx);
+
+        LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
+        LLVMValueRef llvm_glob = LLVMAddGlobal(builder->llvm_module, llvm_type, bc_val->name.data);
+        LLVMSetLinkage(llvm_glob, LLVMPrivateLinkage);
+
+        LLVMValueRef init_val = llvm_emit_constant(builder, bc_val);
+        LLVMSetInitializer(llvm_glob, init_val);
+
+        array_append(&builder->globals, llvm_glob);
+    }
+
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context)
     {
         assert(builder);
@@ -462,7 +486,17 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOADG: assert(false);
+            case Bytecode_Instruction::LOADG:
+            {
+                auto glob_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+                assert(glob_index < builder->globals.count);
+
+                LLVMValueRef llvm_glob = builder->globals[glob_index];
+                LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder, llvm_glob, "");
+                llvm_push_temporary(builder, result);
+                break;
+            }
 
             case Bytecode_Instruction::LOADL: 
             {
@@ -527,14 +561,29 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::STOREG: assert(false);
+            case Bytecode_Instruction::STOREG:
+            {
+
+                auto glob_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+                auto val_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                    &func_context->ip);
+
+                assert(glob_index < builder->globals.count);
+
+                LLVMValueRef source_val = builder->temps[val_index];
+                LLVMValueRef llvm_glob = builder->globals[glob_index];
+
+                LLVMBuildStore(builder->llvm_builder, source_val, llvm_glob);
+                break;
+            }
 
             case Bytecode_Instruction::STOREL:
             {
                 auto dest_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                      &func_context->ip);
                 auto val_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
-                                                                     &func_context->ip);
+                                                                    &func_context->ip);
 
                 LLVMValueRef source_val = builder->temps[val_index];
                 LLVMValueRef dest_val = builder->allocas[dest_index];
@@ -1302,6 +1351,25 @@ namespace Zodiac
                 llvm_push_temporary(builder, result);
                 break;
             }
+        }
+    }
+
+    LLVMValueRef llvm_emit_constant(LLVM_Builder *builder, Bytecode_Value *value)
+    {
+        assert(value->kind == Bytecode_Value_Kind::GLOBAL);
+
+        auto type = value->type;
+
+        switch (type->kind)
+        {
+            case AST_Type_Kind::INTEGER:
+            {
+                LLVMTypeRef llvm_type = llvm_type_from_ast(builder, type);
+                return LLVMConstInt(llvm_type, value->value.int_literal.s64, type->integer.sign);
+                break;
+            }
+
+            default: assert(false);
         }
     }
 
