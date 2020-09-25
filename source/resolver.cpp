@@ -3302,6 +3302,9 @@ namespace Zodiac
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type)
@@ -3344,6 +3347,9 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
         }
+
+        assert(false);
+        return false;
     }
 
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)

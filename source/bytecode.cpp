@@ -1091,6 +1091,9 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_emit_cast_float(Bytecode_Builder *builder,
@@ -1120,6 +1123,8 @@ namespace Zodiac
             case AST_Type_Kind::ARRAY: assert(false);
         }
        
+        assert(false);
+        return nullptr;
     }
 
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)
@@ -2472,7 +2477,7 @@ namespace Zodiac
                 string_builder_appendf(sb, "%%%" PRId64 " = LOAD_STR %" PRIu32 " (\"",
                                        bci->local_temp_index++, str_index);
                 auto str = bci->builder->program.strings[str_index]; 
-                for (int64_t i = 0; i < str.length; i++)
+                for (uint64_t i = 0; i < str.length; i++)
                 {
                     char c;
                     if (parser_make_escape_char(str.data[i], &c))
