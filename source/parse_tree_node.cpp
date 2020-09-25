@@ -99,6 +99,8 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             array_free(&ptn->structure.parameters);
             break;
         }
+        
+        case Declaration_PTN_Kind::ENUM: assert(false);
     }
 }
 
@@ -441,8 +443,20 @@ Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN
     return result;
 }
 
+Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                          Array<PTN*> members, const File_Pos &begin_fp,
+                                          const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::ENUM;
+    result->identifier = identifier;
+    result->enum_decl.members = members;
+    return result;
+}
+
 Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
-                                              Expression_PTN *type_expr, Expression_PTN *init_expr,
+                                              Expression_PTN *type_expr,
+                                              Expression_PTN *init_expr,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
@@ -723,6 +737,7 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
         case Declaration_PTN_Kind::CONSTANT: assert(false);
         case Declaration_PTN_Kind::FUNCTION: assert(false);
         case Declaration_PTN_Kind::STRUCT: assert(false);
+        case Declaration_PTN_Kind::ENUM: assert(false);
     }
 
     assert(false);
@@ -1077,6 +1092,25 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
                     printf("\n");
                 }
                 print_declaration_ptn(mem_decl, indent + 4, false);
+            }
+            print_indent(indent);
+            printf("}\n");
+            if (newline) printf("\n");
+            break;
+        }
+
+        case Declaration_PTN_Kind::ENUM:
+        {
+            print_indent(indent);
+            printf("%s :: enum\n", decl->identifier->atom.data);
+            print_indent(indent);
+            printf("{\n");
+            for (int64_t i = 0; i < decl->enum_decl.members.count; i++)
+            {
+                auto mem_decl = decl->enum_decl.members[i];
+                print_ptn(mem_decl, indent + 4);
+
+                printf("\n");
             }
             print_indent(indent);
             printf("}\n");

@@ -287,6 +287,23 @@ namespace Zodiac
                                                      ast_parameters, begin_fp, end_fp);
                 break;
             }
+
+            case Declaration_PTN_Kind::ENUM:
+            {
+                Array<AST_Declaration*> ast_members;
+                array_init(allocator, &ast_members, ptn->enum_decl.members.count);
+
+                for (int64_t i = 0; i < ptn->enum_decl.members.count; i++)
+                {
+                    auto ptn_mem = ptn->enum_decl.members[i];
+                    auto ast_member = ast_create_enum_member_from_ptn(allocator, ptn_mem); 
+                    array_append(&ast_members, ast_member);
+                }
+
+                return ast_enum_declaration_new(allocator, ast_ident, ast_members, begin_fp,
+                                                ptn->self.end_file_pos);
+                break;
+            }
         }
 
         assert(false);
@@ -310,6 +327,38 @@ namespace Zodiac
         assert(result);
 
         return result;
+    }
+
+    AST_Declaration *ast_create_enum_member_from_ptn(Allocator *allocator, PTN *ptn)
+    {
+
+        AST_Identifier *identifier = nullptr;
+        AST_Expression *init_expr = nullptr;
+        
+        switch (ptn->kind)
+        {
+            case PT_Node_Kind::INVALID: assert(false);
+
+            case PT_Node_Kind::IDENTIFIER:
+            {
+                Identifier_PTN *ident = (Identifier_PTN*)ptn;
+                identifier = ast_identifier_new(allocator, ident->atom, ptn->begin_file_pos,
+                                                ptn->end_file_pos);
+                break;
+            }
+
+            case PT_Node_Kind::FUNCTION_PROTO: assert(false);
+            case PT_Node_Kind::PARAMETER: assert(false);
+            case PT_Node_Kind::EXPRESSION_LIST: assert(false);
+            case PT_Node_Kind::DECLARATION: assert(false);
+            case PT_Node_Kind::STATEMENT: assert(false);
+            case PT_Node_Kind::EXPRESSION: assert(false);
+        }
+
+        assert(identifier);
+
+        return ast_constant_declaration_new(allocator, identifier, nullptr, init_expr,
+                                            ptn->begin_file_pos, ptn->end_file_pos);
     }
 
     AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 
@@ -1045,6 +1094,20 @@ namespace Zodiac
         return result;
     }
 
+    AST_Declaration *ast_enum_declaration_new(Allocator *allocator,
+                                              AST_Identifier *identifier,
+                                              Array<AST_Declaration*> member_decls,
+                                              const File_Pos &begin_fp,
+                                              const File_Pos &end_fp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::ENUM, identifier,
+                                          begin_fp, end_fp);
+        result->enum_decl.member_declarations = member_decls;
+        result->enum_decl.member_scope = nullptr;
+
+        return result;
+    }
+
     AST_Declaration *ast_poly_type_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
                                                    AST_Identifier *spec_ident,
@@ -1732,6 +1795,23 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::ENUM:
+            {
+                printf(" :: enum\n");
+                ast_print_indent(indent);
+                printf("{\n");
+
+                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                {
+                    auto mem_decl = ast_decl->enum_decl.member_declarations[i];
+                    ast_print_declaration(mem_decl, indent + 1);
+                }
+
+                ast_print_indent(indent);
+                printf("}\n");
+                break;
+            }
+
             case AST_Declaration_Kind::POLY_TYPE:
             {
                 if (ast_decl->poly_type.specification_identifier)
@@ -2180,6 +2260,8 @@ namespace Zodiac
                 scope_print(sb, ast_decl->structure.member_scope, indent);
                 break;
             }
+
+            case AST_Declaration_Kind::ENUM: assert(false);
 
             case AST_Declaration_Kind::POLY_TYPE:
             {

@@ -73,6 +73,8 @@ namespace Zodiac
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
+
+            case AST_Declaration_Kind::ENUM: assert(false); assert(false);
         }
     }
 
@@ -847,6 +849,8 @@ namespace Zodiac
             case AST_Declaration_Kind::FUNCTION: assert(false);
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
+
+            case AST_Declaration_Kind::ENUM: assert(false); assert(false);
         }
 
         assert(decl_val);

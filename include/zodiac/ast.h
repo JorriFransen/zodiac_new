@@ -72,6 +72,7 @@ namespace Zodiac
         FUNCTION,
         TYPE,
         STRUCTURE,
+        ENUM,
 
         POLY_TYPE,
     };
@@ -145,6 +146,13 @@ namespace Zodiac
                 Scope *parameter_scope;
                 Scope *member_scope;
             } structure;
+
+            struct
+            {
+                Array<AST_Declaration*> member_declarations;
+
+               Scope *member_scope; 
+            } enum_decl;
 
             struct
             {
@@ -472,6 +480,7 @@ namespace Zodiac
                                                      Array<AST_Declaration*> *var_decls);
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator, Parameter_PTN *ptn,
                                                      AST_Type_Spec *type_spec);
+    AST_Declaration *ast_create_enum_member_from_ptn(Allocator *allocator, PT_Node *ptn);
     AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 
                                                  Array<AST_Declaration*> *var_decls);
     AST_Expression *ast_create_expression_from_ptn(Allocator *allocator, Expression_PTN *ptn);
@@ -533,6 +542,12 @@ namespace Zodiac
                                                    Array<AST_Declaration*> parameters,
                                                    const File_Pos & begin_fp,
                                                    const File_Pos &end_fp);
+
+    AST_Declaration *ast_enum_declaration_new(Allocator *allocator,
+                                              AST_Identifier *identifier,
+                                              Array<AST_Declaration*> member_decls,
+                                              const File_Pos &begin_fp,
+                                              const File_Pos &end_fp);
 
     AST_Declaration *ast_poly_type_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,

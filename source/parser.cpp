@@ -157,6 +157,11 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
             assert(!specified_type);
             result = parser_parse_struct_declaration(parser, ts, identifier);
         }
+        else if (parser_is_token(ts, TOK_KW_ENUM))
+        {
+            assert(!specified_type);
+            result = parser_parse_enum_declaration(parser, ts, identifier);
+        }
         else if (parser_is_token(ts, TOK_KW_IMPORT))
         {
             assert(!specified_type);
@@ -311,6 +316,42 @@ Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* t
 
     return new_struct_declaration_ptn(parser->allocator, identifier, member_decls, parameters,
                                       identifier->self.begin_file_pos, end_fp);
+}
+
+Declaration_PTN* parser_parse_enum_declaration(Parser* parser, Token_Stream* ts,
+                                               Identifier_PTN* identifier)
+{
+    if (!parser_expect_token(parser, ts, TOK_KW_ENUM))
+    {
+        assert(false);
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) assert(false);
+
+    Array<PTN*> members = {};
+    array_init(parser->allocator, &members, 8);
+
+    while (!parser_is_token(ts, TOK_RBRACE))
+    {
+        auto ident = parser_parse_identifier(parser, ts);
+        assert(ident);
+
+        if (parser_match_token(ts, TOK_COMMA))
+        {
+            array_append(&members, (PTN*)ident);
+        }
+        else if (parser_is_token(ts, TOK_RBRACE))
+        {
+            array_append(&members, (PTN*)ident);
+            break;
+        }
+    }
+
+    auto end_fp = ts->current_token().end_file_pos;
+    if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
+
+    return new_enum_declaration_ptn(parser->allocator, identifier, members, 
+                                    identifier->self.begin_file_pos, end_fp);
 }
 
 Declaration_PTN* parser_parse_import_declaration(Parser* parser, Token_Stream* ts,

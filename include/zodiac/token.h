@@ -13,6 +13,7 @@ namespace Zodiac
     DEFINE_KW_TOKEN(TOK_KW_BREAK, "break"),                \
     DEFINE_KW_TOKEN(TOK_KW_FUNC,   "func"),                \
     DEFINE_KW_TOKEN(TOK_KW_STRUCT, "struct"),              \
+    DEFINE_KW_TOKEN(TOK_KW_ENUM, "enum"),                  \
     DEFINE_KW_TOKEN(TOK_KW_WHILE,  "while"),               \
     DEFINE_KW_TOKEN(TOK_KW_IF,     "if"),                  \
     DEFINE_KW_TOKEN(TOK_KW_ELSE,   "else"),                \
