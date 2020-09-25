@@ -527,6 +527,8 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::STOREG: assert(false);
+
             case Bytecode_Instruction::STOREL:
             {
                 auto dest_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

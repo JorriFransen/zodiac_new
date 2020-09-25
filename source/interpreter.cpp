@@ -528,6 +528,34 @@ namespace Zodiac
                     break;
                 }
 
+                case Bytecode_Instruction::STOREG:
+                {
+                    auto glob_index = interpreter_fetch<uint32_t>(interp);
+                    auto val_index = interpreter_fetch<uint32_t>(interp);
+
+                    auto source_val = interpreter_load_temporary(interp, val_index);
+                    auto dest_glob = &interp->globals[glob_index];
+
+                    assert(source_val);
+                    assert(dest_glob);
+
+                    assert(source_val->type == dest_glob->type);
+
+                    switch (source_val->type->kind)
+                    {
+                        case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::FLOAT:
+                        case AST_Type_Kind::BOOL:
+                        {
+                            dest_glob->value = source_val->value;
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
+                    break;
+                }
+
                 case Bytecode_Instruction::STOREL:
                 {
                     auto allocl_index = interpreter_fetch<uint32_t>(interp);

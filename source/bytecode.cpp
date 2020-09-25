@@ -283,8 +283,7 @@ namespace Zodiac
                 else if (lvalue->kind == Bytecode_Value_Kind::GLOBAL)
                 {
                     assert(lvalue->type == rhs_value->type);
-                    assert(false);
-                    // bytecode_emit_storeg(builder, lvalue, rhs_value);
+                    bytecode_emit_storeg(builder, lvalue, rhs_value);
                 }
                 else if (lvalue->kind == Bytecode_Value_Kind::PARAMETER)
                 {
@@ -1338,6 +1337,17 @@ namespace Zodiac
                                          Builtin::type_ptr_u8);
         bytecode_push_local_temporary(builder, result);
         return result;
+    }
+
+    void bytecode_emit_storeg(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value)
+    {
+        assert(dest->kind == Bytecode_Value_Kind::GLOBAL);
+        assert(value->kind == Bytecode_Value_Kind::TEMPORARY);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::STOREG);
+        bytecode_emit_32(builder, dest->glob_index);
+        bytecode_emit_32(builder, value->local_index);
     }
 
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
@@ -2472,6 +2482,17 @@ namespace Zodiac
                     }
                 }
                 string_builder_append(sb, "\")");
+                break;
+            }
+
+            case Bytecode_Instruction::STOREG:
+            {
+                uint32_t glob_index = bytecode_iterator_fetch_32(bci);
+                uint32_t val_index = bytecode_iterator_fetch_32(bci);
+
+                auto name = bci->builder->program.globals[glob_index].value->name;
+
+                string_builder_appendf(sb, "STOREG %%%s %%%" PRIu32, name.data, val_index);
                 break;
             }
 

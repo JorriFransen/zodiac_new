@@ -25,33 +25,34 @@ namespace Zodiac
         LOAD_PARAM      = 0x0B,
         LOAD_BOOL       = 0x0C,
         LOAD_STR        = 0x0D,
-        STOREL          = 0x0E,
-        STOREP          = 0x0F,
-        STORE_PARAM     = 0x10,
+        STOREG          = 0x0E,
+        STOREL          = 0x0F,
+        STOREP          = 0x10,
+        STORE_PARAM     = 0x11,
 
-        ADDROF          = 0x11,
+        ADDROF          = 0x12,
 
-        PUSH_ARG        = 0x12,
+        PUSH_ARG        = 0x13,
 
-        EQ              = 0x13,
-        NEQ             = 0x14,
-        GT              = 0x15,
-        GTEQ            = 0x16,
-        LT              = 0x17,
-        LTEQ            = 0x18,
-        ADD             = 0x19,
-        SUB             = 0x1A,
-        REM             = 0x1B,
-        MUL             = 0x1C,
-        DIV             = 0x1D,
+        EQ              = 0x14,
+        NEQ             = 0x15,
+        GT              = 0x16,
+        GTEQ            = 0x17,
+        LT              = 0x18,
+        LTEQ            = 0x19,
+        ADD             = 0x1A,
+        SUB             = 0x1B,
+        REM             = 0x1C,
+        MUL             = 0x1D,
+        DIV             = 0x1E,
 
-        JUMP            = 0x1E,
-        JUMP_IF         = 0x1F,
-        CAST_INT        = 0x20,
-        CAST_FLOAT      = 0x21,
-        SYSCALL         = 0x22,
-        AGG_OFFSET_PTR  = 0x23,
-        ARR_OFFSET_PTR  = 0x24,
+        JUMP            = 0x1F,
+        JUMP_IF         = 0x20,
+        CAST_INT        = 0x21,
+        CAST_FLOAT      = 0x22,
+        SYSCALL         = 0x23,
+        AGG_OFFSET_PTR  = 0x24,
+        ARR_OFFSET_PTR  = 0x25,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -293,6 +294,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
     Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const Atom &atom);
+    void bytecode_emit_storeg(Bytecode_Builder *builder, Bytecode_Value *dest,
+                              Bytecode_Value *value);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
     void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,
