@@ -27,6 +27,14 @@ print_num :: func (n: s64)
 {
     buf : [32]u8;
     i := 0;
+
+    if (n == 0)
+    {
+        c := '0';
+        @syscall(1, 1, *c, 1);
+        return;
+    }
+
     while (n > 0)
     {
         nc := @cast(u8, n % 10);

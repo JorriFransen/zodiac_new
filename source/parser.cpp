@@ -118,11 +118,13 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
     {
         specified_type = parser_parse_expression(parser, ts);
         end_fp = ts->current_token().end_file_pos;
-        if (parser_is_token(ts, TOK_SEMICOLON))
+        if (parser_match_token(ts, TOK_SEMICOLON))
         {
-            return new_variable_declaration_ptn(parser->allocator, identifier, specified_type,
-                                                nullptr, identifier->self.begin_file_pos,
-                                                end_fp);
+            auto result = new_variable_declaration_ptn(parser->allocator, identifier,
+                                                       specified_type, nullptr,
+                                                       identifier->self.begin_file_pos, end_fp);
+            result->flags |= DPTN_FLAG_SEMICOLON;
+            return result;
         }
     }
 
@@ -292,7 +294,8 @@ Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* t
             auto decl = parser_parse_declaration(parser, ts);
             array_append(&member_decls, decl);
 
-            if (decl->kind != Declaration_PTN_Kind::FUNCTION)
+            if (decl->kind != Declaration_PTN_Kind::FUNCTION &&
+                !(decl->flags  & DPTN_FLAG_SEMICOLON))
             {
                 if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
             }

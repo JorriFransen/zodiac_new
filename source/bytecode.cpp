@@ -163,8 +163,9 @@ namespace Zodiac
             .type = decl->type,
         };
 
-        if (init_expr && (init_expr->expr_flags & AST_EXPR_FLAG_CONST))
+        if (init_expr)
         {
+            assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
 
             auto const_val = const_interpret_expression(init_expr);
             Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
@@ -175,6 +176,10 @@ namespace Zodiac
             value->glob_index = index;
 
             bg.value = value;
+        }
+        else
+        {
+            bg.value = bytecode_new_zero_value(builder, Bytecode_Value_Kind::GLOBAL, decl->type);
         }
 
         array_append(&builder->program.globals, bg);
@@ -237,9 +242,12 @@ namespace Zodiac
         }
 
         // Remove obsolete blocks from function
+        int64_t remove_count = 0;
         for (int64_t i = 0; i < obsolete_blocks.count; i++)
         {
-            array_ordered_remove(&func->blocks, obsolete_blocks[i].old_index);
+            auto index = obsolete_blocks[i].old_index - remove_count;
+            remove_count += 1;
+            array_ordered_remove(&func->blocks, index);
         }
 
         // Update indices of remaining blocks
@@ -2053,6 +2061,35 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_new_zero_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
+                                            AST_Type *type)
+    {
+        switch (type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                auto result = bytecode_new_value(builder, kind, type);
+                result->value.int_literal = {};
+                result->is_const = true;
+                return result;
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+
+        assert(false);
+        return nullptr;
+    }
+
     Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,
                                                         const Const_Value &const_val)
     {
@@ -2251,7 +2288,8 @@ namespace Zodiac
         for (int64_t i = 0; i < builder->program.globals.count; i++)
         {
             auto &glob = builder->program.globals[i];
-            string_builder_appendf(sb, "%%%s: ", glob.value->name.data);
+            auto name = glob.decl->identifier->atom;
+            string_builder_appendf(sb, "%%%s: ", name.data);
             ast_print_type(sb, glob.value->type);
             string_builder_append(sb, " = ");
             bytecode_print_const_val(sb, glob.value);

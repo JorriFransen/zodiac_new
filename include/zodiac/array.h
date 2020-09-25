@@ -23,11 +23,13 @@ struct Array
 
     Element_Type& operator[](int index)
     {
+        assert(index < count);
         return data[index];
     }
 
     const Element_Type& operator[](int index) const
     {
+        assert(index < count);
         return data[index];
     }
 

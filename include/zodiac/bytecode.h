@@ -374,6 +374,8 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_new_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                        AST_Type *type);
+    Bytecode_Value *bytecode_new_zero_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
+                                            AST_Type *type);
     Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,
                                                         const Const_Value &const_val);
 
