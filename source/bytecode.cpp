@@ -2196,6 +2196,7 @@ namespace Zodiac
             case Bytecode_Size_Specifier::INVALID: assert(false);
             case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
             case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
+            case Bytecode_Size_Specifier::BIT_SIZE_MASK: assert(false);
             case Bytecode_Size_Specifier::U8: return Builtin::type_u8;
             case Bytecode_Size_Specifier::S8: return Builtin::type_s8;
             case Bytecode_Size_Specifier::U16: return Builtin::type_u16;
@@ -2226,7 +2227,6 @@ namespace Zodiac
         assert(builder->program.functions[0]->blocks.count >= 0);
         result.block_index = 0;
 
-        //assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
         result.instruction_index = 0;
 
         result.local_temp_index = 0;
@@ -2250,7 +2250,6 @@ namespace Zodiac
         assert(builder->program.functions[0]->blocks.count >= 0);
         result.block_index = 0;
 
-        //assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
         result.instruction_index = 0;
 
         result.local_temp_index = 0;
