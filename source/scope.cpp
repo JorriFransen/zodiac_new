@@ -164,7 +164,8 @@ namespace Zodiac
                 }
 
                 ast_decl->structure.member_scope = 
-                    scope_new(allocator, Scope_Kind::AGGREGATE, ast_decl->structure.parameter_scope,
+                    scope_new(allocator, Scope_Kind::AGGREGATE,
+                              ast_decl->structure.parameter_scope,
                               ast_decl->structure.member_declarations.count);
 
                 for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
@@ -175,7 +176,22 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::ENUM:
+            {
+                assert(ast_decl->enum_decl.member_scope == nullptr);
+                assert(parent_scope);
+
+                ast_decl->enum_decl.member_scope =
+                    scope_new(allocator, Scope_Kind::AGGREGATE, parent_scope,
+                              ast_decl->enum_decl.member_declarations.count);
+
+                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                {
+                    scope_populate_ast(allocator, ast_decl->enum_decl.member_declarations[i],
+                                       ast_decl->enum_decl.member_scope); 
+                }
+                break;
+            }
 
             case AST_Declaration_Kind::POLY_TYPE:
             {
@@ -398,10 +414,13 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::POLY_IDENTIFIER:
             {
-                scope_populate_declaration_ast(allocator, type_spec->poly_identifier.declaration,
+                scope_populate_declaration_ast(allocator,
+                                               type_spec->poly_identifier.declaration,
                                                parent_scope);
                 break;
             }
+            
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
     }
 

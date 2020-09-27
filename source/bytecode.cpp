@@ -477,40 +477,54 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT:
             {
-                auto lvalue = bytecode_emit_lvalue(builder, expression->dot.parent_expression);
-                assert(lvalue);
-                assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL ||
-                       lvalue->kind == Bytecode_Value_Kind::PARAMETER);
-
-                auto index = expression->dot.child_index;
-                assert(index >= 0);
-
-                Bytecode_Value *ptr = nullptr;
-
-                Bytecode_Value *index_val = bytecode_emit_integer_literal(builder,
-                                                                         Builtin::type_u32,
-                                                                         index);
-
-                if (lvalue->type->kind == AST_Type_Kind::STRUCTURE)
+                if (expression->type->kind == AST_Type_Kind::ENUM)
                 {
-                    ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue, index_val);
+                    auto decl = expression->dot.child_decl;
+                    assert(decl);
+                    assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+                    auto init_expr = decl->constant.init_expression;
+                    return bytecode_emit_expression(builder, init_expr);
                 }
                 else
                 {
-                    // Pointer to struct
-                    assert(lvalue->type->kind == AST_Type_Kind::POINTER);
-                    assert(lvalue->type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                    auto lvalue = bytecode_emit_lvalue(builder,
+                                                       expression->dot.parent_expression);
+                    assert(lvalue);
+                    assert(lvalue->kind == Bytecode_Value_Kind::ALLOCL ||
+                           lvalue->kind == Bytecode_Value_Kind::PARAMETER);
 
-                    lvalue = bytecode_emit_load(builder, lvalue);
-                    ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue, index_val);
+                    auto index = expression->dot.child_index;
+                    assert(index >= 0);
+
+                    Bytecode_Value *ptr = nullptr;
+
+                    Bytecode_Value *index_val = bytecode_emit_integer_literal(builder,
+                                                                             Builtin::type_u32,
+                                                                             index);
+
+                    if (lvalue->type->kind == AST_Type_Kind::STRUCTURE)
+                    {
+                        ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue,
+                                                                     index_val);
+                    }
+                    else
+                    {
+                        // Pointer to struct
+                        assert(lvalue->type->kind == AST_Type_Kind::POINTER);
+                        assert(lvalue->type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+
+                        lvalue = bytecode_emit_load(builder, lvalue);
+                        ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue,
+                                                                     index_val);
+                    }
+
+                    assert(ptr);
+
+                    auto value = bytecode_emit_loadp(builder, ptr);
+                    assert(value);
+                    return value;
+
                 }
-
-                assert(ptr);
-
-                auto value = bytecode_emit_loadp(builder, ptr);
-                assert(value);
-                return value;
-
                 break;
             }
 
@@ -585,7 +599,8 @@ namespace Zodiac
             case AST_Expression_Kind::INTEGER_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             {
-                if (expression->type->kind == AST_Type_Kind::INTEGER)
+                if (expression->type->kind == AST_Type_Kind::INTEGER ||
+                    expression->type->kind == AST_Type_Kind::ENUM)
                 {
                     return bytecode_emit_integer_literal(builder, expression);
                 }
@@ -1076,6 +1091,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
 
@@ -1110,6 +1127,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
 
@@ -1141,6 +1160,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
        
@@ -1301,6 +1322,7 @@ namespace Zodiac
         assert(allocl->type->kind == AST_Type_Kind::INTEGER ||
                allocl->type->kind == AST_Type_Kind::FLOAT ||
                allocl->type->kind == AST_Type_Kind::BOOL ||
+               allocl->type->kind == AST_Type_Kind::ENUM ||
                allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
@@ -1696,10 +1718,17 @@ namespace Zodiac
         assert(expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
                expr->kind == AST_Expression_Kind::BOOL_LITERAL ||
                expr->kind == AST_Expression_Kind::CHAR_LITERAL);
-        assert(expr->type->kind == AST_Type_Kind::INTEGER);
+        assert(expr->type->kind == AST_Type_Kind::INTEGER ||
+               expr->type->kind == AST_Type_Kind::ENUM);
+
+        auto type = expr->type;
+        if (type->kind == AST_Type_Kind::ENUM)
+        {
+            type = type->enum_type.base_type;
+        }
 
         Bytecode_Value *result = nullptr;
-        switch (expr->type->bit_size)
+        switch (type->bit_size)
         {
             case 8: 
             {
@@ -1727,7 +1756,13 @@ namespace Zodiac
                                                  int64_t val)
     {
         assert(type->kind == AST_Type_Kind::INTEGER ||
-               type->kind == AST_Type_Kind::BOOL);
+               type->kind == AST_Type_Kind::BOOL ||
+               type->kind == AST_Type_Kind::ENUM);
+
+        if (type->kind == AST_Type_Kind::ENUM)
+        {
+            type = type->enum_type.base_type; 
+        }
 
         bytecode_emit_load_int(builder, type->integer.sign, type->bit_size);
         switch (type->bit_size)
@@ -2087,6 +2122,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
 
@@ -2115,6 +2152,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
         
@@ -2346,6 +2385,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
     }

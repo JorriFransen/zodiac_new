@@ -229,6 +229,7 @@ namespace Zodiac
         {
             Bytecode_Instruction inst = interpreter_fetch_instruction(interp);
 
+
             switch (inst)
             {
                 case Bytecode_Instruction::NOP: assert(false);
@@ -338,6 +339,7 @@ namespace Zodiac
                 case Bytecode_Instruction::LOAD_INT:
                 {
                     auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto type_from_spec = bytecode_type_from_size_spec(size_spec);
                     switch (size_spec)
                     {
                         case Bytecode_Size_Specifier::INVALID: assert(false);
@@ -364,11 +366,11 @@ namespace Zodiac
                         }
 
                         case Bytecode_Size_Specifier::S32: assert(false);
-                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::U64:
                         case Bytecode_Size_Specifier::S64:
                         {
                             int64_t val = interpreter_fetch<int64_t>(interp);
-                            auto bc_val = interpreter_push_temporary(interp, Builtin::type_s64); 
+                            auto bc_val = interpreter_push_temporary(interp, type_from_spec); 
                             bc_val->value.int_literal.s64 = val;
                             break;
                         }
@@ -1518,6 +1520,8 @@ namespace Zodiac
         auto result = interpreter_load_temporary(interp, local_index);
         assert(result->type == type ||
                (result->type->kind == AST_Type_Kind::BOOL &&
+                type->kind == AST_Type_Kind::INTEGER) ||
+               (result->type->kind == AST_Type_Kind::ENUM &&
                 type->kind == AST_Type_Kind::INTEGER));
         return result;
     }

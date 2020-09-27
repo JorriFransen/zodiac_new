@@ -1,5 +1,8 @@
 
 enums
+type specs for enums
+integer literal initializers for enum members
+enum member initializers for enum members
 switch statements
 for loops
 unions

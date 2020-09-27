@@ -100,7 +100,15 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
         
-        case Declaration_PTN_Kind::ENUM: assert(false);
+        case Declaration_PTN_Kind::ENUM:
+        {
+            for (int64_t i = 0; i < ptn->enum_decl.members.count; i++)
+            {
+                free_ptn(allocator, ptn->enum_decl.members[i]);
+            }
+            array_free(&ptn->enum_decl.members);
+            break;
+        }
     }
 }
 

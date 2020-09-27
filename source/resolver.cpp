@@ -790,7 +790,41 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::ENUM:
+            {
+                bool mem_res = true;
+
+                uint64_t member_value = 0;
+
+                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                {
+                    auto mem_decl = ast_decl->enum_decl.member_declarations[i];
+                    assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+
+                    if (!mem_decl->constant.init_expression)
+                    {
+                        mem_decl->constant.init_expression =
+                            ast_integer_literal_expression_new(resolver->allocator,
+                                                               member_value,
+                                                               mem_decl->begin_file_pos,
+                                                               mem_decl->end_file_pos);
+                        member_value += 1;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
+
+                    
+                    if (!try_resolve_identifiers(resolver, mem_decl,
+                                                 ast_decl->enum_decl.member_scope))
+                    {
+                        mem_res = false;
+                    }
+                    result = mem_res;
+                }
+                break;
+            }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
@@ -1131,6 +1165,7 @@ namespace Zodiac
             assert(parent_decl);
             assert(parent_decl->kind == AST_Declaration_Kind::VARIABLE ||
                    parent_decl->kind == AST_Declaration_Kind::PARAMETER ||
+                   parent_decl->kind == AST_Declaration_Kind::ENUM ||
                    parent_decl->kind == AST_Declaration_Kind::IMPORT);
 
             if (parent_decl->kind == AST_Declaration_Kind::IMPORT)
@@ -1166,53 +1201,84 @@ namespace Zodiac
 
                 AST_Type *struct_type = var_type;
 
-                if (var_type->kind != AST_Type_Kind::STRUCTURE)
+                if (var_type->kind == AST_Type_Kind::ENUM)
                 {
-                    assert(var_type->kind == AST_Type_Kind::POINTER);
-                    assert(var_type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
-                    struct_type = var_type->pointer.base;
-                }
-
-                assert(struct_type);
-                assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
-
-                assert(struct_type->structure.member_scope);
-                auto mem_scope = struct_type->structure.member_scope;
-                assert(mem_scope->kind == Scope_Kind::AGGREGATE);
-
-                auto child_ident = ast_expr->dot.child_identifier;
-                if (!child_ident->declaration)
-                {
-                    auto child_decl = scope_find_declaration(mem_scope, child_ident);
-                    assert(child_decl);
-                    assert(child_ident->declaration);
-
-                    auto struct_decl = struct_type->structure.declaration;
-                    assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
-
-                    bool index_found = false;
-                    int64_t index = -1;
-                    for (int64_t i = 0;
-                         i < struct_decl->structure.member_declarations.count;
-                         i++)
+                    auto child_ident = ast_expr->dot.child_identifier;
+                    if (!child_ident->declaration)
                     {
-                        if (child_decl == struct_decl->structure.member_declarations[i]) 
+                        auto mem_scope = parent_decl->enum_decl.member_scope;
+                        auto child_decl = scope_find_declaration(mem_scope, child_ident); 
+                        assert(child_decl);
+                        assert(child_ident->declaration);
+
+                        bool found = false;
+                        for (uint64_t i = 0;
+                             i < parent_decl->enum_decl.member_declarations.count;
+                             i++)
                         {
-                            assert(!index_found);
-                            index_found = true;
-                            index = i;
-                            break;
+                            auto mem_decl = parent_decl->enum_decl.member_declarations[i];
+                            if (mem_decl == child_decl)
+                            {
+                                found = true;
+                                break; 
+                            }
                         }
+                        assert(found);
                     }
 
-                    assert(index_found);
-                    assert(index >= 0);
-                    
-                    ast_expr->dot.child_index = index;
-                    ast_expr->dot.child_decl = child_decl;
+                    ast_expr->dot.child_decl = child_ident->declaration;
+                    result = true;
                 }
+                else
+                {
+                    if (var_type->kind != AST_Type_Kind::STRUCTURE)
+                    {
+                        assert(var_type->kind == AST_Type_Kind::POINTER);
+                        assert(var_type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                        struct_type = var_type->pointer.base;
+                    }
 
-                result = true;
+                    assert(struct_type);
+                    assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+                    assert(struct_type->structure.member_scope);
+                    auto mem_scope = struct_type->structure.member_scope;
+                    assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+                    auto child_ident = ast_expr->dot.child_identifier;
+                    if (!child_ident->declaration)
+                    {
+                        auto child_decl = scope_find_declaration(mem_scope, child_ident);
+                        assert(child_decl);
+                        assert(child_ident->declaration);
+
+                        auto struct_decl = struct_type->structure.declaration;
+                        assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                        bool index_found = false;
+                        int64_t index = -1;
+                        for (int64_t i = 0;
+                             i < struct_decl->structure.member_declarations.count;
+                             i++)
+                        {
+                            if (child_decl == struct_decl->structure.member_declarations[i]) 
+                            {
+                                assert(!index_found);
+                                index_found = true;
+                                index = i;
+                                break;
+                            }
+                        }
+
+                        assert(index_found);
+                        assert(index >= 0);
+                        
+                        ast_expr->dot.child_index = index;
+                        ast_expr->dot.child_decl = child_decl;
+                    }
+
+                    result = true;
+                }
             }
             else result = false;
         }
@@ -1245,6 +1311,7 @@ namespace Zodiac
 
                 assert(decl);
                 assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                       decl->kind == AST_Declaration_Kind::ENUM ||
                        decl->kind == AST_Declaration_Kind::TYPE);
 
                 break;
@@ -1307,6 +1374,8 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
+                                                      
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
 
         if (result)
@@ -1636,7 +1705,8 @@ namespace Zodiac
 
                     auto mem_decl = ast_decl->structure.member_declarations[i];
                     bool mem_res = try_resolve_types(resolver,
-                                                     mem_decl, ast_decl->structure.member_scope);
+                                                     mem_decl,
+                                                     ast_decl->structure.member_scope);
                     if (!mem_res)
                     {
                         result = false;
@@ -1665,7 +1735,40 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::ENUM: 
+            {
+                AST_Type *base_type = Builtin::type_u64;
+
+                result = true;
+
+                auto enum_type = create_enum_type(resolver, ast_decl, base_type, 
+                                                  ast_decl->enum_decl.member_scope,
+                                                  scope);
+
+                for (uint64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                {
+                    auto mem_decl = ast_decl->enum_decl.member_declarations[i];
+                    assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+                    assert(mem_decl->constant.type_spec == nullptr);
+                    mem_decl->constant.type_spec =
+                        ast_type_spec_from_type_new(resolver->allocator, enum_type);
+
+                    bool mem_res = try_resolve_types(resolver, mem_decl,
+                                                     ast_decl->enum_decl.member_scope);
+                    if (!mem_res) result = false;
+                    else 
+                    {
+                        assert(mem_decl->type == enum_type);
+                    }
+                }
+
+                if (result)
+                {
+                   ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                   ast_decl->type = enum_type;
+                } 
+                break;
+            }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
         }
@@ -1972,20 +2075,36 @@ namespace Zodiac
                 {
                     auto parent_type = parent_expr->type;
                     assert(parent_type);
-                    assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
-                           (parent_type->kind == AST_Type_Kind::POINTER && 
-                            parent_type->pointer.base->kind == AST_Type_Kind::STRUCTURE));
+                    if (parent_type->kind == AST_Type_Kind::ENUM)
+                    {
+                        auto member_ident = ast_expr->dot.child_identifier;
+                        assert(member_ident);
+                        assert(member_ident->declaration);
+                        auto mem_decl = member_ident->declaration;
 
-                    auto member_ident = ast_expr->dot.child_identifier;
-                    assert(member_ident);
-                    assert(member_ident->declaration);
-                    auto mem_decl = member_ident->declaration;
+                        assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+                        assert(mem_decl->type);
 
-                    assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
-                    assert(mem_decl->type);
+                        ast_expr->type = parent_type;
+                        result = true;
+                    }
+                    else
+                    {
+                        assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
+                               (parent_type->kind == AST_Type_Kind::POINTER && 
+                                parent_type->pointer.base->kind == AST_Type_Kind::STRUCTURE));
 
-                    ast_expr->type = mem_decl->type;
-                    result = true;
+                        auto member_ident = ast_expr->dot.child_identifier;
+                        assert(member_ident);
+                        assert(member_ident->declaration);
+                        auto mem_decl = member_ident->declaration;
+
+                        assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
+                        assert(mem_decl->type);
+
+                        ast_expr->type = mem_decl->type;
+                        result = true;
+                    }
                 }
                 break;
             }
@@ -2251,8 +2370,10 @@ namespace Zodiac
                 if (suggested_type)
                 {
                     assert(suggested_type->kind == AST_Type_Kind::INTEGER ||
+                           suggested_type->kind == AST_Type_Kind::ENUM ||
                            suggested_type->kind == AST_Type_Kind::FLOAT);
-                    if (resolver_literal_fits_in_type(ast_expr->integer_literal, suggested_type))
+                    if (resolver_literal_fits_in_type(ast_expr->integer_literal,
+                                                      suggested_type))
                     {
                         ast_expr->type = suggested_type;
                         result = true;
@@ -2397,6 +2518,10 @@ namespace Zodiac
         if (ts->type)
         {
             *type_target = ts->type;
+            if (ts->kind == AST_Type_Spec_Kind::FROM_TYPE)
+            {
+                ts->flags |= AST_NODE_FLAG_TYPED;
+            }
             assert(ts->flags & AST_NODE_FLAG_TYPED);
             return true;
         }
@@ -2416,6 +2541,7 @@ namespace Zodiac
                 auto decl = ts->identifier->declaration;
                 assert(decl);
                 assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                       decl->kind == AST_Declaration_Kind::ENUM ||
                        decl->kind == AST_Declaration_Kind::TYPE);
                 if (decl->type)
                 {
@@ -2595,6 +2721,8 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
+                                                      
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
 
         if (result)
@@ -2740,6 +2868,14 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::ENUM: 
+            {
+                assert(ast_type->enum_type.base_type->flags & AST_NODE_FLAG_SIZED);
+                ast_type->bit_size = ast_type->enum_type.base_type->bit_size;
+                ast_type->flags |= AST_NODE_FLAG_SIZED;
+                break;
+            }
+
             case AST_Type_Kind::ARRAY:
             {
                 auto elem_size = ast_type->array.element_type->bit_size;
@@ -2846,6 +2982,20 @@ namespace Zodiac
         result->flags |= AST_NODE_FLAG_RESOLVED_ID;
         result->flags |= AST_NODE_FLAG_TYPED;
         //result->flags |= AST_NODE_FLAG_SIZED;
+        array_append(&resolver->build_data->type_table, result);
+        queue_size_job(resolver, result, current_scope);
+        return result;
+    }
+
+    AST_Type* create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+                               AST_Type *base_type, Scope *mem_scope,
+                               Scope *current_scope)
+    {
+        assert(enum_decl->kind == AST_Declaration_Kind::ENUM);
+
+        auto result = ast_enum_type_new(resolver->allocator, enum_decl, base_type, mem_scope);
+        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        result->flags |= AST_NODE_FLAG_TYPED;
         array_append(&resolver->build_data->type_table, result);
         queue_size_job(resolver, result, current_scope);
         return result;
@@ -3102,6 +3252,7 @@ namespace Zodiac
                 if (decl_kind != AST_Declaration_Kind::VARIABLE &&
                     decl_kind != AST_Declaration_Kind::PARAMETER &&
                     decl_kind != AST_Declaration_Kind::CONSTANT &&
+                    decl_kind != AST_Declaration_Kind::ENUM &&
                     decl_kind != AST_Declaration_Kind::TYPE)
                 {
                     assert(false); 
@@ -3345,7 +3496,8 @@ namespace Zodiac
                     case AST_Declaration_Kind::CONSTANT:
                     case AST_Declaration_Kind::FUNCTION:
                     case AST_Declaration_Kind::IMPORT:
-                    case AST_Declaration_Kind::TYPE: is_const = true; break;
+                    case AST_Declaration_Kind::TYPE: 
+                    case AST_Declaration_Kind::ENUM: is_const = true; break;
 
                     default: assert(false);
                 }
@@ -3442,6 +3594,8 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
 
@@ -3451,6 +3605,11 @@ namespace Zodiac
 
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)
     {
+
+        if (type->kind == AST_Type_Kind::ENUM)
+        {
+            type = type->enum_type.base_type; 
+        }
 
         if (type->kind == AST_Type_Kind::INTEGER)
         {

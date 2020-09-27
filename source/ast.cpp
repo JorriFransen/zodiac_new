@@ -1534,6 +1534,17 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type_Spec *ast_type_spec_from_type_new(Allocator *allocator, AST_Type *type)
+    {
+        File_Pos fp = {};
+        fp.file_name = string_ref("<from_type>");
+
+        auto result = ast_type_spec_new(allocator, AST_Type_Spec_Kind::FROM_TYPE,
+                                        fp, fp);
+        result->type = type;
+        return result;
+    }
+
     AST_Type *ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size)
     {
         auto result = alloc_type<AST_Type>(allocator);
@@ -1594,6 +1605,17 @@ namespace Zodiac
         result->structure.member_types = member_types;
         result->structure.member_scope = member_scope;
         result->structure.declaration = declaration;
+
+        return result;
+    }
+
+    AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                AST_Type *base_type, Scope *member_scope)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::ENUM, 0);
+        result->enum_type.base_type = base_type;
+        result->enum_type.member_scope = member_scope;
+        result->enum_type.declaration = declaration;
 
         return result;
     }
@@ -1981,6 +2003,8 @@ namespace Zodiac
                 }
                 break;
             }
+            
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
     }
 
@@ -2321,6 +2345,8 @@ namespace Zodiac
                 string_builder_appendf(sb, "struct(%s)", decl->identifier->atom.data);
                 break;
             }
+
+            case AST_Type_Kind::ENUM: assert(false);
 
             case AST_Type_Kind::ARRAY:
             {

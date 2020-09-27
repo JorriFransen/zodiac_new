@@ -193,6 +193,9 @@ namespace Zodiac
     AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope);
+    AST_Type* create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+                               AST_Type *base_type, Scope *mem_scope,
+                               Scope *current_scope);
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          AST_Declaration *import_decl);

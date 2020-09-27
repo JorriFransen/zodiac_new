@@ -1620,6 +1620,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::ENUM: assert(false);
+
             case AST_Type_Kind::ARRAY:
             {
                 LLVMTypeRef llvm_elem_type = llvm_type_from_ast(builder,

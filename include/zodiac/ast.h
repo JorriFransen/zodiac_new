@@ -362,6 +362,7 @@ namespace Zodiac
 
         TEMPLATED, // Hash_Table(int, string);
         POLY_IDENTIFIER, // $T or $T/Hash_Table
+        FROM_TYPE,
     };
 
     struct AST_Type_Spec : public AST_Node
@@ -417,6 +418,7 @@ namespace Zodiac
 
         FUNCTION,
         STRUCTURE,
+        ENUM,
         ARRAY,
     };
 
@@ -455,6 +457,13 @@ namespace Zodiac
                 Scope *member_scope;
                 AST_Declaration *declaration;
             } structure;
+
+            struct
+            {
+                AST_Type *base_type;
+                Scope *member_scope;
+                AST_Declaration *declaration;
+            } enum_type;
 
             struct 
             {
@@ -649,6 +658,7 @@ namespace Zodiac
                                                      AST_Identifier *spec_ident,
                                                      const File_Pos & begin_fp,
                                                      const File_Pos &end_fp);
+    AST_Type_Spec *ast_type_spec_from_type_new(Allocator *allocator, AST_Type *type);
 
     AST_Type *ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type *ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);
@@ -659,6 +669,8 @@ namespace Zodiac
                                     AST_Type *return_type);
     AST_Type *ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
                                      Array<AST_Type*> member_types, Scope *member_scope);
+    AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                AST_Type *base_type, Scope *member_scope);
 
     AST_Type *_ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type);
     AST_Type *_ast_create_array_type(Allocator *allocator, AST_Type *elem_type, int64_t elem_count);
