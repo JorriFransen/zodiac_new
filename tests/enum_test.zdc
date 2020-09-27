@@ -1,0 +1,41 @@
+
+
+std :: import std;
+
+Day :: enum 
+{
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday, 
+}
+
+main :: func() -> s64
+{
+    std.println("Enum test");
+
+    day : Day = Day.Monday;
+    print_day(day);
+    return 0;
+}
+
+print_day :: func(day: Day)
+{
+    std.println("Day.");
+    return;
+}
+
+#naked #noreturn _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+#noreturn posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+
