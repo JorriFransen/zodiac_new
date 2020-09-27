@@ -382,6 +382,7 @@ namespace Zodiac
     AST_Type *bytecode_type_from_size_spec(Bytecode_Size_Specifier sp);
 
     Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder);
+    Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder, Bytecode_Function *func);
     void bytecode_iterator_free(Bytecode_Iterator *bci);
     void bytecode_iterator_advance_function(Bytecode_Iterator *bci);
     Bytecode_Function *bytecode_iterator_get_function(Bytecode_Iterator *bci);

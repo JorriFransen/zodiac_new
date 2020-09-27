@@ -71,4 +71,10 @@ Allocator* temp_allocator_get()
     return &__global_instance__.allocator;
 }
 
+void temp_allocator_reset(Allocator *allocator)
+{
+    auto ta = (Temp_Allocator*)allocator;
+    ta->next_index = 0;
+}
+
 }

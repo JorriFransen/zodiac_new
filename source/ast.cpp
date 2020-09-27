@@ -1889,7 +1889,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::BREAK: assert(false);
+            case AST_Statement_Kind::BREAK:
+            {
+                printf("break;\n");
+                break;
+            }
 
             case AST_Statement_Kind::DECLARATION:
             {
@@ -1918,12 +1922,35 @@ namespace Zodiac
                 printf("if (");
                 ast_print_expression(ast_stmt->if_stmt.cond_expr, 0);
                 printf(")");
-                ast_print_statement(ast_stmt->if_stmt.then_stmt, indent);
-                if (ast_stmt->if_stmt.else_stmt)
+
+                auto then_stmt = ast_stmt->if_stmt.then_stmt;
+                auto then_indent = indent;
+                if (then_stmt->kind != AST_Statement_Kind::BLOCK)
+                {
+                    printf("\n");
+                    then_indent += 1;
+                }
+
+                ast_print_statement(then_stmt, then_indent);
+
+                auto else_stmt = ast_stmt->if_stmt.else_stmt;
+                if (else_stmt)
                 {
                     ast_print_indent(indent);
-                    printf("else\n");
-                    ast_print_statement(ast_stmt->if_stmt.else_stmt, indent);
+                    printf("else");
+
+                    auto else_indent = indent;
+                    if (else_stmt->kind == AST_Statement_Kind::IF)
+                    {
+                        printf("\n");
+                    }
+                    else if (else_stmt->kind != AST_Statement_Kind::BLOCK)
+                    {
+                        printf("\n");
+                        else_indent += 1;
+                    }
+
+                    ast_print_statement(else_stmt, else_indent);
                 }
                 break;
             }
@@ -2346,7 +2373,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::ENUM: assert(false);
+            case AST_Type_Kind::ENUM:
+            {
+                auto decl = type->enum_type.declaration;
+                string_builder_appendf(sb, "enum(%s)", decl->identifier->atom.data);
+                break;
+            }
 
             case AST_Type_Kind::ARRAY:
             {

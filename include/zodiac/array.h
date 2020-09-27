@@ -93,6 +93,19 @@ void array_append(Array<Element_Type>* array, const Element_Type& element)
 }
 
 template <typename Element_Type>
+void array_unordered_remove(Array<Element_Type> *array, int64_t index)
+{
+    assert(index < array->count);
+
+    auto last_idx = array->count - 1;
+    if (index != last_idx)
+    {
+        array->data[index] = array->data[last_idx];
+    }
+    array->count -= 1;
+}
+
+template <typename Element_Type>
 void array_ordered_remove(Array<Element_Type> *array, int64_t index)
 {
     assert(index < array->count);

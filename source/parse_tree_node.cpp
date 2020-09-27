@@ -943,7 +943,12 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
-        case Statement_PTN_Kind::BREAK: assert(false);
+        case Statement_PTN_Kind::BREAK:
+        {
+            print_indent(indent);
+            printf("break;\n");
+            break;
+        }
 
         case Statement_PTN_Kind::ASSIGNMENT:
         {
@@ -970,13 +975,34 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             printf("if (");
             print_expression_ptn(statement->if_stmt.cond_expr, 0);
             printf(")\n");
-            print_statement_ptn(statement->if_stmt.then_stmt, indent);
+
+            auto then_stmt = statement->if_stmt.then_stmt;
+
+            auto then_indent = indent;
+            if (then_stmt->kind != Statement_PTN_Kind::BLOCK)
+            {
+                then_indent += 4;
+            }
+            print_statement_ptn(then_stmt, then_indent);
 
             if (statement->if_stmt.else_stmt)
             {
                 print_indent(indent);
-                printf("else\n");
-                print_statement_ptn(statement->if_stmt.else_stmt, indent);
+                printf("else");
+
+                auto else_stmt = statement->if_stmt.else_stmt;
+
+                auto else_indent = indent;
+                if (else_stmt->kind == Statement_PTN_Kind::IF)
+                {
+                    printf("\n");
+                }                    
+                else if (else_stmt->kind != Statement_PTN_Kind::BLOCK)
+                {
+                    printf("\n");
+                    else_indent += 4;
+                }
+                print_statement_ptn(else_stmt, else_indent);
             }
 
             break;

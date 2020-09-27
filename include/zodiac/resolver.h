@@ -64,7 +64,6 @@ namespace Zodiac
         Bytecode_Builder bytecode_builder = {};
         LLVM_Builder llvm_builder = {};
 
-        AST_Node *root_node = nullptr;
         AST_Declaration *entry_decl = nullptr;
         AST_Declaration *bc_entry_decl = nullptr;
 

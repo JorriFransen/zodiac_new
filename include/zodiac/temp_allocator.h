@@ -15,5 +15,6 @@ struct Temp_Allocator
 };
 
 Allocator* temp_allocator_get();
+void temp_allocator_reset(Allocator *allocato);
 
 }

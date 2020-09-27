@@ -418,6 +418,7 @@ namespace Zodiac
                     assert(source_allocl->type->kind == AST_Type_Kind::INTEGER ||
                            source_allocl->type->kind == AST_Type_Kind::FLOAT ||
                            source_allocl->type->kind == AST_Type_Kind::BOOL ||
+                           source_allocl->type->kind == AST_Type_Kind::ENUM ||
                            source_allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
                     auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
@@ -427,6 +428,7 @@ namespace Zodiac
                         case AST_Type_Kind::INTEGER:
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
+                        case AST_Type_Kind::ENUM:
                         {
                             dest_val->value = source_allocl->value;
                             break;
@@ -509,6 +511,7 @@ namespace Zodiac
 
                     assert(param.type->kind == AST_Type_Kind::INTEGER ||
                            param.type->kind == AST_Type_Kind::FLOAT   ||
+                           param.type->kind == AST_Type_Kind::ENUM    ||
                            param.type->kind == AST_Type_Kind::POINTER);
                     result_value->value = param.value;
                     break;
@@ -576,6 +579,7 @@ namespace Zodiac
                         case AST_Type_Kind::INTEGER:
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
+                        case AST_Type_Kind::ENUM:
                         {
                             dest_allocl->value = source_val->value;
                             break;

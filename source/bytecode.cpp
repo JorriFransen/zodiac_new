@@ -226,20 +226,41 @@ namespace Zodiac
             }
         }
 
-        // Update jump records to the new target blocks
-        //@TODO: Remove unchanged jump records
-        for (int64_t i = 0; i < builder->jump_records.count; i++)
+        bool obsolete_jump_records_found = false;
+        do
+        {
+            obsolete_jump_records_found = false;
+            // Update jump records to the new target blocks
+            for (int64_t i = 0; i < builder->jump_records.count; i++)
+            {
+                auto &jr = builder->jump_records[i];
+                for (int64_t j = 0; j < obsolete_blocks.count; j++)
+                {
+                    auto &br = obsolete_blocks[j];
+                    Bytecode_Block *obsolete_block = func->blocks[br.old_index];
+                    
+                    if (jr.from_block == obsolete_block)
+                    {
+                        jr.index_offset = -1;
+                    }
+
+                    if (jr.target_block == obsolete_block)
+                    {
+                        jr.target_block = br.new_target;
+                        obsolete_jump_records_found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        while (obsolete_jump_records_found);
+
+        for (int64_t i = builder->jump_records.count - 1; i >= 0; i--)
         {
             auto &jr = builder->jump_records[i];
-            for (int64_t j = 0; j < obsolete_blocks.count; j++)
+            if (jr.index_offset == -1)
             {
-                auto &br = obsolete_blocks[j];
-                Bytecode_Block *obsolete_block = func->blocks[br.old_index];
-                if (jr.target_block == obsolete_block)
-                {
-                    jr.target_block = br.new_target;
-                    break;
-                }
+                array_unordered_remove(&builder->jump_records, i);
             }
         }
 
@@ -262,9 +283,13 @@ namespace Zodiac
         for (int64_t i = 0; i < builder->jump_records.count; i++)
         {
             auto &jr = builder->jump_records[i];
+            uint32_t index = jr.target_block->index;
+
+            assert(jr.index_offset != -1);
+            assert(jr.target_block->index < func->blocks.count);
+
             uint32_t *ptr = (uint32_t*)&jr.from_block->instructions[jr.index_offset];
 
-            uint32_t index = jr.target_block->index;
             assert(index);
             *ptr = index;
         }
@@ -737,7 +762,8 @@ namespace Zodiac
 
         assert(lhs->type == rhs->type);
         assert(lhs->type->kind == AST_Type_Kind::INTEGER ||
-               lhs->type->kind == AST_Type_Kind::FLOAT);
+               lhs->type->kind == AST_Type_Kind::FLOAT ||
+               lhs->type->kind == AST_Type_Kind::ENUM);
 
         auto lhs_val = bytecode_emit_expression(builder, lhs);
         assert(lhs_val);
@@ -1759,10 +1785,15 @@ namespace Zodiac
                type->kind == AST_Type_Kind::BOOL ||
                type->kind == AST_Type_Kind::ENUM);
 
+        AST_Type *value_type = type;
         if (type->kind == AST_Type_Kind::ENUM)
         {
+            value_type = type;
             type = type->enum_type.base_type; 
         }
+
+        assert(type->kind == AST_Type_Kind::INTEGER ||
+               type->kind == AST_Type_Kind::BOOL);
 
         bytecode_emit_load_int(builder, type->integer.sign, type->bit_size);
         switch (type->bit_size)
@@ -1788,7 +1819,7 @@ namespace Zodiac
             default: assert(false);
         }
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, value_type);
         bytecode_push_local_temporary(builder, result);
         return result;
     }
@@ -1915,25 +1946,22 @@ namespace Zodiac
     {
         auto ta = temp_allocator_get();
 
+        auto result = block->name;
+
         int name_count = 0;
         for (int64_t i = 0; i < func->blocks.count; i++)
         {
-            if (func->blocks[i]->name == block->name)
+            if (func->blocks[i]->name == result)
             {
                 name_count++;
+                auto name_sr = string_ref(block->name.data, block->name.length);
+                auto num_str = string_from_int(ta, name_count);
+                auto str = string_append(ta, name_sr, num_str);
+                result = atom_get(&builder->build_data->atom_table, str.data, str.length);
             }
         }
 
-        if (name_count != 0)
-        {
-            auto name_sr = string_ref(block->name.data, block->name.length);
-            auto num_str = string_from_int(ta, name_count);
-            auto result = string_append(ta, name_sr, num_str);
-            return atom_get(&builder->build_data->atom_table, result.data, result.length);
-        }
-
-        
-        return block->name;
+        return result;
     }
 
     Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
@@ -2194,6 +2222,30 @@ namespace Zodiac
         
         assert(builder->program.functions.count >= 1);
         result.function_index = 0;
+
+        assert(builder->program.functions[0]->blocks.count >= 0);
+        result.block_index = 0;
+
+        //assert(builder->program.functions[0]->blocks[0]->instructions.count >= 0);
+        result.instruction_index = 0;
+
+        result.local_temp_index = 0;
+        result.local_alloc_index = 0;
+
+        return result;
+    }
+
+    Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder, Bytecode_Function *func)
+    {
+        assert(builder);
+
+        Bytecode_Iterator result = {};
+        result.builder = builder;
+
+        stack_init(builder->allocator, &result.arg_stack);
+
+        assert(builder->program.functions.count > func->index);
+        result.function_index = func->index;
 
         assert(builder->program.functions[0]->blocks.count >= 0);
         result.block_index = 0;
@@ -2917,7 +2969,12 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Size_Specifier::U64: assert(false);
+            case Bytecode_Size_Specifier::U64:
+            {
+                string_builder_append(sb, "U64");
+                break;
+            }
+
             case Bytecode_Size_Specifier::S64:
             {
                 string_builder_append(sb, "S64");
@@ -2981,7 +3038,14 @@ namespace Zodiac
             }
 
             case Bytecode_Size_Specifier::S32: assert(false);
-            case Bytecode_Size_Specifier::U64: assert(false);
+
+            case Bytecode_Size_Specifier::U64:
+            {
+                uint64_t val = bytecode_iterator_fetch_64(bci);
+                string_builder_appendf(sb, " %" PRIu64, val);
+                break;
+            }
+
             case Bytecode_Size_Specifier::S64:
             {
                 int64_t val = bytecode_iterator_fetch_64(bci);
