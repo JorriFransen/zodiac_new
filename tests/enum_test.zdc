@@ -14,10 +14,12 @@ Day :: enum
 
 Operator : u8 : enum
 {
-    Add,
-    Sub,
+    Add :: 1;
+    Sub :: 2,
     Mul,
     Div,
+
+    Invalid :: 0,
 }
 
 main :: func() -> s64

@@ -1765,6 +1765,8 @@ namespace Zodiac
                     base_type = Builtin::type_u64;
                 }
 
+                assert(base_type->kind == AST_Type_Kind::INTEGER);
+
                 auto enum_type = create_enum_type(resolver, ast_decl, base_type, 
                                                   ast_decl->enum_decl.member_scope,
                                                   scope);
