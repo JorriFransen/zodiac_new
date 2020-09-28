@@ -451,13 +451,17 @@ Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN
     return result;
 }
 
-Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
+                                          Identifier_PTN *identifier,
+                                          Expression_PTN *type_spec_expr,
                                           Array<PTN*> members, const File_Pos &begin_fp,
                                           const File_Pos &end_fp)
+
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
     result->kind = Declaration_PTN_Kind::ENUM;
     result->identifier = identifier;
+    result->enum_decl.type_spec = type_spec_expr;
     result->enum_decl.members = members;
     return result;
 }

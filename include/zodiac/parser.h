@@ -33,7 +33,8 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
 Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* ts,
                                                  Identifier_PTN* identifier);
 Declaration_PTN* parser_parse_enum_declaration(Parser* parser, Token_Stream* ts,
-                                               Identifier_PTN* identifier);
+                                               Identifier_PTN* identifier,
+                                               Expression_PTN *type_spec_expr);
 Declaration_PTN* parser_parse_import_declaration(Parser* parser, Token_Stream* ts,
                                                  Identifier_PTN* identifier);
 

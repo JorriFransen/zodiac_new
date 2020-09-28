@@ -182,6 +182,7 @@ struct Declaration_PTN
 
         struct
         {
+            Expression_PTN *type_spec;
             Array<PTN*> members;
         } enum_decl;
 
@@ -408,6 +409,7 @@ Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN
                                             const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                          Expression_PTN *type_spec_expr,
                                           Array<PTN*> members, const File_Pos &begin_fp,
                                           const File_Pos &end_fp);
 

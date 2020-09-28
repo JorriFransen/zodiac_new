@@ -159,8 +159,7 @@ Declaration_PTN* parser_parse_declaration(Parser* parser, Token_Stream* ts,
         }
         else if (parser_is_token(ts, TOK_KW_ENUM))
         {
-            assert(!specified_type);
-            result = parser_parse_enum_declaration(parser, ts, identifier);
+            result = parser_parse_enum_declaration(parser, ts, identifier, specified_type);
         }
         else if (parser_is_token(ts, TOK_KW_IMPORT))
         {
@@ -318,8 +317,9 @@ Declaration_PTN* parser_parse_struct_declaration(Parser* parser, Token_Stream* t
                                       identifier->self.begin_file_pos, end_fp);
 }
 
-Declaration_PTN* parser_parse_enum_declaration(Parser* parser, Token_Stream* ts,
-                                               Identifier_PTN* identifier)
+Declaration_PTN* parser_parse_enum_declaration(Parser *parser, Token_Stream* ts,
+                                               Identifier_PTN *identifier,
+                                               Expression_PTN *type_spec_expr)
 {
     if (!parser_expect_token(parser, ts, TOK_KW_ENUM))
     {
@@ -350,8 +350,8 @@ Declaration_PTN* parser_parse_enum_declaration(Parser* parser, Token_Stream* ts,
     auto end_fp = ts->current_token().end_file_pos;
     if (!parser_expect_token(parser, ts, TOK_RBRACE)) assert(false);
 
-    return new_enum_declaration_ptn(parser->allocator, identifier, members, 
-                                    identifier->self.begin_file_pos, end_fp);
+    return new_enum_declaration_ptn(parser->allocator, identifier, type_spec_expr,
+                                    members, identifier->self.begin_file_pos, end_fp);
 }
 
 Declaration_PTN* parser_parse_import_declaration(Parser* parser, Token_Stream* ts,

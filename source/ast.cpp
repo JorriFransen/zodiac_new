@@ -267,13 +267,15 @@ namespace Zodiac
                         {
                             auto type_expr = ptn_param->type_expression;
                             ast_param_ts =
-                                ast_create_type_spec_from_expression_ptn(allocator, type_expr);
+                                ast_create_type_spec_from_expression_ptn(allocator,
+                                                                         type_expr);
                         }
 
 
-                        auto ast_param_decl = ast_create_declaration_from_ptn(allocator,
-                                                                              ptn_param,
-                                                                              ast_param_ts);
+                        auto ast_param_decl =
+                            ast_create_declaration_from_ptn(allocator, ptn_param,
+                                                            ast_param_ts);
+
                         assert(ast_param_decl);
 
                         array_append(&ast_parameters, ast_param_decl);
@@ -283,13 +285,22 @@ namespace Zodiac
                 assert(ast_parameters.count >= 0);
                 auto end_fp = ptn->self.end_file_pos;
 
-                return ast_structure_declaration_new(allocator, ast_ident, ast_member_decls,
-                                                     ast_parameters, begin_fp, end_fp);
+                return ast_structure_declaration_new(allocator, ast_ident,
+                                                     ast_member_decls, ast_parameters,
+                                                     begin_fp, end_fp);
                 break;
             }
 
             case Declaration_PTN_Kind::ENUM:
             {
+                AST_Type_Spec *ast_ts = nullptr;
+
+                auto ptn_ts = (PTN*)ptn->enum_decl.type_spec;
+                if (ptn_ts)
+                {
+                    ast_ts = ast_create_type_spec_from_ptn(allocator, ptn_ts);
+                }
+
                 Array<AST_Declaration*> ast_members;
                 array_init(allocator, &ast_members, ptn->enum_decl.members.count);
 
@@ -300,8 +311,8 @@ namespace Zodiac
                     array_append(&ast_members, ast_member);
                 }
 
-                return ast_enum_declaration_new(allocator, ast_ident, ast_members, begin_fp,
-                                                ptn->self.end_file_pos);
+                return ast_enum_declaration_new(allocator, ast_ident, ast_ts, ast_members,
+                                                begin_fp, ptn->self.end_file_pos);
                 break;
             }
         }
@@ -1082,8 +1093,8 @@ namespace Zodiac
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp)
     {
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STRUCTURE, identifier,
-                                          begin_fp, end_fp);
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STRUCTURE,
+                                          identifier, begin_fp, end_fp);
 
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
@@ -1096,12 +1107,14 @@ namespace Zodiac
 
     AST_Declaration *ast_enum_declaration_new(Allocator *allocator,
                                               AST_Identifier *identifier,
+                                              AST_Type_Spec *ast_ts,
                                               Array<AST_Declaration*> member_decls,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp)
     {
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::ENUM, identifier,
-                                          begin_fp, end_fp);
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::ENUM,
+                                          identifier, begin_fp, end_fp);
+        result->enum_decl.type_spec = ast_ts;
         result->enum_decl.member_declarations = member_decls;
         result->enum_decl.member_scope = nullptr;
 
@@ -1114,7 +1127,8 @@ namespace Zodiac
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp)
     {
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::POLY_TYPE, identifier,
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::POLY_TYPE,
+                                          identifier,
                                           begin_fp, end_fp);
 
         result->poly_type.specification_identifier = spec_ident;

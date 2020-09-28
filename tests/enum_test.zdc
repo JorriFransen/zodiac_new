@@ -1,5 +1,4 @@
 
-
 std :: import std;
 
 Day :: enum 
@@ -11,6 +10,14 @@ Day :: enum
     Friday,
     Saturday,
     Sunday, 
+}
+
+Operator : u8 : enum
+{
+    Add,
+    Sub,
+    Mul,
+    Div,
 }
 
 main :: func() -> s64
@@ -29,6 +36,8 @@ main :: func() -> s64
     print_day(Day.Friday);
     print_day(Day.Saturday);
     print_day(Day.Sunday);
+
+    op := Operator.Add;
 
     return 0;
 }

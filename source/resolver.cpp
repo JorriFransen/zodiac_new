@@ -776,10 +776,10 @@ namespace Zodiac
 
                 bool mem_res = true;
 
-                for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
+                auto mem_decls = ast_decl->structure.member_declarations;
+                for (int64_t i = 0; i < mem_decls.count; i++)
                 {
-                    if (!try_resolve_identifiers(resolver,
-                                                 ast_decl->structure.member_declarations[i],
+                    if (!try_resolve_identifiers(resolver, mem_decls[i],
                                                  ast_decl->structure.member_scope))
                     {
                         mem_res = false;
@@ -792,13 +792,23 @@ namespace Zodiac
 
             case AST_Declaration_Kind::ENUM:
             {
-                bool mem_res = true;
 
                 uint64_t member_value = 0;
 
-                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                if (ast_decl->enum_decl.type_spec)
                 {
-                    auto mem_decl = ast_decl->enum_decl.member_declarations[i];
+                    if (!try_resolve_identifiers(resolver, ast_decl->enum_decl.type_spec,
+                                                 ast_decl->enum_decl.member_scope))
+                    {
+                        assert(false);
+                    }
+                }
+
+                bool mem_res = true;
+                auto mem_decls = ast_decl->enum_decl.member_declarations;
+                for (int64_t i = 0; i < mem_decls.count; i++)
+                {
+                    auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
 
                     if (!mem_decl->constant.init_expression)
@@ -1723,9 +1733,9 @@ namespace Zodiac
                 {
                     auto ident = ast_decl->identifier;
                     assert(ident);
-                    ast_decl->type = create_structure_type(resolver, ast_decl, member_types, 
-                                                           ast_decl->structure.member_scope,
-                                                           scope);
+                    ast_decl->type =
+                        create_structure_type(resolver, ast_decl, member_types,
+                                               ast_decl->structure.member_scope, scope);
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
                 else
@@ -1737,17 +1747,32 @@ namespace Zodiac
 
             case AST_Declaration_Kind::ENUM: 
             {
-                AST_Type *base_type = Builtin::type_u64;
+                AST_Type *base_type = nullptr;
 
                 result = true;
+
+                if (ast_decl->enum_decl.type_spec)
+                {
+                    if (!try_resolve_types(resolver, ast_decl->enum_decl.type_spec,
+                                           scope, &base_type, nullptr))
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    base_type = Builtin::type_u64;
+                }
 
                 auto enum_type = create_enum_type(resolver, ast_decl, base_type, 
                                                   ast_decl->enum_decl.member_scope,
                                                   scope);
 
-                for (uint64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
+                auto mem_decls = ast_decl->enum_decl.member_declarations;
+                for (uint64_t i = 0; i < mem_decls.count; i++)
                 {
-                    auto mem_decl = ast_decl->enum_decl.member_declarations[i];
+                    auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
                     assert(mem_decl->constant.type_spec == nullptr);
                     mem_decl->constant.type_spec =
