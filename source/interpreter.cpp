@@ -1168,12 +1168,14 @@ namespace Zodiac
                }
 
                case Bytecode_Instruction::CAST_INT:
+               case Bytecode_Instruction::CAST_ENUM:
                {
                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
                    auto val_idx = interpreter_fetch<uint32_t>(interp);
 
                    auto val = interpreter_load_temporary(interp, val_idx);
-                   assert(val->type->kind == AST_Type_Kind::INTEGER);
+                   assert(val->type->kind == AST_Type_Kind::INTEGER ||
+                          val->type->kind == AST_Type_Kind::ENUM);
 
                    AST_Type *target_type = bytecode_type_from_size_spec(size_spec);
                    auto result = interpreter_push_temporary(interp, target_type);

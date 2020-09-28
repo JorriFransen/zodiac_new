@@ -1117,7 +1117,12 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
-            case AST_Type_Kind::ENUM: assert(false);
+
+            case AST_Type_Kind::ENUM:
+            {
+                return bytecode_emit_cast_enum(builder, operand_expr, target_type);
+                break;
+            }
 
             case AST_Type_Kind::ARRAY: assert(false);
         }
@@ -1160,6 +1165,25 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
+    }
+
+    Bytecode_Value *bytecode_emit_cast_enum(Bytecode_Builder *builder, AST_Expression *operand_expr,
+                                           AST_Type *target_type)
+    {
+        assert(operand_expr->type->kind == AST_Type_Kind::ENUM);
+
+        auto operand_val = bytecode_emit_expression(builder, operand_expr);
+        assert(operand_val);
+
+        assert(target_type->kind == AST_Type_Kind::INTEGER);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_ENUM);
+        bytecode_emit_size_spec(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
     }
 
     Bytecode_Value *bytecode_emit_cast_float(Bytecode_Builder *builder,
@@ -2809,7 +2833,19 @@ namespace Zodiac
 
                 string_builder_appendf(sb, "%%%" PRId64 " = CAST_INT ",
                                        bci->local_temp_index++);
-                bytecode_print_size_spec(sb, size_spec); 
+                bytecode_print_size_spec(sb, size_spec);
+                string_builder_appendf(sb, " %%%" PRIu32, val_idx);
+                break;
+            }
+
+            case Bytecode_Instruction::CAST_ENUM:
+            {
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+                auto val_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = CAST_ENUM ",
+                                       bci->local_temp_index++);
+                bytecode_print_size_spec(sb, size_spec);
                 string_builder_appendf(sb, " %%%" PRIu32, val_idx);
                 break;
             }
@@ -2985,6 +3021,7 @@ namespace Zodiac
                 string_builder_append(sb, "R64");
                 break;
             }
+
             default: assert(false);
         }
     }

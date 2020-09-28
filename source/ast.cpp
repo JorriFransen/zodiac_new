@@ -308,7 +308,21 @@ namespace Zodiac
                 {
                     auto ptn_mem = ptn->enum_decl.members[i];
                     auto ast_member = ast_create_enum_member_from_ptn(allocator, ptn_mem); 
+                    assert(ast_member->kind == AST_Declaration_Kind::CONSTANT);
+                    assert(ast_member->constant.type_spec == nullptr);
+
                     array_append(&ast_members, ast_member);
+
+                    auto init_expr = ast_member->constant.init_expression;
+                    if (init_expr)
+                    {
+                        if (init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL)
+                        {
+                            ast_member->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_INTINIT;
+                        }
+                        else assert(false);
+                    }
+
                 }
 
                 return ast_enum_declaration_new(allocator, ast_ident, ast_ts, ast_members,
@@ -353,7 +367,8 @@ namespace Zodiac
             case PT_Node_Kind::IDENTIFIER:
             {
                 Identifier_PTN *ident = (Identifier_PTN*)ptn;
-                identifier = ast_identifier_new(allocator, ident->atom, ptn->begin_file_pos,
+                identifier = ast_identifier_new(allocator, ident->atom,
+                                                ptn->begin_file_pos,
                                                 ptn->end_file_pos);
                 break;
             }
@@ -361,7 +376,27 @@ namespace Zodiac
             case PT_Node_Kind::FUNCTION_PROTO: assert(false);
             case PT_Node_Kind::PARAMETER: assert(false);
             case PT_Node_Kind::EXPRESSION_LIST: assert(false);
-            case PT_Node_Kind::DECLARATION: assert(false);
+
+            case PT_Node_Kind::DECLARATION:
+            {
+                Declaration_PTN *declaration = (Declaration_PTN*)ptn;
+                Identifier_PTN *ident = declaration->identifier;
+
+                assert(declaration->kind == Declaration_PTN_Kind::CONSTANT);
+                assert(declaration->constant.type_expression == nullptr);
+
+                identifier = ast_identifier_new(allocator, ident->atom,
+                                                ident->self.begin_file_pos,
+                                                ident->self.end_file_pos);
+
+                auto init_expression = declaration->constant.init_expression;
+                if (init_expression)
+                {
+                    init_expr = ast_create_expression_from_ptn(allocator, init_expression);
+                }
+                break;
+            }
+
             case PT_Node_Kind::STATEMENT: assert(false);
             case PT_Node_Kind::EXPRESSION: assert(false);
         }

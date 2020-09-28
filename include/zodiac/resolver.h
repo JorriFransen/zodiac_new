@@ -233,6 +233,8 @@ namespace Zodiac
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
 
+    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl);
+
     void resolver_inherit_const(AST_Expression *expr);
 
     bool resolver_valid_type_conversion(AST_Type *type, AST_Type *target_type);

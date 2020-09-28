@@ -14,10 +14,17 @@ Day :: enum
 
 Operator : u8 : enum
 {
-    Add :: 1;
-    Sub :: 2,
+    Add :: 16;
+    Sub;
     Mul,
     Div,
+
+    Eq :: 1,
+    NEq,
+    Lt,
+    LtEq,
+    Gt,
+    GtEq,
 
     Invalid :: 0,
 }
@@ -39,7 +46,28 @@ main :: func() -> s64
     print_day(Day.Saturday);
     print_day(Day.Sunday);
 
-    op := Operator.Add;
+    std.print_num(Operator.Add);
+    std.print("\n");
+    std.print_num(Operator.Sub);
+    std.print("\n");
+    std.print_num(Operator.Mul);
+    std.print("\n");
+    std.print_num(Operator.Div);
+    std.print("\n");
+    std.print_num(Operator.Eq);
+    std.print("\n");
+    std.print_num(Operator.NEq);
+    std.print("\n");
+    std.print_num(Operator.Lt);
+    std.print("\n");
+    std.print_num(Operator.LtEq);
+    std.print("\n");
+    std.print_num(Operator.Gt);
+    std.print("\n");
+    std.print_num(Operator.GtEq);
+    std.print("\n");
+    std.print_num(Operator.Invalid);
+    std.print("\n");
 
     return 0;
 }

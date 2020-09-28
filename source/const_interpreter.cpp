@@ -34,10 +34,21 @@ namespace Zodiac
 
             case AST_Expression_Kind::INTEGER_LITERAL:
             {
-                assert(expr->type == Builtin::type_s64);
                 Const_Value result = {};
                 result.type = expr->type;
-                result.s64 = expr->integer_literal.s64;
+
+                if (expr->type->kind == AST_Type_Kind::ENUM)
+                {
+                    auto base_type = expr->type->enum_type.base_type;
+                    assert(base_type->kind == AST_Type_Kind::INTEGER);
+                    result.s64 = expr->integer_literal.s64;
+                }
+                else
+                {
+                    assert(expr->type == Builtin::type_s64);
+                    result.s64 = expr->integer_literal.s64;
+                }
+
                 return result;
                 break;
             }

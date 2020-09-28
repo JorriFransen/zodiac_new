@@ -793,8 +793,6 @@ namespace Zodiac
             case AST_Declaration_Kind::ENUM:
             {
 
-                uint64_t member_value = 0;
-
                 if (ast_decl->enum_decl.type_spec)
                 {
                     if (!try_resolve_identifiers(resolver, ast_decl->enum_decl.type_spec,
@@ -811,26 +809,26 @@ namespace Zodiac
                     auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
 
-                    if (!mem_decl->constant.init_expression)
+                    auto init_expr = mem_decl->constant.init_expression;
+                    if (init_expr)
                     {
-                        mem_decl->constant.init_expression =
-                            ast_integer_literal_expression_new(resolver->allocator,
-                                                               member_value,
-                                                               mem_decl->begin_file_pos,
-                                                               mem_decl->end_file_pos);
-                        member_value += 1;
+                        assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
                     }
                     else
                     {
-                        assert(false);
+                        mem_decl->constant.init_expression =
+                            ast_integer_literal_expression_new(resolver->allocator,
+                                                               0,
+                                                               mem_decl->begin_file_pos,
+                                                               mem_decl->end_file_pos);
                     }
 
-                    
                     if (!try_resolve_identifiers(resolver, mem_decl,
                                                  ast_decl->enum_decl.member_scope))
                     {
                         mem_res = false;
                     }
+
                     result = mem_res;
                 }
                 break;
@@ -1791,6 +1789,12 @@ namespace Zodiac
 
                 if (result)
                 {
+                    result = resolver_assign_enum_initializers(resolver, ast_decl);
+                    assert(result);
+                }
+
+                if (result)
+                {
                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
                    ast_decl->type = enum_type;
                 } 
@@ -2369,9 +2373,18 @@ namespace Zodiac
                 {
                     if (target_type->kind == AST_Type_Kind::INTEGER)
                     {
-                        assert(operand->type->kind == AST_Type_Kind::INTEGER);
-                        result = true;
-                        result_type = target_type;
+                        if (operand->type->kind == AST_Type_Kind::INTEGER)
+                        {
+                            result = true;
+                            result_type = target_type;
+                        }
+                        else if (operand->type->kind == AST_Type_Kind::ENUM)
+                        {
+                            result = true;
+                            assert(resolver_valid_type_conversion(
+                                        operand->type->enum_type.base_type, target_type));
+                            result_type = target_type;
+                        }
                     }
                     else if (target_type->kind == AST_Type_Kind::FLOAT)
                     {
@@ -3499,6 +3512,39 @@ namespace Zodiac
         return nullptr;
     }
 
+    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::ENUM);
+
+        bool result = true;
+
+        auto members = decl->enum_decl.member_declarations;
+
+        int64_t next_value = 0;
+
+        for (int64_t i = 0; i < members.count; i++)
+        {
+            auto mem_decl = members[i];
+            assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+
+            auto init_expr = mem_decl->constant.init_expression;
+            if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_INTINIT)
+            {
+                assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+                auto nv = const_interpret_expression(init_expr);
+                next_value = nv.s64 + 1;
+            }
+            else
+            {
+                assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+                init_expr->integer_literal.s64 = next_value;
+                next_value += 1;
+            }
+        }
+
+        return result;
+    }
+
     void resolver_inherit_const(AST_Expression *expr)
     {
         if (expr->expr_flags & AST_EXPR_FLAG_CONST) return;
@@ -3601,7 +3647,15 @@ namespace Zodiac
                     {
                         return type->bit_size < target_type->bit_size;
                     } 
-                    else assert(false);
+                    else if (type->integer.sign)
+                    {
+                        assert(false);
+                    }
+                    else
+                    {
+                        assert(target_type->integer.sign);
+                        return type->bit_size < target_type->bit_size;
+                    }
                 }
                 else assert(false);
 
@@ -3621,7 +3675,18 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
-            case AST_Type_Kind::ENUM: assert(false);
+
+            case AST_Type_Kind::ENUM:
+            {
+                if (target_type->kind == AST_Type_Kind::INTEGER)
+                {
+                    assert(type->enum_type.base_type);
+                    return resolver_valid_type_conversion(type->enum_type.base_type,
+                                                          target_type);
+                }
+                else assert(false);
+                break;
+            }
 
             case AST_Type_Kind::ARRAY: assert(false);
         }

@@ -1133,7 +1133,9 @@ namespace Zodiac
                 break;
             }
 
+
             case Bytecode_Instruction::CAST_INT:
+            case Bytecode_Instruction::CAST_ENUM:
             {
                 auto size_spec =
                     llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
