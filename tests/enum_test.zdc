@@ -14,17 +14,21 @@ Day :: enum
 
 Operator : u8 : enum
 {
+    First_Math :: Add;
     Add :: 16;
     Sub;
     Mul,
     Div,
+    Last_Math :: Div;
 
+    First_Cmp :: Eq;
     Eq :: 1,
     NEq,
     Lt,
     LtEq,
     Gt,
     GtEq,
+    Last_Cmp :: GtEq;
 
     Invalid :: 0,
 }
@@ -33,6 +37,14 @@ main :: func() -> s64
 {
     std.println("Enum test");
 
+    test_day();
+    test_operators();
+
+    return 0;
+}
+
+test_day :: func()
+{
     day : Day = Day.Monday;
     print_day(day);
 
@@ -46,30 +58,44 @@ main :: func() -> s64
     print_day(Day.Saturday);
     print_day(Day.Sunday);
 
+    return;
+}
+
+test_operators :: func()
+{
+    std.print("\nOperator.First_Math = ");
+    std.print_num(Operator.First_Math);
+    std.print("\nOperator.Add = ");
     std.print_num(Operator.Add);
-    std.print("\n");
+    std.print("\nOperator.Sub = ");
     std.print_num(Operator.Sub);
-    std.print("\n");
+    std.print("\nOperator.Mul = ");
     std.print_num(Operator.Mul);
-    std.print("\n");
+    std.print("\nOperator.Div = ");
     std.print_num(Operator.Div);
-    std.print("\n");
+    std.print("\nOperator.Last_Math = ");
+    std.print_num(Operator.Last_Math);
+    std.print("\nOperator.First_Cmp = ");
+    std.print_num(Operator.First_Cmp);
+    std.print("\nOperator.Eq = ");
     std.print_num(Operator.Eq);
-    std.print("\n");
+    std.print("\nOperator.Neq = ");
     std.print_num(Operator.NEq);
-    std.print("\n");
+    std.print("\nOperator.Lt = ");
     std.print_num(Operator.Lt);
-    std.print("\n");
+    std.print("\nOperator.LtEq = ");
     std.print_num(Operator.LtEq);
-    std.print("\n");
+    std.print("\nOperator.Gt = ");
     std.print_num(Operator.Gt);
-    std.print("\n");
+    std.print("\nOperator.GtEq = ");
     std.print_num(Operator.GtEq);
-    std.print("\n");
+    std.print("\nOperator.Last_Cmp = ");
+    std.print_num(Operator.Last_Cmp);
+    std.print("\nOperator.Invalid = ");
     std.print_num(Operator.Invalid);
     std.print("\n");
 
-    return 0;
+    return;
 }
 
 print_day :: func(day: Day)

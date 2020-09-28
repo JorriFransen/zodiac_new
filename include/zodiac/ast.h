@@ -81,14 +81,15 @@ namespace Zodiac
 
     enum AST_Declaration_Flag__ : AST_Declaration_Flag
     {
-        AST_DECL_FLAG_NONE                = 0x00,
-        AST_DECL_FLAG_IS_NAKED            = 0x01,
-        AST_DECL_FLAG_IS_ENTRY            = 0x02,
-        AST_DECL_FLAG_IS_BYTECODE_ENTRY   = 0x04,
-        AST_DECL_FLAG_NORETURN            = 0x08,
-        AST_DECL_FLAG_FOREIGN             = 0x10,
-        AST_DECL_FLAG_GLOBAL              = 0x20,
-        AST_DECL_FLAG_ENUM_MEMBER_INTINIT = 0x40,
+        AST_DECL_FLAG_NONE                  = 0x00,
+        AST_DECL_FLAG_IS_NAKED              = 0x01,
+        AST_DECL_FLAG_IS_ENTRY              = 0x02,
+        AST_DECL_FLAG_IS_BYTECODE_ENTRY     = 0x04,
+        AST_DECL_FLAG_NORETURN              = 0x08,
+        AST_DECL_FLAG_FOREIGN               = 0x10,
+        AST_DECL_FLAG_GLOBAL                = 0x20,
+        AST_DECL_FLAG_ENUM_MEMBER_INTINIT   = 0x40,
+        AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT = 0x80,
     };
 
     struct AST_Declaration : public AST_Node

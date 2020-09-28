@@ -320,6 +320,10 @@ namespace Zodiac
                         {
                             ast_member->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_INTINIT;
                         }
+                        else if (init_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                        {
+                            ast_member->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT;
+                        }
                         else assert(false);
                     }
 

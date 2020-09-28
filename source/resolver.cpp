@@ -812,7 +812,8 @@ namespace Zodiac
                     auto init_expr = mem_decl->constant.init_expression;
                     if (init_expr)
                     {
-                        assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+                        assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
+                               init_expr->kind == AST_Expression_Kind::IDENTIFIER);
                     }
                     else
                     {
@@ -1774,9 +1775,11 @@ namespace Zodiac
                 {
                     auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
-                    assert(mem_decl->constant.type_spec == nullptr);
-                    mem_decl->constant.type_spec =
-                        ast_type_spec_from_type_new(resolver->allocator, enum_type);
+                    if (mem_decl->constant.type_spec == nullptr)
+                    {
+                        mem_decl->constant.type_spec =
+                            ast_type_spec_from_type_new(resolver->allocator, enum_type);
+                    }
 
                     bool mem_res = try_resolve_types(resolver, mem_decl,
                                                      ast_decl->enum_decl.member_scope);
@@ -3033,12 +3036,21 @@ namespace Zodiac
     {
         assert(enum_decl->kind == AST_Declaration_Kind::ENUM);
 
-        auto result = ast_enum_type_new(resolver->allocator, enum_decl, base_type, mem_scope);
-        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
-        result->flags |= AST_NODE_FLAG_TYPED;
-        array_append(&resolver->build_data->type_table, result);
-        queue_size_job(resolver, result, current_scope);
-        return result;
+        AST_Type *enum_type = build_data_find_enum_type(resolver->build_data,
+                                                        enum_decl);
+
+        if (!enum_type)
+        {
+            enum_type = ast_enum_type_new(resolver->allocator, enum_decl, base_type,
+                                          mem_scope);
+            enum_type->flags |= AST_NODE_FLAG_RESOLVED_ID;
+            enum_type->flags |= AST_NODE_FLAG_TYPED;
+            array_append(&resolver->build_data->type_table, enum_type);
+            queue_size_job(resolver, enum_type, current_scope);
+        }
+
+        assert(enum_type);
+        return enum_type;
     }
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
@@ -3532,6 +3544,22 @@ namespace Zodiac
             {
                 assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
                 auto nv = const_interpret_expression(init_expr);
+                next_value = nv.s64 + 1;
+            }
+            else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT)
+            {
+                assert(init_expr->kind == AST_Expression_Kind::IDENTIFIER);
+                assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+                auto id_decl = init_expr->identifier->declaration;
+                assert(id_decl);
+                assert(id_decl->kind == AST_Declaration_Kind::CONSTANT);
+
+                auto id_init_expr = id_decl->constant.init_expression;
+                assert(id_init_expr->type);
+                assert(id_init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
+
+                auto nv = const_interpret_expression(id_init_expr);
                 next_value = nv.s64 + 1;
             }
             else

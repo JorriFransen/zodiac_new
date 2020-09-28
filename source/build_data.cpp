@@ -107,4 +107,20 @@ namespace Zodiac
 
         return nullptr;
     }
+
+    AST_Type * build_data_find_enum_type(Build_Data *build_data, AST_Declaration *enum_decl)
+    {
+        for (int64_t i = 0; i < build_data->type_table.count; i++)
+        {
+            auto r_type = build_data->type_table[i];
+
+            if (r_type->kind == AST_Type_Kind::ENUM &&
+                r_type->enum_type.declaration == enum_decl)
+            {
+                return r_type;
+            }
+        }
+
+        return nullptr;
+    }
 }
