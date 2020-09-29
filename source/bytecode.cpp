@@ -1513,7 +1513,7 @@ namespace Zodiac
 
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
-#if DEBUG
+#ifndef NDEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::INTEGER);
 #endif
@@ -1534,7 +1534,7 @@ namespace Zodiac
         assert(target_type->kind == AST_Type_Kind::FLOAT);
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
-#if DEBUG
+#ifndef NDEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::INTEGER);
 #endif
@@ -1555,7 +1555,7 @@ namespace Zodiac
         assert(target_type->kind == AST_Type_Kind::INTEGER);
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
-#if DEBUG
+#ifndef NDEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::FLOAT);
 #endif
@@ -2336,7 +2336,7 @@ namespace Zodiac
 
         bci->instruction_index += adv;
 
-#if DEBUG
+#ifndef NDEBUG
         auto block = bytecode_iterator_get_block(bci);
         assert(bci->instruction_index <= block->instructions.count);
 #endif

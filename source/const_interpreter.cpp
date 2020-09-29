@@ -39,7 +39,7 @@ namespace Zodiac
 
                 if (expr->type->kind == AST_Type_Kind::ENUM)
                 {
-#if DEBUG
+#ifndef NDEBUG
                     auto base_type = expr->type->enum_type.base_type;
                     assert(base_type->kind == AST_Type_Kind::INTEGER);
 #endif

@@ -289,7 +289,7 @@ namespace Zodiac
         if (bc_val)
         {
 
-#if DEBUG
+#ifndef NDEBUG
             auto bc_idx = bc_glob.value->glob_index;
             auto dest_idx = builder->globals.count;
             assert(bc_idx == dest_idx);
@@ -1124,12 +1124,12 @@ namespace Zodiac
                                                                          &func_context->ip);
 
 
-#if DEBUG
+#ifndef NDEBUG
                 auto next_inst =
 #endif
                     llvm_fetch_from_bytecode<Bytecode_Instruction>(func_context->bc_block,
                                                                    &func_context->ip);
-#if DEBUG
+#ifndef NDEBUG
                 assert(next_inst == Bytecode_Instruction::JUMP);
 #endif
 
@@ -1206,7 +1206,7 @@ namespace Zodiac
                                                                   &func_context->ip);
 
                 auto val = builder->temps[val_idx];
-#if DEBUG
+#ifndef NDEBUG
                 LLVMTypeKind tk = LLVMGetTypeKind(LLVMTypeOf(val));
                 assert(tk == LLVMFloatTypeKind ||
                        tk == LLVMDoubleTypeKind);

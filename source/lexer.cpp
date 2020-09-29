@@ -212,7 +212,7 @@ Token lex_keyword_or_identifier(Lexer_Data* ld)
 
 Token lex_identifier(Lexer_Data* ld)
 {
-#if DEBUG
+#ifndef NDEBUG
     auto fc = current_char(ld);
     assert(is_alpha(fc) || fc == '_');
 #endif
@@ -262,7 +262,7 @@ Token lex_number_literal(Lexer_Data* ld)
 
 Token lex_character_literal(Lexer_Data* ld)
 {
-#if DEBUG
+#ifndef NDEBUG
     auto  fc = current_char(ld);
     assert(fc == '\'');
 #endif
@@ -290,7 +290,7 @@ Token lex_character_literal(Lexer_Data* ld)
 
 Token lex_string_literal(Lexer_Data* ld)
 {
-#if DEBUG
+#ifndef NDEBUG
     auto fc = current_char(ld);
     assert(fc == '"');
 #endif

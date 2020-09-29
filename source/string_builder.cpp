@@ -125,7 +125,7 @@ namespace Zodiac
 
     void string_builder_append_to_block(String_Builder_Block *sbb, const char* cstr, uint64_t length)
     {
-#if DEBUG
+#ifndef NDEBUG
         auto rem = sbb->capacity - sbb->used;
         assert(rem >= length);
 #endif

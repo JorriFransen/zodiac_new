@@ -52,7 +52,7 @@ namespace Zodiac
         {
             auto &glob = program->globals[i];
 
-#if DEBUG
+#ifndef NDEBUG
             auto type = glob.value->type;
             assert(type->kind == AST_Type_Kind::INTEGER ||
                    type->kind == AST_Type_Kind::FLOAT ||
@@ -615,7 +615,7 @@ namespace Zodiac
                     auto bit_size = new_val->type->bit_size;
                     assert(bit_size % 8 == 0);
 
-#if DEBUG
+#ifndef NDEBUG
                     auto tk = new_val->type->kind;
                     assert(tk == AST_Type_Kind::INTEGER ||
                            tk == AST_Type_Kind::FLOAT);

@@ -2139,7 +2139,7 @@ namespace Zodiac
                     assert(parent_type);
                     if (parent_type->kind == AST_Type_Kind::ENUM)
                     {
-#if DEBUG
+#ifndef NDEBUG
                         auto member_ident = ast_expr->dot.child_identifier;
                         assert(member_ident);
                         assert(member_ident->declaration);
@@ -2359,7 +2359,7 @@ namespace Zodiac
                     assert(false);
                 }
 
-#if DEBUG
+#ifndef NDEBUG
                 auto index_type = ast_expr->subscript.index_expression->type;
                 assert(index_type->kind == AST_Type_Kind::INTEGER);
 #endif
@@ -2979,7 +2979,7 @@ namespace Zodiac
 
         assert(node->kind == AST_Node_Kind::STATEMENT);
 
-#if DEBUG
+#ifndef NDEBUG
         auto stmt = static_cast<AST_Statement*>(node);
         assert(stmt->kind == AST_Statement_Kind::BLOCK);
 #endif
