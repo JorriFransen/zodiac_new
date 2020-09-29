@@ -1730,8 +1730,7 @@ namespace Zodiac
                 
                 if (result)
                 {
-                    auto ident = ast_decl->identifier;
-                    assert(ident);
+                    assert(ast_decl->identifier);
                     ast_decl->type =
                         create_structure_type(resolver, ast_decl, member_types,
                                                ast_decl->structure.member_scope, scope);
@@ -2075,7 +2074,12 @@ namespace Zodiac
             {
                 auto parent_expr = ast_expr->dot.parent_expression;
                 bool parent_res = try_resolve_types(resolver, parent_expr, scope);
-                assert(parent_res);
+
+                if (!parent_res)
+                {
+                    result = false;
+                    break;
+                }
 
                 if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER &&
                     parent_expr->identifier->declaration->kind == AST_Declaration_Kind::IMPORT)
@@ -2111,13 +2115,15 @@ namespace Zodiac
                     assert(parent_type);
                     if (parent_type->kind == AST_Type_Kind::ENUM)
                     {
+#if DEBUG
                         auto member_ident = ast_expr->dot.child_identifier;
                         assert(member_ident);
                         assert(member_ident->declaration);
-                        auto mem_decl = member_ident->declaration;
 
+                        auto mem_decl = member_ident->declaration;
                         assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
                         assert(mem_decl->type);
+#endif
 
                         ast_expr->type = parent_type;
                         result = true;
@@ -2329,8 +2335,10 @@ namespace Zodiac
                     assert(false);
                 }
 
+#if DEBUG
                 auto index_type = ast_expr->subscript.index_expression->type;
                 assert(index_type->kind == AST_Type_Kind::INTEGER);
+#endif
 
                 if (!try_resolve_types(resolver, ast_expr->subscript.pointer_expression, scope))
                 {
@@ -2947,9 +2955,10 @@ namespace Zodiac
 
         assert(node->kind == AST_Node_Kind::STATEMENT);
 
+#if DEBUG
         auto stmt = static_cast<AST_Statement*>(node);
-
         assert(stmt->kind == AST_Statement_Kind::BLOCK);
+#endif
 
         resolver->break_node = node;
     }
@@ -3784,6 +3793,9 @@ namespace Zodiac
 #undef DOUBLE_INT_MAX 
         }
         else assert(false);
+
+        assert(false);
+        return false;
     }
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)

@@ -11,7 +11,7 @@ check_cmake_result () {
 }
 
 call_cmake () {
-    cmake .. -G Ninja ../.. -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}"
+    cmake .. -G Ninja ../.. -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}" $2
     check_cmake_result
     echo
 }
@@ -38,6 +38,7 @@ popd
 
 mkdir -p build_clang/debug
 mkdir -p build_clang/release
+mkdir -p build_clang/tracy
 
 pushd build_clang
 pushd debug
@@ -50,6 +51,11 @@ popd
 #CC=clang CXX=clang++ call_cmake Release
 
 #popd
+
+pushd tracy
+CFLAGS=-DTRACY_ENABLE=1 CC=clang CXX=clang++ call_cmake Release "-DTRACY_ENABLE=1"
+popd
+
 popd
 
 

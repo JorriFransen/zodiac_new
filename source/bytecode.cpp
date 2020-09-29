@@ -1513,8 +1513,10 @@ namespace Zodiac
 
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
+#if DEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::INTEGER);
+#endif
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_INT);
         bytecode_emit_size_spec(builder, target_type);
@@ -1532,8 +1534,10 @@ namespace Zodiac
         assert(target_type->kind == AST_Type_Kind::FLOAT);
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
+#if DEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::INTEGER);
+#endif
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_INT);
         bytecode_emit_size_spec(builder, target_type);
@@ -1551,8 +1555,10 @@ namespace Zodiac
         assert(target_type->kind == AST_Type_Kind::INTEGER);
         assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
 
+#if DEBUG
         auto op_type = operand_val->type;
         assert(op_type->kind == AST_Type_Kind::FLOAT);
+#endif
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_FLOAT);
         bytecode_emit_size_spec(builder, target_type);

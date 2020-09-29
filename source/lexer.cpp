@@ -262,8 +262,10 @@ Token lex_number_literal(Lexer_Data* ld)
 
 Token lex_character_literal(Lexer_Data* ld)
 {
+#if DEBUG
     auto  fc = current_char(ld);
     assert(fc == '\'');
+#endif
 
     auto begin_fp = get_file_pos(ld);
 
@@ -446,6 +448,9 @@ char lexer_get_escape_char(char ident)
         case 'n': return '\n';
         default: assert(false);
     }
+
+    assert(false);
+    return 0;
 }
 
 Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)

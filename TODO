@@ -1,5 +1,4 @@
 
-enum member initializers for enum members
 switch statements
 for loops
 unions
@@ -34,7 +33,6 @@ Command line option parsing
   - -cruntime
   - -print_scope (Scopes need to be parented to the global scope to make this work)
 
-Optional semicolon at the end of foreign function declarations.
 Print parameter types in bytecode printer
 
 Windows build

@@ -280,9 +280,12 @@ namespace Zodiac
         auto bc_val = bc_glob.value;
         if (bc_val)
         {
+
+#if DEBUG
             auto bc_idx = bc_glob.value->glob_index;
             auto dest_idx = builder->globals.count;
             assert(bc_idx == dest_idx);
+#endif
 
             assert(bc_val->kind == Bytecode_Value_Kind::GLOBAL);
             LLVMValueRef init_val = llvm_emit_constant(builder, bc_val);
@@ -1112,10 +1115,16 @@ namespace Zodiac
                 auto then_block_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                          &func_context->ip);
 
+
+#if DEBUG
                 auto next_inst =
+#endif
                     llvm_fetch_from_bytecode<Bytecode_Instruction>(func_context->bc_block,
                                                                    &func_context->ip);
+#if DEBUG
                 assert(next_inst == Bytecode_Instruction::JUMP);
+#endif
+
                 auto else_block_idx =
                     llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                        &func_context->ip);
@@ -1189,9 +1198,11 @@ namespace Zodiac
                                                                   &func_context->ip);
 
                 auto val = builder->temps[val_idx];
+#if DEBUG
                 LLVMTypeKind tk = LLVMGetTypeKind(LLVMTypeOf(val));
                 assert(tk == LLVMFloatTypeKind ||
                        tk == LLVMDoubleTypeKind);
+#endif
 
                 switch (size_spec)
                 {
@@ -1392,6 +1403,9 @@ namespace Zodiac
 
             default: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context)
@@ -1511,8 +1525,11 @@ namespace Zodiac
                                                 false,
                                                 LLVMInlineAsmDialectATT);
 
-        LLVMValueRef result = LLVMBuildCall(builder->llvm_builder, asm_val, llvm_args.data,
-                                            llvm_args.count, "");
+#if DEBUG
+        LLVMValueRef result =
+#endif
+            LLVMBuildCall(builder->llvm_builder, asm_val, llvm_args.data,
+                          llvm_args.count, "");
         assert(result);
 
         free(builder->allocator, constraint_str.data);
