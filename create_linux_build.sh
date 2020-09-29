@@ -53,7 +53,7 @@ popd
 #popd
 
 pushd tracy
-CFLAGS=-DTRACY_ENABLE=1 CC=clang CXX=clang++ call_cmake Release "-DTRACY_ENABLE=1"
+CC=clang CXX=clang++ call_cmake Release "-DTRACY_ENABLE=1"
 popd
 
 popd

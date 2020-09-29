@@ -15,12 +15,6 @@ using namespace Zodiac;
 
 int main(int argc, char** argv)
 {
-
-#ifdef TRACY_ENABLE
-    printf("Tracy enabled: %d\n", TRACY_ENABLE);
-#else
-    printf("Tracy not enabled\n");
-#endif
     auto options = parse_command_line(argc, argv);
 
     if (!options.valid) return 1;

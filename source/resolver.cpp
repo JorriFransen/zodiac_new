@@ -12,6 +12,8 @@
 
 #include <inttypes.h>
 
+#include <tracy/Tracy.hpp>
+
 namespace Zodiac
 {
     void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
@@ -121,8 +123,13 @@ namespace Zodiac
 
         auto options = resolver->build_data->options;
 
+        FrameMark
+
         while (!done)
         {
+            ZoneScopedNCS("compiler_pump", 0xffff00, 32)
+            { ZoneScopedNC("parse_jobs", 0xff0000)
+
             auto parse_job_count = queue_count(&resolver->parse_job_queue);
             while (parse_job_count--)
             {
@@ -142,7 +149,9 @@ namespace Zodiac
                     assert(ast_module);
                     queue_ident_job(resolver, ast_module, ast_module->module_scope);
                 }
-            }
+            } }
+
+            { ZoneScopedNC("ident_jobs", 0x00ff00)
 
             auto ident_job_count = queue_count(&resolver->ident_job_queue);
             while (ident_job_count--)
@@ -162,11 +171,14 @@ namespace Zodiac
                     }
                     free_job(resolver, job);
                 }
-            }
+            } }
+
+            { ZoneScopedNC("type_jobs", 0x0000ff) 
 
             auto type_job_count = queue_count(&resolver->type_job_queue);
             while (type_job_count--)
             {
+
                 auto job = queue_dequeue(&resolver->type_job_queue);
                 assert(job);
                 bool job_done = try_resolve_job(resolver, job);
@@ -200,11 +212,14 @@ namespace Zodiac
                     // Size jobs are queued when types are first created
                     free_job(resolver, job);
                 }
-            }
+            } }
+
+            { ZoneScopedNC("size_jobs", 0xff0000) 
 
             auto size_job_count = queue_count(&resolver->size_job_queue);
             while (size_job_count--)
             {
+
                 auto job = queue_dequeue(&resolver->size_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
 
@@ -216,7 +231,9 @@ namespace Zodiac
                 {
                     free_job(resolver, job);
                 }
-            }
+            } }
+
+            { ZoneScopedNC("bytecode_jobs", 0x00ff00) 
 
             auto bytecode_job_count = queue_count(&resolver->emit_bytecode_job_queue);
             while (bytecode_job_count--)
@@ -261,7 +278,9 @@ namespace Zodiac
 
                     free_job(resolver, job);
                 }
-            }
+            } }
+
+            { ZoneScopedNC("llvm_jobs", 0x0000ff)
 
             auto llvm_job_count = queue_count(&resolver->emit_llvm_func_job_queue);
             while (llvm_job_count--)
@@ -274,11 +293,14 @@ namespace Zodiac
                     done = true;
                 }
                 free_job(resolver, job);
-            }
+            } }
+
+            { ZoneScopedNC("llvm_binary_jobs", 0x00ffff)
 
             auto llvm_binary_job_count = queue_count(&resolver->emit_llvm_binary_job_queue);
             while (llvm_binary_job_count--)
             {
+
                 auto job = queue_dequeue(&resolver->emit_llvm_binary_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
                 free_job(resolver, job);
@@ -288,7 +310,7 @@ namespace Zodiac
                     resolver->llvm_error = true;
                     done = true;
                 }
-            }
+            } }
 
             if (queue_count(&resolver->parse_job_queue) == 0 &&
                 queue_count(&resolver->ident_job_queue) == 0 &&
@@ -314,6 +336,8 @@ namespace Zodiac
             }
 
             resolver_save_progression(resolver);
+
+            FrameMark
         }
     }
 

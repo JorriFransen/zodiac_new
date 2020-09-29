@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 
+#include <tracy/Tracy.hpp>
 
 namespace Zodiac
 { 
@@ -54,6 +55,8 @@ namespace Zodiac
 
     bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name)
     {
+        ZoneScoped
+
         assert(builder);
         assert(output_file_name);
 
@@ -99,13 +102,16 @@ namespace Zodiac
         auto obj_file_name = string_builder_to_string(builder->allocator, &sb);
         string_builder_free(&sb);
 
-        bool obj_emit_failed = LLVMTargetMachineEmitToFile(
+        bool obj_emit_failed = false;
+        { ZoneScopedN("LLVMTargetMachineEmitToFile")
+        obj_emit_failed = LLVMTargetMachineEmitToFile(
                 llvm_target_machine,
                 builder->llvm_module,
                 (char*)obj_file_name.data,
                 LLVMObjectFile,
                 &error
             );
+        }
 
         free(builder->allocator, obj_file_name.data);
 
@@ -123,6 +129,8 @@ namespace Zodiac
 
     bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name)
     {
+        ZoneScopedNCS("llvm_run_linker", 0x00ffff, 32);
+
         assert(output_file_name);
 
         String_Builder _sb = {};
@@ -1525,11 +1533,12 @@ namespace Zodiac
                                                 false,
                                                 LLVMInlineAsmDialectATT);
 
-#if DEBUG
+#ifndef NDEBUG
         LLVMValueRef result =
 #endif
             LLVMBuildCall(builder->llvm_builder, asm_val, llvm_args.data,
                           llvm_args.count, "");
+        
         assert(result);
 
         free(builder->allocator, constraint_str.data);
