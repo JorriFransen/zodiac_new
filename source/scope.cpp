@@ -49,7 +49,7 @@ namespace Zodiac
         return nullptr;
     }
 
-    void scope_populate_ast(Allocator* allocator, AST_Node* anode, Scope *parent_scope)
+    void scope_populate_ast(Allocator *allocator, AST_Node *anode, Scope *parent_scope)
     {
         assert(allocator);
 
@@ -315,7 +315,7 @@ namespace Zodiac
         }
     }
 
-    void scope_populate_expression_ast(Allocator* allocator, AST_Expression *ast_expr,
+    void scope_populate_expression_ast(Allocator *allocator, AST_Expression *ast_expr,
                                        Scope *parent_scope)
     {
         assert(allocator);
@@ -468,7 +468,7 @@ namespace Zodiac
         auto new_cap = scope->current_block->decl_cap * 2; 
 
         auto mem = (uint8_t*)alloc(allocator, sizeof(Scope_Block) +
-                                                     (new_cap * sizeof(AST_Declaration*)));
+                                                     (new_cap  *sizeof(AST_Declaration*)));
         assert(mem);
 
         Scope_Block *new_block = (Scope_Block*)mem;
@@ -481,7 +481,7 @@ namespace Zodiac
         scope->current_block = new_block;
     }
 
-    Scope *scope_new(Allocator* allocator, Scope_Kind kind, Scope *parent,
+    Scope *scope_new(Allocator *allocator, Scope_Kind kind, Scope *parent,
                      int64_t initial_cap/*=4*/)
     {
         auto mem = (uint8_t*)alloc(allocator,

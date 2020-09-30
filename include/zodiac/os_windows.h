@@ -12,9 +12,9 @@ namespace Zodiac
 bool os_is_relative_path(const String& path);
 bool os_is_regular_file(const String& path);
 const String os_get_file_name(Allocator *allocator, const String &path);
-const String os_get_absolute_path(Allocator* allocator, const String& path);
+const String os_get_absolute_path(Allocator *allocator, const String& path);
 const String os_normalize_path(Allocator *allocator, const String &path);
-const char* os_get_cwd(Allocator* allocator);
+const char *os_get_cwd(Allocator *allocator);
 
 String os_read_file_string(Allocator *allcoator, const String &path);
 

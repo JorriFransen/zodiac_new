@@ -82,7 +82,7 @@ enum Token_Kind
 struct KW_Token
 {
     Token_Kind kind = TOK_INVALID;
-    const char* string = nullptr;
+    const char *string = nullptr;
 };
 
 static const KW_Token KW_Tokens[] =
@@ -112,7 +112,7 @@ Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, char c);
 
 bool token_equal(const Token& a, const Token& b);
 
-const char* token_kind_name(Token_Kind);
+const char *token_kind_name(Token_Kind);
 void token_print(const Token& token);
 
 }

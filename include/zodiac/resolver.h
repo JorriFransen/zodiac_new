@@ -161,7 +161,7 @@ namespace Zodiac
     bool try_resolve_identifiers(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
-    bool try_resolve_identifiers(Resolver *resolver, AST_Expression* ast_expr, Scope *scope);
+    bool try_resolve_identifiers(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
     bool try_resolve_identifiers_dot_expr(Resolver *resolver, AST_Expression *ast_expr,
                                           Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Type_Spec *ast_ts, Scope *scope);
@@ -173,7 +173,7 @@ namespace Zodiac
                            AST_Type **inferred_return_type);
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr,
-                           AST_Type* suggested_type, Scope *scope);
+                           AST_Type *suggested_type, Scope *scope);
     bool try_resolve_builtin_call_types(Resolver *resolver, AST_Expression *call_expr,
                                         Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,
@@ -185,14 +185,14 @@ namespace Zodiac
     void resolver_push_break_node(Resolver *resolver, AST_Node *node);
     void resolver_pop_break_node(Resolver *resolver);
 
-    AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
+    AST_Type *find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope);
-    AST_Type* find_or_create_array_type(Resolver *resolver, AST_Type *element_type,
+    AST_Type *find_or_create_array_type(Resolver *resolver, AST_Type *element_type,
                                         int64_t element_count, Scope *current_scope);
-    AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
+    AST_Type *create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope);
-    AST_Type* create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+    AST_Type *create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
                                AST_Type *base_type, Scope *mem_scope,
                                Scope *current_scope);
 

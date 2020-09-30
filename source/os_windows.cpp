@@ -34,7 +34,7 @@ const String os_get_file_name(Allocator *allocator, const String &path)
     return string_copy(allocator, path, start_idx, path.length - start_idx);
 }
 
-const String os_get_absolute_path(Allocator* allocator, const String& path)
+const String os_get_absolute_path(Allocator *allocator, const String& path)
 {
     auto size = GetFullPathNameA(path.data, 0, nullptr, nullptr);
     auto buf = alloc_array<char>(allocator, size);
@@ -50,7 +50,7 @@ const String os_get_absolute_path(Allocator* allocator, const String& path)
     //return {};
 //}
 
-const char* os_get_cwd(Allocator* allocator)
+const char *os_get_cwd(Allocator *allocator)
 {
     assert(false);
     return nullptr;

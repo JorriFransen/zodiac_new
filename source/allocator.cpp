@@ -5,17 +5,17 @@
 namespace Zodiac
 {
 
-void* alloc(Allocator* allocator, int64_t size)
+void *alloc(Allocator *allocator, int64_t size)
 {
     return allocator->alloc(allocator, ALLOCATE, size, nullptr);
 }
 
-void* free(Allocator* allocator, void* ptr)
+void *free(Allocator *allocator, void *ptr)
 {
     return allocator->alloc(allocator, FREE, 0, ptr);
 }
 
-void* align_up(void* ptr, uint64_t align)
+void *align_up(void *ptr, uint64_t align)
 {
     assert(is_power_of_two(align));
 

@@ -28,7 +28,7 @@ const String string_copy(Allocator *allocator, const String& string, int64_t len
     return string_copy(allocator, string, 0, length);
 }
 
-const String string_copy(Allocator* allocator, const String& string)
+const String string_copy(Allocator *allocator, const String& string)
 {
     return string_copy(allocator, string, 0, string.length);
 }
@@ -64,13 +64,13 @@ const String string_append(Allocator *allocator, const String &lhs, const char *
     return string_append(allocator, lhs, string_ref(cstr));
 }
 
-const String string_ref(const char* cstr)
+const String string_ref(const char *cstr)
 {
     String result = { (char*)cstr, (int64_t)strlen(cstr) };
     return result;
 }
 
-const String string_ref(const char* cstr, int64_t length)
+const String string_ref(const char *cstr, int64_t length)
 {
     String result = { (char*)cstr, length };
     return result;

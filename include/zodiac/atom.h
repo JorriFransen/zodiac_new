@@ -8,23 +8,23 @@ namespace Zodiac
 
 struct Atom
 {
-    const char* data = nullptr;
+    const char *data = nullptr;
     uint64_t length = 0;
 };
 
 struct Atom_Table
 {
     Hash_Table<String, Atom> atoms = {};
-    Allocator* allocator = nullptr;
+    Allocator *allocator = nullptr;
 };
 
-void atom_table_init(Allocator* allocator, Atom_Table* at);
+void atom_table_init(Allocator *allocator, Atom_Table *at);
 
-Atom atom_get(Atom_Table* at, const String& str, uint64_t length);
-Atom atom_get(Atom_Table* at, const String& str);
+Atom atom_get(Atom_Table *at, const String& str, uint64_t length);
+Atom atom_get(Atom_Table *at, const String& str);
 
-Atom atom_get(Atom_Table* at, const char* cstr, uint64_t length);
-Atom atom_get(Atom_Table* at, const char* cstr);
+Atom atom_get(Atom_Table *at, const char *cstr, uint64_t length);
+Atom atom_get(Atom_Table *at, const char *cstr);
 
 bool operator==(const Atom& a, const Atom& b);
 

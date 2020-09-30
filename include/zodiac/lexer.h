@@ -15,8 +15,8 @@ using namespace Zodiac;
 
 struct Lexer
 {
-    Build_Data* build_data = nullptr;
-    Allocator* allocator = nullptr;
+    Build_Data *build_data = nullptr;
+    Allocator *allocator = nullptr;
 };
 
 struct Lexed_File
@@ -28,7 +28,7 @@ struct Lexed_File
 
 struct Lexer_Data
 {
-    Lexer* lexer = nullptr;
+    Lexer *lexer = nullptr;
     String file_path = {};
     String file_data = {};
     uint64_t file_index = 0;
@@ -42,7 +42,7 @@ struct Lexer_Data
 
 struct Lexed_File_Token_Stream : public Token_Stream
 {
-    Lexed_File* lexed_file = nullptr;
+    Lexed_File *lexed_file = nullptr;
     int64_t current_index = 0;
 
     Lexed_File_Token_Stream(){}
@@ -55,29 +55,29 @@ struct Lexed_File_Token_Stream : public Token_Stream
     void free() {};
 };
 
-Lexer lexer_create(Allocator* allocator, Build_Data* build_data);
-void lexer_init(Allocator* allocator, Build_Data* build_data, Lexer* lexer);
-Lexed_File lexer_lex_file(Lexer* lexer, const String& file_path);
+Lexer lexer_create(Allocator *allocator, Build_Data *build_data);
+void lexer_init(Allocator *allocator, Build_Data *build_data, Lexer *lexer);
+Lexed_File lexer_lex_file(Lexer *lexer, const String& file_path);
 void lexer_free_lexed_file(Lexer *lexer, Lexed_File *lexed_file);
 
-Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size);
+Lexer_Data lexer_data_create(Lexer *lexer, String file_path, String file_data, uint64_t file_size);
 
-Token next_token(Lexer_Data* ld);
+Token next_token(Lexer_Data *ld);
 
-Token lex_keyword_or_identifier(Lexer_Data* ld);
-Token lex_identifier(Lexer_Data* ld);
-Token lex_number_literal(Lexer_Data* ld);
-Token lex_character_literal(Lexer_Data* ld);
-Token lex_string_literal(Lexer_Data* ld);
+Token lex_keyword_or_identifier(Lexer_Data *ld);
+Token lex_identifier(Lexer_Data *ld);
+Token lex_number_literal(Lexer_Data *ld);
+Token lex_character_literal(Lexer_Data *ld);
+Token lex_string_literal(Lexer_Data *ld);
 
-void advance(Lexer_Data* ld, uint64_t count = 1);
+void advance(Lexer_Data *ld, uint64_t count = 1);
 
-char current_char(Lexer_Data* ld);
-char peek_char(Lexer_Data* ld, uint64_t offset);
+char current_char(Lexer_Data *ld);
+char peek_char(Lexer_Data *ld, uint64_t offset);
 
-const char* current_char_ptr(Lexer_Data* ld);
+const char *current_char_ptr(Lexer_Data *ld);
 
-void skip_whitespace(Lexer_Data* ld);
+void skip_whitespace(Lexer_Data *ld);
 
 bool is_alpha(char c);
 bool is_alpha_num(char c);
@@ -86,11 +86,11 @@ bool is_num(char c);
 bool is_whitespace(char c);
 bool is_newline(char c);
 
-File_Pos get_file_pos(Lexer_Data* ld);
+File_Pos get_file_pos(Lexer_Data *ld);
 
-String lexer_replace_character_literals(Allocator *allocator, const char* str, int64_t length);
+String lexer_replace_character_literals(Allocator *allocator, const char *str, int64_t length);
 char lexer_get_escape_char(char ident);
 
-void lexed_file_print(Lexed_File* lf);
+void lexed_file_print(Lexed_File *lf);
 
-Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf);
+Token_Stream *lexer_new_token_stream(Allocator *allocator, Lexed_File *lf);

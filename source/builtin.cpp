@@ -23,7 +23,7 @@ AST_Type *Builtin::type_ptr_u8 = {};
 
 #include <stdio.h>
 
-void builtin_initialize_atoms(Atom_Table* at)
+void builtin_initialize_atoms(Atom_Table *at)
 {
 #define DEFINE_BUILTIN_ATOM(name) Builtin::atom_ ##name = atom_get(at, #name);
 #define DEFINE_BUILTIN_TYPE(name, kind, size, sign) Builtin::atom_ ##name = atom_get(at, #name);

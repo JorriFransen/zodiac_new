@@ -8,6 +8,6 @@ namespace Zodiac
 
 static Allocator instance;
 
-Allocator* c_allocator_get();
+Allocator *c_allocator_get();
 
 }

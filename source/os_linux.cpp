@@ -51,7 +51,7 @@ const String os_get_file_dir(Allocator *allocator, const String &path)
     return string_copy(allocator, path, 0, end_idx + 1);
 }
 
-const String os_get_absolute_path(Allocator* allocator, const String& path)
+const String os_get_absolute_path(Allocator *allocator, const String& path)
 {
     auto ta = temp_allocator_get();
 
@@ -81,7 +81,7 @@ const String os_normalize_path(Allocator *allocator, const String &path)
     return result;
 }
 
-const char* os_get_cwd(Allocator* allocator)
+const char *os_get_cwd(Allocator *allocator)
 {
     const auto BUF_SIZE = 4096;
     char buf[BUF_SIZE];
@@ -90,7 +90,7 @@ const char* os_get_cwd(Allocator* allocator)
     assert(ret == buf);
 
     auto result_len = strlen(ret);
-    char* result = alloc_array<char>(allocator, result_len + 1);
+    char *result = alloc_array<char>(allocator, result_len + 1);
     memcpy(result, ret, result_len);
     result[result_len] = '\0';
 

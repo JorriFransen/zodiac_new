@@ -8,20 +8,20 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-Lexer lexer_create(Allocator* allocator, Build_Data* build_data)
+Lexer lexer_create(Allocator *allocator, Build_Data *build_data)
 {
     Lexer result = {};
     lexer_init(allocator, build_data, &result);
     return result;
 }
 
-void lexer_init(Allocator* allocator, Build_Data* build_data, Lexer* lexer)
+void lexer_init(Allocator *allocator, Build_Data *build_data, Lexer *lexer)
 {
     lexer->allocator = allocator;
     lexer->build_data = build_data;
 }
 
-Lexed_File lexer_lex_file(Lexer* lexer, const String& _file_path)
+Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
 {
     String file_path = _file_path;
 
@@ -64,7 +64,7 @@ void lexer_free_lexed_file(Lexer *lexer, Lexed_File *lexed_file)
     array_free(&lexed_file->tokens);    
 }
 
-Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, uint64_t file_size)
+Lexer_Data lexer_data_create(Lexer *lexer, String file_path, String file_data, uint64_t file_size)
 {
     Lexer_Data result = {};
     result.lexer = lexer;
@@ -77,7 +77,7 @@ Lexer_Data lexer_data_create(Lexer* lexer, String file_path, String file_data, u
     return result;
 }
 
-Token next_token(Lexer_Data* ld)
+Token next_token(Lexer_Data *ld)
 {
 restart:
     skip_whitespace(ld);
@@ -192,7 +192,7 @@ restart:
     return {};
 }
 
-Token lex_keyword_or_identifier(Lexer_Data* ld)
+Token lex_keyword_or_identifier(Lexer_Data *ld)
 {
     Token result = lex_identifier(ld);
 
@@ -210,7 +210,7 @@ Token lex_keyword_or_identifier(Lexer_Data* ld)
     return result;
 }
 
-Token lex_identifier(Lexer_Data* ld)
+Token lex_identifier(Lexer_Data *ld)
 {
 #ifndef NDEBUG
     auto fc = current_char(ld);
@@ -235,7 +235,7 @@ Token lex_identifier(Lexer_Data* ld)
     return token_create(begin_fp, end_fp, TOK_IDENTIFIER, atom);
 }
 
-Token lex_number_literal(Lexer_Data* ld)
+Token lex_number_literal(Lexer_Data *ld)
 {
     auto fc = current_char(ld);
     assert(is_num(fc) || fc == '.');
@@ -260,7 +260,7 @@ Token lex_number_literal(Lexer_Data* ld)
     return token_create(begin_fp, end_fp, TOK_NUMBER_LITERAL, atom);
 }
 
-Token lex_character_literal(Lexer_Data* ld)
+Token lex_character_literal(Lexer_Data *ld)
 {
 #ifndef NDEBUG
     auto  fc = current_char(ld);
@@ -288,7 +288,7 @@ Token lex_character_literal(Lexer_Data* ld)
     return token_create(begin_fp, end_fp, TOK_CHAR_LITERAL, c);
 }
 
-Token lex_string_literal(Lexer_Data* ld)
+Token lex_string_literal(Lexer_Data *ld)
 {
 #ifndef NDEBUG
     auto fc = current_char(ld);
@@ -317,7 +317,7 @@ Token lex_string_literal(Lexer_Data* ld)
     return token_create(begin_fp, end_fp, TOK_STRING_LITERAL, atom);
 }
 
-void advance(Lexer_Data* ld, uint64_t count/*=1*/)
+void advance(Lexer_Data *ld, uint64_t count/*=1*/)
 {
     assert(ld->file_index < ld->file_size);
 
@@ -338,12 +338,12 @@ void advance(Lexer_Data* ld, uint64_t count/*=1*/)
     }
 }
 
-char current_char(Lexer_Data* ld)
+char current_char(Lexer_Data *ld)
 {
     return peek_char(ld, 0);
 }
 
-char peek_char(Lexer_Data* ld, uint64_t offset)
+char peek_char(Lexer_Data *ld, uint64_t offset)
 {
     if (ld->file_index + offset < ld->file_size)
         return ld->file_data[ld->file_index + offset];
@@ -351,7 +351,7 @@ char peek_char(Lexer_Data* ld, uint64_t offset)
     return EOF;
 }
 
-const char* current_char_ptr(Lexer_Data* ld)
+const char *current_char_ptr(Lexer_Data *ld)
 {
     if (ld->file_index < ld->file_size)
     {
@@ -361,7 +361,7 @@ const char* current_char_ptr(Lexer_Data* ld)
     return nullptr;
 }
 
-void skip_whitespace(Lexer_Data* ld)
+void skip_whitespace(Lexer_Data *ld)
 {
     while (is_whitespace(current_char(ld))) 
     {
@@ -394,7 +394,7 @@ bool is_newline(char c)
     return c == '\n' || c == '\r';
 }
 
-File_Pos get_file_pos(Lexer_Data* ld)
+File_Pos get_file_pos(Lexer_Data *ld)
 {
     File_Pos result = {};
 
@@ -406,7 +406,7 @@ File_Pos get_file_pos(Lexer_Data* ld)
     return result;
 }
 
-void lexed_file_print(Lexed_File* lf)
+void lexed_file_print(Lexed_File *lf)
 {
     printf("Lexed file: '%s'\n", lf->path.data);
     for (int64_t i = 0; i < lf->tokens.count; i++)
@@ -415,7 +415,7 @@ void lexed_file_print(Lexed_File* lf)
     }
 }
 
-String lexer_replace_character_literals(Allocator *allocator, const char* str, int64_t length)
+String lexer_replace_character_literals(Allocator *allocator, const char *str, int64_t length)
 {
     auto buf = alloc_array<char>(allocator, length + 1);
     int64_t actual_length = 0;
@@ -453,7 +453,7 @@ char lexer_get_escape_char(char ident)
     return 0;
 }
 
-Token_Stream* lexer_new_token_stream(Allocator* allocator, Lexed_File* lf)
+Token_Stream *lexer_new_token_stream(Allocator *allocator, Lexed_File *lf)
 {
     assert(lf);
 

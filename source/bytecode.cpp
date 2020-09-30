@@ -448,7 +448,7 @@ namespace Zodiac
 
         auto current_func = builder->current_function;
         auto then_block = bytecode_builder_append_block(builder, current_func, "then");
-        Bytecode_Block * else_block = nullptr;
+        Bytecode_Block  *else_block = nullptr;
         if (stmt->if_stmt.else_stmt)
         {
             else_block = bytecode_new_block(builder, "else");

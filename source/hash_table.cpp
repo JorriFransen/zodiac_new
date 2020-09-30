@@ -26,7 +26,7 @@ uint64_t hash_key(const String& str)
     return hash;
 }
 
-uint64_t hash_key(const char* str)
+uint64_t hash_key(const char *str)
 {
     auto length = strlen(str);
 

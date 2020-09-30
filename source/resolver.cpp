@@ -1021,7 +1021,7 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_identifiers(Resolver *resolver, AST_Expression* ast_expr, Scope *scope)
+    bool try_resolve_identifiers(Resolver *resolver, AST_Expression *ast_expr, Scope *scope)
     {
         bool result = false;
 
@@ -1469,7 +1469,7 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Declaration* ast_decl, Scope *scope)
+    bool try_resolve_types(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope)
     {
         assert(resolver);
         assert(ast_decl);
@@ -1841,7 +1841,7 @@ namespace Zodiac
         return result;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Statement* ast_stmt, Scope *scope,
+    bool try_resolve_types(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope,
                            AST_Type **inferred_return_type)
     {
         assert(resolver);
@@ -2051,7 +2051,7 @@ namespace Zodiac
     }
 
     bool try_resolve_types(Resolver *resolver, AST_Expression *ast_expr,
-                           AST_Type* suggested_type, Scope *scope)
+                           AST_Type *suggested_type, Scope *scope)
     {
         assert(resolver);
         assert(ast_expr);
@@ -2581,7 +2581,7 @@ namespace Zodiac
         return false;
     }
 
-    bool try_resolve_types(Resolver *resolver, AST_Type_Spec* ts, Scope* scope,
+    bool try_resolve_types(Resolver *resolver, AST_Type_Spec *ts, Scope *scope,
                            AST_Type **type_target, AST_Type *suggested_type)
     {
         assert(resolver);
@@ -2955,7 +2955,7 @@ namespace Zodiac
             {
                 auto elem_size = ast_type->array.element_type->bit_size;
                 assert(elem_size);
-                auto bit_size = elem_size * ast_type->array.element_count;
+                auto bit_size = elem_size  *ast_type->array.element_count;
                 assert(bit_size);
                 ast_type->bit_size = bit_size;
                 ast_type->flags |= AST_NODE_FLAG_SIZED;
@@ -2994,7 +2994,7 @@ namespace Zodiac
         resolver->break_node = nullptr;
     }
 
-    AST_Type* find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
+    AST_Type *find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope)
     {
         assert(resolver);
@@ -3019,7 +3019,7 @@ namespace Zodiac
         return func_type;
     }
 
-    AST_Type* find_or_create_array_type(Resolver *resolver, AST_Type *element_type,
+    AST_Type *find_or_create_array_type(Resolver *resolver, AST_Type *element_type,
                                         int64_t element_count, Scope *current_scope)
     {
         assert(element_count > 0);
@@ -3043,7 +3043,7 @@ namespace Zodiac
 
     }
 
-    AST_Type* create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
+    AST_Type *create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope)
     {
@@ -3063,7 +3063,7 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type* create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+    AST_Type *create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
                                AST_Type *base_type, Scope *mem_scope,
                                Scope *current_scope)
     {

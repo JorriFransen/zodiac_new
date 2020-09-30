@@ -16,23 +16,23 @@ bool hash_table_strings_equal(const String& a, const String& b);
 template <typename Key_Type, typename Value_Type>
 struct Hash_Table
 {
-    uint64_t* hashes = nullptr;
-    Key_Type* keys = nullptr;
-    Value_Type* values = nullptr;
+    uint64_t *hashes = nullptr;
+    Key_Type *keys = nullptr;
+    Value_Type *values = nullptr;
 
     int64_t capacity = 0;
 
     Hash_Table_Keys_Equal_FN<Key_Type> keys_equal = nullptr;
-    Allocator* allocator = {};
+    Allocator *allocator = {};
 };
 
 uint64_t hash_key(const String& str);
-uint64_t hash_key(const char* str);
+uint64_t hash_key(const char *str);
 
 #define HASH_TABLE_INITIAL_CAPACITY 16
 
 template <typename Key_Type, typename Value_Type>
-void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* hash_table,
+void hash_table_init(Allocator *allocator, Hash_Table<Key_Type, Value_Type> *hash_table,
                      Hash_Table_Keys_Equal_FN<Key_Type> keys_equal)
 {
     assert(allocator);
@@ -44,7 +44,7 @@ void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* has
 
     auto total_size = hashes_size + keys_size + values_size;
 
-    uint8_t* mem = alloc_array<uint8_t>(allocator, total_size);
+    uint8_t *mem = alloc_array<uint8_t>(allocator, total_size);
     assert(mem);
 
     hash_table->hashes = (uint64_t*)mem;
@@ -59,7 +59,7 @@ void hash_table_init(Allocator* allocator, Hash_Table<Key_Type, Value_Type>* has
 }
 
 template <typename Key_Type, typename Value_Type>
-void hash_table_add(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_Type value)
+void hash_table_add(Hash_Table<Key_Type, Value_Type> *ht, Key_Type key, Value_Type value)
 {
     uint64_t hash = hash_key(key);
     uint64_t hash_index = hash % ht->capacity;
@@ -87,7 +87,7 @@ void hash_table_add(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_Ty
 }
 
 template <typename Key_Type, typename Value_Type>
-void hash_table_grow(Hash_Table<Key_Type, Value_Type>* ht)
+void hash_table_grow(Hash_Table<Key_Type, Value_Type> *ht)
 {
     auto new_cap = ht->capacity * 2;
 
@@ -123,7 +123,7 @@ void hash_table_grow(Hash_Table<Key_Type, Value_Type>* ht)
 }
 
 template <typename Key_Type, typename Value_Type>
-bool hash_table_find(Hash_Table<Key_Type, Value_Type>* ht, Key_Type key, Value_Type* vptr)
+bool hash_table_find(Hash_Table<Key_Type, Value_Type> *ht, Key_Type key, Value_Type *vptr)
 {
     uint64_t hash = hash_key(key);
     uint64_t hash_index = hash % ht->capacity;

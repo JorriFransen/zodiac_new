@@ -16,10 +16,10 @@ enum Allocation_Mode
     FREE_ALL,
 };
 
-typedef void* (*Alloc_Function)(Allocator* allocator,
+typedef void *(*Alloc_Function)(Allocator *allocator,
                                 Allocation_Mode mode,
                                 int64_t size,
-                                void* old_ptr);
+                                void *old_ptr);
 
 struct Allocator
 {
@@ -27,8 +27,8 @@ struct Allocator
 };
 
 
-void* alloc(Allocator* allocator, int64_t size);
-void* free(Allocator* allocator, void* ptr);
+void *alloc(Allocator *allocator, int64_t size);
+void *free(Allocator *allocator, void *ptr);
 
 template <typename T>
 T *free(Allocator *allocator, T *ptr)
@@ -37,7 +37,7 @@ T *free(Allocator *allocator, T *ptr)
 }
 
 template <typename Type>
-Type* alloc_type(Allocator* allocator)
+Type *alloc_type(Allocator *allocator)
 {
     auto mem = (Type*)alloc(allocator, sizeof(Type));
     auto result = new (mem) Type();
@@ -45,9 +45,9 @@ Type* alloc_type(Allocator* allocator)
 }
 
 template <typename Element_Type>
-Element_Type* alloc_array(Allocator* allocator, int64_t element_count)
+Element_Type *alloc_array(Allocator *allocator, int64_t element_count)
 {
-    return (Element_Type*)alloc(allocator, sizeof(Element_Type) * element_count);
+    return (Element_Type*)alloc(allocator, sizeof(Element_Type)  *element_count);
 }
 
 template <typename T>
@@ -57,6 +57,6 @@ bool is_power_of_two(T v)
     return (v & (v - 1)) == 0;
 }
 
-void* align_up(void* ptr, uint64_t align);
+void *align_up(void *ptr, uint64_t align);
 
 }

@@ -50,5 +50,5 @@ namespace Zodiac
     Scope *scope_new(Allocator *allocator, Scope_Kind kind, Scope *parent, int64_t initial_cap = 4);
 
     void scope_print(Scope *scope);
-    void scope_print(String_Builder *sb, Scope* scope, int64_t indent = 0);
+    void scope_print(String_Builder *sb, Scope *scope, int64_t indent = 0);
 }

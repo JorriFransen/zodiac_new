@@ -61,7 +61,7 @@ namespace Zodiac
         static AST_Type *type_ptr_u8;
     };
 
-    void builtin_initialize_atoms(Atom_Table* at);
+    void builtin_initialize_atoms(Atom_Table *at);
     void builtin_initialize_types(Allocator *allocator, Build_Data *build_data);
     AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, uint64_t size,
                                       bool sign);

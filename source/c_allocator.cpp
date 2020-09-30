@@ -8,7 +8,7 @@
 namespace Zodiac
 {
 
-void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void* old_ptr)
+void *_c_allocate(Allocator *allocator, Allocation_Mode mode, int64_t size, void *old_ptr)
 {
     assert(allocator);
 
@@ -46,7 +46,7 @@ void* _c_allocate(Allocator* allocator, Allocation_Mode mode, int64_t size, void
 
 static bool instance_initialized = false;
 
-Allocator* c_allocator_get()
+Allocator *c_allocator_get()
 {
     if (!instance_initialized) {
         instance = { _c_allocate };

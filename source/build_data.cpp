@@ -4,7 +4,7 @@
 
 namespace Zodiac
 {
-    void build_data_init(Allocator* allocator, Build_Data* build_data, Options *options)
+    void build_data_init(Allocator *allocator, Build_Data *build_data, Options *options)
     {
         build_data->options = options;
 
@@ -74,7 +74,7 @@ namespace Zodiac
         return arr_type;
     }
 
-    AST_Type* build_data_find_function_type(Build_Data *build_data, Array<AST_Type*> param_types,
+    AST_Type *build_data_find_function_type(Build_Data *build_data, Array<AST_Type*> param_types,
                                             AST_Type *return_type)
     {
         assert(build_data);
@@ -108,7 +108,7 @@ namespace Zodiac
         return nullptr;
     }
 
-    AST_Type * build_data_find_enum_type(Build_Data *build_data, AST_Declaration *enum_decl)
+    AST_Type  *build_data_find_enum_type(Build_Data *build_data, AST_Declaration *enum_decl)
     {
         for (int64_t i = 0; i < build_data->type_table.count; i++)
         {

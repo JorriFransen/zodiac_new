@@ -16,10 +16,10 @@ const int64_t DEFAULT_ARRAY_CAPACITY = 8;
 template <typename Element_Type>
 struct Array
 {
-    Element_Type* data = nullptr;
+    Element_Type *data = nullptr;
     int64_t count = 0;
     int64_t capacity = 0;
-    Allocator* allocator = nullptr;
+    Allocator *allocator = nullptr;
 
     Element_Type& operator[](int index)
     {
@@ -37,7 +37,7 @@ struct Array
 };
 
 template <typename Element_Type>
-void array_init(Allocator* allocator, Array<Element_Type>* array, int64_t capacity)
+void array_init(Allocator *allocator, Array<Element_Type> *array, int64_t capacity)
 {
     if (capacity > 0)
     {
@@ -50,7 +50,7 @@ void array_init(Allocator* allocator, Array<Element_Type>* array, int64_t capaci
 }
 
 template <typename Element_Type>
-void array_free(Array<Element_Type>* array)
+void array_free(Array<Element_Type> *array)
 {
     if (array->allocator && array->data)
     {
@@ -62,18 +62,18 @@ void array_free(Array<Element_Type>* array)
 }
 
 template <typename Element_Type>
-void array_init(Allocator* allocator, Array<Element_Type>* array)
+void array_init(Allocator *allocator, Array<Element_Type> *array)
 {
     array_init(allocator, array, DEFAULT_ARRAY_CAPACITY);
 }
 
 template <typename Element_Type>
-void array_grow(Array<Element_Type>* array, int64_t new_cap)
+void array_grow(Array<Element_Type> *array, int64_t new_cap)
 {
     assert(new_cap > array->capacity);
 
     auto new_data = alloc_array<Element_Type>(array->allocator, new_cap);
-    memcpy(new_data, array->data, array->count * sizeof(Element_Type));
+    memcpy(new_data, array->data, array->count  *sizeof(Element_Type));
     free(array->allocator, array->data);
 
     array->data = new_data;
@@ -81,7 +81,7 @@ void array_grow(Array<Element_Type>* array, int64_t new_cap)
 }
 
 template <typename Element_Type>
-void array_append(Array<Element_Type>* array, const Element_Type& element)
+void array_append(Array<Element_Type> *array, const Element_Type& element)
 {
     if (array->count >= (array->capacity - 1))
     {
@@ -119,14 +119,14 @@ void array_ordered_remove(Array<Element_Type> *array, int64_t index)
 }
 
 template <typename Element_Type>
-Element_Type array_first(Array<Element_Type>* array)
+Element_Type array_first(Array<Element_Type> *array)
 {
     assert(array->count >= 1);
     return array->data[0];
 }
 
 template <typename Element_Type>
-Element_Type array_last(Array<Element_Type>* array)
+Element_Type array_last(Array<Element_Type> *array)
 {
     assert(array->count >= 1);
     return array->data[array->count - 1];

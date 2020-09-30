@@ -7,7 +7,7 @@
 
 namespace Zodiac
 {
-    void string_builder_init(Allocator* allocator, String_Builder* sb, uint64_t default_block_cap/*=2048*/)
+    void string_builder_init(Allocator *allocator, String_Builder *sb, uint64_t default_block_cap/*=2048*/)
     {
         assert(allocator);
         assert(sb);
@@ -22,7 +22,7 @@ namespace Zodiac
 
     }
 
-    void string_builder_free(String_Builder* sb)
+    void string_builder_free(String_Builder *sb)
     {
         assert(sb); 
 
@@ -40,7 +40,7 @@ namespace Zodiac
         }
     }
 
-    String_Builder_Block *string_builder_allocate_block(Allocator* allocator, uint64_t capacity)
+    String_Builder_Block *string_builder_allocate_block(Allocator *allocator, uint64_t capacity)
     {
         auto block_size = sizeof(String_Builder_Block) + capacity;
         auto mem = alloc(allocator, block_size);
@@ -70,7 +70,7 @@ namespace Zodiac
         string_builder_append(sb, cstr, strlen(cstr));
     }
 
-    void string_builder_append(String_Builder* sb, const char* cstr, uint64_t length)
+    void string_builder_append(String_Builder *sb, const char *cstr, uint64_t length)
     {
         auto block = sb->current_block;
         auto block_rem = block->capacity - block->used;
@@ -123,7 +123,7 @@ namespace Zodiac
         free(allocator, buf);
     }
 
-    void string_builder_append_to_block(String_Builder_Block *sbb, const char* cstr, uint64_t length)
+    void string_builder_append_to_block(String_Builder_Block *sbb, const char *cstr, uint64_t length)
     {
 #ifndef NDEBUG
         auto rem = sbb->capacity - sbb->used;
@@ -134,7 +134,7 @@ namespace Zodiac
         sbb->used += length;
     }
 
-    String string_builder_to_string(Allocator* allocator, String_Builder* sb)
+    String string_builder_to_string(Allocator *allocator, String_Builder *sb)
     {
         uint64_t required_cap = 0;
 
@@ -145,7 +145,7 @@ namespace Zodiac
             block = block->next;
         }
 
-        char* cstr = alloc_array<char>(allocator, required_cap + 1);
+        char *cstr = alloc_array<char>(allocator, required_cap + 1);
         auto dest_cur = cstr;
         block = sb->first_block;
 

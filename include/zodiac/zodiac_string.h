@@ -9,7 +9,7 @@ namespace Zodiac
 
 struct String
 {
-    char* data = nullptr;
+    char *data = nullptr;
     int64_t length = 0;
 
     char& operator[](int index)
@@ -50,7 +50,7 @@ int64_t string_length(String string);
 const String string_copy(Allocator *allocator, const String& string, int64_t offset,
                          int64_t length);
 const String string_copy(Allocator *allocator, const String& string, int64_t length);
-const String string_copy(Allocator* allocator, const String& string);
+const String string_copy(Allocator *allocator, const String& string);
 const String string_copy(Allocator *allocator, const char *cstr, int64_t length);
 const String string_copy(Allocator *allocator, const char *cstr);
 
@@ -59,8 +59,8 @@ void string_free(Allocator *allocator, String &str);
 const String string_append(Allocator *allocator, const String &lhs, const String &rhs);
 const String string_append(Allocator *allocator, const String &lhs, const char *cstr);
 
-const String string_ref(const char* cstr);
-const String string_ref(const char* cstr, int64_t length);
+const String string_ref(const char *cstr);
+const String string_ref(const char *cstr, int64_t length);
 
 const String string_from_int(Allocator *allocator, int64_t val);
 
