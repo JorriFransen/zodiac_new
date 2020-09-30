@@ -702,6 +702,12 @@ Statement_PTN* parser_parse_statement(Parser* parser, Token_Stream* ts)
             break;
         }
 
+        case TOK_KW_SWITCH:
+        {
+            return parser_parse_switch_statement(parser, ts);
+            break;
+        }
+
         default:
         {
             auto expr = parser_parse_expression(parser, ts);
@@ -771,6 +777,11 @@ Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stre
     return new_assignment_statement_ptn(parser->allocator, ident_expression, rhs_expr,
                                         ident_expression->self.begin_file_pos,
                                         rhs_expr->self.end_file_pos);
+}
+
+Statement_PTN* parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
+{
+    assert(false);
 }
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type/*=false*/)
@@ -1466,7 +1477,7 @@ void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Toke
     else
     {
         parser_report_error(parser, ts,
-                            "Unexpectd token when parsing expression: '%s', '%.*s'",
+                            "Unexpected token when parsing expression: '%s', '%.*s'",
                             tok_kind_name, tok.atom.length, tok.atom.data);
     }
 }

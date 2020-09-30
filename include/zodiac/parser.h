@@ -49,6 +49,7 @@ Statement_PTN* parser_parse_assignment_statement(Parser* parser, Token_Stream* t
                                                  Expression_PTN* ident_expression);
 Statement_PTN* parser_parse_self_assignment_statement(Parser* parser, Token_Stream* ts,
                                                       Expression_PTN* ident_expression);
+Statement_PTN* parser_parse_switch_statement(Parser *parser, Token_Stream *ts);
 
 Expression_PTN* parser_parse_expression(Parser* parser, Token_Stream* ts, bool is_type = false);
 Expression_PTN* parser_parse_cmp_expression(Parser* parser, Token_Stream* ts, bool is_type = false);

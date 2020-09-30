@@ -110,8 +110,32 @@ namespace Zodiac
             case AST_Declaration_Kind::USING: break;
 
             case AST_Declaration_Kind::IMPORT:
+            {
+                scope_populate_expression_ast(allocator, ast_decl->import.ident_expression,
+                                              parent_scope);
+                break;
+            }
+
             case AST_Declaration_Kind::VARIABLE:
+            {
+                if (ast_decl->parameter.type_spec)
+                {
+                    scope_populate_type_spec_ast(allocator, ast_decl->variable.type_spec,
+                                                 parent_scope);
+                }
+                break;
+            }
+
             case AST_Declaration_Kind::CONSTANT:
+            {
+                if (ast_decl->parameter.type_spec)
+                {
+                    scope_populate_type_spec_ast(allocator, ast_decl->constant.type_spec,
+                                                 parent_scope);
+                }
+                break;
+            }
+
             case AST_Declaration_Kind::PARAMETER: 
             {
                 if (ast_decl->parameter.type_spec)

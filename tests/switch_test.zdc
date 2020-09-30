@@ -1,0 +1,50 @@
+
+std :: import std;
+
+main :: func() -> s64
+{
+    std.println("Switch test");
+
+    n := 0;
+
+    while (n <= 10)
+    {
+        print_n(n);
+        n = n + 1;
+    }
+
+    return 0;
+}
+
+print_n :: func(n: s64)
+{
+    std.print("The value of n is ");
+
+    switch (n)
+    {
+        case 0:
+            std.print("0\n");
+            // Break is inserted automatically here 
+
+        case 1:
+            std.print("1\n");
+            break;
+
+        default: 
+            std.print("Out of reach\n");
+    }
+
+    return;
+}
+
+#naked #noreturn _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+#noreturn posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+
