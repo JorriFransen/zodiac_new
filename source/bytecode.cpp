@@ -393,7 +393,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH:
+            {
+                bytecode_emit_switch_statement(builder, statement);
+                break;
+            }
         }
     }
 
@@ -480,6 +484,89 @@ namespace Zodiac
 
         bytecode_builder_append_block(builder, current_func, post_if_block);
         bytecode_builder_set_insert_point(builder, post_if_block);
+    }
+
+    void bytecode_emit_switch_statement(Bytecode_Builder *builder, AST_Statement *stmt)
+    {
+        assert(stmt->kind == AST_Statement_Kind::SWITCH);
+
+        auto ta = temp_allocator_get();
+
+        auto switch_val = bytecode_emit_expression(builder, stmt->switch_stmt.expression);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::SWITCH);
+        bytecode_emit_32(builder, switch_val->local_index);
+        bytecode_emit_32(builder, (uint32_t)stmt->switch_stmt.cases.count);
+
+        Bytecode_Block *pre_switch_block = builder->insert_block;
+        Bytecode_Block *default_block = nullptr;
+        Bytecode_Block *post_switch_block = bytecode_new_block(builder, "post_switch");
+
+        Array<Bytecode_Block*> case_blocks = {};
+        array_init(ta, &case_blocks, stmt->switch_stmt.cases.count);
+
+        for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
+        {
+            AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
+
+            const char *block_name = (switch_case->is_default ? "default" : "case");
+
+            Bytecode_Block *case_block = bytecode_new_block(builder, block_name);
+
+            bytecode_builder_set_insert_point(builder, case_block);
+            bytecode_push_break_block(builder, post_switch_block);
+            bytecode_emit_statement(builder, switch_case->body);
+            bytecode_pop_break_block(builder);
+
+            if (!bytecode_block_ends_with_terminator(case_block))
+            {
+                bytecode_emit_jump(builder, post_switch_block);
+            }
+
+            // case_block = builder->insert_block;
+            array_append(&case_blocks, case_block);
+
+            if (switch_case->is_default)
+            {
+                default_block = case_block;
+            }
+        }
+
+        bytecode_builder_set_insert_point(builder, pre_switch_block);
+
+        if (stmt->switch_stmt.default_case)
+        {
+            bytecode_emit_byte(builder, 1);
+            auto offset = bytecode_emit_32(builder, 0);
+            bytecode_record_jump(builder, default_block, offset);
+        }
+        else
+        {
+            bytecode_emit_byte(builder, 0);
+        }
+
+        for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
+        {
+            AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
+            Bytecode_Block *case_block = case_blocks[i];
+
+            if (switch_case->is_default) continue; 
+
+            bytecode_emit_integer_literal(builder, switch_case->expression, true);
+            auto offset = bytecode_emit_32(builder, 0);
+            bytecode_record_jump(builder, case_block, offset);
+        }
+
+        auto func = builder->current_function;
+
+        for (int64_t i = 0; i < case_blocks.count; i++)
+        {
+            Bytecode_Block *case_block = case_blocks[i];
+            bytecode_builder_append_block(builder, func, case_block);
+        }
+
+        bytecode_builder_append_block(builder, func, post_switch_block);
+        bytecode_builder_set_insert_point(builder, post_switch_block);
     }
 
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder,
@@ -1771,7 +1858,8 @@ namespace Zodiac
     }
 
     Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder,
-                                                 AST_Expression *expr)
+                                                 AST_Expression *expr,
+                                                 bool noload /*=false*/)
     {
         assert(expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
                expr->kind == AST_Expression_Kind::BOOL_LITERAL ||
@@ -1791,27 +1879,29 @@ namespace Zodiac
             case 8: 
             {
                 result = bytecode_emit_integer_literal(builder, expr->type,
-                                                      (int8_t)expr->integer_literal.s64);
+                                                      (int8_t)expr->integer_literal.s64,
+                                                      noload);
                 break;
             }
 
             case 64:
             {
                 result = bytecode_emit_integer_literal(builder, expr->type,
-                                                      expr->integer_literal.s64);
+                                                      expr->integer_literal.s64,
+                                                      noload);
                 break;
             }
 
             default: assert(false);
         }
 
-        assert(result);
+        assert(result || noload);
         return result;
 
     }
 
     Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder, AST_Type *type,
-                                                 int64_t val)
+                                                 int64_t val, bool noload /*=false*/)
     {
         assert(type->kind == AST_Type_Kind::INTEGER ||
                type->kind == AST_Type_Kind::BOOL ||
@@ -1827,7 +1917,15 @@ namespace Zodiac
         assert(type->kind == AST_Type_Kind::INTEGER ||
                type->kind == AST_Type_Kind::BOOL);
 
-        bytecode_emit_load_int(builder, type->integer.sign, type->bit_size);
+        if (!noload)
+        {
+            bytecode_emit_load_int(builder, type->integer.sign, type->bit_size);
+        }
+        else
+        {
+            bytecode_emit_size_spec(builder, type->integer.sign, false, type->bit_size);
+        }
+
         switch (type->bit_size)
         {
             case 8:
@@ -1851,9 +1949,17 @@ namespace Zodiac
             default: assert(false);
         }
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, value_type);
-        bytecode_push_local_temporary(builder, result);
-        return result;
+        if (!noload)
+        {
+            auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                             value_type);
+            bytecode_push_local_temporary(builder, result);
+            return result;
+        }
+        else
+        {
+            return nullptr;
+        }
     }
 
     Bytecode_Value *bytecode_emit_bool_literal(Bytecode_Builder *builder, AST_Expression *expr)
@@ -2831,6 +2937,45 @@ namespace Zodiac
                 auto block = func->blocks[block_idx];
                 string_builder_appendf(sb, "JUMP_IF %%% " PRIu32 ", %s",
                                        tmp_idx, block->name);
+                break;
+            }
+
+            case Bytecode_Instruction::SWITCH:
+            {
+                auto tmp_idx = bytecode_iterator_fetch_32(bci);
+                string_builder_appendf(sb, "SWITCH %%%" PRIu32, tmp_idx);
+
+                auto case_count = bytecode_iterator_fetch_32(bci);
+                assert(case_count);
+
+                auto has_default = bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+
+                auto func = bci->builder->program.functions[bci->function_index];
+
+                if (has_default)
+                {
+                    auto block_idx = bytecode_iterator_fetch_32(bci);
+                    auto block = func->blocks[block_idx];
+                    string_builder_appendf(sb, "\n      default -> %s", block->name);
+
+                    case_count -= 1;
+                }
+
+                for (int64_t i = 0; i < case_count; i++)
+                {
+                    string_builder_append(sb, "\n      ");
+                    bytecode_print_im_int(sb, bci);
+
+                    auto block_idx = bytecode_iterator_fetch_32(bci);
+                    auto block = func->blocks[block_idx];
+                    string_builder_appendf(sb, "   -> %s", block->name);
+                }
+
+
+                auto ta = temp_allocator_get();
+                auto str = string_builder_to_string(ta, sb);
+                printf("%.*s\n", (int)str.length, str.data);
                 break;
             }
 

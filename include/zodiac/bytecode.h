@@ -48,12 +48,13 @@ namespace Zodiac
 
         JUMP            = 0x1F,
         JUMP_IF         = 0x20,
-        CAST_INT        = 0x21,
-        CAST_ENUM       = 0x22,
-        CAST_FLOAT      = 0x23,
-        SYSCALL         = 0x24,
-        AGG_OFFSET_PTR  = 0x25,
-        ARR_OFFSET_PTR  = 0x26,
+        SWITCH          = 0x21,
+        CAST_INT        = 0x22,
+        CAST_ENUM       = 0x23,
+        CAST_FLOAT      = 0x24,
+        SYSCALL         = 0x25,
+        AGG_OFFSET_PTR  = 0x26,
+        ARR_OFFSET_PTR  = 0x27,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -260,6 +261,7 @@ namespace Zodiac
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
     void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt);
+    void bytecode_emit_switch_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression);
     Bytecode_Value *bytecode_emit_call_expression(Bytecode_Builder *builder,
                                                   AST_Expression *expression);
@@ -336,9 +338,13 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Type *type,
                                                 float f, double d);
 
-    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder, AST_Expression *expr);
+    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder,
+                                                  AST_Expression *expr,
+                                                  bool noload = false);
+
     Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder, AST_Type *type,
-                                                 int64_t val);
+                                                 int64_t val, bool noload = false);
+
     Bytecode_Value *bytecode_emit_bool_literal(Bytecode_Builder *builder, AST_Expression *expr);
     void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type);
     void bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Instruction op);

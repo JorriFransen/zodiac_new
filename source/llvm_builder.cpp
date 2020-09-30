@@ -1151,6 +1151,8 @@ namespace Zodiac
             }
 
 
+            case Bytecode_Instruction::SWITCH: assert(false);
+
             case Bytecode_Instruction::CAST_INT:
             case Bytecode_Instruction::CAST_ENUM:
             {

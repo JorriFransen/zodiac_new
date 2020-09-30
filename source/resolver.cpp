@@ -977,7 +977,7 @@ namespace Zodiac
                     assert(false);
                 }
 
-                resolver_push_break_node(resolver, ast_stmt->while_stmt.body);
+                resolver_push_break_node(resolver, ast_stmt);
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.body,
                                              ast_stmt->while_stmt.body_scope))
@@ -1015,7 +1015,48 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH:
+            {
+                result = true;
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->switch_stmt.expression, scope))
+                {
+                    result = false;
+                }
+
+                bool case_expr_res = true;
+                bool case_body_res = true;
+
+                for (uint64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
+                {
+                    AST_Switch_Case *case_stmt = ast_stmt->switch_stmt.cases[i];
+
+                    if (case_stmt->is_default)
+                    {
+                        assert(!case_stmt->expression);
+                    }
+                    else
+                    {
+                        if (!try_resolve_identifiers(resolver, case_stmt->expression, scope))
+                        {
+                            case_expr_res = false;
+                        }
+                    }
+
+                    resolver_push_break_node(resolver, ast_stmt);
+
+                    if (!try_resolve_identifiers(resolver, case_stmt->body, scope))
+                    {
+                        case_body_res = false;
+                    }
+
+                    resolver_pop_break_node(resolver);
+                }
+
+                if (case_expr_res == false || case_body_res == false) result = false;
+
+                break;
+            }
         }
 
         if (result)
@@ -2000,7 +2041,7 @@ namespace Zodiac
                     result = false;
                 }
 
-                resolver_push_break_node(resolver, ast_stmt->while_stmt.body);
+                resolver_push_break_node(resolver, ast_stmt);
 
                 if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
                                        ast_stmt->while_stmt.body_scope, inferred_return_type))
@@ -2042,7 +2083,64 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH:
+            {
+                result = true;
+
+                bool expr_res = try_resolve_types(resolver, ast_stmt->switch_stmt.expression,
+                                                  scope);
+                AST_Type *expr_type = nullptr;
+                if (expr_res)
+                {
+                    expr_type = ast_stmt->switch_stmt.expression->type;
+                    assert(expr_type->kind == AST_Type_Kind::INTEGER);
+                }
+
+                bool case_expr_result = true;
+                bool case_body_result = true;
+
+                //@TODO: Switch cases should be statement nodes, or have node flags,
+                //        so we don't have to re-resolve them on each cycle.
+                for (int64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
+                {
+                    AST_Switch_Case *switch_case = ast_stmt->switch_stmt.cases[i];
+
+                    // Only resolve the case expr type when we have determined the
+                    //  switch expr type.
+                    if (expr_res && !switch_case->is_default)
+                    {
+                        assert(expr_type);
+                        if (!try_resolve_types(resolver, switch_case->expression,
+                                               expr_type, scope))
+                        {
+                            case_expr_result = false;
+                        }
+                        else
+                        {
+                            assert(switch_case->expression->type == expr_type);
+                            assert(switch_case->expression->expr_flags &
+                                   AST_EXPR_FLAG_CONST);
+                        }
+                    }
+
+                    resolver_push_break_node(resolver, ast_stmt);
+
+                    if (!try_resolve_types(resolver, switch_case->body, scope,
+                                           inferred_return_type))
+                    {
+                        case_body_result = false;
+                    }
+
+                    resolver_pop_break_node(resolver);
+                }
+
+                result = expr_res && case_expr_result && case_body_result;
+                if (result)
+                {
+                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                }
+                break;
+            }
         }
 
         if (result)
@@ -2991,7 +3089,8 @@ namespace Zodiac
 
 #ifndef NDEBUG
         auto stmt = static_cast<AST_Statement*>(node);
-        assert(stmt->kind == AST_Statement_Kind::BLOCK);
+        assert(stmt->kind == AST_Statement_Kind::WHILE ||
+               stmt->kind == AST_Statement_Kind::SWITCH);
 #endif
 
         resolver->break_node = node;
@@ -3325,7 +3424,28 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         stmt->switch_stmt.expression,
+                                                         scope);
+
+                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
+                {
+                    auto switch_case = stmt->switch_stmt.cases[i];
+
+                    if (!switch_case->is_default)
+                    {
+                        queue_emit_bytecode_jobs_from_expression(resolver,
+                                                                 switch_case->expression,
+                                                                 scope);
+                    }
+
+                    queue_emit_bytecode_jobs_from_statement(resolver, switch_case->body,
+                                                            scope);
+                }
+                break;
+            }
         }
     }
 
