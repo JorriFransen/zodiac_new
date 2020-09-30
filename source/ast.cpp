@@ -15,6 +15,7 @@ namespace Zodiac
     AST_Node_Kind AST_Module::_kind = AST_Node_Kind::MODULE;
     AST_Node_Kind AST_Identifier::_kind = AST_Node_Kind::IDENTIFIER;
     AST_Node_Kind AST_Declaration::_kind = AST_Node_Kind::DECLARATION;
+    AST_Node_Kind AST_Switch_Case::_kind = AST_Node_Kind::SWITCH_CASE;
     AST_Node_Kind AST_Statement::_kind = AST_Node_Kind::STATEMENT;
     AST_Node_Kind AST_Expression::_kind = AST_Node_Kind::EXPRESSION;
     AST_Node_Kind AST_Type_Spec::_kind = AST_Node_Kind::TYPE_SPEC;
@@ -523,6 +524,57 @@ namespace Zodiac
 
                 return ast_if_statement_new(allocator, cond_expr, then_stmt, else_stmt,
                                             begin_fp, end_fp);
+                break;
+            }
+
+            case Statement_PTN_Kind::SWITCH:
+            {
+                Array<AST_Switch_Case*> cases = {};
+                array_init(allocator, &cases, ptn->switch_stmt.cases.count);
+
+                AST_Expression *expression =
+                    ast_create_expression_from_ptn(allocator, ptn->switch_stmt.expression);
+
+                AST_Switch_Case *default_case = nullptr;
+
+                for (int64_t i = 0; i < ptn->switch_stmt.cases.count; i++)
+                {
+                    auto ptn_case = ptn->switch_stmt.cases[i];
+
+                    bool is_default = ptn_case.is_default;
+
+                    AST_Expression *expression = nullptr;
+                    if (is_default)
+                    {
+                        assert(!ptn_case.expression);
+                    }
+                    else
+                    {
+                        assert(ptn_case.expression);
+                        expression = ast_create_expression_from_ptn(allocator,
+                                                                    ptn_case.expression);
+                    }
+
+                    AST_Statement *body = ast_create_statement_from_ptn(allocator,
+                                                                        ptn_case.body,
+                                                                        var_decls);
+
+                    AST_Switch_Case *ast_case = ast_switch_case_new(allocator, expression,
+                                                                    is_default, body,
+                                                                    ptn_case.begin_fp, 
+                                                                    ptn_case.end_fp);
+
+                    if (is_default)
+                    {
+                        assert(default_case == nullptr);
+                        default_case = ast_case;
+                    }
+
+                    array_append(&cases, ast_case);
+                }
+
+                return ast_switch_statement_new(allocator, expression, default_case,
+                                                cases, begin_fp, end_fp);
                 break;
             }
         }
@@ -1175,6 +1227,20 @@ namespace Zodiac
         return result;
     }
 
+    AST_Switch_Case *ast_switch_case_new(Allocator *allocator, AST_Expression *expression,
+                                         bool is_default, AST_Statement *body, 
+                                         const File_Pos &begin_fp,
+                                         const File_Pos &end_fp)
+    {
+        auto result = ast_node_new<AST_Switch_Case>(allocator, begin_fp, end_fp);
+
+        result->expression = expression;
+        result->is_default = is_default;
+        result->body = body;
+
+        return result;
+    }
+
     AST_Statement *ast_statement_new(Allocator *allocator, AST_Statement_Kind kind,
                                      const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -1275,6 +1341,22 @@ namespace Zodiac
         result->if_stmt.cond_expr = cond_expr;
         result->if_stmt.then_stmt = then_stmt;
         result->if_stmt.else_stmt = else_stmt;
+
+        return result;
+    }
+
+    AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
+                                            AST_Switch_Case *default_case,
+                                            Array<AST_Switch_Case*> cases,
+                                            const File_Pos &begin_fp,
+                                            const File_Pos &end_fp)
+    {
+        auto result = ast_statement_new(allocator, AST_Statement_Kind::SWITCH,
+                                        begin_fp, end_fp);
+
+        result->switch_stmt.expression = expression;
+        result->switch_stmt.default_case = default_case;
+        result->switch_stmt.cases = cases;
 
         return result;
     }
@@ -1734,6 +1816,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
@@ -2007,6 +2091,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Statement_Kind::SWITCH: assert(false);
         } 
     }
 
@@ -2292,6 +2378,8 @@ namespace Zodiac
                 ast_print_declaration_scopes(sb, ast_decl, indent);
                 break;
             }
+
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
 
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);

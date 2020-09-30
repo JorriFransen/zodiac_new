@@ -781,7 +781,125 @@ Statement_PTN *parser_parse_self_assignment_statement(Parser *parser, Token_Stre
 
 Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
 {
-    assert(false);
+    auto begin_fp = ts->current_token().begin_file_pos;
+
+    if (!parser_expect_token(parser, ts, TOK_KW_SWITCH))
+    {
+        return nullptr;
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_LPAREN))
+    {
+        return nullptr;
+    }
+
+    Expression_PTN *expr = parser_parse_expression(parser, ts);
+    assert(expr);
+
+    if (!parser_expect_token(parser, ts, TOK_RPAREN))
+    {
+        return nullptr;
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_LBRACE))
+    {
+        return  nullptr;
+    }
+
+    Array<Switch_Case_PTN> cases = {};
+    array_init(parser->allocator, &cases);
+
+    bool has_default_case = false;
+
+    while (parser_is_token(ts, TOK_KW_CASE) ||
+           parser_is_token(ts, TOK_KW_DEFAULT))
+    {
+        auto case_ptn = parser_parse_switch_case(parser, ts);
+
+        if (case_ptn.parse_error)
+        {
+            return nullptr;
+        }
+
+        if (case_ptn.is_default)
+        {
+            assert(!has_default_case);
+            has_default_case = true;
+        }
+        array_append(&cases, case_ptn);
+    }
+
+    auto end_fp = ts->current_token().end_file_pos;
+
+    if (!parser_expect_token(parser, ts, TOK_RBRACE))
+    {
+        return  nullptr;
+    }
+
+    if (!cases.count) array_free(&cases);
+
+    return new_switch_statement_ptn(parser->allocator, expr, cases, has_default_case,
+                                    begin_fp, end_fp);
+}
+
+Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
+{
+    Switch_Case_PTN result = {};
+
+    result.begin_fp = ts->current_token().begin_file_pos;
+
+    if (parser_match_token(ts, TOK_KW_CASE))
+    {
+        result.expression = parser_parse_expression(parser, ts);
+        assert(result.expression);
+
+    }
+    else if (parser_match_token(ts, TOK_KW_DEFAULT))
+    {
+        result.is_default = true;
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_COLON))
+    {
+        result.parse_error = true;
+        return result;
+    }
+
+    Array<Statement_PTN*> body_stmts = {};
+    array_init(parser->allocator, &body_stmts);
+
+    while (!parser_is_token(ts, TOK_KW_CASE) &&
+           !parser_is_token(ts, TOK_KW_DEFAULT) &&
+           !parser_is_token(ts, TOK_RBRACE))
+    {
+        Statement_PTN *stmt = parser_parse_statement(parser, ts);
+        assert(stmt);
+        array_append(&body_stmts, stmt);
+    }
+
+    assert(body_stmts.count);
+
+    Statement_PTN *body_stmt = nullptr;
+
+    if (body_stmts.count == 1 && body_stmts[0]->kind == Statement_PTN_Kind::BLOCK)
+    {
+        body_stmt = body_stmts[0];
+        array_free(&body_stmts);
+    }
+    else
+    {
+        auto begin_fp = body_stmts[0]->self.begin_file_pos;
+        auto end_fp = body_stmts[body_stmts.count - 1]->self.end_file_pos;
+        body_stmt = new_block_statement_ptn(parser->allocator, body_stmts, begin_fp,
+                                            end_fp);
+    }
+
+    assert(body_stmt);
+    result.body = body_stmt;
+
+    result.end_fp = body_stmt->self.end_file_pos;
+
+    return result;
 }
 
 Expression_PTN *parser_parse_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)

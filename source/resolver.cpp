@@ -592,6 +592,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
+
             case AST_Node_Kind::STATEMENT: 
             {
                 auto stmt = static_cast<AST_Statement*>(ast_node);
@@ -1012,6 +1014,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Statement_Kind::SWITCH: assert(false);
         }
 
         if (result)
@@ -1452,6 +1456,8 @@ namespace Zodiac
             }
 
             case AST_Node_Kind::EXPRESSION: assert(false);
+
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
 
             case AST_Node_Kind::STATEMENT:
             {
@@ -2035,6 +2041,8 @@ namespace Zodiac
                 if (result) ast_stmt->flags |= AST_NODE_FLAG_TYPED;
                 break;
             }
+
+            case AST_Statement_Kind::SWITCH: assert(false);
         }
 
         if (result)
@@ -2864,6 +2872,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
@@ -3314,6 +3324,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Statement_Kind::SWITCH: assert(false);
         }
     }
 

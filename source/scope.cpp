@@ -89,6 +89,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
+
             case AST_Node_Kind::STATEMENT: assert(false);
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
@@ -309,6 +311,29 @@ namespace Zodiac
                     ast_stmt->if_stmt.else_scope = else_scope;
                     scope_populate_statement_ast(allocator, ast_stmt->if_stmt.else_stmt,
                                                  else_scope);
+                }
+                break;
+            }
+
+            case AST_Statement_Kind::SWITCH:
+            {
+                scope_populate_expression_ast(allocator, ast_stmt->switch_stmt.expression,
+                                              parent_scope);
+                
+                for (int64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
+                {
+                    auto case_stmt = ast_stmt->switch_stmt.cases[i];
+                    if (case_stmt->expression)
+                    {
+                        scope_populate_expression_ast(allocator, case_stmt->expression,
+                                                      parent_scope);
+                    }
+                    else
+                    {
+                        assert(case_stmt->is_default);
+                    }
+
+                    scope_populate_statement_ast(allocator, case_stmt->body, parent_scope);
                 }
                 break;
             }

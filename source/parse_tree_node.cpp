@@ -200,6 +200,24 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
             if (ptn->if_stmt.else_stmt) free_ptn(allocator, ptn->if_stmt.else_stmt);
             break;
         }
+
+        case Statement_PTN_Kind::SWITCH:
+        {
+            free_ptn(allocator, ptn->switch_stmt.expression);
+
+            for (int64_t i = 0; i < ptn->switch_stmt.cases.count; i++)
+            {
+                auto case_ptn = ptn->switch_stmt.cases[i];
+                if (!case_ptn.is_default)
+                {
+                    free_ptn(allocator, case_ptn.expression);
+                }
+
+                free_ptn(allocator, case_ptn.body);
+            }
+
+            break;
+        }
     }
 }
 
@@ -379,6 +397,19 @@ Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_e
     result->if_stmt.cond_expr = cond_expr;
     result->if_stmt.then_stmt = then_stmt;
     result->if_stmt.else_stmt = else_stmt;
+    return result;
+}
+
+Statement_PTN *new_switch_statement_ptn(Allocator *allocator, Expression_PTN *expression,
+                                        Array<Switch_Case_PTN> cases,
+                                        bool has_default_case,
+                                        const File_Pos &begin_fp,
+                                        const File_Pos &end_fp)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::SWITCH, begin_fp, end_fp);
+    result->switch_stmt.expression = expression;
+    result->switch_stmt.has_default_case = has_default_case;
+    result->switch_stmt.cases = cases;
     return result;
 }
 
@@ -1011,6 +1042,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
 
             break;
         }
+
+        case Statement_PTN_Kind::SWITCH: assert(false);
     }
 }
 

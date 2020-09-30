@@ -24,11 +24,18 @@ print_n :: func(n: s64)
     {
         case 0:
             std.print("0\n");
+            std.print("We don't need braces :) !!!\n");
             // Break is inserted automatically here 
 
         case 1:
             std.print("1\n");
             break;
+
+        case 3:
+        {
+            std.print("3\n");
+            std.print("But we can use braces...\n");
+        }
 
         default: 
             std.print("Out of reach\n");

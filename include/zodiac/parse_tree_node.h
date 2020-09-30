@@ -57,6 +57,19 @@ struct Function_Proto_PTN
     Expression_PTN *return_type_expression = nullptr;
 };
 
+struct Statement_PTN;
+
+struct Switch_Case_PTN
+{
+    Expression_PTN *expression = nullptr;
+    Statement_PTN *body = nullptr;
+    bool is_default = false;
+    bool parse_error = false;
+
+    File_Pos begin_fp = {};
+    File_Pos end_fp = {};
+};
+
 enum class Statement_PTN_Kind
 {
     INVALID,
@@ -68,6 +81,7 @@ enum class Statement_PTN_Kind
     ASSIGNMENT,
     WHILE,
     IF,
+    SWITCH,
 };
 
 struct Statement_PTN
@@ -109,6 +123,13 @@ struct Statement_PTN
             Statement_PTN *then_stmt;
             Statement_PTN *else_stmt;
         } if_stmt;
+
+        struct
+        {
+            Expression_PTN *expression;
+            Array<Switch_Case_PTN> cases;
+            bool has_default_case;
+        } switch_stmt;
     };
 
     Statement_PTN() {}
@@ -383,6 +404,11 @@ Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *whi
 Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_expr,
                                     Statement_PTN *then_stmt, Statement_PTN *else_stmt,
                                     const File_Pos &begin_fp, const File_Pos &end_fp);
+Statement_PTN *new_switch_statement_ptn(Allocator *allocator, Expression_PTN *expression,
+                                        Array<Switch_Case_PTN> cases,
+                                        bool has_default_case,
+                                        const File_Pos &begin_fp,
+                                        const File_Pos &end_fp);
 
 Function_Proto_PTN *new_function_prototype_parse_tree_node(Allocator *allocator,
                                                            Array<Parameter_PTN*> parameters,

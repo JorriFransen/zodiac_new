@@ -392,6 +392,8 @@ namespace Zodiac
                 bytecode_emit_if_statement(builder, statement);
                 break;
             }
+
+            case AST_Statement_Kind::SWITCH: assert(false);
         }
     }
 
