@@ -16,6 +16,9 @@ call_cmake () {
     echo
 }
 
+git submodule init
+git submodule update
+
 rm -rf build_gcc
 rm -rf build_clang
 
