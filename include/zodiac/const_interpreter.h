@@ -8,7 +8,7 @@ namespace Zodiac
     {
         AST_Type *type = nullptr;
 
-        int64_t s64 = 0;
+        Integer_Literal integer = {};
     };
 
     Const_Value const_interpret_expression(AST_Expression *expr);

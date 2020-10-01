@@ -1407,7 +1407,7 @@ namespace Zodiac
             case AST_Type_Kind::INTEGER:
             {
                 LLVMTypeRef llvm_type = llvm_type_from_ast(builder, type);
-                return LLVMConstInt(llvm_type, value->value.int_literal.s64, type->integer.sign);
+                return LLVMConstInt(llvm_type, value->value.integer.s64, type->integer.sign);
                 break;
             }
 

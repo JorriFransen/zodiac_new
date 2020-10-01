@@ -43,12 +43,12 @@ namespace Zodiac
                     auto base_type = expr->type->enum_type.base_type;
                     assert(base_type->kind == AST_Type_Kind::INTEGER);
 #endif
-                    result.s64 = expr->integer_literal.s64;
+                    result.integer = expr->integer_literal;
                 }
                 else
                 {
                     assert(expr->type == Builtin::type_s64);
-                    result.s64 = expr->integer_literal.s64;
+                    result.integer = expr->integer_literal;
                 }
 
                 return result;
@@ -99,7 +99,7 @@ namespace Zodiac
                     {
                         if (sign)
                         {
-                            result.s64 = lhs_val.s64 + rhs_val.s64;
+                            result.integer.s64 = lhs_val.integer.s64 + rhs_val.integer.s64;
                         }
                         else
                         {

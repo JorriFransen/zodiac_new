@@ -340,44 +340,11 @@ namespace Zodiac
 
                 case Bytecode_Instruction::LOAD_INT:
                 {
-                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
-                    auto type_from_spec = bytecode_type_from_size_spec(size_spec);
-                    switch (size_spec)
-                    {
-                        case Bytecode_Size_Specifier::INVALID: assert(false);
-                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-
-                        case Bytecode_Size_Specifier::U8:
-                        {
-                            uint8_t val = interpreter_fetch<uint8_t>(interp);
-                            auto bc_val = interpreter_push_temporary(interp, Builtin::type_u8); 
-                            bc_val->value.int_literal.u8 = val;
-                            break;
-                        }
-
-                        case Bytecode_Size_Specifier::S8: assert(false);
-                        case Bytecode_Size_Specifier::U16: assert(false);
-                        case Bytecode_Size_Specifier::S16: assert(false);
-
-                        case Bytecode_Size_Specifier::U32:
-                        {
-                            uint32_t val = interpreter_fetch<uint32_t>(interp);
-                            auto bc_val = interpreter_push_temporary(interp, Builtin::type_u32); 
-                            bc_val->value.int_literal.u32 = val;
-                            break;
-                        }
-
-                        case Bytecode_Size_Specifier::S32: assert(false);
-                        case Bytecode_Size_Specifier::U64:
-                        case Bytecode_Size_Specifier::S64:
-                        {
-                            int64_t val = interpreter_fetch<int64_t>(interp);
-                            auto bc_val = interpreter_push_temporary(interp, type_from_spec); 
-                            bc_val->value.int_literal.s64 = val;
-                            break;
-                        }
-                        default: assert(false);
-                    }
+                    Const_Value cval = interpreter_load_int(interp);
+                    assert(cval.type);
+                    assert(cval.type->kind == AST_Type_Kind::INTEGER);
+                    auto bc_val = interpreter_push_temporary(interp, cval.type);
+                    bc_val->value.integer = cval.integer;
 
                     break;
                 }
@@ -469,28 +436,28 @@ namespace Zodiac
                     {
                         case 8:
                         {
-                            result_val->value.int_literal.s8 =
+                            result_val->value.integer.s8 =
                                 *((int8_t*)ptr_val->value.pointer);
                             break;
                         }
 
                         case 16:
                         {
-                            result_val->value.int_literal.s16 =
+                            result_val->value.integer.s16 =
                                 *((int16_t*)ptr_val->value.pointer);
                             break;
                         }
 
                         case 32:
                         {
-                            result_val->value.int_literal.s32 =
+                            result_val->value.integer.s32 =
                                 *((int32_t*)ptr_val->value.pointer);
                             break;
                         }
 
                         case 64: 
                         {
-                            result_val->value.int_literal.s64 =
+                            result_val->value.integer.s64 =
                                 *((int64_t*)ptr_val->value.pointer);
                             break;
                         }
@@ -626,28 +593,28 @@ namespace Zodiac
                         case 8:
                         {
                             auto ptr = (int8_t*)ptr_val->value.pointer;
-                            *ptr = new_val->value.int_literal.s8;
+                            *ptr = new_val->value.integer.s8;
                             break;
                         }
 
                         case 16:
                         {
                             auto ptr = (int16_t*)ptr_val->value.pointer;
-                            *ptr = new_val->value.int_literal.s16;
+                            *ptr = new_val->value.integer.s16;
                             break;
                         }
 
                         case 32:
                         {
                             auto ptr = (int32_t*)ptr_val->value.pointer;
-                            *ptr = new_val->value.int_literal.s32;
+                            *ptr = new_val->value.integer.s32;
                             break;
                         }
 
                         case 64: 
                         {
                             auto ptr = (int64_t*)ptr_val->value.pointer;
-                            *ptr = new_val->value.int_literal.s64;
+                            *ptr = new_val->value.integer.s64;
                             break;
                         }
 
@@ -687,7 +654,7 @@ namespace Zodiac
                     }
                     else if (alloc->type->kind == AST_Type_Kind::INTEGER)
                     {
-                        result->value.pointer = &alloc->value.int_literal;
+                        result->value.pointer = &alloc->value.integer;
                     }
                     else assert(false);
 
@@ -731,8 +698,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.boolean =
-                                lhs_val->value.int_literal.s64 ==
-                                rhs_val->value.int_literal.s64;
+                                lhs_val->value.integer.s64 ==
+                                rhs_val->value.integer.s64;
                             break;
                         }
                         default: assert(false);
@@ -769,8 +736,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.boolean =
-                                lhs_val->value.int_literal.s64 !=
-                                rhs_val->value.int_literal.s64;
+                                lhs_val->value.integer.s64 !=
+                                rhs_val->value.integer.s64;
                             break;
                         }
                         default: assert(false);
@@ -808,7 +775,7 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.boolean =
-                                lhs_val->value.int_literal.s64 > rhs_val->value.int_literal.s64;
+                                lhs_val->value.integer.s64 > rhs_val->value.integer.s64;
                             break;
                         }
 
@@ -858,7 +825,7 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.boolean =
-                                lhs_val->value.int_literal.s64 < rhs_val->value.int_literal.s64;
+                                lhs_val->value.integer.s64 < rhs_val->value.integer.s64;
                             break;
                         }
 
@@ -906,7 +873,7 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.boolean =
-                                lhs_val->value.int_literal.s64 <= rhs_val->value.int_literal.s64;
+                                lhs_val->value.integer.s64 <= rhs_val->value.integer.s64;
                             break;
                         }
 
@@ -946,8 +913,8 @@ namespace Zodiac
 
                         case Bytecode_Size_Specifier::U8: 
                         {
-                            result_val->value.int_literal.u8 =
-                                lhs_val->value.int_literal.u8 + rhs_val->value.int_literal.u8;
+                            result_val->value.integer.u8 =
+                                lhs_val->value.integer.u8 + rhs_val->value.integer.u8;
                             break;
                         }
 
@@ -968,8 +935,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->value.int_literal.s64 =
-                                lhs_val->value.int_literal.s64 + rhs_val->value.int_literal.s64;
+                            result_val->value.integer.s64 =
+                                lhs_val->value.integer.s64 + rhs_val->value.integer.s64;
                             break;
                         }
                         default: assert(false);
@@ -1005,8 +972,8 @@ namespace Zodiac
                        case Bytecode_Size_Specifier::U64: assert(false);
                        case Bytecode_Size_Specifier::S64:
                        {
-                           result_val->value.int_literal.s64 =
-                               lhs_val->value.int_literal.s64 - rhs_val->value.int_literal.s64;
+                           result_val->value.integer.s64 =
+                               lhs_val->value.integer.s64 - rhs_val->value.integer.s64;
                            break;
                        }
 
@@ -1052,8 +1019,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->value.int_literal.s64 =
-                                lhs_val->value.int_literal.s64 % rhs_val->value.int_literal.s64;
+                            result_val->value.integer.s64 =
+                                lhs_val->value.integer.s64 % rhs_val->value.integer.s64;
                             break;
                         }
                         default: assert(false);
@@ -1089,8 +1056,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->value.int_literal.s64 =
-                                lhs_val->value.int_literal.s64 * rhs_val->value.int_literal.s64;
+                            result_val->value.integer.s64 =
+                                lhs_val->value.integer.s64 * rhs_val->value.integer.s64;
                             break;
                         }
 
@@ -1136,8 +1103,8 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::U64: assert(false);
                         case Bytecode_Size_Specifier::S64:
                         {
-                            result_val->value.int_literal.s64 =
-                                lhs_val->value.int_literal.s64 / rhs_val->value.int_literal.s64;
+                            result_val->value.integer.s64 =
+                                lhs_val->value.integer.s64 / rhs_val->value.integer.s64;
                             break;
                         }
                         default: assert(false);
@@ -1171,7 +1138,48 @@ namespace Zodiac
                    break;
                }
 
-               case Bytecode_Instruction::SWITCH: assert(false);
+               case Bytecode_Instruction::SWITCH:
+               {
+                   auto val_idx = interpreter_fetch<uint32_t>(interp);
+                   auto case_count = interpreter_fetch<uint32_t>(interp);
+                   auto has_default = interpreter_fetch<uint8_t>(interp);
+
+                   uint32_t default_block_index = 0;
+                   if (has_default)
+                   {
+                        default_block_index = interpreter_fetch<uint32_t>(interp);
+                        assert(default_block_index < frame->func->blocks.count);
+                        
+                        case_count -= 1;
+                   }
+
+                   auto *switch_val = interpreter_load_temporary(interp, val_idx);
+                   assert(switch_val->type->kind == AST_Type_Kind::INTEGER);
+
+                   for (int64_t i = 0; i < case_count; i++)
+                   {
+                       Const_Value case_value = interpreter_load_int(interp);
+                       assert(case_value.type == switch_val->type);
+
+                       auto block_idx = interpreter_fetch<uint32_t>(interp);
+
+                       if (case_value.integer.u64 == switch_val->value.integer.u64)
+                       {
+                           frame->block_index = block_idx;
+                           frame->jumped = true;
+                           break;
+                       }
+                   }
+
+                   if (!frame->jumped && has_default)
+                   {
+                       frame->block_index = default_block_index;
+                       frame->jumped = true;
+                   }
+
+                   assert(frame->jumped);
+                   break;
+               }
 
                case Bytecode_Instruction::CAST_INT:
                case Bytecode_Instruction::CAST_ENUM:
@@ -1189,10 +1197,10 @@ namespace Zodiac
                    uint64_t new_val;
                    switch (val->type->bit_size)
                    {
-                       case 8: new_val = val->value.int_literal.u8; break;
-                       case 16: new_val = val->value.int_literal.u16; break;
-                       case 32: new_val = val->value.int_literal.u32; break;
-                       case 64: new_val = val->value.int_literal.u64; break;
+                       case 8: new_val = val->value.integer.u8; break;
+                       case 16: new_val = val->value.integer.u16; break;
+                       case 32: new_val = val->value.integer.u32; break;
+                       case 64: new_val = val->value.integer.u64; break;
                        default: assert(false);
                    }
 
@@ -1204,7 +1212,7 @@ namespace Zodiac
 
                        case Bytecode_Size_Specifier::U8:
                        {
-                           result->value.int_literal.u8 = new_val;
+                           result->value.integer.u8 = new_val;
                            break;
                        }
 
@@ -1214,20 +1222,20 @@ namespace Zodiac
 
                        case Bytecode_Size_Specifier::U32:
                        {
-                           result->value.int_literal.u32 = new_val;
+                           result->value.integer.u32 = new_val;
                            break;
                        }
 
                        case Bytecode_Size_Specifier::S32:
                        {
-                           result->value.int_literal.s32 = new_val;
+                           result->value.integer.s32 = new_val;
                            break;
                        }
 
                        case Bytecode_Size_Specifier::U64: assert(false);
                        case Bytecode_Size_Specifier::S64:
                        {
-                           result->value.int_literal.s64 = new_val;
+                           result->value.integer.s64 = new_val;
                            break;
                        }
 
@@ -1281,7 +1289,7 @@ namespace Zodiac
 
                        case Bytecode_Size_Specifier::S32:
                        {
-                           result->value.int_literal.s32 = new_val;
+                           result->value.integer.s32 = new_val;
                            break;
 
                        }
@@ -1289,7 +1297,7 @@ namespace Zodiac
                        case Bytecode_Size_Specifier::U64: assert(false);
                        case Bytecode_Size_Specifier::S64:
                        {
-                           result->value.int_literal.s64 = new_val;
+                           result->value.integer.s64 = new_val;
                            break;
                        }
 
@@ -1310,7 +1318,7 @@ namespace Zodiac
                        auto arg_val = stack_peek_ptr(&interp->arg_stack, (arg_count - 1) - i);
                        assert(arg_val->type == Builtin::type_s64 ||
                               arg_val->type->kind == AST_Type_Kind::POINTER);
-                       array_append(&args, arg_val->value.int_literal.s64);
+                       array_append(&args, arg_val->value.integer.s64);
                    }
 
                    os_syscall(args);
@@ -1361,7 +1369,7 @@ namespace Zodiac
 
                    Bytecode_Value *offset_val = interpreter_load_temporary(interp, offset_idx);
                    assert(offset_val->type == Builtin::type_u32);
-                   int64_t offset = offset_val->value.int_literal.u32;
+                   int64_t offset = offset_val->value.integer.u32;
 
                    AST_Type *struct_type = nullptr;
                    if (store_val->type->kind == AST_Type_Kind::STRUCTURE)
@@ -1435,7 +1443,7 @@ namespace Zodiac
 
                    auto offset_val = interpreter_load_temporary(interp, offset_idx);
                    assert(offset_val->type == Builtin::type_u32);
-                   int64_t offset = offset_val->value.int_literal.u32;
+                   int64_t offset = offset_val->value.integer.u32;
 
                    AST_Type *element_type = nullptr;
                    AST_Type *elem_ptr_type = nullptr;
@@ -1563,7 +1571,50 @@ namespace Zodiac
         return allocl;
     }
 
+    Const_Value interpreter_load_int(Interpreter *interp)
+    {
+        auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+
+        Const_Value result = {};
+        result.type = bytecode_type_from_size_spec(size_spec);
+
+        switch (size_spec)
+        {
+            case Bytecode_Size_Specifier::INVALID: assert(false);
+            case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+
+            case Bytecode_Size_Specifier::U8:
+            {
+                result.integer.u8 = interpreter_fetch<uint8_t>(interp);
+                break;
+            }
+
+            case Bytecode_Size_Specifier::S8: assert(false);
+            case Bytecode_Size_Specifier::U16: assert(false);
+            case Bytecode_Size_Specifier::S16: assert(false);
+
+            case Bytecode_Size_Specifier::U32:
+            {
+                result.integer.u32 = interpreter_fetch<uint32_t>(interp);
+                break;
+            }
+
+            case Bytecode_Size_Specifier::S32: assert(false);
+
+            case Bytecode_Size_Specifier::U64:
+            case Bytecode_Size_Specifier::S64:
+            {
+                result.integer.u64 = interpreter_fetch<uint64_t>(interp);
+                break;
+            }
+            default: assert(false);
+        }
+
+        return result;
+    }
+
     Bytecode_Instruction interpreter_fetch_instruction(Interpreter *interp)
+
     {
         assert(interp);
         assert(interp->running);

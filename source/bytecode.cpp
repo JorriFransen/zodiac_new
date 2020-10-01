@@ -1673,7 +1673,7 @@ namespace Zodiac
         assert(offset_val->kind == Bytecode_Value_Kind::TEMPORARY);
         assert(offset_val->type == Builtin::type_u32);
 
-        auto index = offset_val->value.int_literal.u32;
+        auto index = offset_val->value.integer.u32;
 
         auto lval_type = lvalue->type;
         AST_Type *struct_type = nullptr;
@@ -2277,7 +2277,7 @@ namespace Zodiac
             case AST_Type_Kind::INTEGER:
             {
                 auto result = bytecode_new_value(builder, kind, type);
-                result->value.int_literal = {};
+                result->value.integer = {};
                 result->is_const = true;
                 return result;
                 break;
@@ -2309,7 +2309,7 @@ namespace Zodiac
 
             case AST_Type_Kind::INTEGER:
             {
-                result->value.int_literal.s64 = const_val.s64;
+                result->value.integer.s64 = const_val.integer.s64;
                 break;
             }
 
@@ -2559,9 +2559,9 @@ namespace Zodiac
                     case 64:
                     {
                         if (sign)
-                            string_builder_appendf(sb, "%" PRId64, val->value.int_literal.s64);
+                            string_builder_appendf(sb, "%" PRId64, val->value.integer.s64);
                         else
-                            string_builder_appendf(sb, "%" PRIu64, val->value.int_literal.u64);
+                            string_builder_appendf(sb, "%" PRIu64, val->value.integer.u64);
                         break;
                     }
                     default: assert(false); 

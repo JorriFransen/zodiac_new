@@ -32,9 +32,19 @@ namespace Zodiac
     struct AST_Type_Spec;
     struct AST_Type;
 
-    struct Integer_Literal
+    union Integer_Literal
     {
-        int64_t s64 = 0;
+        uint64_t u64;
+        int64_t s64;
+
+        uint32_t u32;
+        int32_t s32;
+
+        uint16_t u16;
+        int32_t s16;
+
+        uint8_t u8;
+        int8_t s8;
     };
 }
 

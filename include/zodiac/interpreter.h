@@ -59,6 +59,8 @@ namespace Zodiac
     Bytecode_Value *interpreter_load_temporary(Interpreter *interp, int32_t local_index);
     Bytecode_Value *interpreter_load_allocl(Interpreter *interp, int32_t allocl_index);
 
+    Const_Value interpreter_load_int(Interpreter *interp);
+
     Bytecode_Instruction interpreter_fetch_instruction(Interpreter *interp);
 
     template <typename T>

@@ -2884,9 +2884,9 @@ namespace Zodiac
 
                     Const_Value length_val = const_interpret_expression(length_expr);
                     assert(length_val.type == length_expr->type);
-                    assert(length_val.s64 > 0);
+                    assert(length_val.integer.s64 > 0);
 
-                    length = length_val.s64; 
+                    length = length_val.integer.s64; 
                 }
 
                 assert(length);
@@ -3709,7 +3709,7 @@ namespace Zodiac
             {
                 assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
                 auto nv = const_interpret_expression(init_expr);
-                next_value = nv.s64 + 1;
+                next_value = nv.integer.s64 + 1;
             }
             else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT)
             {
@@ -3725,7 +3725,7 @@ namespace Zodiac
                 assert(id_init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
 
                 auto nv = const_interpret_expression(id_init_expr);
-                next_value = nv.s64 + 1;
+                next_value = nv.integer.s64 + 1;
             }
             else
             {
