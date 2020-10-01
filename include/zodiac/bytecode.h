@@ -197,6 +197,7 @@ namespace Zodiac
         Array<Bytecode_Function*> functions = {};
         Array<Bytecode_Global> globals = {};
         Array<Atom> strings = {};
+        Array<AST_Type*> *types = nullptr;
         Bytecode_Function *entry_function = nullptr;
         Bytecode_Function *bytecode_entry_function = nullptr;
     };
@@ -401,6 +402,8 @@ namespace Zodiac
     void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci);
     void bytecode_print_size_spec(String_Builder *sb, Bytecode_Size_Specifier size_spec);
     void bytecode_print_im_int(String_Builder *sb, Bytecode_Iterator *bci);
+    void bytecode_print_im_enum(String_Builder *sb, Bytecode_Iterator *bci,
+                                AST_Type *type);
     void bytecode_print_im_float(String_Builder *sb, Bytecode_Iterator *bci);
     
 }

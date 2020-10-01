@@ -1140,6 +1140,8 @@ namespace Zodiac
 
                case Bytecode_Instruction::SWITCH:
                {
+                   auto type_idx = interpreter_fetch<uint32_t>(interp);
+                   assert(type_idx < interp->program->types->count);
                    auto val_idx = interpreter_fetch<uint32_t>(interp);
                    auto case_count = interpreter_fetch<uint32_t>(interp);
                    auto has_default = interpreter_fetch<uint8_t>(interp);
@@ -1154,12 +1156,15 @@ namespace Zodiac
                    }
 
                    auto *switch_val = interpreter_load_temporary(interp, val_idx);
-                   assert(switch_val->type->kind == AST_Type_Kind::INTEGER);
+                   assert(switch_val->type == (*interp->program->types)[type_idx]);
+                   assert(switch_val->type->kind == AST_Type_Kind::INTEGER ||
+                          switch_val->type->kind == AST_Type_Kind::ENUM);
 
                    for (int64_t i = 0; i < case_count; i++)
                    {
                        Const_Value case_value = interpreter_load_int(interp);
-                       assert(case_value.type == switch_val->type);
+                       assert(case_value.type == switch_val->type ||
+                              switch_val->type->kind == AST_Type_Kind::ENUM);
 
                        auto block_idx = interpreter_fetch<uint32_t>(interp);
 

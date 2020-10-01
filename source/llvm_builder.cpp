@@ -1097,6 +1097,8 @@ namespace Zodiac
 
             case Bytecode_Instruction::SWITCH:
             {
+                /*auto type_idx =*/ llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
                 auto case_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

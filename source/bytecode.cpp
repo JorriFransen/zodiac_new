@@ -3,6 +3,7 @@
 #include "builtin.h"
 #include "temp_allocator.h"
 #include "parser.h"
+#include "const_interpreter.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -26,6 +27,7 @@ namespace Zodiac
         builder->program.bytecode_entry_function = nullptr;
 
         array_init(allocator, &builder->emitted_types);
+        builder->program.types = &builder->emitted_types;
         array_init(allocator, &builder->jump_records);
 
         builder->insert_block = nullptr;
@@ -495,6 +497,7 @@ namespace Zodiac
         auto switch_val = bytecode_emit_expression(builder, stmt->switch_stmt.expression);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::SWITCH);
+        bytecode_emit_type_index(builder, switch_val->type);
         bytecode_emit_32(builder, switch_val->local_index);
         bytecode_emit_32(builder, (uint32_t)stmt->switch_stmt.cases.count);
 
@@ -1863,9 +1866,19 @@ namespace Zodiac
     {
         assert(expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
                expr->kind == AST_Expression_Kind::BOOL_LITERAL ||
-               expr->kind == AST_Expression_Kind::CHAR_LITERAL);
+               expr->kind == AST_Expression_Kind::CHAR_LITERAL ||
+               expr->kind == AST_Expression_Kind::DOT);
         assert(expr->type->kind == AST_Type_Kind::INTEGER ||
                expr->type->kind == AST_Type_Kind::ENUM);
+
+        if (expr->kind == AST_Expression_Kind::DOT)
+        {
+            auto decl = expr->dot.child_decl;
+            assert(decl);
+            assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+            expr = decl->constant.init_expression;
+            assert(expr);
+        }
 
         auto type = expr->type;
         if (type->kind == AST_Type_Kind::ENUM)
@@ -2942,6 +2955,9 @@ namespace Zodiac
 
             case Bytecode_Instruction::SWITCH:
             {
+                auto type_index = bytecode_iterator_fetch_32(bci);
+                auto type = bci->builder->emitted_types[type_index];
+
                 auto tmp_idx = bytecode_iterator_fetch_32(bci);
                 string_builder_appendf(sb, "SWITCH %%%" PRIu32, tmp_idx);
 
@@ -2965,7 +2981,15 @@ namespace Zodiac
                 for (int64_t i = 0; i < case_count; i++)
                 {
                     string_builder_append(sb, "\n      ");
-                    bytecode_print_im_int(sb, bci);
+                    if (type->kind == AST_Type_Kind::INTEGER)
+                    {
+                        bytecode_print_im_int(sb, bci);
+                    }
+                    else 
+                    {
+                        assert(type->kind == AST_Type_Kind::ENUM);
+                        bytecode_print_im_enum(sb, bci, type);
+                    }
 
                     auto block_idx = bytecode_iterator_fetch_32(bci);
                     auto block = func->blocks[block_idx];
@@ -2973,9 +2997,6 @@ namespace Zodiac
                 }
 
 
-                auto ta = temp_allocator_get();
-                auto str = string_builder_to_string(ta, sb);
-                printf("%.*s\n", (int)str.length, str.data);
                 break;
             }
 
@@ -3243,6 +3264,51 @@ namespace Zodiac
             }
             default: assert(false);
         }
+    }
+
+    void bytecode_print_im_enum(String_Builder *sb, Bytecode_Iterator *bci,
+                                AST_Type *type)
+    {
+        auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+
+
+
+        assert(((uint16_t)size_spec &
+                (uint16_t)Bytecode_Size_Specifier::BIT_SIZE_MASK) == type->bit_size);
+
+        uint64_t val = 0;
+        switch (type->bit_size)
+        {
+            case 8:
+            {
+                val = bytecode_iterator_fetch_byte(bci);
+                bytecode_iterator_advance_ip(bci);
+                break;
+            }
+
+            case 16: val = bytecode_iterator_fetch_16(bci); break;
+            case 32: val = bytecode_iterator_fetch_32(bci); break;
+            case 64: val = bytecode_iterator_fetch_64(bci); break;
+            default: assert(false);
+        }
+
+        auto enum_decl = type->enum_type.declaration;
+
+        const char* mem_name = "<member_name_not_found>";
+
+        for (int64_t i = 0; i < enum_decl->enum_decl.member_declarations.count; i++)
+        {
+            auto mem_decl = enum_decl->enum_decl.member_declarations[i];
+            auto mem_expr = mem_decl->constant.init_expression;
+            Const_Value mem_val = const_interpret_expression(mem_expr);
+
+            if (mem_val.integer.u64 == val)
+            {
+                mem_name = mem_decl->identifier->atom.data;
+            }
+        }
+
+        string_builder_appendf(sb, "%s.%s", enum_decl->identifier->atom.data, mem_name);
     }
 
     void bytecode_print_im_float(String_Builder *sb, Bytecode_Iterator *bci)

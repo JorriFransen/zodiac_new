@@ -2093,7 +2093,8 @@ namespace Zodiac
                 if (expr_res)
                 {
                     expr_type = ast_stmt->switch_stmt.expression->type;
-                    assert(expr_type->kind == AST_Type_Kind::INTEGER);
+                    assert(expr_type->kind == AST_Type_Kind::INTEGER ||
+                           expr_type->kind == AST_Type_Kind::ENUM);
                 }
 
                 bool case_expr_result = true;
