@@ -1,7 +1,8 @@
 
-switch statements
+Make switch statements work with enums
 comma seperated cases for switch statements
 parse tree and ast printing for switch statements
+For enum switch cases, check if all enum members are handled
 range cases for switch statements
 for loops
 unions

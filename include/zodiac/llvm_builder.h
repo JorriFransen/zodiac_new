@@ -84,6 +84,9 @@ namespace Zodiac
                                                        Bytecode_Block *bc_block,
                                                        Array<LLVMBasicBlockRef> llvm_blocks);
 
+    Const_Value llvm_load_int(Bytecode_Block *block, int64_t *ipp);
+    LLVMValueRef llvm_const_int(Const_Value cv);
+
     template <typename T> 
     T llvm_fetch_from_bytecode(Bytecode_Block *block, int64_t *ipp)
     {

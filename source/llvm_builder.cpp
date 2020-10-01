@@ -453,65 +453,9 @@ namespace Zodiac
 
             case Bytecode_Instruction::LOAD_INT:
             {
-                auto size_spec =
-                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
-                                                                      &func_context->ip);
-                bool sign = (uint16_t)size_spec &
-                            (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
-
-                uint64_t bit_size = (((uint16_t)size_spec) &
-                                     ((uint16_t)Bytecode_Size_Specifier::BIT_SIZE_MASK));
-
-#define LOAD_INT_                                        \
-    LLVMTypeRef type = LLVMIntType(bit_size);            \
-    LLVMValueRef result = LLVMConstInt(type, val, sign); \
-    llvm_push_temporary(builder, result);
-
-                switch (size_spec)
-                {
-                    case Bytecode_Size_Specifier::INVALID: assert(false);
-                    case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-
-                    case Bytecode_Size_Specifier::U8: 
-                    case Bytecode_Size_Specifier::S8:
-                    {
-                        auto val = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
-                                                                     &func_context->ip);
-                        LOAD_INT_
-                        break;
-                    }
-
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    {
-                        auto val = llvm_fetch_from_bytecode<uint16_t>(func_context->bc_block,
-                                                                      &func_context->ip);
-                        LOAD_INT_
-                        break;
-                    }
-
-                    case Bytecode_Size_Specifier::S32:
-                    case Bytecode_Size_Specifier::U32:
-                    {
-                        auto val = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
-                                                                      &func_context->ip);
-                        LOAD_INT_
-                        break;
-                    }
-
-
-                    case Bytecode_Size_Specifier::U64: 
-                    case Bytecode_Size_Specifier::S64:
-                    {
-                        auto val = llvm_fetch_from_bytecode<uint64_t>(func_context->bc_block,
-                                                                      &func_context->ip);
-                        LOAD_INT_
-                        break;
-                    }
-
-                    default: assert(false);
-                }
-#undef LOAD_INT_
+                Const_Value cv = llvm_load_int(func_context->bc_block, &func_context->ip);
+                LLVMValueRef result = llvm_const_int(cv);
+                llvm_push_temporary(builder, result);
                 break;
             }
 
@@ -1151,7 +1095,49 @@ namespace Zodiac
             }
 
 
-            case Bytecode_Instruction::SWITCH: assert(false);
+            case Bytecode_Instruction::SWITCH:
+            {
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+                auto case_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+                auto has_default = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
+                                                                     &func_context->ip);
+
+                uint32_t default_block_idx = 0;
+                if (has_default)
+                {
+                    default_block_idx =
+                        llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                           &func_context->ip);
+                    case_count -= 1;
+                }
+
+                auto switch_val = builder->temps[val_idx];
+
+                assert(default_block_idx < func_context->llvm_blocks.count);
+                auto default_block = func_context->llvm_blocks[default_block_idx];
+
+
+                auto switch_inst_val = LLVMBuildSwitch(builder->llvm_builder, switch_val,
+                                                       default_block, case_count);
+
+                for (int64_t i = 0; i < case_count; i++)
+                {
+                    Const_Value case_value = llvm_load_int(func_context->bc_block,
+                                                           &func_context->ip);
+
+                    auto block_idx =
+                        llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                           &func_context->ip);
+                    LLVMValueRef llvm_on_val = llvm_const_int(case_value);
+                    assert(block_idx < func_context->llvm_blocks.count);
+                    LLVMBasicBlockRef dest_block = func_context->llvm_blocks[block_idx];
+                    LLVMAddCase(switch_inst_val, llvm_on_val, dest_block);
+                }
+
+                break;
+            }
 
             case Bytecode_Instruction::CAST_INT:
             case Bytecode_Instruction::CAST_ENUM:
@@ -1722,6 +1708,97 @@ namespace Zodiac
         result.llvm_blocks = llvm_blocks;
         result.ip = 0;
 
+        return result;
+    }
+
+    Const_Value llvm_load_int(Bytecode_Block *block, int64_t *ipp)
+    {
+        auto size_spec =
+            llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(block, ipp);
+        Const_Value result = {};
+        result.type = bytecode_type_from_size_spec(size_spec);
+        assert(result.type->kind == AST_Type_Kind::INTEGER);
+
+        switch (size_spec)
+        {
+           case Bytecode_Size_Specifier::INVALID: assert(false);
+           case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+           case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
+           case Bytecode_Size_Specifier::BIT_SIZE_MASK: assert(false);
+
+           case Bytecode_Size_Specifier::U8:
+           case Bytecode_Size_Specifier::S8:
+           {
+                result.integer.u8 = llvm_fetch_from_bytecode<uint8_t>(block, ipp);
+                break;
+           }
+
+           case Bytecode_Size_Specifier::U16: assert(false);
+           case Bytecode_Size_Specifier::S16: assert(false);
+           {
+                result.integer.u16 = llvm_fetch_from_bytecode<uint16_t>(block, ipp);
+                break;
+           }
+
+           case Bytecode_Size_Specifier::U32:
+           case Bytecode_Size_Specifier::S32:
+           {
+                result.integer.u32 = llvm_fetch_from_bytecode<uint32_t>(block, ipp);
+                break;
+           }
+
+           case Bytecode_Size_Specifier::R32: assert(false);
+
+           case Bytecode_Size_Specifier::U64:
+           case Bytecode_Size_Specifier::S64:
+           {
+                result.integer.u64 = llvm_fetch_from_bytecode<uint64_t>(block, ipp);
+                break;
+           }
+
+           case Bytecode_Size_Specifier::R64: assert(false);
+        }
+
+        return result;
+    }
+
+    LLVMValueRef llvm_const_int(Const_Value cv)
+    {
+        assert(cv.type->kind == AST_Type_Kind::INTEGER);
+
+        LLVMTypeRef llvm_type = LLVMIntType(cv.type->bit_size);
+
+        LLVMValueRef result = nullptr;
+
+        switch (cv.type->bit_size)
+        {
+            case 8:
+            {
+                result = LLVMConstInt(llvm_type, cv.integer.u8, cv.type->integer.sign);
+                break;
+            }
+
+            case 16:
+            {
+                result = LLVMConstInt(llvm_type, cv.integer.u16, cv.type->integer.sign);
+                break;
+            }
+
+            case 32:
+            {
+                result = LLVMConstInt(llvm_type, cv.integer.u32, cv.type->integer.sign);
+                break;
+            }
+
+            case 64:
+            {
+                result = LLVMConstInt(llvm_type, cv.integer.u64, cv.type->integer.sign);
+                break;
+            }
+
+        }
+
+        assert(result);
         return result;
     }
 

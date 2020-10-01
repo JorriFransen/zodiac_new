@@ -41,6 +41,7 @@ print_n :: func(n: s64)
             std.print("Out of reach\n");
     }
 
+    std.print("\n");
     return;
 }
 
