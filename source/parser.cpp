@@ -850,8 +850,8 @@ Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
 
     if (parser_match_token(ts, TOK_KW_CASE))
     {
-        result.expression = parser_parse_expression(parser, ts);
-        assert(result.expression);
+        result.expressions = parser_parse_expression_list(parser, ts);
+        assert(result.expressions);
 
     }
     else if (parser_match_token(ts, TOK_KW_DEFAULT))

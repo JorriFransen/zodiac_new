@@ -499,7 +499,14 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::SWITCH);
         bytecode_emit_type_index(builder, switch_val->type);
         bytecode_emit_32(builder, switch_val->local_index);
-        bytecode_emit_32(builder, (uint32_t)stmt->switch_stmt.cases.count);
+
+        auto case_count = stmt->switch_stmt.case_expr_count;
+        if (stmt->switch_stmt.default_case)
+        {
+            case_count += 1;
+        }
+
+        bytecode_emit_32(builder, case_count);
 
         Bytecode_Block *pre_switch_block = builder->insert_block;
         Bytecode_Block *default_block = nullptr;
@@ -548,6 +555,8 @@ namespace Zodiac
             bytecode_emit_byte(builder, 0);
         }
 
+        int emitted_case_exprs = 0;
+
         for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
         {
             AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
@@ -555,10 +564,18 @@ namespace Zodiac
 
             if (switch_case->is_default) continue; 
 
-            bytecode_emit_integer_literal(builder, switch_case->expression, true);
-            auto offset = bytecode_emit_32(builder, 0);
-            bytecode_record_jump(builder, case_block, offset);
+            for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++)
+            {
+                bytecode_emit_integer_literal(builder, switch_case->expressions[expr_i],
+                                              true);
+                auto offset = bytecode_emit_32(builder, 0);
+                bytecode_record_jump(builder, case_block, offset);
+
+                emitted_case_exprs += 1;
+            }
         }
+
+        assert(emitted_case_exprs == stmt->switch_stmt.case_expr_count);
 
         auto func = builder->current_function;
 

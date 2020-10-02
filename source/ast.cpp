@@ -536,6 +536,7 @@ namespace Zodiac
                     ast_create_expression_from_ptn(allocator, ptn->switch_stmt.expression);
 
                 AST_Switch_Case *default_case = nullptr;
+                uint32_t case_expr_count = 0;
 
                 for (int64_t i = 0; i < ptn->switch_stmt.cases.count; i++)
                 {
@@ -543,23 +544,36 @@ namespace Zodiac
 
                     bool is_default = ptn_case.is_default;
 
-                    AST_Expression *expression = nullptr;
+                    Array<AST_Expression *> case_expressions = {};
+
                     if (is_default)
                     {
-                        assert(!ptn_case.expression);
+                        assert(!ptn_case.expressions);
                     }
                     else
                     {
-                        assert(ptn_case.expression);
-                        expression = ast_create_expression_from_ptn(allocator,
-                                                                    ptn_case.expression);
+                        auto ptn_exprs = ptn_case.expressions->expressions;
+                        array_init(allocator, &case_expressions, ptn_exprs.count);
+
+                        assert(ptn_case.expressions);
+                        for (int64_t expr_i = 0; expr_i < ptn_exprs.count; expr_i++)
+                        {
+                            auto expr = ast_create_expression_from_ptn(allocator,
+                                                                       ptn_exprs[expr_i]);
+                            assert(expr);
+                            array_append(&case_expressions, expr);
+                        }
+            
+                        case_expr_count += ptn_exprs.count;
+
                     }
 
                     AST_Statement *body = ast_create_statement_from_ptn(allocator,
                                                                         ptn_case.body,
                                                                         var_decls);
 
-                    AST_Switch_Case *ast_case = ast_switch_case_new(allocator, expression,
+                    AST_Switch_Case *ast_case = ast_switch_case_new(allocator,
+                                                                    case_expressions,
                                                                     is_default, body,
                                                                     ptn_case.begin_fp, 
                                                                     ptn_case.end_fp);
@@ -574,7 +588,7 @@ namespace Zodiac
                 }
 
                 return ast_switch_statement_new(allocator, expression, default_case,
-                                                cases, begin_fp, end_fp);
+                                                cases, case_expr_count, begin_fp, end_fp);
                 break;
             }
         }
@@ -1227,14 +1241,15 @@ namespace Zodiac
         return result;
     }
 
-    AST_Switch_Case *ast_switch_case_new(Allocator *allocator, AST_Expression *expression,
+    AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
+                                         Array<AST_Expression *> case_exprs,
                                          bool is_default, AST_Statement *body, 
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp)
     {
         auto result = ast_node_new<AST_Switch_Case>(allocator, begin_fp, end_fp);
 
-        result->expression = expression;
+        result->expressions = case_exprs;
         result->is_default = is_default;
         result->body = body;
 
@@ -1348,6 +1363,7 @@ namespace Zodiac
     AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
                                             AST_Switch_Case *default_case,
                                             Array<AST_Switch_Case*> cases,
+                                            uint32_t case_expr_count,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp)
     {
@@ -1357,6 +1373,7 @@ namespace Zodiac
         result->switch_stmt.expression = expression;
         result->switch_stmt.default_case = default_case;
         result->switch_stmt.cases = cases;
+        result->switch_stmt.case_expr_count = case_expr_count;
 
         return result;
     }

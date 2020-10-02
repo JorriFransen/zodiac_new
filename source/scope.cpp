@@ -323,10 +323,16 @@ namespace Zodiac
                 for (int64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
                 {
                     auto case_stmt = ast_stmt->switch_stmt.cases[i];
-                    if (case_stmt->expression)
+                    if (case_stmt->expressions.count)
                     {
-                        scope_populate_expression_ast(allocator, case_stmt->expression,
-                                                      parent_scope);
+                        for (int64_t expr_i = 0;
+                             expr_i < case_stmt->expressions.count;
+                             expr_i++)
+                        {
+                            scope_populate_expression_ast(allocator,
+                                                          case_stmt->expressions[expr_i],
+                                                          parent_scope);
+                        }
                     }
                     else
                     {

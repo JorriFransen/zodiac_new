@@ -168,7 +168,7 @@ namespace Zodiac
     {
         static AST_Node_Kind _kind;
 
-        AST_Expression *expression = nullptr;
+        Array<AST_Expression *> expressions = {};
         bool is_default = false;
         AST_Statement *body = nullptr;
     };
@@ -237,6 +237,7 @@ namespace Zodiac
                 AST_Expression *expression;
                 AST_Switch_Case *default_case;
                 Array<AST_Switch_Case*> cases;
+                uint32_t case_expr_count;
             } switch_stmt;
         };
     };
@@ -600,7 +601,8 @@ namespace Zodiac
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
-    AST_Switch_Case *ast_switch_case_new(Allocator *allocator, AST_Expression *expression,
+    AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
+                                         Array<AST_Expression *> case_exprs,
                                          bool is_default, AST_Statement *body, 
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
@@ -650,6 +652,7 @@ namespace Zodiac
     AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
                                             AST_Switch_Case *default_case,
                                             Array<AST_Switch_Case*> cases,
+                                            uint32_t case_expr_count,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 

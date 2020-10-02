@@ -1033,13 +1033,19 @@ namespace Zodiac
 
                     if (case_stmt->is_default)
                     {
-                        assert(!case_stmt->expression);
+                        assert(!case_stmt->expressions.count);
                     }
                     else
                     {
-                        if (!try_resolve_identifiers(resolver, case_stmt->expression, scope))
+                        for (int64_t expr_i = 0; expr_i < case_stmt->expressions.count;
+                             expr_i++)
                         {
-                            case_expr_res = false;
+                            if (!try_resolve_identifiers(resolver,
+                                                         case_stmt->expressions[expr_i],
+                                                         scope))
+                            {
+                                case_expr_res = false;
+                            }
                         }
                     }
 
@@ -2111,16 +2117,19 @@ namespace Zodiac
                     if (expr_res && !switch_case->is_default)
                     {
                         assert(expr_type);
-                        if (!try_resolve_types(resolver, switch_case->expression,
-                                               expr_type, scope))
+                        for (int64_t expr_i = 0; expr_i < switch_case->expressions.count;
+                             expr_i++)
                         {
-                            case_expr_result = false;
-                        }
-                        else
-                        {
-                            assert(switch_case->expression->type == expr_type);
-                            assert(switch_case->expression->expr_flags &
-                                   AST_EXPR_FLAG_CONST);
+                            auto case_expr = switch_case->expressions[expr_i];
+                            if (!try_resolve_types(resolver, case_expr, expr_type, scope))
+                            {
+                                case_expr_result = false;
+                            }
+                            else
+                            {
+                                assert(case_expr->type == expr_type);
+                                assert(case_expr->expr_flags & AST_EXPR_FLAG_CONST);
+                            }
                         }
                     }
 
@@ -3437,9 +3446,13 @@ namespace Zodiac
 
                     if (!switch_case->is_default)
                     {
-                        queue_emit_bytecode_jobs_from_expression(resolver,
-                                                                 switch_case->expression,
-                                                                 scope);
+                        for (int64_t expr_i = 0; expr_i < switch_case->expressions.count;
+                             expr_i++)
+                        {
+                            auto case_expr = switch_case->expressions[expr_i];
+                            queue_emit_bytecode_jobs_from_expression(resolver, case_expr,
+                                                                     scope);
+                        }
                     }
 
                     queue_emit_bytecode_jobs_from_statement(resolver, switch_case->body,

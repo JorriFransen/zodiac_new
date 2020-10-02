@@ -210,7 +210,7 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
                 auto case_ptn = ptn->switch_stmt.cases[i];
                 if (!case_ptn.is_default)
                 {
-                    free_ptn(allocator, case_ptn.expression);
+                    free_ptn(allocator, case_ptn.expressions);
                 }
 
                 free_ptn(allocator, case_ptn.body);
