@@ -803,6 +803,9 @@ namespace Zodiac
     AST_Type *_ast_create_array_type(Allocator *allocator, AST_Type *elem_type,
                                      int64_t elem_count);
 
+    AST_Declaration *ast_find_enum_member(AST_Type *enum_type,
+                                          Const_Value member_value);
+
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node *ast_node);
     void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent);

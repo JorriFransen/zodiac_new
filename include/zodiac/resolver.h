@@ -185,7 +185,8 @@ namespace Zodiac
     void resolver_expand_switch_case_ranges(Resolver *resolver,
                                             AST_Statement *stmt,
                                             AST_Switch_Case *switch_case,
-                                            uint64_t range_count);
+                                            uint64_t range_count,
+                                            Scope *switch_scope);
 
     void resolver_push_break_node(Resolver *resolver, AST_Node *node);
     void resolver_pop_break_node(Resolver *resolver);

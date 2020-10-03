@@ -1519,7 +1519,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Node_Kind::EXPRESSION: assert(false);
+            case AST_Node_Kind::EXPRESSION:
+            {
+                auto expr = static_cast<AST_Expression*>(ast_node);
+                result = try_resolve_types(resolver, expr, scope);
+                break;
+            }
 
             case AST_Node_Kind::SWITCH_CASE: assert(false);
 
@@ -2159,7 +2164,8 @@ namespace Zodiac
                         if (case_expr_result && range_count)
                         {
                             resolver_expand_switch_case_ranges(resolver, ast_stmt,
-                                                               switch_case, range_count);
+                                                               switch_case, range_count,
+                                                               scope);
                         }
                     }
 
@@ -3146,7 +3152,8 @@ namespace Zodiac
     void resolver_expand_switch_case_ranges(Resolver *resolver,
                                             AST_Statement *stmt,
                                             AST_Switch_Case *switch_case,
-                                            uint64_t range_count)
+                                            uint64_t range_count,
+                                            Scope *switch_scope)
     {
         Array<AST_Expression*> temp_case_exprs = {};
         auto ta = temp_allocator_get();
@@ -3196,6 +3203,39 @@ namespace Zodiac
                                                            val, begin_fp, end_fp);
                     new_expr->type = begin_val.type;
 
+                    if (begin_expr->type->kind == AST_Type_Kind::ENUM)
+                    {
+                        auto enum_type = begin_expr->type;
+
+                        auto enum_name =
+                            enum_type->enum_type.declaration->identifier->atom;
+
+                        auto parent_ident = ast_identifier_new(resolver->allocator, 
+                                                               enum_name,
+                                                               begin_fp, end_fp);
+
+                        auto parent_expr =
+                            ast_identifier_expression_new(resolver->allocator,
+                                                          parent_ident,
+                                                          begin_fp, end_fp);;
+
+                        auto member_decl = ast_find_enum_member(enum_type,
+                                                                { .type = enum_type,
+                                                                  .integer={.u64=val}});
+                        assert(member_decl);
+
+                        auto child_name = member_decl->identifier->atom;
+                        AST_Identifier *child_ident =
+                            ast_identifier_new(resolver->allocator, child_name,
+                                               begin_fp, end_fp);
+
+                        new_expr = ast_dot_expression_new(resolver->allocator,
+                                                          parent_expr, child_ident,
+                                                          begin_fp, end_fp);
+
+                    }
+
+                    queue_ident_job(resolver, new_expr, switch_scope);
                     array_append(&temp_case_exprs, new_expr);
 
                     val += 1;

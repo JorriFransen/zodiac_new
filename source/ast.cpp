@@ -1827,6 +1827,29 @@ namespace Zodiac
         return result;
     }
 
+    AST_Declaration *ast_find_enum_member(AST_Type *enum_type,
+                                          Const_Value member_value)
+    {
+        assert(enum_type->kind == AST_Type_Kind::ENUM);
+
+        auto decl = enum_type->enum_type.declaration;
+
+        assert(member_value.type == enum_type);
+
+        for (int64_t i = 0; i < decl->enum_decl.member_declarations.count; i++)
+        {
+            auto mem_decl = decl->enum_decl.member_declarations[i];
+            auto init_expr = mem_decl->constant.init_expression;
+
+            if (init_expr->integer_literal.u64 == member_value.integer.u64)
+            {
+                return mem_decl;
+            }
+        }
+
+        return nullptr;
+    }
+
     void ast_print_indent(uint64_t indent)
     {
         for (uint64_t i = 0; i < indent; i++)

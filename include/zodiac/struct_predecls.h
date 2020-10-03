@@ -46,5 +46,13 @@ namespace Zodiac
         uint8_t u8;
         int8_t s8;
     };
+
+    struct Const_Value
+    {
+        AST_Type *type = nullptr;
+
+        Integer_Literal integer = {};
+    };
+
 }
 
