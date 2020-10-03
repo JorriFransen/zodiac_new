@@ -6,7 +6,6 @@
 #include "string_builder.h"
 #include "scope.h"
 #include "parser.h"
-#include "temp_allocator.h"
 
 #include <inttypes.h>
 
@@ -2166,53 +2165,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH:
-            {
-                printf("switch (");
-                ast_print_expression(ast_stmt->switch_stmt.expression, 0);
-                printf(")\n");
-                ast_print_indent(indent);
-                printf("{\n");
-
-                indent += 1;
-
-                for (int i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
-                {
-                    ast_print_indent(indent);
-
-                    AST_Switch_Case *switch_case = ast_stmt->switch_stmt.cases[i];
-
-                    if (switch_case->is_default)
-                    {
-                        printf("default:");
-                    }
-                    else
-                    {
-                        printf("case ");
-
-                        for (int64_t j = 0; j < switch_case->expressions.count; j++)
-                        {
-                            if (j > 0) printf(", ");
-
-                            AST_Expression *case_expr = switch_case->expressions[j];
-
-                            ast_print_expression(case_expr, 0);
-                        }
-
-                        printf(":");
-                    }
-
-                    ast_print_statement(switch_case->body, indent);
-
-                    printf("\n");
-                }
-
-                indent -= 1;
-
-                ast_print_indent(indent);
-                printf("}\n");
-                break;
-            }
+            case AST_Statement_Kind::SWITCH: assert(false);
         } 
     }
 
@@ -2290,13 +2243,7 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Type_Spec_Kind::FROM_TYPE:
-            {
-                printf("type_spec_from_type(");
-                ast_print_type(type_spec->type);
-                printf(")");
-                break;
-            }
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
     }
 
@@ -2413,15 +2360,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CAST:
-            {
-                printf("@compiler_cast(");
-                ast_print_type(ast_expr->cast.target_type);
-                printf(", ");
-                ast_print_expression(ast_expr->cast.operand_expression, 0);
-                printf(")");
-                break;
-            };
+            case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::INTEGER_LITERAL:
             {
@@ -2472,13 +2411,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::RANGE:
-            {
-                ast_print_expression(ast_expr->range.begin, 0);
-                printf(" .. ");
-                ast_print_expression(ast_expr->range.end, 0);
-                break;
-            }
+            case AST_Expression_Kind::RANGE: assert(false);
         }
     }
 
@@ -2602,20 +2535,6 @@ namespace Zodiac
                 break;
             }
         }
-    }
-
-    void ast_print_type(AST_Type *type)
-    {
-        auto ta = temp_allocator_get();
-
-        String_Builder sb = {};
-        string_builder_init(ta, &sb, 16);
-
-        ast_print_type(&sb, type);
-
-        String result = string_builder_to_string(ta, &sb);
-
-        printf("%.*s", (int)result.length, result.data);
     }
 
     void ast_print_type(String_Builder *sb, AST_Type *type)

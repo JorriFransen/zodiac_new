@@ -17,7 +17,6 @@ namespace Zodiac
                                                                                     \
     DEFINE_OPTION(bool, print_parse_tree, false, "Print the parse tree")            \
     DEFINE_OPTION(bool, print_ast, false, "Print the parsed ast")                   \
-    DEFINE_OPTION(bool, print_resolved_ast, false, "Print the resolved ast")        \
     DEFINE_OPTION(bool, print_scope, false, "Scope dump")                           \
     DEFINE_OPTION(bool, print_link_command, false, "Print the linker invocation")   \
     DEFINE_OPTION(bool, print_llvm, false, "Print the generated llvm ir")           \
