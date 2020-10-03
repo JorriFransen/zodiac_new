@@ -1052,7 +1052,58 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
-        case Statement_PTN_Kind::SWITCH: assert(false);
+        case Statement_PTN_Kind::SWITCH:
+        {
+            print_indent(indent);
+            printf("switch (");
+            print_expression_ptn(statement->switch_stmt.expression, 0);
+            printf(")\n");
+            print_indent(indent);
+            printf("{\n");
+
+            indent += 4;
+
+            for (int64_t i = 0; i < statement->switch_stmt.cases.count; i++)
+            {
+                print_indent(indent);
+
+                Switch_Case_PTN &case_ptn = statement->switch_stmt.cases[i];
+                if (case_ptn.is_default)
+                {
+                    printf("default: \n");
+                }
+                else
+                {
+                    printf("case ");
+
+                    for (int64_t j = 0; j < case_ptn.expressions.count; j++)
+                    {
+                        if (j != 0) printf(", ");
+
+                        Switch_Case_Expression_PTN &case_expr = case_ptn.expressions[j];
+
+                        print_expression_ptn(case_expr.expression, 0);
+
+                        if (case_expr.range_end_expr)
+                        {
+                            printf(" .. ");
+                            print_expression_ptn(case_expr.range_end_expr, 0);
+                        }
+                    }
+
+                    printf(":\n");
+                }
+
+                print_statement_ptn(case_ptn.body, indent);
+                printf("\n");
+            }
+
+            indent -= 4;
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
     }
 }
 
