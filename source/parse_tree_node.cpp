@@ -210,7 +210,16 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
                 auto case_ptn = ptn->switch_stmt.cases[i];
                 if (!case_ptn.is_default)
                 {
-                    free_ptn(allocator, case_ptn.expressions);
+                    for (int64_t j = 0; j < case_ptn.expressions.count; j++)
+                    {
+                        free_ptn(allocator, case_ptn.expressions[j].expression);
+                        if (case_ptn.expressions[j].range_end_expr)
+                        {
+                            free_ptn(allocator, case_ptn.expressions[j].range_end_expr);
+                        }
+                    }
+                    array_free(&case_ptn.expressions);
+                    // free_ptn(allocator, case_ptn.expressions);
                 }
 
                 free_ptn(allocator, case_ptn.body);

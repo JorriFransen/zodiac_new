@@ -264,6 +264,8 @@ namespace Zodiac
         STRING_LITERAL,
         CHAR_LITERAL,
         BOOL_LITERAL,
+
+        RANGE,
     };
 
     typedef uint64_t AST_Expression_Flags;
@@ -368,6 +370,12 @@ namespace Zodiac
             {
                 bool value;
             } bool_literal;
+
+            struct
+            {
+                AST_Expression *begin;
+                AST_Expression *end;
+            } range;
         };
     };
 
@@ -731,6 +739,10 @@ namespace Zodiac
     AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
+
+    AST_Expression *ast_range_expression_new(Allocator *allocator, 
+                                              AST_Expression *begin_expr,
+                                              AST_Expression *end_expr);
 
     AST_Type_Spec *ast_type_spec_new(Allocator *allocator, AST_Type_Spec_Kind kind,
                                      const File_Pos &begin_fp, const File_Pos &end_fp);

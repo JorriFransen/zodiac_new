@@ -1,6 +1,17 @@
 
 std :: import std;
 
+Day :: enum 
+{
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday, 
+}
+
 main :: func() -> s64
 {
     std.println("Switch test");
@@ -11,6 +22,39 @@ main :: func() -> s64
     {
         print_n(n);
         n = n + 1;
+    }
+
+    std.println("\n");
+
+    day := Day.Monday;
+    while (day <= Day.Sunday) 
+    {
+        print_day(day);
+        std.print(" is in the ");
+        switch (day)
+        {
+            case Day.Monday .. Day.Tuesday: std.print("beginning");
+            case Day.Wednesday .. Day.Friday: std.print("middle");
+            case Day.Saturday .. Day.Sunday: std.print("end");
+        }
+        std.print(" of the week\n");
+        day = day + 1;
+    }
+
+    std.println("\n");
+
+    day = Day.Monday;
+    while (day <= Day.Sunday) 
+    {
+        print_day(day);
+        std.print(" is a ");
+        switch (day)
+        {
+            case Day.Monday .. Day.Friday: std.print("week");
+            case Day.Saturday .. Day.Sunday: std.print("weekend");
+        }
+        std.print(" day\n");
+        day = day + 1;
     }
 
     return 0;
@@ -54,5 +98,25 @@ print_n :: func(n: s64)
 {
     exit_code := main();
     @exit(exit_code);
+}
+
+print_day :: func(day: Day)
+{
+
+    std.print("Day.");
+
+    switch (day)
+    {
+        case Day.Monday: std.print("Monday");
+        case Day.Tuesday: std.print("Tuesday");
+        case Day.Wednesday: std.print("Wednesday");
+        case Day.Thursday: std.print("Thursday");
+        case Day.Friday: std.print("Friday");
+        case Day.Saturday: std.print("Saturday");
+        case Day.Sunday: std.print("Sunday");
+        default: std.print("INVALID");
+    }
+
+    return;
 }
 

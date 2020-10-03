@@ -85,6 +85,12 @@ namespace Zodiac
     }
 
     template <typename Element_Type>
+    Element_Type stack_top(Stack<Element_Type> *stack)
+    {
+        return stack_peek(stack);
+    }
+
+    template <typename Element_Type>
     Element_Type *stack_top_ptr(Stack<Element_Type> *stack)
     {
         return stack_peek_ptr(stack);

@@ -548,20 +548,39 @@ namespace Zodiac
 
                     if (is_default)
                     {
-                        assert(!ptn_case.expressions);
+                        assert(!ptn_case.expressions.count);
                     }
                     else
                     {
-                        auto ptn_exprs = ptn_case.expressions->expressions;
+                        auto ptn_exprs = ptn_case.expressions;
                         array_init(allocator, &case_expressions, ptn_exprs.count);
 
-                        assert(ptn_case.expressions);
+                        assert(ptn_case.expressions.count);
                         for (int64_t expr_i = 0; expr_i < ptn_exprs.count; expr_i++)
                         {
-                            auto expr = ast_create_expression_from_ptn(allocator,
-                                                                       ptn_exprs[expr_i]);
-                            assert(expr);
-                            array_append(&case_expressions, expr);
+                            auto switch_case_expr = ptn_exprs[expr_i];
+                            AST_Expression *case_expr = nullptr;
+                            if (!switch_case_expr.range_end_expr)
+                            {
+                                case_expr =
+                                    ast_create_expression_from_ptn(allocator,
+                                                                   switch_case_expr.expression);
+                            }
+                            else
+                            {
+                                auto r_begin_expr = ast_create_expression_from_ptn(
+                                        allocator, switch_case_expr.range_begin_expr);
+
+                                auto r_end_expr = ast_create_expression_from_ptn(
+                                        allocator, switch_case_expr.range_end_expr);
+
+                                case_expr = ast_range_expression_new(allocator,
+                                                                     r_begin_expr,
+                                                                     r_end_expr);
+                            }
+
+                            assert(case_expr);
+                            array_append(&case_expressions, case_expr);
                         }
             
                         case_expr_count += ptn_exprs.count;
@@ -1583,6 +1602,20 @@ namespace Zodiac
         return result;
     }
 
+    AST_Expression *ast_range_expression_new(Allocator *allocator, 
+                                              AST_Expression *begin_expr,
+                                              AST_Expression *end_expr)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::RANGE,
+                                         begin_expr->begin_file_pos,
+                                         end_expr->end_file_pos);
+
+        result->range.begin = begin_expr;
+        result->range.end = end_expr;
+
+        return result;
+    }
+
     AST_Type_Spec *ast_type_spec_new(Allocator *allocator, AST_Type_Spec_Kind kind,
                                      const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -2355,6 +2388,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::RANGE: assert(false);
         }
     }
 

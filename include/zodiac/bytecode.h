@@ -221,7 +221,7 @@ namespace Zodiac
         Bytecode_Block *insert_block = nullptr;
         Bytecode_Function *current_function = nullptr;
 
-        Bytecode_Block *break_block = nullptr;
+        Stack<Bytecode_Block *> break_block_stack = {};
 
         Array<Bytecode_Jump_Record> jump_records = {};
     };

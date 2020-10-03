@@ -116,7 +116,6 @@ restart:
         __1_CHAR_TOKEN_CASE(':', TOK_COLON);
         __1_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
         __1_CHAR_TOKEN_CASE('@', TOK_AT);
-        __1_CHAR_TOKEN_CASE('.', TOK_DOT);
         __1_CHAR_TOKEN_CASE(',', TOK_COMMA);
         __1_CHAR_TOKEN_CASE('$', TOK_DOLLAR);
 
@@ -131,6 +130,7 @@ restart:
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
+        __2_CHAR_TOKEN_CASE('.', TOK_DOT, '.', TOK_DOT_DOT);
         __2_CHAR_TOKEN_CASE('<', TOK_LT, '=', TOK_LTEQ);
         __2_CHAR_TOKEN_CASE('>', TOK_GT, '=', TOK_GTEQ);
         __2_CHAR_TOKEN_CASE('=', TOK_EQ, '=', TOK_EQ_EQ);

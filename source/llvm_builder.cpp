@@ -1103,17 +1103,10 @@ namespace Zodiac
                                                                   &func_context->ip);
                 auto case_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                      &func_context->ip);
-                auto has_default = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
-                                                                     &func_context->ip);
-
-                uint32_t default_block_idx = 0;
-                if (has_default)
-                {
-                    default_block_idx =
+                uint32_t default_block_idx =
                         llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                            &func_context->ip);
-                    case_count -= 1;
-                }
+                // case_count -= 1;
 
                 auto switch_val = builder->temps[val_idx];
 

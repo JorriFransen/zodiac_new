@@ -44,7 +44,7 @@ namespace Zodiac
         resolver->lexer = lexer_create(allocator, build_data);
         resolver->parser = parser_create(allocator, build_data);
 
-        resolver->break_node = nullptr;
+        stack_init(allocator, &resolver->break_node_stack);
 
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
         llvm_builder_init(allocator, &resolver->llvm_builder,
@@ -107,7 +107,7 @@ namespace Zodiac
             assert(queue_count(&resolver->emit_llvm_func_job_queue) == 0);
             assert(queue_count(&resolver->emit_llvm_binary_job_queue) == 0);
 
-            assert(resolver->break_node == nullptr);
+            assert(stack_count(&resolver->break_node_stack) == 0);
         }
 
         Resolve_Result result = {};
@@ -951,7 +951,7 @@ namespace Zodiac
 
             case AST_Statement_Kind::BREAK:
             {
-                assert(resolver->break_node);
+                assert(stack_count(&resolver->break_node_stack));
                 result = true;
                 break;
             }
@@ -1215,6 +1215,23 @@ namespace Zodiac
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 result = true;
+                break;
+            }
+
+            case AST_Expression_Kind::RANGE:
+            {
+                result = true;
+
+                if (!try_resolve_identifiers(resolver, ast_expr->range.begin, scope))
+                {
+                    result = false;
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_expr->range.end, scope))
+                {
+                    result = false;
+                }
+
                 break;
             }
         }
@@ -2010,7 +2027,7 @@ namespace Zodiac
 
             case AST_Statement_Kind::BREAK:
             {
-                assert(resolver->break_node);
+                assert(stack_count(&resolver->break_node_stack));
                 result = true;
                 ast_stmt->flags |= AST_NODE_FLAG_TYPED;
                 break;
@@ -2112,6 +2129,8 @@ namespace Zodiac
                 {
                     AST_Switch_Case *switch_case = ast_stmt->switch_stmt.cases[i];
 
+                    uint64_t range_count = 0;
+
                     // Only resolve the case expr type when we have determined the
                     //  switch expr type.
                     if (expr_res && !switch_case->is_default)
@@ -2129,7 +2148,18 @@ namespace Zodiac
                             {
                                 assert(case_expr->type == expr_type);
                                 assert(case_expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+                                if (case_expr->kind == AST_Expression_Kind::RANGE)
+                                {
+                                    range_count += 1;
+                                }
                             }
+                        }
+
+                        if (case_expr_result && range_count)
+                        {
+                            resolver_expand_switch_case_ranges(resolver, ast_stmt,
+                                                               switch_case, range_count);
                         }
                     }
 
@@ -2604,6 +2634,29 @@ namespace Zodiac
             {
                 ast_expr->type = Builtin::type_bool;
                 result = true;
+                break;
+            }
+
+            case AST_Expression_Kind::RANGE:
+            {
+                result = true;
+
+                if (!try_resolve_types(resolver, ast_expr->range.begin, scope))
+                {
+                    result = false;
+                }
+
+                if (!try_resolve_types(resolver, ast_expr->range.end, scope))
+                {
+                    result = false;
+                }
+
+                if (result)
+                {
+                    assert(ast_expr->range.begin->type == ast_expr->range.end->type);
+                    ast_expr->type = ast_expr->range.begin->type;
+                }
+
                 break;
             }
         }
@@ -3090,11 +3143,89 @@ namespace Zodiac
         return result;
     }
 
+    void resolver_expand_switch_case_ranges(Resolver *resolver,
+                                            AST_Statement *stmt,
+                                            AST_Switch_Case *switch_case,
+                                            uint64_t range_count)
+    {
+        Array<AST_Expression*> temp_case_exprs = {};
+        auto ta = temp_allocator_get();
+        array_init(ta, &temp_case_exprs, range_count * 3);
+
+        int64_t first_range_index = -1;
+
+        for (int64_t expr_i = 0;
+             expr_i < switch_case->expressions.count;
+             expr_i++)
+        {
+            auto case_expr = switch_case->expressions[expr_i];
+            if (case_expr->kind == AST_Expression_Kind::RANGE)
+            {
+                if (first_range_index == -1)
+                {
+                    first_range_index = expr_i;
+                }
+
+                auto begin_expr = case_expr->range.begin;
+                auto end_expr = case_expr->range.end;
+
+                array_append(&temp_case_exprs, begin_expr);
+
+                Const_Value begin_val =
+                    const_interpret_expression(begin_expr);
+
+                Const_Value end_val =
+                    const_interpret_expression(end_expr);
+
+                assert(begin_val.type == end_val.type);
+                assert(begin_val.type->kind == AST_Type_Kind::INTEGER ||
+                       begin_val.type->kind == AST_Type_Kind::ENUM);
+                assert(begin_val.type->integer.sign == false);
+
+                assert(begin_val.integer.u64 < end_val.integer.u64);
+
+                File_Pos begin_fp = {};
+                begin_fp.file_name = string_ref("<expanded from range expression>");
+                auto end_fp = begin_fp;
+
+                uint64_t val = begin_val.integer.u64 + 1;
+                while (val < end_val.integer.u64)
+                {
+                    AST_Expression *new_expr =
+                        ast_integer_literal_expression_new(resolver->allocator,
+                                                           val, begin_fp, end_fp);
+                    new_expr->type = begin_val.type;
+
+                    array_append(&temp_case_exprs, new_expr);
+
+                    val += 1;
+                    stmt->switch_stmt.case_expr_count += 1;
+                }
+
+                array_append(&temp_case_exprs, end_expr);
+                stmt->switch_stmt.case_expr_count += 1;
+
+            }
+            else if (first_range_index >= 0)
+            {
+                array_append(&temp_case_exprs, case_expr);
+            }
+        }
+
+        assert(first_range_index >= 0);
+
+        switch_case->expressions.count = first_range_index;
+
+        for (int64_t j = 0; j < temp_case_exprs.count; j++)
+        {
+            array_append(&switch_case->expressions,
+                         temp_case_exprs[j]);
+        }
+
+    }
+
     void resolver_push_break_node(Resolver *resolver, AST_Node *node)
     {
-        assert(resolver);
-        assert(resolver->break_node == nullptr);
-
         assert(node->kind == AST_Node_Kind::STATEMENT);
 
 #ifndef NDEBUG
@@ -3103,14 +3234,14 @@ namespace Zodiac
                stmt->kind == AST_Statement_Kind::SWITCH);
 #endif
 
-        resolver->break_node = node;
+        stack_push(&resolver->break_node_stack, node);
     }
 
     void resolver_pop_break_node(Resolver *resolver)
     {
         assert(resolver);
-        assert(resolver->break_node);
-        resolver->break_node = nullptr;
+
+        stack_pop(&resolver->break_node_stack);
     }
 
     AST_Type *find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
@@ -3574,6 +3705,15 @@ namespace Zodiac
             {
                 break;
             }
+
+            case AST_Expression_Kind::RANGE:
+            {
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->range.begin,
+                                                         scope);
+                queue_emit_bytecode_jobs_from_expression(resolver, expr->range.end,
+                                                         scope);
+                break;
+            }
         }
     }
 
@@ -3697,6 +3837,7 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::RANGE: assert(false);
         }
 
         assert(false);
@@ -3828,6 +3969,15 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+
+            case AST_Expression_Kind::RANGE:
+            {
+                auto begin = expr->range.begin;
+                auto end = expr->range.end;
+                is_const = ((begin->expr_flags & AST_EXPR_FLAG_CONST) &&
+                            (end->expr_flags & AST_EXPR_FLAG_CONST));
+                break;
+            }
         }
 
         if (is_const)

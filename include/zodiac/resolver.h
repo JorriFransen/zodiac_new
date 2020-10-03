@@ -67,7 +67,7 @@ namespace Zodiac
         AST_Declaration *entry_decl = nullptr;
         AST_Declaration *bc_entry_decl = nullptr;
 
-        AST_Node *break_node = nullptr;
+        Stack<AST_Node *> break_node_stack = {};
 
         Queue<Resolve_Job*> parse_job_queue = {};
         Queue<Resolve_Job*> ident_job_queue = {};
@@ -181,6 +181,11 @@ namespace Zodiac
 
     bool try_resolve_sizes(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     bool try_resolve_sizes(Resolver *resolver, AST_Type *ast_type, Scope *scope);
+
+    void resolver_expand_switch_case_ranges(Resolver *resolver,
+                                            AST_Statement *stmt,
+                                            AST_Switch_Case *switch_case,
+                                            uint64_t range_count);
 
     void resolver_push_break_node(Resolver *resolver, AST_Node *node);
     void resolver_pop_break_node(Resolver *resolver);

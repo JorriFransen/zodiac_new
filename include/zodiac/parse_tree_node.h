@@ -60,9 +60,20 @@ struct Function_Proto_PTN
 struct Statement_PTN;
 struct Expression_List_PTN;
 
+struct Switch_Case_Expression_PTN
+{
+    union
+    {
+        Expression_PTN *expression = nullptr;
+        Expression_PTN *range_begin_expr;
+    };
+
+    Expression_PTN *range_end_expr = nullptr;
+};
+
 struct Switch_Case_PTN
 {
-    Expression_List_PTN *expressions = nullptr;
+    Array<Switch_Case_Expression_PTN> expressions = {};
     Statement_PTN *body = nullptr;
     bool is_default = false;
     bool parse_error = false;

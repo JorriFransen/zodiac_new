@@ -850,8 +850,8 @@ Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
 
     if (parser_match_token(ts, TOK_KW_CASE))
     {
-        result.expressions = parser_parse_expression_list(parser, ts);
-        assert(result.expressions);
+        result.expressions = parser_parse_case_expressions(parser, ts);
+        assert(result.expressions.count);
 
     }
     else if (parser_match_token(ts, TOK_KW_DEFAULT))
@@ -898,6 +898,34 @@ Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
     result.body = body_stmt;
 
     result.end_fp = body_stmt->self.end_file_pos;
+
+    return result;
+}
+
+Array<Switch_Case_Expression_PTN> parser_parse_case_expressions(Parser *parser, Token_Stream *ts)
+{
+    Array<Switch_Case_Expression_PTN> result = {};
+    array_init(parser->allocator, &result, 1);
+
+    while (!parser_is_token(ts, TOK_COLON))
+    {
+        Expression_PTN *expr = parser_parse_expression(parser, ts); 
+
+        Expression_PTN *range_end_expr = nullptr;
+        if (parser_match_token(ts, TOK_DOT_DOT))
+        {
+            range_end_expr = parser_parse_expression(parser, ts);
+        }
+
+        Switch_Case_Expression_PTN sce = { .expression = expr,
+                                           .range_end_expr = range_end_expr};
+        array_append(&result, sce);
+
+        if (!parser_match_token(ts, TOK_COMMA))
+        {
+            break;
+        }
+    }
 
     return result;
 }

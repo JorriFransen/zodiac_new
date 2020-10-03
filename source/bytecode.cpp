@@ -28,11 +28,12 @@ namespace Zodiac
 
         array_init(allocator, &builder->emitted_types);
         builder->program.types = &builder->emitted_types;
+
+        stack_init(allocator, &builder->break_block_stack);
         array_init(allocator, &builder->jump_records);
 
         builder->insert_block = nullptr;
         builder->current_function = nullptr;
-        builder->break_block = nullptr;
     }
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
@@ -366,8 +367,8 @@ namespace Zodiac
 
             case AST_Statement_Kind::BREAK:
             {
-                assert(builder->break_block);
-                bytecode_emit_jump(builder, builder->break_block);
+                assert(stack_count(&builder->break_block_stack));
+                bytecode_emit_jump(builder, stack_top(&builder->break_block_stack));
                 break;
             }
 
@@ -501,11 +502,6 @@ namespace Zodiac
         bytecode_emit_32(builder, switch_val->local_index);
 
         auto case_count = stmt->switch_stmt.case_expr_count;
-        if (stmt->switch_stmt.default_case)
-        {
-            case_count += 1;
-        }
-
         bytecode_emit_32(builder, case_count);
 
         Bytecode_Block *pre_switch_block = builder->insert_block;
@@ -544,16 +540,14 @@ namespace Zodiac
 
         bytecode_builder_set_insert_point(builder, pre_switch_block);
 
-        if (stmt->switch_stmt.default_case)
+        if (!stmt->switch_stmt.default_case)
         {
-            bytecode_emit_byte(builder, 1);
-            auto offset = bytecode_emit_32(builder, 0);
-            bytecode_record_jump(builder, default_block, offset);
+            assert(!default_block);
+            default_block = post_switch_block;
         }
-        else
-        {
-            bytecode_emit_byte(builder, 0);
-        }
+
+        auto offset = bytecode_emit_32(builder, 0);
+        bytecode_record_jump(builder, default_block, offset);
 
         int emitted_case_exprs = 0;
 
@@ -756,6 +750,7 @@ namespace Zodiac
                 return bytecode_emit_load_str(builder, expression->string_literal.atom);
                 break;
             }
+            case AST_Expression_Kind::RANGE: assert(false);
         }
 
         assert(false);
@@ -1147,6 +1142,7 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::RANGE: assert(false);
         }
 
         assert(false);
@@ -2208,15 +2204,14 @@ namespace Zodiac
     {
         assert(builder);
         assert(break_block);
-        assert(builder->break_block == nullptr);
-        builder->break_block = break_block;
+        stack_push(&builder->break_block_stack, break_block);
     }
 
     void bytecode_pop_break_block(Bytecode_Builder *builder)
     {
         assert(builder);
-        assert(builder->break_block);
-        builder->break_block = nullptr;
+        assert(stack_count(&builder->break_block_stack));
+        stack_pop(&builder->break_block_stack);
     }
 
     void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *target_block,
@@ -2981,19 +2976,11 @@ namespace Zodiac
                 auto case_count = bytecode_iterator_fetch_32(bci);
                 assert(case_count);
 
-                auto has_default = bytecode_iterator_fetch_byte(bci);
-                bytecode_iterator_advance_ip(bci);
-
                 auto func = bci->builder->program.functions[bci->function_index];
 
-                if (has_default)
-                {
-                    auto block_idx = bytecode_iterator_fetch_32(bci);
-                    auto block = func->blocks[block_idx];
-                    string_builder_appendf(sb, "\n      default -> %s", block->name);
-
-                    case_count -= 1;
-                }
+                auto block_idx = bytecode_iterator_fetch_32(bci);
+                auto block = func->blocks[block_idx];
+                string_builder_appendf(sb, "\n      default -> %s", block->name);
 
                 for (int64_t i = 0; i < case_count; i++)
                 {

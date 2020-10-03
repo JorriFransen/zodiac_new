@@ -406,7 +406,7 @@ namespace Zodiac
                                               parent_scope);
                 scope_populate_expression_ast(allocator, ast_expr->subscript.index_expression,
                                               parent_scope);
-                break;;
+                break;
             }
 
             case AST_Expression_Kind::CAST: assert(false);
@@ -418,6 +418,15 @@ namespace Zodiac
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
 
+            case AST_Expression_Kind::RANGE:
+            {
+                scope_populate_expression_ast(allocator, ast_expr->range.begin,
+                                              parent_scope);
+
+                scope_populate_expression_ast(allocator, ast_expr->range.end,
+                                              parent_scope);
+                break;
+            }
         }
     }
  

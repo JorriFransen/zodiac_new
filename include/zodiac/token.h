@@ -35,6 +35,7 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_POUND),                               \
     DEFINE_TOKEN(TOK_AT),                                  \
     DEFINE_TOKEN(TOK_DOT),                                 \
+    DEFINE_TOKEN(TOK_DOT_DOT),                             \
     DEFINE_TOKEN(TOK_COMMA),                               \
     DEFINE_TOKEN(TOK_DOLLAR),                              \
     DEFINE_TOKEN(TOK_BANG),                                \

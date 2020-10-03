@@ -15,7 +15,22 @@ namespace Zodiac
             case AST_Expression_Kind::INVALID: assert(false);
             case AST_Expression_Kind::IDENTIFIER: assert(false);
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT:
+            {
+                assert(expr->dot.child_decl);
+
+                auto decl = expr->dot.child_decl;
+                if (decl->kind == AST_Declaration_Kind::CONSTANT)
+                {
+                    return const_interpret_expression(decl->constant.init_expression);
+                }
+                else
+                { 
+                    assert(false);
+                }
+                break;
+            }
 
             case AST_Expression_Kind::BINARY: 
             {
@@ -59,6 +74,7 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::RANGE: assert(false);
         }
 
         assert(false);

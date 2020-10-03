@@ -1144,16 +1144,10 @@ namespace Zodiac
                    assert(type_idx < interp->program->types->count);
                    auto val_idx = interpreter_fetch<uint32_t>(interp);
                    auto case_count = interpreter_fetch<uint32_t>(interp);
-                   auto has_default = interpreter_fetch<uint8_t>(interp);
 
                    uint32_t default_block_index = 0;
-                   if (has_default)
-                   {
-                        default_block_index = interpreter_fetch<uint32_t>(interp);
-                        assert(default_block_index < frame->func->blocks.count);
-                        
-                        case_count -= 1;
-                   }
+                   default_block_index = interpreter_fetch<uint32_t>(interp);
+                   assert(default_block_index < frame->func->blocks.count);
 
                    auto *switch_val = interpreter_load_temporary(interp, val_idx);
                    assert(switch_val->type == (*interp->program->types)[type_idx]);
@@ -1176,7 +1170,7 @@ namespace Zodiac
                        }
                    }
 
-                   if (!frame->jumped && has_default)
+                   if (!frame->jumped)
                    {
                        frame->block_index = default_block_index;
                        frame->jumped = true;
