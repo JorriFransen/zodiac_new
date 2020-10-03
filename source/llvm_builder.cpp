@@ -629,13 +629,14 @@ namespace Zodiac
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+
+                    case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
+                    case Bytecode_Size_Specifier::U64:
                     case Bytecode_Size_Specifier::S64:
                     {
                         LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntEQ,
@@ -667,13 +668,13 @@ namespace Zodiac
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+                    case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
+                    case Bytecode_Size_Specifier::U64:
                     case Bytecode_Size_Specifier::S64:
                     {
                         LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntNE,
@@ -701,20 +702,26 @@ namespace Zodiac
                 LLVMValueRef lhs_val = builder->temps[lhs_idx];
                 LLVMValueRef rhs_val = builder->temps[rhs_idx];
 
+                bool sign = (uint16_t)size_spec & 
+                            (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
+
                 switch (size_spec)
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+
+                    case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
+                    case Bytecode_Size_Specifier::U64:
                     case Bytecode_Size_Specifier::S64:
                     {
-                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntSGT,
+                        LLVMIntPredicate op = LLVMIntUGT;
+                        if (sign) op = LLVMIntSGT;
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, op,
                                                             lhs_val, rhs_val, "");
                         llvm_push_temporary(builder, result);
                         break;
@@ -750,20 +757,27 @@ namespace Zodiac
                 LLVMValueRef lhs_val = builder->temps[lhs_idx];
                 LLVMValueRef rhs_val = builder->temps[rhs_idx];
 
+                bool sign = (uint16_t)size_spec & 
+                            (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
+
+
                 switch (size_spec)
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+
+                    case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
+                    case Bytecode_Size_Specifier::U64:
                     case Bytecode_Size_Specifier::S64:
                     {
-                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntSLT,
+                        LLVMIntPredicate op = LLVMIntULT;
+                        if (sign) op = LLVMIntSLT;
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, op,
                                                             lhs_val, rhs_val, "");
                         llvm_push_temporary(builder, result);
                         break;
@@ -797,20 +811,26 @@ namespace Zodiac
                 LLVMValueRef lhs_val = builder->temps[lhs_idx];
                 LLVMValueRef rhs_val = builder->temps[rhs_idx];
 
+                bool sign = (uint16_t)size_spec &
+                            (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
+
                 switch (size_spec)
                 {
                     case Bytecode_Size_Specifier::INVALID: assert(false);
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
-                    case Bytecode_Size_Specifier::U8: assert(false);
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
+
+                    case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
+                    case Bytecode_Size_Specifier::U64:
                     case Bytecode_Size_Specifier::S64:
                     {
-                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, LLVMIntSLT,
+                        LLVMIntPredicate op = LLVMIntULE;
+                        if (sign) op = LLVMIntSLE;
+                        LLVMValueRef result = LLVMBuildICmp(builder->llvm_builder, op,
                                                             lhs_val, rhs_val, "");
                         llvm_push_temporary(builder, result);
                         break;
