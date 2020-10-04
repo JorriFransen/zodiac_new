@@ -1796,12 +1796,14 @@ namespace Zodiac
     }
 
     AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
-                                AST_Type *base_type, Scope *member_scope)
+                                AST_Type *base_type,
+                                Scope *member_scope)
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::ENUM, 0);
         result->enum_type.base_type = base_type;
         result->enum_type.member_scope = member_scope;
         result->enum_type.declaration = declaration;
+        result->enum_type.unique_member_values = {};
 
         return result;
     }

@@ -41,7 +41,7 @@ main :: func() -> s64
         day = day + 1;
     }
 
-    std.println("\n");
+    std.print("\n");
 
     day = Day.Monday;
     while (day <= Day.Sunday) 
@@ -56,6 +56,21 @@ main :: func() -> s64
         std.print(" day\n");
         day = day + 1;
     }
+
+    std.print("\n");
+
+    day = Day.Monday;
+    while (day <= Day.Sunday) 
+    { 
+        switch (day)
+        {
+            case Day.Tuesday: std.print("Handling tuesday...\n");
+            case Day.Saturday: std.print("Handling saturday...\n");
+        }
+        day = day + 1;
+    }
+
+    std.print("\n");
 
     return 0;
 }

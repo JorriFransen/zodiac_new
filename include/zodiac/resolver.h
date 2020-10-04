@@ -20,6 +20,7 @@ namespace Zodiac
         UNDECLARED_IDENTIFIER,
         MISMATCHING_TYPES,
         ASSIGNING_TO_CONST,
+        INCOMPLETE_SWITCH,
     };
 
     struct Resolve_Error
@@ -188,6 +189,9 @@ namespace Zodiac
                                             uint64_t range_count,
                                             Scope *switch_scope);
 
+    bool resolver_switch_case_expressions_are_typed(AST_Statement *ast_stmt);
+    bool resolver_check_switch_completeness(Resolver *resolver, AST_Statement *ast_stmt);
+
     void resolver_push_break_node(Resolver *resolver, AST_Node *node);
     void resolver_pop_break_node(Resolver *resolver);
 
@@ -198,9 +202,10 @@ namespace Zodiac
     AST_Type *create_structure_type(Resolver *resolver, AST_Declaration *struct_decl, 
                                     Array<AST_Type*> mem_types, Scope *mem_scope,
                                     Scope *current_scope);
-    AST_Type *create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
-                               AST_Type *base_type, Scope *mem_scope,
-                               Scope *current_scope);
+    AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+                                       AST_Type *base_type, 
+                                       Scope *mem_scope,
+                                       Scope *current_scope);
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          AST_Declaration *import_decl);
@@ -239,7 +244,8 @@ namespace Zodiac
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
 
-    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl);
+    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl,
+                                           AST_Type *enum_type);
 
     void resolver_inherit_const(AST_Expression *expr);
 

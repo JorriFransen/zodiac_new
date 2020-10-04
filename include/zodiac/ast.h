@@ -154,7 +154,7 @@ namespace Zodiac
             {
                 AST_Type_Spec *type_spec;
                 Array<AST_Declaration*> member_declarations;
-               Scope *member_scope; 
+                Scope *member_scope; 
             } enum_decl;
 
             struct
@@ -490,8 +490,9 @@ namespace Zodiac
             struct
             {
                 AST_Type *base_type;
-                Scope *member_scope;
                 AST_Declaration *declaration;
+                Array<Integer_Literal> unique_member_values;
+                Scope *member_scope;
             } enum_type;
 
             struct 
@@ -797,7 +798,8 @@ namespace Zodiac
     AST_Type *ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
                                      Array<AST_Type*> member_types, Scope *member_scope);
     AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
-                                AST_Type *base_type, Scope *member_scope);
+                                AST_Type *base_type,
+                                Scope *member_scope);
 
     AST_Type *_ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type);
     AST_Type *_ast_create_array_type(Allocator *allocator, AST_Type *elem_type,

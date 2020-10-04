@@ -187,10 +187,11 @@ namespace Zodiac
                 {
                     queue_enqueue(&resolver->type_job_queue, job);
                 }
-                else
+                else if (job->ast_node->kind == AST_Node_Kind::DECLARATION)
                 {
                     auto decl = job->declaration;
                     assert(decl);
+
                     if (decl->kind == AST_Declaration_Kind::FUNCTION)
                     {
                         if (decl == resolver->entry_decl)
@@ -212,6 +213,12 @@ namespace Zodiac
                     // Size jobs are queued when types are first created
                     free_job(resolver, job);
                 }
+                else
+                {
+                    assert(job->ast_node->kind == AST_Node_Kind::EXPRESSION);
+                    free_job(resolver, job);
+                }
+
             } }
 
             { ZoneScopedNC("size_jobs", 0xff0000) 
@@ -1493,7 +1500,6 @@ namespace Zodiac
         assert(ast_node);
 
         assert(ast_node->flags & AST_NODE_FLAG_RESOLVED_ID);
-        assert(!(ast_node->flags & AST_NODE_FLAG_TYPED));  
 
         bool result = false;
 
@@ -1505,6 +1511,7 @@ namespace Zodiac
 
             case AST_Node_Kind::DECLARATION:
             {
+                assert(!(ast_node->flags & AST_NODE_FLAG_TYPED));  
                 assert(scope);
                 auto decl = static_cast<AST_Declaration*>(ast_node);
                 //assert(decl->type == nullptr);
@@ -1522,6 +1529,11 @@ namespace Zodiac
             case AST_Node_Kind::EXPRESSION:
             {
                 auto expr = static_cast<AST_Expression*>(ast_node);
+                if (ast_node->flags & AST_NODE_FLAG_TYPED)
+                {
+                    assert(expr->type);
+                    return true;
+                }
                 result = try_resolve_types(resolver, expr, scope);
                 break;
             }
@@ -1530,6 +1542,7 @@ namespace Zodiac
 
             case AST_Node_Kind::STATEMENT:
             {
+                assert(!(ast_node->flags & AST_NODE_FLAG_TYPED));  
                 auto stmt = static_cast<AST_Statement*>(ast_node);
                 result = try_resolve_types(resolver, stmt, scope, nullptr);
                 break;
@@ -1864,9 +1877,9 @@ namespace Zodiac
 
                 assert(base_type->kind == AST_Type_Kind::INTEGER);
 
-                auto enum_type = create_enum_type(resolver, ast_decl, base_type, 
-                                                  ast_decl->enum_decl.member_scope,
-                                                  scope);
+                auto enum_type = find_or_create_enum_type(resolver, ast_decl, base_type, 
+                                                          ast_decl->enum_decl.member_scope,
+                                                          scope);
 
                 auto mem_decls = ast_decl->enum_decl.member_declarations;
                 for (uint64_t i = 0; i < mem_decls.count; i++)
@@ -1890,7 +1903,8 @@ namespace Zodiac
 
                 if (result)
                 {
-                    result = resolver_assign_enum_initializers(resolver, ast_decl);
+                    result = resolver_assign_enum_initializers(resolver, ast_decl,
+                                                               enum_type);
                     assert(result);
                 }
 
@@ -2181,6 +2195,19 @@ namespace Zodiac
                 }
 
                 result = expr_res && case_expr_result && case_body_result;
+
+                if (result && expr_type->kind == AST_Type_Kind::ENUM)
+                {
+                    if (resolver_switch_case_expressions_are_typed(ast_stmt))
+                    {
+                        result = resolver_check_switch_completeness(resolver, ast_stmt);
+                    }
+                    else
+                    {
+                        result = false;
+                    }
+                }
+
                 if (result)
                 {
                     ast_stmt->flags |= AST_NODE_FLAG_TYPED;
@@ -2949,7 +2976,7 @@ namespace Zodiac
                     assert(length_expr->type);
                     assert(length_expr->type->kind == AST_Type_Kind::INTEGER);
 
-                    assert(length_expr->flags & AST_EXPR_FLAG_CONST);
+                    assert(length_expr->expr_flags & AST_EXPR_FLAG_CONST);
 
                     Const_Value length_val = const_interpret_expression(length_expr);
                     assert(length_val.type == length_expr->type);
@@ -3191,8 +3218,12 @@ namespace Zodiac
 
                 assert(begin_val.integer.u64 < end_val.integer.u64);
 
-                File_Pos begin_fp = {};
-                begin_fp.file_name = string_ref("<expanded from range expression>");
+                File_Pos begin_fp = begin_expr->begin_file_pos;
+                begin_fp.file_name =
+                    string_append(resolver->allocator,
+                                  string_ref("<expanded from range expression> "),
+                                  begin_expr->begin_file_pos.file_name);
+
                 auto end_fp = begin_fp;
 
                 uint64_t val = begin_val.integer.u64 + 1;
@@ -3201,7 +3232,6 @@ namespace Zodiac
                     AST_Expression *new_expr =
                         ast_integer_literal_expression_new(resolver->allocator,
                                                            val, begin_fp, end_fp);
-                    new_expr->type = begin_val.type;
 
                     if (begin_expr->type->kind == AST_Type_Kind::ENUM)
                     {
@@ -3234,7 +3264,7 @@ namespace Zodiac
                                                           begin_fp, end_fp);
 
                     }
-
+                    
                     queue_ident_job(resolver, new_expr, switch_scope);
                     array_append(&temp_case_exprs, new_expr);
 
@@ -3244,6 +3274,12 @@ namespace Zodiac
 
                 array_append(&temp_case_exprs, end_expr);
                 stmt->switch_stmt.case_expr_count += 1;
+
+                //@FIXME:@LEAK: We are leaking 'case_expr' here, right now we can't be
+                //               sure about the allocator that was used to allocate the 
+                //               expression. (in practice we are only using the c
+                //               allocator at the moment, but if we change any of them we
+                //               won't know)
 
             }
             else if (first_range_index >= 0)
@@ -3262,6 +3298,95 @@ namespace Zodiac
                          temp_case_exprs[j]);
         }
 
+    }
+
+    bool resolver_switch_case_expressions_are_typed(AST_Statement *ast_stmt)
+    {
+        assert(ast_stmt->kind == AST_Statement_Kind::SWITCH);
+
+        for (int64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
+        {
+            auto switch_case = ast_stmt->switch_stmt.cases[i];
+            for (int64_t j = 0; j < switch_case->expressions.count; j++)
+            {
+                auto case_expr = switch_case->expressions[j];
+
+                if (!(case_expr->flags & AST_NODE_FLAG_TYPED))
+                {
+                    return false;
+                }
+                else
+                {
+                    assert(case_expr->type);
+                    assert(case_expr->type->kind == AST_Type_Kind::INTEGER ||
+                           case_expr->type->kind == AST_Type_Kind::ENUM);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool resolver_check_switch_completeness(Resolver *resolver, AST_Statement *ast_stmt)
+    {
+        assert(ast_stmt->kind == AST_Statement_Kind::SWITCH);
+
+        AST_Type *enum_type = ast_stmt->switch_stmt.expression->type;
+        assert(enum_type);
+
+        if (ast_stmt->switch_stmt.default_case) return true;
+
+        auto umvs = enum_type->enum_type.unique_member_values;
+
+        auto ta = temp_allocator_get();
+
+        Array<Integer_Literal> unhandled_umvs = {};
+        array_init(ta, &unhandled_umvs, umvs.count);
+
+        for (int64_t i = 0; i < umvs.count; i++) array_append(&unhandled_umvs, umvs[i]);
+
+        auto cases = ast_stmt->switch_stmt.cases;
+        for (int64_t i = 0; i < cases.count; i++)
+        {
+            AST_Switch_Case *switch_case = cases[i];
+            for (int64_t j = 0; j < switch_case->expressions.count; j++)
+            {
+                auto case_expr = switch_case->expressions[j];
+
+                Const_Value expr_val = const_interpret_expression(case_expr);
+
+                int64_t match_idx = -1;
+
+                for (int64_t umv_i = 0; umv_i < unhandled_umvs.count; umv_i++)
+                {
+                    auto u_umv = unhandled_umvs[umv_i];
+                    if (u_umv.u64 == expr_val.integer.u64)
+                    {
+                        match_idx = umv_i;
+                        break;
+                    }
+                }
+
+                if (match_idx != -1)
+                {
+                    array_unordered_remove(&unhandled_umvs, match_idx);
+                }
+
+                if (unhandled_umvs.count <= 0) break;
+            }
+
+            if (unhandled_umvs.count <= 0) break;
+        }
+
+        if (unhandled_umvs.count)
+        {
+            resolver_report_error(resolver, Resolve_Error_Kind::INCOMPLETE_SWITCH,
+                                  ast_stmt,
+                                  "Incomplete switch case");
+            return false;
+        }
+
+        return true;
     }
 
     void resolver_push_break_node(Resolver *resolver, AST_Node *node)
@@ -3353,9 +3478,10 @@ namespace Zodiac
         return result;
     }
 
-    AST_Type *create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
-                               AST_Type *base_type, Scope *mem_scope,
-                               Scope *current_scope)
+    AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+                                      AST_Type *base_type, 
+                                      Scope *mem_scope,
+                                      Scope *current_scope)
     {
         assert(enum_decl->kind == AST_Declaration_Kind::ENUM);
 
@@ -3884,15 +4010,22 @@ namespace Zodiac
         return nullptr;
     }
 
-    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl)
+    bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl,
+                                           AST_Type *enum_type)
     {
         assert(decl->kind == AST_Declaration_Kind::ENUM);
+        assert(enum_type->kind == AST_Type_Kind::ENUM);
+        assert(enum_type->enum_type.declaration == decl);
+
+        assert(enum_type->enum_type.unique_member_values.count == 0);
+        array_init(resolver->allocator, &enum_type->enum_type.unique_member_values);
 
         bool result = true;
 
         auto members = decl->enum_decl.member_declarations;
 
         int64_t next_value = 0;
+        int64_t current_value = 0;
 
         for (int64_t i = 0; i < members.count; i++)
         {
@@ -3905,6 +4038,7 @@ namespace Zodiac
                 assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
                 auto nv = const_interpret_expression(init_expr);
                 next_value = nv.integer.s64 + 1;
+                current_value = nv.integer.s64;
             }
             else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT)
             {
@@ -3921,12 +4055,32 @@ namespace Zodiac
 
                 auto nv = const_interpret_expression(id_init_expr);
                 next_value = nv.integer.s64 + 1;
+                current_value = nv.integer.s64;
             }
             else
             {
                 assert(init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL);
                 init_expr->integer_literal.s64 = next_value;
+                current_value = next_value;
                 next_value += 1;
+            }
+
+            bool match_found = false;
+
+            for (int64_t j = 0; j < enum_type->enum_type.unique_member_values.count; j++)
+            {
+                auto umv = enum_type->enum_type.unique_member_values[j];
+                if (umv.s64 == current_value)
+                {
+                    match_found = true;
+                    break;
+                }
+            }
+
+            if (!match_found)
+            {
+                array_append(&enum_type->enum_type.unique_member_values,
+                             { .s64 = current_value });
             }
         }
 
