@@ -607,8 +607,11 @@ namespace Zodiac
                     array_append(&cases, ast_case);
                 }
 
+                bool allow_incomplete = ptn->switch_stmt.allow_incomplete;
+
                 return ast_switch_statement_new(allocator, expression, default_case,
-                                                cases, case_expr_count, begin_fp, end_fp);
+                                                cases, case_expr_count, allow_incomplete,
+                                                begin_fp, end_fp);
                 break;
             }
         }
@@ -1384,6 +1387,7 @@ namespace Zodiac
                                             AST_Switch_Case *default_case,
                                             Array<AST_Switch_Case*> cases,
                                             uint32_t case_expr_count,
+                                            bool allow_incomplete,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp)
     {
@@ -1394,6 +1398,7 @@ namespace Zodiac
         result->switch_stmt.default_case = default_case;
         result->switch_stmt.cases = cases;
         result->switch_stmt.case_expr_count = case_expr_count;
+        result->switch_stmt.allow_incomplete = allow_incomplete;
 
         return result;
     }

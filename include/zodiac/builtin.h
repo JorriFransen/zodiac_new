@@ -28,16 +28,17 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_TYPE(s64, INTEGER, 64, true)    \
     DEFINE_BUILTIN_TYPE(u64, INTEGER, 64, false)   \
 
-#define BUILTIN_ATOM_LIST                \
-    DEFINE_BUILTIN_ATOM(_start)          \
-    DEFINE_BUILTIN_ATOM(mainCRTStartup)  \
-    DEFINE_BUILTIN_ATOM(main)            \
-    DEFINE_BUILTIN_ATOM(exit)            \
-    DEFINE_BUILTIN_ATOM(syscall)         \
-    DEFINE_BUILTIN_ATOM(naked)           \
-    DEFINE_BUILTIN_ATOM(noreturn)        \
-    DEFINE_BUILTIN_ATOM(foreign)         \
-    DEFINE_BUILTIN_ATOM(cast)            \
+#define BUILTIN_ATOM_LIST                 \
+    DEFINE_BUILTIN_ATOM(_start)           \
+    DEFINE_BUILTIN_ATOM(mainCRTStartup)   \
+    DEFINE_BUILTIN_ATOM(main)             \
+    DEFINE_BUILTIN_ATOM(exit)             \
+    DEFINE_BUILTIN_ATOM(syscall)          \
+    DEFINE_BUILTIN_ATOM(naked)            \
+    DEFINE_BUILTIN_ATOM(noreturn)         \
+    DEFINE_BUILTIN_ATOM(foreign)          \
+    DEFINE_BUILTIN_ATOM(cast)             \
+    DEFINE_BUILTIN_ATOM(allow_incomplete) \
 
 #undef DEFINE_BUILTIN_TYPE
 

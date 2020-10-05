@@ -2196,11 +2196,16 @@ namespace Zodiac
 
                 result = expr_res && case_expr_result && case_body_result;
 
-                if (result && expr_type->kind == AST_Type_Kind::ENUM)
+                if (result)
                 {
-                    if (resolver_switch_case_expressions_are_typed(ast_stmt))
+                    if(resolver_switch_case_expressions_are_typed(ast_stmt))
                     {
-                        result = resolver_check_switch_completeness(resolver, ast_stmt);
+                        if (expr_type->kind == AST_Type_Kind::ENUM &&
+                            !ast_stmt->switch_stmt.allow_incomplete)
+                        {
+                            result = resolver_check_switch_completeness(resolver,
+                                                                        ast_stmt);
+                        }
                     }
                     else
                     {

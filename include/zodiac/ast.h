@@ -238,6 +238,7 @@ namespace Zodiac
                 AST_Switch_Case *default_case;
                 Array<AST_Switch_Case*> cases;
                 uint32_t case_expr_count;
+                bool allow_incomplete;
             } switch_stmt;
         };
     };
@@ -662,6 +663,7 @@ namespace Zodiac
                                             AST_Switch_Case *default_case,
                                             Array<AST_Switch_Case*> cases,
                                             uint32_t case_expr_count,
+                                            bool allow_incomplete,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 

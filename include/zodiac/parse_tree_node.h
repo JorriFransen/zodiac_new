@@ -141,6 +141,8 @@ struct Statement_PTN
             Expression_PTN *expression;
             Array<Switch_Case_PTN> cases;
             bool has_default_case;
+            bool allow_incomplete;
+
         } switch_stmt;
     };
 
@@ -419,6 +421,7 @@ Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_e
 Statement_PTN *new_switch_statement_ptn(Allocator *allocator, Expression_PTN *expression,
                                         Array<Switch_Case_PTN> cases,
                                         bool has_default_case,
+                                        bool allow_incomplete,
                                         const File_Pos &begin_fp,
                                         const File_Pos &end_fp);
 

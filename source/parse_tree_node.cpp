@@ -412,12 +412,14 @@ Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_e
 Statement_PTN *new_switch_statement_ptn(Allocator *allocator, Expression_PTN *expression,
                                         Array<Switch_Case_PTN> cases,
                                         bool has_default_case,
+                                        bool allow_incomplete,
                                         const File_Pos &begin_fp,
                                         const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::SWITCH, begin_fp, end_fp);
     result->switch_stmt.expression = expression;
     result->switch_stmt.has_default_case = has_default_case;
+    result->switch_stmt.allow_incomplete = allow_incomplete;
     result->switch_stmt.cases = cases;
     return result;
 }

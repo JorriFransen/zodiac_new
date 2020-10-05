@@ -801,6 +801,23 @@ Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
         return nullptr;
     }
 
+    bool allow_incomplete = false;
+
+    if (parser_match_token(ts, TOK_POUND))
+    {
+        auto identifier = parser_parse_identifier(parser, ts);
+        assert(identifier);
+
+        if (identifier->atom == Builtin::atom_allow_incomplete)
+        {
+            allow_incomplete = true;
+        }
+        else
+        {
+            assert(false);
+        }
+    }
+
     if (!parser_expect_token(parser, ts, TOK_LBRACE))
     {
         return  nullptr;
@@ -839,7 +856,7 @@ Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
     if (!cases.count) array_free(&cases);
 
     return new_switch_statement_ptn(parser->allocator, expr, cases, has_default_case,
-                                    begin_fp, end_fp);
+                                    allow_incomplete, begin_fp, end_fp);
 }
 
 Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
