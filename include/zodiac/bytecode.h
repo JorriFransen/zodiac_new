@@ -250,6 +250,7 @@ namespace Zodiac
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement);
     void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
     void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt);
+    void bytecode_emit_for_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     void bytecode_emit_switch_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression);
@@ -313,6 +314,9 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast_int_float(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type);
+    Bytecode_Value *bytecode_emit_cast_int_bool(Bytecode_Builder *builder,
+                                                Bytecode_Value *operand_val,
+                                                AST_Type *target_type);
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type);

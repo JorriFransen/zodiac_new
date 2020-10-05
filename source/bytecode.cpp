@@ -390,7 +390,11 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                bytecode_emit_for_statement(builder, statement);
+                break;
+            }
 
             case AST_Statement_Kind::IF:
             {
@@ -449,6 +453,36 @@ namespace Zodiac
 
         bytecode_builder_append_block(builder, current_func, post_while_block);
         bytecode_builder_set_insert_point(builder, post_while_block);
+    }
+
+    void bytecode_emit_for_statement(Bytecode_Builder *builder, AST_Statement *stmt)
+    {
+        assert(stmt->kind == AST_Statement_Kind::FOR);
+
+        auto current_func = builder->current_function;
+
+        Bytecode_Block *cond_block = bytecode_new_block(builder, "for_cond");
+        Bytecode_Block *body_block = bytecode_new_block(builder, "for_body");
+        Bytecode_Block *post_for_block = bytecode_new_block(builder, "post_for");
+
+        bytecode_emit_statement(builder, stmt->for_stmt.init_stmt);
+        bytecode_emit_jump(builder, cond_block);
+
+        bytecode_builder_append_block(builder, current_func, cond_block);
+        bytecode_builder_set_insert_point(builder, cond_block);
+        auto cond_val = bytecode_emit_expression(builder, stmt->for_stmt.cond_expr);
+        bytecode_emit_jump_if(builder, body_block, cond_val);
+        bytecode_emit_jump(builder, post_for_block);
+
+        bytecode_builder_append_block(builder, current_func, body_block);
+        bytecode_builder_set_insert_point(builder, body_block);
+        bytecode_emit_statement(builder, stmt->for_stmt.body_stmt);
+        bytecode_emit_statement(builder, stmt->for_stmt.step_stmt);
+        bytecode_emit_jump(builder, cond_block);
+
+        bytecode_builder_append_block(builder, current_func, post_for_block);
+        bytecode_builder_set_insert_point(builder, post_for_block);
+
     }
 
     void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt)
@@ -1261,7 +1295,11 @@ namespace Zodiac
                 return bytecode_emit_cast_int_float(builder, operand_val, target_type);
             }
 
-            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::BOOL:
+            {
+                return bytecode_emit_cast_int_bool(builder, operand_val, target_type);
+            }
+
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
@@ -1374,9 +1412,17 @@ namespace Zodiac
         {
             sign = type->integer.sign;
         }
+        else if (type->kind == AST_Type_Kind::BOOL)
+        {
+            sign = false;
+        }
         else if (type->kind == AST_Type_Kind::FLOAT)
         {
             real = true;
+        }
+        else
+        {
+            assert(false);
         }
 
         bytecode_emit_size_spec(builder, sign, real, type->bit_size);
@@ -1653,6 +1699,28 @@ namespace Zodiac
         auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
         bytecode_push_local_temporary(builder, result);
         return result;
+    }
+
+    Bytecode_Value *bytecode_emit_cast_int_bool(Bytecode_Builder *builder,
+                                                Bytecode_Value *operand_val,
+                                                AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::BOOL);
+        assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
+
+#ifndef NDEBUG
+        auto op_type = operand_val->type;
+        assert(op_type->kind == AST_Type_Kind::INTEGER);
+#endif
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_INT);
+        bytecode_emit_size_spec(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+
     }
 
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
@@ -3162,7 +3230,12 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Size_Specifier::S8: assert(false);
+            case Bytecode_Size_Specifier::S8:
+            {
+                string_builder_append(sb, "S8");
+                break;
+            }
+
             case Bytecode_Size_Specifier::U16: assert(false);
             case Bytecode_Size_Specifier::S16: assert(false);
 

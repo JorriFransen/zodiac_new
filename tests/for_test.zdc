@@ -11,6 +11,16 @@ main :: func() -> s64
         std.print("\n");
     }
 
+    std.print("\n");
+
+    for (i := 9; i >= 0; i = i - 1)
+    {
+        std.print_num(i);
+        std.print("\n");
+    }
+
+    std.print("\n");
+
     return 0;
 }
 

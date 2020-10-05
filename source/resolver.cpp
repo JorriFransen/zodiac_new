@@ -997,7 +997,42 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                auto for_scope = ast_stmt->for_stmt.scope;
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.init_stmt,
+                                             for_scope))
+                {
+                    return false;
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.cond_expr,
+                                             for_scope))
+                {
+                    return false;
+                }
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.step_stmt,
+                                             for_scope))
+                {
+                    return false;
+                }
+
+                resolver_push_break_node(resolver, ast_stmt);
+
+                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.body_stmt,
+                                             for_scope))
+                {
+                    return false;
+                }
+
+                resolver_pop_break_node(resolver);
+
+                result = true;
+
+                break;
+            }
 
             case AST_Statement_Kind::IF:
             {
@@ -1214,8 +1249,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CAST:  assert(false);
-
+            case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::INTEGER_LITERAL: 
             case AST_Expression_Kind::FLOAT_LITERAL: 
@@ -2100,7 +2134,72 @@ namespace Zodiac
             }
 
             
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR: 
+            {
+                auto for_scope = ast_stmt->for_stmt.scope;
+
+                if (!try_resolve_types(resolver, ast_stmt->for_stmt.init_stmt, for_scope,
+                                       inferred_return_type))
+                {
+                    return false;
+                }
+
+                if (!try_resolve_types(resolver, ast_stmt->for_stmt.cond_expr, for_scope))
+                {
+                    return false;
+                }
+                else
+                {
+                    auto cond_expr = ast_stmt->for_stmt.cond_expr;
+                    auto cond_type = cond_expr->type;
+
+                    assert(cond_type);
+
+                    assert(cond_type->kind == AST_Type_Kind::INTEGER);
+
+                    // if (cond_type != Builtin::type_bool)
+                    // {
+                    //     assert(resolver_valid_type_conversion(cond_type,
+                    //                                           Builtin::type_bool));
+
+                    //     auto begin_fp = cond_expr->begin_file_pos;
+                    //     auto end_fp = cond_expr->end_file_pos;
+
+                    //     ast_stmt->for_stmt.cond_expr =
+                    //         ast_cast_expression_new(resolver->allocator,
+                    //                                 cond_expr, Builtin::type_bool,
+                    //                                 begin_fp, end_fp);
+
+                    //     ast_stmt->for_stmt.cond_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+
+                    //     if (!try_resolve_types(resolver, ast_stmt->for_stmt.cond_expr,
+                    //                            for_scope))
+                    //     {
+                    //         assert(false);
+                    //     }
+                    // }
+                }
+
+                if (!try_resolve_types(resolver, ast_stmt->for_stmt.step_stmt, for_scope,
+                                       inferred_return_type))
+                {
+                    return false;
+                }
+
+                resolver_push_break_node(resolver, ast_stmt);
+
+                if (!try_resolve_types(resolver, ast_stmt->for_stmt.body_stmt, for_scope,
+                                       inferred_return_type))
+                {
+                    return false;
+                }
+
+                resolver_pop_break_node(resolver);
+
+                result = true;
+                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
 
             case AST_Statement_Kind::IF:
             {
@@ -2613,6 +2712,12 @@ namespace Zodiac
                     {
                         assert(operand->type->kind == AST_Type_Kind::FLOAT ||
                                operand->type->kind == AST_Type_Kind::INTEGER);
+                        result = true;
+                        result_type = target_type;
+                    }
+                    else if (target_type->kind == AST_Type_Kind::BOOL)
+                    {
+                        assert(operand->type->kind == AST_Type_Kind::INTEGER);
                         result = true;
                         result_type = target_type;
                     }
@@ -3422,7 +3527,8 @@ namespace Zodiac
 #ifndef NDEBUG
         auto stmt = static_cast<AST_Statement*>(node);
         assert(stmt->kind == AST_Statement_Kind::WHILE ||
-               stmt->kind == AST_Statement_Kind::SWITCH);
+               stmt->kind == AST_Statement_Kind::SWITCH ||
+               stmt->kind == AST_Statement_Kind::FOR);
 #endif
 
         stack_push(&resolver->break_node_stack, node);
@@ -3742,7 +3848,27 @@ namespace Zodiac
             }
 
             
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                auto for_scope = stmt->for_stmt.scope;
+
+                queue_emit_bytecode_jobs_from_statement(resolver,
+                                                        stmt->for_stmt.init_stmt,
+                                                        for_scope);
+
+                queue_emit_bytecode_jobs_from_expression(resolver,
+                                                         stmt->for_stmt.cond_expr,
+                                                         for_scope);
+
+                queue_emit_bytecode_jobs_from_statement(resolver,
+                                                        stmt->for_stmt.step_stmt,
+                                                        for_scope);
+
+                queue_emit_bytecode_jobs_from_statement(resolver,
+                                                        stmt->for_stmt.body_stmt,
+                                                        for_scope);
+                break;
+            }
 
             case AST_Statement_Kind::IF:
             {
@@ -4235,6 +4361,10 @@ namespace Zodiac
                         assert(target_type->integer.sign);
                         return type->bit_size < target_type->bit_size;
                     }
+                }
+                else if (target_type->kind == AST_Type_Kind::BOOL)
+                {
+                    return true;
                 }
                 else assert(false);
 
