@@ -1251,6 +1251,17 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         }
 
+        case TOK_LPAREN:
+        {
+            ts->next_token();
+            result = parser_parse_expression(parser, ts);
+            if (!parser_expect_token(parser, ts, TOK_RPAREN))
+            {
+                return nullptr;
+            }
+            break;
+        }
+
         default:
         {
             auto ct = ts->current_token();
