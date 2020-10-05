@@ -187,6 +187,7 @@ namespace Zodiac
         EXPRESSION,
 
         WHILE,
+        FOR,
         IF,
         SWITCH,
     };
@@ -221,6 +222,16 @@ namespace Zodiac
                 AST_Statement *body;
                 Scope *body_scope;
             } while_stmt;
+
+            struct
+            {
+                AST_Statement *init_stmt;
+                AST_Expression *cond_expr;
+                AST_Statement *step_stmt;
+                AST_Statement *body_stmt;
+
+                Scope *scope;
+            } for_stmt;
 
             struct
             {
@@ -652,6 +663,13 @@ namespace Zodiac
     AST_Statement *ast_while_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *body, const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
+
+    AST_Statement *ast_for_statement_new(Allocator *allocator, AST_Statement *init_stmt,
+                                         AST_Expression *cond_expr,
+                                         AST_Statement *step_stmt,
+                                         AST_Statement *body_stmt, 
+                                         const File_Pos &begin_fp,
+                                         const File_Pos &end_fp);
 
     AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *then_stmt,

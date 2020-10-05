@@ -222,9 +222,9 @@ namespace Zodiac
                     assert(ast_body);
                 }
 
-                bool is_naked = ptn->flags & DPTN_FLAG_IS_NAKED;
-                bool is_noreturn = ptn->flags & DPTN_FLAG_NORETURN;
-                bool is_foreign = ptn->flags & DPTN_FLAG_FOREIGN;
+                bool is_naked = ptn->self.flags & PTN_FLAG_DECL_IS_NAKED;
+                bool is_noreturn = ptn->self.flags & PTN_FLAG_FUNC_NORETURN;
+                bool is_foreign = ptn->self.flags & PTN_FLAG_FUNC_FOREIGN;
 
                 auto end_fp = ptn->self.end_file_pos;
 
@@ -505,6 +505,28 @@ namespace Zodiac
                 auto body = ast_create_statement_from_ptn(allocator, ptn->while_stmt.body,
                                                           var_decls);
                 return ast_while_statement_new(allocator, cond_expr, body, begin_fp, end_fp);
+                break;
+            }
+
+            case Statement_PTN_Kind::FOR:
+            {
+                auto init_stmt = ast_create_statement_from_ptn(allocator,
+                                                               ptn->for_stmt.init_stmt,
+                                                               var_decls);
+
+                auto cond_expr = ast_create_expression_from_ptn(allocator,
+                                                                ptn->for_stmt.cond_expr);
+
+                auto step_stmt = ast_create_statement_from_ptn(allocator,
+                                                               ptn->for_stmt.step_stmt,
+                                                               var_decls);
+
+                auto body_stmt = ast_create_statement_from_ptn(allocator,
+                                                               ptn->for_stmt.body_stmt,
+                                                               var_decls);
+
+                return ast_for_statement_new(allocator, init_stmt, cond_expr, step_stmt,
+                                             body_stmt, begin_fp, end_fp);
                 break;
             }
 
@@ -1367,6 +1389,24 @@ namespace Zodiac
         return result;
     }
 
+    AST_Statement *ast_for_statement_new(Allocator *allocator, AST_Statement *init_stmt,
+                                         AST_Expression *cond_expr,
+                                         AST_Statement *step_stmt,
+                                         AST_Statement *body_stmt, 
+                                         const File_Pos &begin_fp,
+                                         const File_Pos &end_fp)
+    {
+        auto result = ast_statement_new(allocator, AST_Statement_Kind::FOR, begin_fp,
+                                        end_fp);
+
+        result->for_stmt.init_stmt = init_stmt;
+        result->for_stmt.cond_expr = cond_expr;
+        result->for_stmt.step_stmt = step_stmt;
+        result->for_stmt.body_stmt = body_stmt;
+
+        return result;
+    }
+
     AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *then_stmt, AST_Statement *else_stmt,
                                            const File_Pos & begin_fp, const File_Pos &end_fp)
@@ -2135,6 +2175,8 @@ namespace Zodiac
                 break;
             }
                                             
+            case AST_Statement_Kind::FOR: assert(false);
+
             case AST_Statement_Kind::IF:
             {
                 printf("if (");

@@ -297,6 +297,27 @@ namespace Zodiac
                 break;
             }
             
+            case AST_Statement_Kind::FOR:
+            {
+                auto for_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                assert(ast_stmt->for_stmt.scope == nullptr);
+                ast_stmt->for_stmt.scope = for_scope;
+
+                scope_populate_statement_ast(allocator, ast_stmt->for_stmt.init_stmt,
+                                             for_scope);
+
+                scope_populate_expression_ast(allocator, ast_stmt->for_stmt.cond_expr,
+                                              for_scope);
+
+                scope_populate_statement_ast(allocator, ast_stmt->for_stmt.step_stmt,
+                                             for_scope);
+
+                scope_populate_statement_ast(allocator, ast_stmt->for_stmt.body_stmt,
+                                             for_scope);
+
+                break;
+            }
+
             case AST_Statement_Kind::IF:
             {
                 scope_populate_expression_ast(allocator, ast_stmt->if_stmt.cond_expr,

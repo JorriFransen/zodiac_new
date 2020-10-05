@@ -193,6 +193,15 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
             break;
         }
 
+        case Statement_PTN_Kind::FOR:
+        {
+            free_ptn(allocator, ptn->for_stmt.init_stmt);
+            free_ptn(allocator, ptn->for_stmt.cond_expr);
+            free_ptn(allocator, ptn->for_stmt.step_stmt);
+            free_ptn(allocator, ptn->for_stmt.body_stmt);
+            break;
+        }
+
         case Statement_PTN_Kind::IF:
         {
             free_ptn(allocator, ptn->if_stmt.cond_expr);
@@ -392,6 +401,20 @@ Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *whi
     auto result = new_statement(allocator, Statement_PTN_Kind::WHILE, begin_fp, end_fp);
     result->while_stmt.cond_expr = while_expr;
     result->while_stmt.body = while_body;
+    return result;
+}
+
+Statement_PTN *new_for_statement_ptn(Allocator *allocator, Statement_PTN *init_stmt,
+                                     Expression_PTN *cond_expr, Statement_PTN *step_stmt,
+                                     Statement_PTN *body_stmt,
+                                     const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    auto result = new_statement(allocator, Statement_PTN_Kind::FOR, begin_fp, end_fp);
+    result->for_stmt.init_stmt = init_stmt;
+    result->for_stmt.cond_expr = cond_expr;
+    result->for_stmt.step_stmt = step_stmt;
+    result->for_stmt.body_stmt = body_stmt;
+
     return result;
 }
 
@@ -1054,6 +1077,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
+        case Statement_PTN_Kind::FOR: assert(false);
+
         case Statement_PTN_Kind::SWITCH:
         {
             print_indent(indent);
@@ -1129,7 +1154,7 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
         {
             print_indent(indent);
 
-            if (decl->flags & DPTN_FLAG_IS_NAKED)
+            if (decl->self.flags & PTN_FLAG_DECL_IS_NAKED)
             {
                 printf("#naked ");
             }

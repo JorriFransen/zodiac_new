@@ -32,9 +32,21 @@ struct Expression_PTN;
 
 typedef PT_Node_Kind PTN_Kind;
 
+typedef uint64_t PTN_Flag;
+
+enum PTN_FLAG : PTN_Flag
+{
+    PTN_FLAG_NONE      = 0x00,
+    PTN_FLAG_DECL_IS_NAKED  = 0x01,
+    PTN_FLAG_FUNC_NORETURN  = 0x02,
+    PTN_FLAG_FUNC_FOREIGN   = 0x04,
+    PTN_FLAG_SEMICOLON = 0x08,
+};
+
 struct PT_Node
 {
     PT_Node_Kind kind = PT_Node_Kind::INVALID;
+    PTN_Flag flags = PTN_FLAG_NONE;
 
     File_Pos begin_file_pos = {};
     File_Pos end_file_pos = {};
@@ -92,6 +104,7 @@ enum class Statement_PTN_Kind
     BREAK,
     ASSIGNMENT,
     WHILE,
+    FOR,
     IF,
     SWITCH,
 };
@@ -131,6 +144,14 @@ struct Statement_PTN
 
         struct
         {
+            Statement_PTN *init_stmt;
+            Expression_PTN *cond_expr;
+            Statement_PTN *step_stmt;
+            Statement_PTN *body_stmt;
+        } for_stmt;
+
+        struct
+        {
             Expression_PTN *cond_expr;
             Statement_PTN *then_stmt;
             Statement_PTN *else_stmt;
@@ -165,23 +186,11 @@ enum class Declaration_PTN_Kind
 
 };
 
-typedef uint64_t Declaration_PTN_Flag;
-
-enum Declaration_PTN_FLAG : Declaration_PTN_Flag
-{
-    DPTN_FLAG_NONE      = 0x00,
-    DPTN_FLAG_IS_NAKED  = 0x01,
-    DPTN_FLAG_NORETURN  = 0x02,
-    DPTN_FLAG_FOREIGN   = 0x04,
-    DPTN_FLAG_SEMICOLON = 0x08,
-};
-
 struct Declaration_PTN
 {
     static PTN_Kind _kind;
     PT_Node self = {};
     Declaration_PTN_Kind kind = Declaration_PTN_Kind::INVALID;
-    Declaration_PTN_Flag flags = DPTN_FLAG_NONE;
 
     Identifier_PTN *identifier = nullptr;
 
@@ -415,6 +424,12 @@ Statement_PTN *new_assignment_statement_ptn(Allocator *allocator, Expression_PTN
 Statement_PTN *new_while_statement_ptn(Allocator *allocator, Expression_PTN *while_expr,
                                        Statement_PTN *while_body, const File_Pos &begin_fp,
                                        const File_Pos &end_fp);
+
+Statement_PTN *new_for_statement_ptn(Allocator *allocator, Statement_PTN *init_stmt,
+                                     Expression_PTN *cond_expr, Statement_PTN *step_stmt,
+                                     Statement_PTN *body_stmt,
+                                     const File_Pos &begin_fp, const File_Pos &end_fp);
+
 Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_expr,
                                     Statement_PTN *then_stmt, Statement_PTN *else_stmt,
                                     const File_Pos &begin_fp, const File_Pos &end_fp);

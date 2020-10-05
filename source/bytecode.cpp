@@ -390,6 +390,8 @@ namespace Zodiac
                 break;
             }
             
+            case AST_Statement_Kind::FOR: assert(false);
+
             case AST_Statement_Kind::IF:
             {
                 bytecode_emit_if_statement(builder, statement);

@@ -997,6 +997,8 @@ namespace Zodiac
                 break;
             }
             
+            case AST_Statement_Kind::FOR: assert(false);
+
             case AST_Statement_Kind::IF:
             {
                 result = true;
@@ -2098,6 +2100,8 @@ namespace Zodiac
             }
 
             
+            case AST_Statement_Kind::FOR: assert(false);
+
             case AST_Statement_Kind::IF:
             {
                 result = true;
@@ -3738,6 +3742,8 @@ namespace Zodiac
             }
 
             
+            case AST_Statement_Kind::FOR: assert(false);
+
             case AST_Statement_Kind::IF:
             {
                 queue_emit_bytecode_jobs_from_expression(resolver, stmt->if_stmt.cond_expr,
