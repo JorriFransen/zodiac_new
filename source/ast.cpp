@@ -1403,6 +1403,7 @@ namespace Zodiac
         result->for_stmt.cond_expr = cond_expr;
         result->for_stmt.step_stmt = step_stmt;
         result->for_stmt.body_stmt = body_stmt;
+        result->for_stmt.scope = nullptr;
 
         return result;
     }
