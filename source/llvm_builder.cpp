@@ -870,15 +870,14 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
 
-                    case Bytecode_Size_Specifier::S8: assert(false);
-                    case Bytecode_Size_Specifier::U16: assert(false);
-                    case Bytecode_Size_Specifier::S16: assert(false);
-                    case Bytecode_Size_Specifier::U32: assert(false);
-                    case Bytecode_Size_Specifier::S32: assert(false);
-                    case Bytecode_Size_Specifier::U64: assert(false);
-
+                    case Bytecode_Size_Specifier::S8:
                     case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::U16:
+                    case Bytecode_Size_Specifier::S16:
+                    case Bytecode_Size_Specifier::U32:
+                    case Bytecode_Size_Specifier::S32:
                     case Bytecode_Size_Specifier::S64:
+                    case Bytecode_Size_Specifier::U64:
                     {
                         LLVMValueRef result = LLVMBuildAdd(builder->llvm_builder,
                                                            lhs_val, rhs_val, "");

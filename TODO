@@ -1,5 +1,4 @@
 
-binary cmp operators should result in bool types.
 op-assign statements (+= -= etc.)
 post_inc/dec expressions (i++/i--)
 

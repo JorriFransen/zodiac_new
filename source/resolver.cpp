@@ -2171,7 +2171,7 @@ namespace Zodiac
 
                     assert(cond_type);
 
-                    assert(cond_type->kind == AST_Type_Kind::INTEGER);
+                    assert(cond_type->kind == AST_Type_Kind::BOOL);
 
                     // if (cond_type != Builtin::type_bool)
                     // {
@@ -2565,6 +2565,11 @@ namespace Zodiac
                 {
                     assert(lhs->type == rhs->type);
                     result_type = lhs->type;
+                }
+
+                if (binop_is_cmp(ast_expr->binary.op))
+                {
+                    result_type = Builtin::type_bool;
                 }
 
                 assert(result_type);

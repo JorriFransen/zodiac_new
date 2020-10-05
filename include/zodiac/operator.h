@@ -6,12 +6,14 @@ namespace Zodiac
     {
         BINOP_INVALID,
 
-        BINOP_EQ,
+        BINOP_FIRST_CMP,
+        BINOP_EQ = BINOP_FIRST_CMP,
         BINOP_NEQ,
         BINOP_LT,
         BINOP_LTEQ,
         BINOP_GT,
         BINOP_GTEQ,
+        BINOP_LAST_CMP = BINOP_GTEQ,
 
         BINOP_ADD,
         BINOP_SUB,
@@ -27,4 +29,6 @@ namespace Zodiac
 
         UNOP_DEREF,
     };
+
+    bool binop_is_cmp(Binary_Operator op);
 }

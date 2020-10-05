@@ -1442,6 +1442,11 @@ namespace Zodiac
         {
             sign = false;
         }
+        else if (type->kind == AST_Type_Kind::ENUM)
+        {
+            auto base_type = type->enum_type.base_type;
+            sign = base_type->integer.sign;
+        }
         else if (type->kind == AST_Type_Kind::FLOAT)
         {
             real = true;

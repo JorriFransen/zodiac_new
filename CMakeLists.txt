@@ -29,6 +29,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/interpreter.cpp
     source/lexer.cpp
     source/llvm_builder.cpp
+    source/operator.cpp
     source/os.cpp
     source/os_linux.cpp
     source/os_windows.cpp

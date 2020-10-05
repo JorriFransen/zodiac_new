@@ -872,7 +872,13 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::S16: assert(false);
                         case Bytecode_Size_Specifier::U32: assert(false);
                         case Bytecode_Size_Specifier::S32: assert(false);
-                        case Bytecode_Size_Specifier::U64: assert(false);
+
+                        case Bytecode_Size_Specifier::U64:
+                        {
+                            result_val->value.boolean =
+                                lhs_val->value.integer.u64 <= rhs_val->value.integer.u64;
+                            break;
+                        }
 
                         case Bytecode_Size_Specifier::S64:
                         {
@@ -936,7 +942,7 @@ namespace Zodiac
                             break;
                         }
 
-                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::U64:
                         case Bytecode_Size_Specifier::S64:
                         {
                             result_val->value.integer.s64 =
