@@ -284,8 +284,9 @@ namespace Zodiac
 
     enum AST_Expression_Flags_ : AST_Expression_Flags
     {
-        AST_EXPR_FLAG_NONE  = 0x00,
-        AST_EXPR_FLAG_CONST = 0x01,
+        AST_EXPR_FLAG_NONE      = 0x00,
+        AST_EXPR_FLAG_CONST     = 0x01,
+        AST_EXPR_FLAG_DOT_COUNT = 0x02,
     };
 
     struct AST_Expression : public AST_Node

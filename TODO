@@ -2,6 +2,9 @@
 binary cmp operators should result in bool types.
 op-assign statements (+= -= etc.)
 post_inc/dec expressions (i++/i--)
+
+@sizeof() / @offsetof
+
 unions
 
 Statements (function bodies) should remember their inferred return type, since an error might be reported on this in a later cycle. At the momement inferred return type will be null or type_void if the statement has been resolved in a previous cycle.

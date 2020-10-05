@@ -5,23 +5,48 @@ main :: func() -> s64
 {
     std.println("for test");
 
-    for (i : s64 = 0; i < 10; i = i + 1)
-    {
-        std.print_num(i);
-        std.print("\n");
-    }
+    // for (i : s64 = 0; i < 10; i = i + 1)
+    // {
+    //     std.print_num(i);
+    //     std.print("\n");
+    // }
+
+    // std.print("\n");
+
+    // for (i := 9; i >= 0; i = i - 1)
+    // {
+    //     std.print_num(i);
+    //     std.print("\n");
+    // }
 
     std.print("\n");
 
-    for (i := 9; i >= 0; i = i - 1)
-    {
-        std.print_num(i);
-        std.print("\n");
-    }
+    test_array_for();
 
     std.print("\n");
 
     return 0;
+}
+
+test_array_for :: func()
+{
+    int_array : [5]s64;
+
+    for (i := 0; i < int_array.count; i = i + 1)
+    {
+        int_array[i] = i;
+    }
+
+    for (j := 0; j < int_array.count; j = j + 1)
+    {
+        std.print("int_array[");
+        std.print_num(j);
+        std.print("] = ");
+        std.print_num(int_array[j]);
+        std.print("\n");
+    }
+
+    return;
 }
 
 #naked #noreturn _start :: func ()

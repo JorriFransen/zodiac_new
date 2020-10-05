@@ -1001,22 +1001,24 @@ namespace Zodiac
             {
                 auto for_scope = ast_stmt->for_stmt.scope;
 
+                result = true;
+
                 if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.init_stmt,
                                              for_scope))
                 {
-                    return false;
+                    result = false;
                 }
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.cond_expr,
                                              for_scope))
                 {
-                    return false;
+                    result = false;
                 }
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.step_stmt,
                                              for_scope))
                 {
-                    return false;
+                    result = false;
                 }
 
                 resolver_push_break_node(resolver, ast_stmt);
@@ -1024,12 +1026,11 @@ namespace Zodiac
                 if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.body_stmt,
                                              for_scope))
                 {
-                    return false;
+                    result = false;
                 }
 
                 resolver_pop_break_node(resolver);
 
-                result = true;
 
                 break;
             }
@@ -1372,6 +1373,19 @@ namespace Zodiac
 
                     ast_expr->dot.child_decl = child_ident->declaration;
                     result = true;
+                }
+                else if (var_type->kind == AST_Type_Kind::ARRAY)
+                {
+                    auto child_ident = ast_expr->dot.child_identifier;
+                    if (child_ident->atom == Builtin::atom_count)
+                    {
+                        result = true;
+                        ast_expr->expr_flags |= AST_EXPR_FLAG_DOT_COUNT;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
                 }
                 else
                 {
@@ -2138,15 +2152,17 @@ namespace Zodiac
             {
                 auto for_scope = ast_stmt->for_stmt.scope;
 
+                result = true;
+
                 if (!try_resolve_types(resolver, ast_stmt->for_stmt.init_stmt, for_scope,
                                        inferred_return_type))
                 {
-                    return false;
+                    result = false;
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->for_stmt.cond_expr, for_scope))
                 {
-                    return false;
+                    result = false;
                 }
                 else
                 {
@@ -2183,7 +2199,7 @@ namespace Zodiac
                 if (!try_resolve_types(resolver, ast_stmt->for_stmt.step_stmt, for_scope,
                                        inferred_return_type))
                 {
-                    return false;
+                    result = false;
                 }
 
                 resolver_push_break_node(resolver, ast_stmt);
@@ -2191,13 +2207,15 @@ namespace Zodiac
                 if (!try_resolve_types(resolver, ast_stmt->for_stmt.body_stmt, for_scope,
                                        inferred_return_type))
                 {
-                    return false;
+                    result = false;
                 }
 
                 resolver_pop_break_node(resolver);
 
-                result = true;
-                ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                if (result)
+                {
+                    ast_stmt->flags |= AST_NODE_FLAG_TYPED;
+                }
                 break;
             }
 
@@ -2438,6 +2456,18 @@ namespace Zodiac
 
                         ast_expr->type = parent_type;
                         result = true;
+                    }
+                    else if (parent_type->kind == AST_Type_Kind::ARRAY)
+                    {
+                        if (ast_expr->expr_flags & AST_EXPR_FLAG_DOT_COUNT)
+                        {
+                            result = true;
+                            ast_expr->type = Builtin::type_s64;
+                        }
+                        else
+                        {
+                            assert(false);
+                        }
                     }
                     else
                     {
@@ -4254,21 +4284,28 @@ namespace Zodiac
             case AST_Expression_Kind::IDENTIFIER:
             case AST_Expression_Kind::DOT:
             {
-                auto decl = resolver_get_declaration(expr);
-                assert(expr);
-
-                switch (decl->kind)
+                if (expr->expr_flags & AST_EXPR_FLAG_DOT_COUNT)
                 {
-                    case AST_Declaration_Kind::VARIABLE:
-                    case AST_Declaration_Kind::PARAMETER: break;
+                    is_const = true;
+                }
+                else
+                {
+                    auto decl = resolver_get_declaration(expr);
+                    assert(decl);
 
-                    case AST_Declaration_Kind::CONSTANT:
-                    case AST_Declaration_Kind::FUNCTION:
-                    case AST_Declaration_Kind::IMPORT:
-                    case AST_Declaration_Kind::TYPE: 
-                    case AST_Declaration_Kind::ENUM: is_const = true; break;
+                    switch (decl->kind)
+                    {
+                        case AST_Declaration_Kind::VARIABLE:
+                        case AST_Declaration_Kind::PARAMETER: break;
 
-                    default: assert(false);
+                        case AST_Declaration_Kind::CONSTANT:
+                        case AST_Declaration_Kind::FUNCTION:
+                        case AST_Declaration_Kind::IMPORT:
+                        case AST_Declaration_Kind::TYPE: 
+                        case AST_Declaration_Kind::ENUM: is_const = true; break;
+
+                        default: assert(false);
+                    }
                 }
                 break;
             }

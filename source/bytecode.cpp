@@ -649,6 +649,30 @@ namespace Zodiac
                     auto init_expr = decl->constant.init_expression;
                     return bytecode_emit_expression(builder, init_expr);
                 }
+                else if (expression->expr_flags & AST_EXPR_FLAG_DOT_COUNT)
+                {
+                    auto parent_expr = expression->dot.parent_expression;
+                    AST_Declaration *parent_decl = nullptr;
+
+                    if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER)
+                    {
+                        parent_decl = parent_expr->identifier->declaration;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
+                    assert(parent_decl);
+
+                    auto parent_type = parent_decl->type;
+                    assert(parent_type);
+                    assert(parent_type->kind == AST_Type_Kind::ARRAY);
+
+                    auto element_count = parent_type->array.element_count;
+
+                    return bytecode_emit_integer_literal(builder, expression->type,
+                                                         element_count);
+                }
                 else
                 {
                     auto lvalue = bytecode_emit_lvalue(builder,
@@ -730,8 +754,10 @@ namespace Zodiac
             {
                 auto ptr_val = bytecode_emit_lvalue(builder,
                                                     expression->subscript.pointer_expression);
+
                 assert(ptr_val);
-                assert(ptr_val->type->kind == AST_Type_Kind::POINTER);
+                assert(ptr_val->type->kind == AST_Type_Kind::POINTER ||
+                       ptr_val->type->kind == AST_Type_Kind::ARRAY);
 
                 auto index_val =
                     bytecode_emit_expression(builder, expression->subscript.index_expression);

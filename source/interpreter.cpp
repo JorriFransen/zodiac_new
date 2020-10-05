@@ -656,6 +656,10 @@ namespace Zodiac
                     {
                         result->value.pointer = &alloc->value.integer;
                     }
+                    else if (alloc->type->kind == AST_Type_Kind::ARRAY)
+                    {
+                        result->value.pointer = alloc->value.pointer;
+                    }
                     else assert(false);
 
                     break;
