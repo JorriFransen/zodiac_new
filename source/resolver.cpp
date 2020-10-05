@@ -3382,7 +3382,24 @@ namespace Zodiac
         {
             resolver_report_error(resolver, Resolve_Error_Kind::INCOMPLETE_SWITCH,
                                   ast_stmt,
-                                  "Incomplete switch case");
+                                  "Incomplete switch case, %" PRId64 " unhandled enum values.",
+                                  unhandled_umvs.count);
+
+            auto edecl = enum_type->enum_type.declaration;
+
+            int64_t report_count = min(unhandled_umvs.count, 3);
+            for (int64_t i = 0; i < report_count; i++)
+            {
+                Const_Value cv = { .type = enum_type, .integer = unhandled_umvs[i] };
+                auto emem = ast_find_enum_member(enum_type, cv);
+
+                resolver_report_error(resolver, Resolve_Error_Kind::INCOMPLETE_SWITCH,
+                                      ast_stmt, 
+                                      "Unhandled enum value: %s.%s",
+                                      edecl->identifier->atom.data,
+                                      emem->identifier->atom.data);
+            }
+
             return false;
         }
 
@@ -4440,7 +4457,7 @@ namespace Zodiac
             auto node = err.ast_node;
             auto &bfp = node->begin_file_pos;
 
-            fprintf(stderr, "Error:%.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
+            fprintf(stderr, "Error: %.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
                     (int)bfp.file_name.length, bfp.file_name.data,
                     bfp.line, bfp.column,
                     (int)err.message_size, err.message);
