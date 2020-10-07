@@ -1,4 +1,6 @@
 
+Emit steps for for loops in their own block
+type check subscript expression (index)
 op-assign statements (+= -= etc.)
 post_inc/dec expressions (i++/i--)
 

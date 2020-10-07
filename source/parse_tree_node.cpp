@@ -1009,6 +1009,7 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             for (int64_t i = 0; i < statement->block.statements.count; i++)
             {
                 print_statement_ptn(statement->block.statements[i], indent + 4, false);
+                printf("\n");
             }
 
             print_indent(indent);
@@ -1027,7 +1028,7 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
         case Statement_PTN_Kind::EXPRESSION:
         {
             print_expression_ptn(statement->expression, indent);
-            printf(";\n");
+            printf(";");
             if (newline) printf("\n");
             break;
         }
@@ -1048,7 +1049,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
         case Statement_PTN_Kind::BREAK:
         {
             print_indent(indent);
-            printf("break;\n");
+            printf("break;");
+            if (newline) printf("\n");
             break;
         }
 
@@ -1057,7 +1059,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             print_expression_ptn(statement->assignment.ident_expression, indent);
             printf(" = ");
             print_expression_ptn(statement->assignment.rhs_expression, 0);
-            printf(";\n");
+            printf(";");
+            if (newline) printf("\n");
             break;
         }
 
@@ -1071,7 +1074,25 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
-        case Statement_PTN_Kind::FOREACH: assert(false);
+        case Statement_PTN_Kind::FOREACH:
+        {
+            print_indent(indent);
+            printf("for (");
+            if (statement->foreach.it_identifier)
+            {
+                print_ptn(&statement->foreach.it_identifier->self, 0);
+                if (statement->foreach.it_index_identifier)
+                {
+                    printf(", ");
+                    print_ptn(&statement->foreach.it_index_identifier->self, 0);
+                }
+            printf(": ");
+            }
+            print_expression_ptn(statement->foreach.array_expression, 0);
+            printf(")\n");
+            print_statement_ptn(statement->foreach.body_stmt, indent);
+            break;
+        }
 
         case Statement_PTN_Kind::IF:
         {
@@ -1112,7 +1133,21 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             break;
         }
 
-        case Statement_PTN_Kind::FOR: assert(false);
+        case Statement_PTN_Kind::FOR:
+        {
+            print_indent(indent);
+            printf("for (");
+            print_statement_ptn(statement->for_stmt.init_stmt, 0, false);
+            printf(" ");
+            print_expression_ptn(statement->for_stmt.cond_expr, 0);
+            printf("; ");
+            print_statement_ptn(statement->for_stmt.step_stmt, 0, false);
+            printf(")\n");
+
+            print_statement_ptn(statement->for_stmt.body_stmt, indent);
+
+            break;
+        }
 
         case Statement_PTN_Kind::SWITCH:
         {
@@ -1234,7 +1269,7 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
                 printf("= ");
                 print_expression_ptn(decl->variable.init_expression, 0);
             }
-            printf(";\n");
+            printf(";");
             if (newline) printf("\n");
             break;
         }

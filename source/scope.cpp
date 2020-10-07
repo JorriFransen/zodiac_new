@@ -303,14 +303,20 @@ namespace Zodiac
                 assert(ast_stmt->for_stmt.scope == nullptr);
                 ast_stmt->for_stmt.scope = for_scope;
 
-                scope_populate_statement_ast(allocator, ast_stmt->for_stmt.init_stmt,
-                                             for_scope);
+                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
+                {
+                    auto init_stmt = ast_stmt->for_stmt.init_statements[i];
+                    scope_populate_statement_ast(allocator, init_stmt, for_scope);
+                }
 
                 scope_populate_expression_ast(allocator, ast_stmt->for_stmt.cond_expr,
                                               for_scope);
 
-                scope_populate_statement_ast(allocator, ast_stmt->for_stmt.step_stmt,
-                                             for_scope);
+                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
+                {
+                    auto step_stmt = ast_stmt->for_stmt.step_statements[i];
+                    scope_populate_statement_ast(allocator, step_stmt, for_scope);
+                }
 
                 scope_populate_statement_ast(allocator, ast_stmt->for_stmt.body_stmt,
                                              for_scope);

@@ -1003,10 +1003,13 @@ namespace Zodiac
 
                 result = true;
 
-                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.init_stmt,
-                                             for_scope))
+                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
                 {
-                    result = false;
+                    auto init_stmt = ast_stmt->for_stmt.init_statements[i];
+                    if (!try_resolve_identifiers(resolver, init_stmt, for_scope))
+                    {
+                        result = false;
+                    }
                 }
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.cond_expr,
@@ -1015,10 +1018,13 @@ namespace Zodiac
                     result = false;
                 }
 
-                if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.step_stmt,
-                                             for_scope))
+                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
                 {
-                    result = false;
+                    auto step_stmt = ast_stmt->for_stmt.step_statements[i];
+                    if (!try_resolve_identifiers(resolver, step_stmt, for_scope))
+                    {
+                        result = false;
+                    }
                 }
 
                 resolver_push_break_node(resolver, ast_stmt);
@@ -2154,10 +2160,14 @@ namespace Zodiac
 
                 result = true;
 
-                if (!try_resolve_types(resolver, ast_stmt->for_stmt.init_stmt, for_scope,
-                                       inferred_return_type))
+                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
                 {
-                    result = false;
+                    auto  init_stmt = ast_stmt->for_stmt.init_statements[i];
+                    if (!try_resolve_types(resolver, init_stmt, for_scope,
+                                           inferred_return_type))
+                    {
+                        result = false;
+                    }
                 }
 
                 if (!try_resolve_types(resolver, ast_stmt->for_stmt.cond_expr, for_scope))
@@ -2196,10 +2206,14 @@ namespace Zodiac
                     // }
                 }
 
-                if (!try_resolve_types(resolver, ast_stmt->for_stmt.step_stmt, for_scope,
-                                       inferred_return_type))
+                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
                 {
-                    result = false;
+                    auto step_stmt = ast_stmt->for_stmt.step_statements[i];
+                    if (!try_resolve_types(resolver, step_stmt, for_scope,
+                                           inferred_return_type))
+                    {
+                        result = false;
+                    }
                 }
 
                 resolver_push_break_node(resolver, ast_stmt);
@@ -3887,17 +3901,24 @@ namespace Zodiac
             {
                 auto for_scope = stmt->for_stmt.scope;
 
-                queue_emit_bytecode_jobs_from_statement(resolver,
-                                                        stmt->for_stmt.init_stmt,
-                                                        for_scope);
+                for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++)
+                {
+                    auto init_stmt = stmt->for_stmt.init_statements[i];
+                    queue_emit_bytecode_jobs_from_statement(resolver, init_stmt,
+                                                            for_scope);
+                }
 
                 queue_emit_bytecode_jobs_from_expression(resolver,
                                                          stmt->for_stmt.cond_expr,
                                                          for_scope);
 
-                queue_emit_bytecode_jobs_from_statement(resolver,
-                                                        stmt->for_stmt.step_stmt,
-                                                        for_scope);
+                for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++)
+                {
+                    auto step_stmt = stmt->for_stmt.step_statements[i];
+                    queue_emit_bytecode_jobs_from_statement(resolver,
+                                                            step_stmt,
+                                                            for_scope);
+                }
 
                 queue_emit_bytecode_jobs_from_statement(resolver,
                                                         stmt->for_stmt.body_stmt,

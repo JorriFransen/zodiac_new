@@ -465,7 +465,11 @@ namespace Zodiac
         Bytecode_Block *body_block = bytecode_new_block(builder, "for_body");
         Bytecode_Block *post_for_block = bytecode_new_block(builder, "post_for");
 
-        bytecode_emit_statement(builder, stmt->for_stmt.init_stmt);
+        for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++)
+        {
+            auto init_stmt = stmt->for_stmt.init_statements[i];
+            bytecode_emit_statement(builder, init_stmt);
+        }
         bytecode_emit_jump(builder, cond_block);
 
         bytecode_builder_append_block(builder, current_func, cond_block);
@@ -477,7 +481,11 @@ namespace Zodiac
         bytecode_builder_append_block(builder, current_func, body_block);
         bytecode_builder_set_insert_point(builder, body_block);
         bytecode_emit_statement(builder, stmt->for_stmt.body_stmt);
-        bytecode_emit_statement(builder, stmt->for_stmt.step_stmt);
+        for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++)
+        {
+            auto step_stmt = stmt->for_stmt.step_statements[i];
+            bytecode_emit_statement(builder, step_stmt);
+        }
         bytecode_emit_jump(builder, cond_block);
 
         bytecode_builder_append_block(builder, current_func, post_for_block);

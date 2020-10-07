@@ -225,9 +225,9 @@ namespace Zodiac
 
             struct
             {
-                AST_Statement *init_stmt;
+                Array<AST_Statement *> init_statements;
                 AST_Expression *cond_expr;
-                AST_Statement *step_stmt;
+                Array<AST_Statement *> step_statements;
                 AST_Statement *body_stmt;
 
                 Scope *scope;
@@ -665,9 +665,10 @@ namespace Zodiac
                                            AST_Statement *body, const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
-    AST_Statement *ast_for_statement_new(Allocator *allocator, AST_Statement *init_stmt,
+    AST_Statement *ast_for_statement_new(Allocator *allocator, 
+                                         Array<AST_Statement *> init_statements,
                                          AST_Expression *cond_expr,
-                                         AST_Statement *step_stmt,
+                                         Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
@@ -831,8 +832,10 @@ namespace Zodiac
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node *ast_node);
-    void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent);
-    void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent);
+    void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent,
+                               bool newline = true);
+    void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent,
+                             bool newline = false);
     void ast_print_expression(AST_Expression *ast_expr, uint64_t indent);
     void ast_print_type_spec(AST_Type_Spec *type_spec);
 

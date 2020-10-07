@@ -525,13 +525,34 @@ namespace Zodiac
                                                                ptn->for_stmt.body_stmt,
                                                                var_decls);
 
-                return ast_for_statement_new(allocator, init_stmt, cond_expr, step_stmt,
-                                             body_stmt, begin_fp, end_fp);
+                Array<AST_Statement *> init_statements = {};
+                array_init(allocator, &init_statements, 1);
+                array_append(&init_statements, init_stmt);
+
+                Array<AST_Statement *> step_statements = {};
+                array_init(allocator, &step_statements, 1);
+                array_append(&step_statements, step_stmt);
+
+
+                return ast_for_statement_new(allocator, init_statements, cond_expr,
+                                             step_statements, body_stmt,
+                                             begin_fp, end_fp);
                 break;
             }
 
             case Statement_PTN_Kind::FOREACH:
             {
+                Array<AST_Statement *> init_stmts = {};
+                int64_t init_count = ptn->foreach.it_index_identifier ? 2 : 1;
+                array_init(allocator, &init_stmts, init_count);
+
+                Array<AST_Statement *> step_statements = {};
+                array_init(allocator, &step_statements, init_count);
+
+                auto array_expr =
+                    ast_create_expression_from_ptn(allocator,
+                                                   ptn->foreach.array_expression);
+
                 auto ii_bfp = ptn->foreach.it_index_identifier->self.begin_file_pos;
                 auto ii_efp = ptn->foreach.it_index_identifier->self.end_file_pos;
                 ii_bfp.file_name = string_append(allocator,
@@ -548,18 +569,35 @@ namespace Zodiac
                                                       ptn_idx_ident->self.begin_file_pos,
                                                       ptn_idx_ident->self.end_file_pos);
 
-                auto init_decl =
+                auto idx_ident_expr = ast_identifier_expression_new(allocator,
+                                                                    index_ident,
+                                                                    ii_bfp, ii_efp);
+
+
+                auto index_decl =
                     ast_variable_declaration_new(allocator, index_ident, nullptr, zero,
                                                  ii_bfp, ii_efp);
-                auto init_stmt = ast_declaration_statement_new(allocator, init_decl,
+                array_append(var_decls, index_decl);
+                auto index_stmt = ast_declaration_statement_new(allocator, index_decl,
                                                                ii_bfp, ii_efp);
+                array_append(&init_stmts, index_stmt);
 
+                auto ptn_it_ident = ptn->foreach.it_identifier;
 
-                auto cond_lhs = ast_identifier_expression_new(allocator, index_ident,
-                                                              ii_bfp, ii_efp);
-                auto array_expr =
-                    ast_create_expression_from_ptn(allocator,
-                                                   ptn->foreach.array_expression);
+                auto it_ident = ast_identifier_new(allocator, ptn_it_ident->atom,
+                                                   ptn_it_ident->self.begin_file_pos,
+                                                   ptn_it_ident->self.end_file_pos);
+
+                auto first_it = ast_subscript_expression_new(allocator, array_expr,
+                                                             idx_ident_expr,
+                                                             ii_bfp, ii_efp);
+
+                auto it_decl = ast_variable_declaration_new(allocator, it_ident, nullptr, 
+                                                            first_it, ii_bfp, ii_efp);
+                array_append(var_decls, it_decl);
+                auto it_stmt = ast_declaration_statement_new(allocator, it_decl,
+                                                             ii_bfp, ii_efp);
+                array_append(&init_stmts, it_stmt);
 
                 auto count_ident = ast_identifier_new(allocator, Builtin::atom_count,
                                                       ii_bfp, ii_efp);
@@ -569,27 +607,43 @@ namespace Zodiac
 
                 auto cond_expr = ast_binary_expression_new(allocator,
                                                            BINOP_LT,
-                                                           cond_lhs, cond_rhs, 
+                                                           idx_ident_expr, cond_rhs, 
                                                            ii_bfp, ii_efp);
 
                 auto one = ast_integer_literal_expression_new(allocator, 1,
                                                               ii_bfp, ii_efp);
 
-                auto new_val_expr = ast_binary_expression_new(allocator,
-                                                              BINOP_ADD,
-                                                              cond_lhs, one,
-                                                              ii_bfp, ii_efp);
+                auto new_idx_expr = ast_binary_expression_new(allocator,
+                                                             BINOP_ADD,
+                                                             idx_ident_expr, one,
+                                                             ii_bfp, ii_efp);
 
-                auto step_stmt = ast_assignment_statement_new(allocator,
-                                                              cond_lhs, new_val_expr,
-                                                              ii_bfp, ii_efp);
+                auto idx_step_expr = ast_assignment_statement_new(allocator,
+                                                                  idx_ident_expr,
+                                                                  new_idx_expr,
+                                                                  ii_bfp, ii_efp);
+                array_append(&step_statements, idx_step_expr);
+
+                auto it_ident_expr = ast_identifier_expression_new(allocator, it_ident,
+                                                                   ii_bfp, ii_efp);
+                auto new_it_expr = ast_subscript_expression_new(allocator, array_expr,
+                                                                idx_ident_expr,
+                                                                ii_bfp, ii_efp);
+                auto it_step_stmt = ast_assignment_statement_new(allocator,
+                                                                 it_ident_expr,
+                                                                 new_it_expr,
+                                                                 ii_bfp, ii_efp);
+                array_append(&step_statements, it_step_stmt);
 
                 auto body_stmt =
                     ast_create_statement_from_ptn(allocator, ptn->foreach.body_stmt,
                                                   var_decls);
 
-                return ast_for_statement_new(allocator, init_stmt, cond_expr, step_stmt,
-                                             body_stmt, begin_fp, end_fp);
+
+
+                return ast_for_statement_new(allocator, init_stmts, cond_expr,
+                                             step_statements, body_stmt,
+                                             begin_fp, end_fp);
             }
 
             case Statement_PTN_Kind::IF:
@@ -1451,9 +1505,10 @@ namespace Zodiac
         return result;
     }
 
-    AST_Statement *ast_for_statement_new(Allocator *allocator, AST_Statement *init_stmt,
+    AST_Statement *ast_for_statement_new(Allocator *allocator,
+                                         Array<AST_Statement *> init_statements,
                                          AST_Expression *cond_expr,
-                                         AST_Statement *step_stmt,
+                                         Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp)
@@ -1461,9 +1516,9 @@ namespace Zodiac
         auto result = ast_statement_new(allocator, AST_Statement_Kind::FOR, begin_fp,
                                         end_fp);
 
-        result->for_stmt.init_stmt = init_stmt;
+        result->for_stmt.init_statements = init_statements;
         result->for_stmt.cond_expr = cond_expr;
-        result->for_stmt.step_stmt = step_stmt;
+        result->for_stmt.step_statements = step_statements;
         result->for_stmt.body_stmt = body_stmt;
         result->for_stmt.scope = nullptr;
 
@@ -1981,7 +2036,9 @@ namespace Zodiac
                 auto module = (AST_Module*)ast_node;
                 for (int64_t i = 0; i < module->declarations.count; i++)
                 {
-                    ast_print_declaration(module->declarations[i], 0);
+                    auto decl = module->declarations[i];
+                    ast_print_declaration(decl, 0);
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) printf("\n");
                 }
                 break;
             }
@@ -2009,7 +2066,8 @@ namespace Zodiac
         }
     }
 
-    void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent)
+    void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent,
+                               bool newline/*=true*/)
     {
         if (ast_decl->kind == AST_Declaration_Kind::FUNCTION ||
             ast_decl->kind == AST_Declaration_Kind::STRUCTURE)
@@ -2072,7 +2130,8 @@ namespace Zodiac
 
                     ast_print_expression(ast_decl->variable.init_expression, 0);
                 }
-                printf(";\n");
+                printf(";");
+                if (newline) printf("\n");
                 break;
             }
 
@@ -2167,7 +2226,8 @@ namespace Zodiac
         }
     }
 
-    void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent)
+    void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent,
+                             bool newline/*=false*/)
     {
         ast_print_indent(indent);
 
@@ -2182,10 +2242,13 @@ namespace Zodiac
                 printf("{\n");
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
                 {
+                    if (i > 0) printf("\n");
                     ast_print_statement(ast_stmt->block.statements[i], indent + 1);
                 }
+                printf("\n");
                 ast_print_indent(indent);
-                printf("}\n");
+                printf("}");
+                if (newline) printf("\n");
                 break;  
             }
 
@@ -2194,7 +2257,7 @@ namespace Zodiac
                 ast_print_expression(ast_stmt->assignment.identifier_expression, 0);
                 printf(" = ");
                 ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
-                printf("\n");
+                if (newline) printf("\n");
                 break;
             }
 
@@ -2212,20 +2275,22 @@ namespace Zodiac
 
             case AST_Statement_Kind::BREAK:
             {
-                printf("break;\n");
+                printf("break;");
+                if (newline) printf("\n");
                 break;
             }
 
             case AST_Statement_Kind::DECLARATION:
             {
-                ast_print_declaration(ast_stmt->declaration, 0);
+                ast_print_declaration(ast_stmt->declaration, 0, false);
                 break;
             }
 
             case AST_Statement_Kind::EXPRESSION:
             {
                 ast_print_expression(ast_stmt->expression, 0);
-                printf(";\n");
+                printf(";");
+                if (newline) printf("\n");
                 break;
             }
 
@@ -2234,11 +2299,33 @@ namespace Zodiac
                 printf("while (");
                 ast_print_expression(ast_stmt->while_stmt.cond_expr, 0);
                 printf(")");
-                ast_print_statement(ast_stmt->while_stmt.body, indent);
+                ast_print_statement(ast_stmt->while_stmt.body, indent, false);
                 break;
             }
                                             
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                printf("for (");
+                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
+                {
+                    if (i > 0) printf(", ");
+                    auto init_stmt = ast_stmt->for_stmt.init_statements[i];
+                    ast_print_statement(init_stmt, 0);
+                }
+                printf(" ");
+                ast_print_expression(ast_stmt->for_stmt.cond_expr, 0);
+                printf("; ");
+
+                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
+                {
+                    if (i > 0) printf(", ");
+                    auto step_stmt = ast_stmt->for_stmt.step_statements[i];
+                    ast_print_statement(step_stmt, 0);
+                }
+                printf(")");
+                ast_print_statement(ast_stmt->for_stmt.body_stmt, indent);
+                break;
+            }
 
             case AST_Statement_Kind::IF:
             {

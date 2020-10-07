@@ -37,9 +37,9 @@ test_array_for :: func()
         int_array[i] = (i + 1) * 2;
     }
 
-    for (j := 0; j < int_array.count; j = j + 1)
+    for (i := 0; i < int_array.count; i = i + 1)
     {
-        print_array_value("int_array", int_array[j], j);
+        print_array_value("int_array", int_array[i], i);
     }
 
     // std.print("\n");
@@ -56,15 +56,12 @@ test_array_for :: func()
     //     print_array_value("int_array", v, it_index);
     // }
 
-    // std.print("\n");
+    std.print("\n");
 
-    // for (v, i: int_array)
-    // {
-    //     // std.print("i: ");
-    //     // std.print_num(i);
-    //     // std.print("\n");
-    //     // print_array_value("int_array", int_array[i], i);
-    // }
+    for (v, i: int_array)
+    {
+        print_array_value("int_array", v, i);
+    }
 
     return;
 }
