@@ -1,5 +1,4 @@
 
-type check subscript expression (index)
 op-assign statements (+= -= etc.)
 post_inc/dec expressions (i++/i--)
 
