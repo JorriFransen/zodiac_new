@@ -39,12 +39,41 @@ test_array_for :: func()
 
     for (j := 0; j < int_array.count; j = j + 1)
     {
-        std.print("int_array[");
-        std.print_num(j);
-        std.print("] = ");
-        std.print_num(int_array[j]);
-        std.print("\n");
+        print_array_value("int_array", int_array[j], j);
     }
+
+    // std.print("\n");
+
+    // for (int_array)
+    // {
+    //     print_array_value("int_array", it, it_index);
+    // }
+
+    // std.print("\n");
+
+    // for (v: int_array)
+    // {
+    //     print_array_value("int_array", v, it_index);
+    // }
+
+    std.print("\n");
+
+    for (v, i: int_array)
+    {
+        print_array_value("int_array", v, i);
+    }
+
+    return;
+}
+
+print_array_value :: func(name: *u8, it: s64, idx: s64)
+{
+    std.print(name);
+    std.print("[");
+    std.print_num(idx);
+    std.print("] = ");
+    std.print_num(it);
+    std.print("\n");
 
     return;
 }

@@ -870,8 +870,8 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
 
-                    case Bytecode_Size_Specifier::S8:
                     case Bytecode_Size_Specifier::U8:
+                    case Bytecode_Size_Specifier::S8:
                     case Bytecode_Size_Specifier::U16:
                     case Bytecode_Size_Specifier::S16:
                     case Bytecode_Size_Specifier::U32:
