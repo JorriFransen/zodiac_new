@@ -530,6 +530,68 @@ namespace Zodiac
                 break;
             }
 
+            case Statement_PTN_Kind::FOREACH:
+            {
+                auto ii_bfp = ptn->foreach.it_index_identifier->self.begin_file_pos;
+                auto ii_efp = ptn->foreach.it_index_identifier->self.end_file_pos;
+                ii_bfp.file_name = string_append(allocator,
+                                                 string_ref("<foreach expansion> "),
+                                                 ii_bfp.file_name);
+                ii_efp.file_name = ii_bfp.file_name;
+
+                auto zero = ast_integer_literal_expression_new(allocator, 0,
+                                                               ii_bfp, ii_efp);
+
+                auto ptn_idx_ident = ptn->foreach.it_index_identifier;
+
+                auto index_ident = ast_identifier_new(allocator, ptn_idx_ident->atom,
+                                                      ptn_idx_ident->self.begin_file_pos,
+                                                      ptn_idx_ident->self.end_file_pos);
+
+                auto init_decl =
+                    ast_variable_declaration_new(allocator, index_ident, nullptr, zero,
+                                                 ii_bfp, ii_efp);
+                auto init_stmt = ast_declaration_statement_new(allocator, init_decl,
+                                                               ii_bfp, ii_efp);
+
+
+                auto cond_lhs = ast_identifier_expression_new(allocator, index_ident,
+                                                              ii_bfp, ii_efp);
+                auto array_expr =
+                    ast_create_expression_from_ptn(allocator,
+                                                   ptn->foreach.array_expression);
+
+                auto count_ident = ast_identifier_new(allocator, Builtin::atom_count,
+                                                      ii_bfp, ii_efp);
+
+                auto cond_rhs = ast_dot_expression_new(allocator, array_expr,
+                                                       count_ident, ii_bfp, ii_efp);
+
+                auto cond_expr = ast_binary_expression_new(allocator,
+                                                           BINOP_LT,
+                                                           cond_lhs, cond_rhs, 
+                                                           ii_bfp, ii_efp);
+
+                auto one = ast_integer_literal_expression_new(allocator, 1,
+                                                              ii_bfp, ii_efp);
+
+                auto new_val_expr = ast_binary_expression_new(allocator,
+                                                              BINOP_ADD,
+                                                              cond_lhs, one,
+                                                              ii_bfp, ii_efp);
+
+                auto step_stmt = ast_assignment_statement_new(allocator,
+                                                              cond_lhs, new_val_expr,
+                                                              ii_bfp, ii_efp);
+
+                auto body_stmt =
+                    ast_create_statement_from_ptn(allocator, ptn->foreach.body_stmt,
+                                                  var_decls);
+
+                return ast_for_statement_new(allocator, init_stmt, cond_expr, step_stmt,
+                                             body_stmt, begin_fp, end_fp);
+            }
+
             case Statement_PTN_Kind::IF:
             {
                 auto cond_expr = ast_create_expression_from_ptn(allocator,

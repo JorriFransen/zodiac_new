@@ -105,6 +105,7 @@ enum class Statement_PTN_Kind
     ASSIGNMENT,
     WHILE,
     FOR,
+    FOREACH,
     IF,
     SWITCH,
 };
@@ -149,6 +150,14 @@ struct Statement_PTN
             Statement_PTN *step_stmt;
             Statement_PTN *body_stmt;
         } for_stmt;
+
+        struct
+        {
+            Identifier_PTN *it_identifier; 
+            Identifier_PTN *it_index_identifier; 
+            Expression_PTN *array_expression;
+            Statement_PTN *body_stmt;
+        } foreach;
 
         struct
         {
@@ -429,6 +438,13 @@ Statement_PTN *new_for_statement_ptn(Allocator *allocator, Statement_PTN *init_s
                                      Expression_PTN *cond_expr, Statement_PTN *step_stmt,
                                      Statement_PTN *body_stmt,
                                      const File_Pos &begin_fp, const File_Pos &end_fp);
+
+Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *it_ident,
+                                         Identifier_PTN *it_idx_ident,
+                                         Expression_PTN *array_expr,
+                                         Statement_PTN *body_stmt,
+                                         const File_Pos &begin_fp,
+                                         const File_Pos &end_fp);
 
 Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_expr,
                                     Statement_PTN *then_stmt, Statement_PTN *else_stmt,

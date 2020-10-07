@@ -202,6 +202,17 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
             break;
         }
 
+        case Statement_PTN_Kind::FOREACH:
+        {
+            free_ptn(allocator, ptn->foreach.it_identifier);
+
+            if (ptn->foreach.it_index_identifier)
+                free_ptn(allocator, ptn->foreach.it_index_identifier);
+
+            free_ptn(allocator, ptn->foreach.array_expression);
+            free_ptn(allocator, ptn->foreach.body_stmt);
+        }
+
         case Statement_PTN_Kind::IF:
         {
             free_ptn(allocator, ptn->if_stmt.cond_expr);
@@ -429,6 +440,28 @@ Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_e
     result->if_stmt.cond_expr = cond_expr;
     result->if_stmt.then_stmt = then_stmt;
     result->if_stmt.else_stmt = else_stmt;
+    return result;
+}
+
+Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *it_ident,
+                                         Identifier_PTN *it_idx_ident,
+                                         Expression_PTN *array_expr,
+                                         Statement_PTN *body_stmt,
+                                         const File_Pos &begin_fp,
+                                         const File_Pos &end_fp)
+{
+    assert(it_ident);
+    assert(array_expr);
+    assert(body_stmt);
+
+    auto result = new_statement(allocator, Statement_PTN_Kind::FOREACH, begin_fp,
+                                end_fp);
+
+    result->foreach.it_identifier = it_ident;
+    result->foreach.it_index_identifier = it_idx_ident;
+    result->foreach.array_expression = array_expr;
+    result->foreach.body_stmt = body_stmt;
+
     return result;
 }
 
@@ -1037,6 +1070,8 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
             print_statement_ptn(statement->while_stmt.body, indent);
             break;
         }
+
+        case Statement_PTN_Kind::FOREACH: assert(false);
 
         case Statement_PTN_Kind::IF:
         {
