@@ -5,11 +5,13 @@
 
 #include <llvm-c/Core.h>
 
+#include <llvm/IR/IRBuilder.h>
+
 namespace Zodiac
 {
     struct LLVM_Function
     {
-        LLVMValueRef llvm_func = {};
+        llvm::Function *llvm_func = nullptr;
         Bytecode_Function *bc_func = nullptr;
     };
 
@@ -27,14 +29,16 @@ namespace Zodiac
         LLVMModuleRef llvm_module;
         LLVMBuilderRef llvm_builder;
 
+        llvm::IRBuilder<> *_llvm_builder = nullptr;
+
         Array<LLVM_Function> functions = {};
 
-        Array<LLVMValueRef> temps = {};
-        Array<LLVMValueRef> allocas = {};
-        Array<LLVMValueRef> params = {};
-        Array<LLVMValueRef> globals = {};
+        Array<llvm::Value *> temps = {};
+        Array<llvm::Value *> allocas = {};
+        Array<llvm::Value *> params = {};
+        Array<llvm::Value *> globals = {};
 
-        Stack<LLVMValueRef> arg_stack = {};
+        Stack<llvm::Value *> arg_stack = {};
 
         String target_triple = {};
         Zodiac_Target_Platform target_platform = Zodiac_Target_Platform::INVALID;

@@ -3,9 +3,17 @@
 #include "builtin.h"
 #include "os.h"
 
-#include <llvm-c/Analysis.h>
-#include <llvm/IR/Module.h>
 #include <llvm-c/TargetMachine.h>
+
+#include <llvm/IR/Module.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Support/Host.h>
+#include <llvm/Support/FileSystem.h>
 
 #include <stdio.h>
 
@@ -24,6 +32,7 @@ namespace Zodiac
         llvm_builder->build_data = build_data;
         llvm_builder->llvm_module = LLVMModuleCreateWithName("root_module");
         llvm_builder->llvm_builder = LLVMCreateBuilder();
+        llvm_builder->_llvm_builder = llvm::unwrap(llvm_builder->llvm_builder);
 
         array_init(allocator, &llvm_builder->functions);
         array_init(allocator, &llvm_builder->temps);
@@ -35,11 +44,13 @@ namespace Zodiac
 
         llvm_builder->bc_program = bc_program;
 
-        LLVMInitializeNativeTarget();
-        LLVMInitializeNativeAsmPrinter();
-        LLVMInitializeNativeAsmParser();
+        llvm::InitializeNativeTarget();
+        llvm::InitializeNativeTargetAsmPrinter();
+        llvm::InitializeNativeTargetAsmParser();
 
-        auto target_triple = string_ref(LLVMGetDefaultTargetTriple());
+        auto _target_triple = llvm::sys::getDefaultTargetTriple();
+        auto target_triple = string_copy(allocator,
+                                         _target_triple.data(), _target_triple.length());
         llvm_builder->target_triple = target_triple;
 
         if (string_contains(target_triple, "windows"))
@@ -60,41 +71,31 @@ namespace Zodiac
         assert(builder);
         assert(output_file_name);
 
-        char *error = nullptr;
-        bool verify_error = LLVMVerifyModule(builder->llvm_module, LLVMAbortProcessAction,
-                                             &error);
+        bool verify_error = llvm::verifyModule(*llvm::unwrap(builder->llvm_module),
+                                               &llvm::errs());
         
         if (verify_error)
         {
-            fprintf(stderr, "%s\n", error);
             assert(false);
         }
-        LLVMDisposeMessage(error);
-        error = nullptr;
 
-        LLVMSetTarget(builder->llvm_module, builder->target_triple.data);
-        LLVMTargetRef llvm_target = nullptr;
-        bool target_error = LLVMGetTargetFromTriple(builder->target_triple.data,
-                                                    &llvm_target, &error);
-        if (target_error)
-        {
-            fprintf(stderr, "%s\n", error);
-        }
-        LLVMDisposeMessage(error);
-        error = nullptr;
-
+        llvm::unwrap(builder->llvm_module)->setTargetTriple(builder->target_triple.data);
+        std::string error;
+        const llvm::Target *llvm_target =
+            llvm::TargetRegistry::lookupTarget(builder->target_triple.data, error);
+        assert(llvm_target);
+        
         auto cpu = "generic";
         auto features = "";
+        llvm::TargetOptions opt;
+        auto rm = llvm::Optional<llvm::Reloc::Model>();
 
-        LLVMTargetMachineRef llvm_target_machine = LLVMCreateTargetMachine(
-            llvm_target,
-            builder->target_triple.data,
-            cpu,
-            features,
-            LLVMCodeGenLevelNone,
-            LLVMRelocPIC,
-            LLVMCodeModelDefault
-        );
+        llvm::TargetMachine *llvm_target_machine =
+            llvm_target->createTargetMachine(builder->target_triple.data,
+                                             cpu, features, opt, rm);
+
+        llvm::unwrap(builder->llvm_module)->setDataLayout(
+                llvm_target_machine->createDataLayout());
 
         String_Builder sb = {};
         string_builder_init(builder->allocator, &sb);
@@ -102,27 +103,38 @@ namespace Zodiac
         auto obj_file_name = string_builder_to_string(builder->allocator, &sb);
         string_builder_free(&sb);
 
-        bool obj_emit_failed = false;
+
         { ZoneScopedN("LLVMTargetMachineEmitToFile")
-        obj_emit_failed = LLVMTargetMachineEmitToFile(
-                llvm_target_machine,
-                builder->llvm_module,
-                (char*)obj_file_name.data,
-                LLVMObjectFile,
-                &error
-            );
+
+        std::error_code err_code;
+        llvm::raw_fd_ostream dest(obj_file_name.data, err_code, llvm::sys::fs::OF_None);
+        if (err_code)
+        {
+            fprintf(stderr, "Could not open file: %s\n", obj_file_name.data);
+            assert(false);
+        }
+       
+        llvm::legacy::PassManager pass;
+        auto filetype = llvm::CGFT_ObjectFile;
+        if (llvm_target_machine->addPassesToEmitFile(pass, dest, nullptr, filetype))
+        {
+            fprintf(stderr, "TargetMachine can't emit a file of this type");
+            assert(false);
+        }
+        pass.run(*llvm::unwrap(builder->llvm_module));
+        
+
         }
 
         free(builder->allocator, obj_file_name.data);
 
-        if (obj_emit_failed)
-        {
-            fprintf(stderr, "%s\n", error);
-        }
-        LLVMDisposeMessage(error);
-        error = nullptr;
+        // if (obj_emit_failed)
+        // {
+        //     fprintf(stderr, "%s\n", c_err);
+        // }
+        // LLVMDisposeMessage(c_err);
 
-        LLVMDisposeTargetMachine(llvm_target_machine);
+        delete llvm_target_machine;
 
         return llvm_run_linker(builder, output_file_name);
     }
@@ -204,9 +216,16 @@ namespace Zodiac
 
         LLVMTypeRef llvm_func_type = llvm_type_from_ast(builder, func_decl->type);
 
-        LLVMValueRef llvm_func_val = LLVMAddFunction(builder->llvm_module,
-                                                     func_decl->identifier->atom.data,
-                                                     llvm_func_type);
+        // LLVMValueRef llvm_func_val = LLVMAddFunction(builder->llvm_module,
+        //                                              func_decl->identifier->atom.data,
+        //                                              llvm_func_type);
+        llvm::FunctionType *_llvm_func_type =
+            llvm::unwrap<llvm::FunctionType>(llvm_func_type);
+
+        llvm::Function *llvm_func_val =
+            llvm::Function::Create(_llvm_func_type, llvm::GlobalValue::ExternalLinkage,
+                                   func_decl->identifier->atom.data,
+                                   llvm::unwrap(builder->llvm_module));
         assert(llvm_func_val);
         array_append(&builder->functions, { llvm_func_val, bc_func });
 
@@ -222,12 +241,13 @@ namespace Zodiac
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 auto bc_block = bc_func->blocks[i];
-                auto llvm_block = LLVMAppendBasicBlock(llvm_func_val, bc_block->name.data);
+                auto llvm_block = LLVMAppendBasicBlock(llvm::wrap(llvm_func_val),
+                                                       bc_block->name.data);
                 array_append(&llvm_blocks, llvm_block);
             }
 
             LLVMPositionBuilderAtEnd(builder->llvm_builder,
-                                     LLVMGetFirstBasicBlock(llvm_func_val));
+                                     LLVMGetFirstBasicBlock(llvm::wrap(llvm_func_val)));
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
@@ -236,13 +256,13 @@ namespace Zodiac
                 auto name = bc_func->parameters[i].value->name;
                 LLVMValueRef param_alloca = LLVMBuildAlloca(builder->llvm_builder, param_type,
                                                             name.data);
-                array_append(&builder->params, param_alloca);
+                array_append(&builder->params, llvm::unwrap(param_alloca));
             }
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
-                LLVMValueRef param_val = LLVMGetParam(llvm_func_val, i);
-                LLVMValueRef param_alloca = builder->params[i];
+                LLVMValueRef param_val = LLVMGetParam(llvm::wrap(llvm_func_val), i);
+                LLVMValueRef param_alloca = llvm::wrap(builder->params[i]);
                 LLVMBuildStore(builder->llvm_builder, param_val, param_alloca);
             }
 
@@ -253,15 +273,16 @@ namespace Zodiac
                 LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
                 LLVMValueRef alloca_val = LLVMBuildAlloca(builder->llvm_builder, llvm_type,
                                                           decl->identifier->atom.data);
-                array_append(&builder->allocas, alloca_val);
+                array_append(&builder->allocas, llvm::unwrap(alloca_val));
             }
 
-            auto llvm_block = LLVMGetFirstBasicBlock(llvm_func_val);
+            auto llvm_block = LLVMGetFirstBasicBlock(llvm::wrap(llvm_func_val));
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 LLVM_Function_Context func_context =
-                    llvm_create_function_context(llvm_func_val, bc_func, llvm_block,
-                                                 bc_func->blocks[i], llvm_blocks);
+                    llvm_create_function_context(llvm::wrap(llvm_func_val), bc_func,
+                                                 llvm_block, bc_func->blocks[i],
+                                                 llvm_blocks);
                 llvm_emit_block(builder, &func_context);
                 llvm_block = LLVMGetNextBasicBlock(llvm_block);
             }
@@ -300,7 +321,7 @@ namespace Zodiac
             LLVMSetInitializer(llvm_glob, init_val);
         }
 
-        array_append(&builder->globals, llvm_glob);
+        array_append(&builder->globals, llvm::unwrap(llvm_glob));
     }
 
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context)
@@ -360,15 +381,15 @@ namespace Zodiac
                     for (uint32_t i = 0; i < arg_count; i++)
                     {
                         auto offset = (arg_count - 1) - i;
-                        LLVMValueRef arg_val = stack_peek(&builder->arg_stack, offset);
-                        array_append(&args, arg_val);
+                        llvm::Value *arg_val = stack_peek(&builder->arg_stack, offset);
+                        array_append(&args, llvm::wrap(arg_val));
                     }
 
                     for (uint32_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
                 }
 
                 auto func = builder->functions[func_idx];
-                LLVMValueRef func_val = func.llvm_func;
+                LLVMValueRef func_val = llvm::wrap(func.llvm_func);
                 LLVMValueRef ret_val = LLVMBuildCall(builder->llvm_builder, func_val,
                                                      args.data, args.count, "");
 
@@ -394,7 +415,7 @@ namespace Zodiac
             {
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
-                LLVMValueRef ret_val = builder->temps[val_idx];
+                LLVMValueRef ret_val = llvm::wrap(builder->temps[val_idx]);
                 LLVMBuildRet(builder->llvm_builder, ret_val);
                 break;
             }
@@ -465,7 +486,7 @@ namespace Zodiac
                                                                      &func_context->ip);
                 assert(glob_index < builder->globals.count);
 
-                LLVMValueRef llvm_glob = builder->globals[glob_index];
+                LLVMValueRef llvm_glob = llvm::wrap(builder->globals[glob_index]);
                 LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder, llvm_glob, "");
                 llvm_push_temporary(builder, result);
                 break;
@@ -475,7 +496,7 @@ namespace Zodiac
             {
                 auto allocl_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                        &func_context->ip);
-                LLVMValueRef llvm_alloca = builder->allocas[allocl_index];
+                LLVMValueRef llvm_alloca = llvm::wrap(builder->allocas[allocl_index]);
                 LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder, llvm_alloca, "");
                 llvm_push_temporary(builder, result);
                 break;
@@ -486,7 +507,7 @@ namespace Zodiac
                 auto ptr_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef ptr_val = builder->temps[ptr_idx];
+                LLVMValueRef ptr_val = llvm::wrap(builder->temps[ptr_idx]);
                 LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder, ptr_val, "");
                 llvm_push_temporary(builder, result);
                 break; 
@@ -496,8 +517,9 @@ namespace Zodiac
             {
                 auto param_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                       &func_context->ip);
-                LLVMValueRef result = LLVMBuildLoad(builder->llvm_builder,
-                                                    builder->params[param_index], "");
+                LLVMValueRef result =
+                    LLVMBuildLoad(builder->llvm_builder,
+                                  llvm::wrap(builder->params[param_index]), "");
                 llvm_push_temporary(builder, result);
                 break;
             }
@@ -544,8 +566,8 @@ namespace Zodiac
 
                 assert(glob_index < builder->globals.count);
 
-                LLVMValueRef source_val = builder->temps[val_index];
-                LLVMValueRef llvm_glob = builder->globals[glob_index];
+                LLVMValueRef source_val = llvm::wrap(builder->temps[val_index]);
+                LLVMValueRef llvm_glob = llvm::wrap(builder->globals[glob_index]);
 
                 LLVMBuildStore(builder->llvm_builder, source_val, llvm_glob);
                 break;
@@ -558,8 +580,8 @@ namespace Zodiac
                 auto val_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
 
-                LLVMValueRef source_val = builder->temps[val_index];
-                LLVMValueRef dest_val = builder->allocas[dest_index];
+                LLVMValueRef source_val = llvm::wrap(builder->temps[val_index]);
+                LLVMValueRef dest_val = llvm::wrap(builder->allocas[dest_index]);
 
                 LLVMBuildStore(builder->llvm_builder, source_val, dest_val);
                 break;
@@ -572,8 +594,8 @@ namespace Zodiac
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef ptr_val = builder->temps[ptr_idx];
-                LLVMValueRef val = builder->temps[val_idx];
+                LLVMValueRef ptr_val = llvm::wrap(builder->temps[ptr_idx]);
+                LLVMValueRef val = llvm::wrap(builder->temps[val_idx]);
 
                 LLVMBuildStore(builder->llvm_builder, val, ptr_val);
                 break;
@@ -586,8 +608,8 @@ namespace Zodiac
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef param_alloca = builder->params[param_idx];
-                LLVMValueRef val = builder->temps[val_idx];
+                LLVMValueRef param_alloca = llvm::wrap(builder->params[param_idx]);
+                LLVMValueRef val = llvm::wrap(builder->temps[val_idx]);
 
                 LLVMBuildStore(builder->llvm_builder, val, param_alloca);
                 break;
@@ -597,7 +619,7 @@ namespace Zodiac
             {
                 auto alloc_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
-                LLVMValueRef alloca = builder->allocas[alloc_idx];
+                LLVMValueRef alloca = llvm::wrap(builder->allocas[alloc_idx]);
                 llvm_push_temporary(builder, alloca);
                 break;
             }
@@ -606,7 +628,7 @@ namespace Zodiac
             {
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                  &func_context->ip);
-                LLVMValueRef val = builder->temps[val_idx];
+                llvm::Value *val = builder->temps[val_idx];
                 stack_push(&builder->arg_stack, val);
                 break;
             }
@@ -622,8 +644,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -661,8 +683,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -699,8 +721,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 bool sign = (uint16_t)size_spec & 
                             (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
@@ -754,8 +776,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 bool sign = (uint16_t)size_spec & 
                             (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
@@ -808,8 +830,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 bool sign = (uint16_t)size_spec &
                             (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
@@ -861,8 +883,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -909,8 +931,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -956,8 +978,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -993,8 +1015,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -1040,8 +1062,8 @@ namespace Zodiac
                 auto rhs_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                LLVMValueRef lhs_val = builder->temps[lhs_idx];
-                LLVMValueRef rhs_val = builder->temps[rhs_idx];
+                LLVMValueRef lhs_val = llvm::wrap(builder->temps[lhs_idx]);
+                LLVMValueRef rhs_val = llvm::wrap(builder->temps[rhs_idx]);
 
                 switch (size_spec)
                 {
@@ -1100,7 +1122,7 @@ namespace Zodiac
                     llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                        &func_context->ip);
 
-                LLVMValueRef cond_val = builder->temps[val_idx];
+                LLVMValueRef cond_val = llvm::wrap(builder->temps[val_idx]);
 
                 assert(then_block_idx < func_context->llvm_blocks.count);
                 LLVMBasicBlockRef then_block = func_context->llvm_blocks[then_block_idx];
@@ -1127,7 +1149,7 @@ namespace Zodiac
                                                            &func_context->ip);
                 // case_count -= 1;
 
-                auto switch_val = builder->temps[val_idx];
+                auto switch_val = llvm::wrap(builder->temps[val_idx]);
 
                 assert(default_block_idx < func_context->llvm_blocks.count);
                 auto default_block = func_context->llvm_blocks[default_block_idx];
@@ -1162,7 +1184,7 @@ namespace Zodiac
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                auto val = builder->temps[val_idx];
+                auto val = llvm::wrap(builder->temps[val_idx]);
                 assert(LLVMGetTypeKind(LLVMTypeOf(val)) == LLVMIntegerTypeKind);
 
                 AST_Type *target_type = bytecode_type_from_size_spec(size_spec);
@@ -1207,7 +1229,7 @@ namespace Zodiac
                 auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
 
-                auto val = builder->temps[val_idx];
+                auto val = llvm::wrap(builder->temps[val_idx]);
 #ifndef NDEBUG
                 LLVMTypeKind tk = LLVMGetTypeKind(LLVMTypeOf(val));
                 assert(tk == LLVMFloatTypeKind ||
@@ -1279,26 +1301,26 @@ namespace Zodiac
 
                     case Bytecode_Value_Type_Specifier::ALLOCL:
                     {
-                        store_val = builder->allocas[store_idx];
+                        store_val = llvm::wrap(builder->allocas[store_idx]);
                         break;
                     }
 
                     case Bytecode_Value_Type_Specifier::PARAMETER:
                     {
-                        store_val = builder->params[store_idx];
+                        store_val = llvm::wrap(builder->params[store_idx]);
                         break;
                     }
 
                     case Bytecode_Value_Type_Specifier::TEMPORARY:
                     {
-                        store_val = builder->temps[store_idx];
+                        store_val = llvm::wrap(builder->temps[store_idx]);
                         break;
                     }
                 }
                 assert(store_val);
 
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
-                LLVMValueRef llvm_offset_val = builder->temps[offset_val_idx];
+                LLVMValueRef llvm_offset_val = llvm::wrap(builder->temps[offset_val_idx]);
                 assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
 
                 LLVMValueRef zero_val = LLVMConstNull(llvm_idx_type);
@@ -1338,21 +1360,20 @@ namespace Zodiac
 
                     case Bytecode_Value_Type_Specifier::ALLOCL:
                     {
-                        store_val = builder->allocas[store_idx];
-                        //store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
+                        store_val = llvm::wrap(builder->allocas[store_idx]);
                         break;
                     }
 
                     case Bytecode_Value_Type_Specifier::PARAMETER:
                     {
-                        store_val = builder->params[store_idx];
+                        store_val = llvm::wrap(builder->params[store_idx]);
                         store_val = LLVMBuildLoad(builder->llvm_builder, store_val, "");
                         break;
                     }
 
                     case Bytecode_Value_Type_Specifier::TEMPORARY:
                     {
-                        store_val = builder->temps[store_idx];
+                        store_val = llvm::wrap(builder->temps[store_idx]);
                         break;
                     }
                 }
@@ -1368,7 +1389,7 @@ namespace Zodiac
                     is_array = true; 
                 }
 
-                LLVMValueRef llvm_offset_val = builder->temps[offset_val_idx];
+                LLVMValueRef llvm_offset_val = llvm::wrap(builder->temps[offset_val_idx]);
                 LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
                 assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
 
@@ -1422,7 +1443,7 @@ namespace Zodiac
     {
         auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                           &func_context->ip);
-        LLVMValueRef val = builder->temps[val_idx];
+        LLVMValueRef val = llvm::wrap(builder->temps[val_idx]);
 
         switch (builder->target_platform)
         {
@@ -1500,8 +1521,8 @@ namespace Zodiac
         array_init(builder->allocator, &llvm_args, arg_count);
         for (int64_t i = 0 ; i < arg_count; i++)
         {
-            LLVMValueRef arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
-            LLVMTypeRef arg_type = LLVMTypeOf(arg_val); 
+            llvm::Value *arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
+            LLVMTypeRef arg_type = LLVMTypeOf(llvm::wrap(arg_val)); 
                 LLVMTypeRef dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
             if (arg_type != dest_type)
             {
@@ -1510,8 +1531,9 @@ namespace Zodiac
                 {
                     case LLVMPointerTypeKind:
                     {
-                        arg_val = LLVMBuildPtrToInt(builder->llvm_builder, arg_val, dest_type,
-                                                    "");
+                        arg_val = llvm::unwrap(LLVMBuildPtrToInt(builder->llvm_builder,
+                                                                 llvm::wrap(arg_val),
+                                                                 dest_type, ""));
                         break;
                     }
 
@@ -1519,7 +1541,7 @@ namespace Zodiac
                 }
 
             }
-            array_append(&llvm_args, arg_val);
+            array_append(&llvm_args, llvm::wrap(arg_val));
         }
 
         for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
@@ -1556,7 +1578,7 @@ namespace Zodiac
         assert(builder);
         assert(temp_val);
 
-        array_append(&builder->temps, temp_val);
+        array_append(&builder->temps, llvm::unwrap(temp_val));
     }
 
     LLVMTypeRef llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
