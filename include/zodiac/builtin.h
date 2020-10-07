@@ -34,6 +34,8 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(main)             \
     DEFINE_BUILTIN_ATOM(exit)             \
     DEFINE_BUILTIN_ATOM(count)            \
+    DEFINE_BUILTIN_ATOM(it)               \
+    DEFINE_BUILTIN_ATOM(it_index)         \
     DEFINE_BUILTIN_ATOM(naked)            \
     DEFINE_BUILTIN_ATOM(noreturn)         \
     DEFINE_BUILTIN_ATOM(foreign)          \

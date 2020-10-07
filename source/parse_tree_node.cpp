@@ -204,13 +204,16 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
 
         case Statement_PTN_Kind::FOREACH:
         {
-            free_ptn(allocator, ptn->foreach.it_identifier);
+            if (ptn->foreach.it_identifier)
+                free_ptn(allocator, ptn->foreach.it_identifier);
 
             if (ptn->foreach.it_index_identifier)
                 free_ptn(allocator, ptn->foreach.it_index_identifier);
 
             free_ptn(allocator, ptn->foreach.array_expression);
             free_ptn(allocator, ptn->foreach.body_stmt);
+
+            break;
         }
 
         case Statement_PTN_Kind::IF:
@@ -450,7 +453,6 @@ Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *i
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp)
 {
-    assert(it_ident);
     assert(array_expr);
     assert(body_stmt);
 

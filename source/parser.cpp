@@ -738,6 +738,18 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                                                    begin_fp,
                                                    body_stmt->self.end_file_pos);
             }
+            else if (parser_match_token(ts, TOK_RPAREN))
+            {
+                auto array_expr =
+                    new_identifier_expression_ptn(parser->allocator, it_ident,
+                                                  it_ident->self.begin_file_pos,
+                                                  it_ident->self.end_file_pos);
+
+                auto body_stmt = parser_parse_statement(parser, ts);
+                result = new_foreach_statement_ptn(parser->allocator, nullptr, nullptr,
+                                                   array_expr, body_stmt, begin_fp,
+                                                   body_stmt->self.end_file_pos);
+            }
             else
             {
                 if (!parser_expect_token(parser, ts, TOK_COLON))
@@ -752,51 +764,63 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     type_spec_expr = parser_parse_expression(parser, ts);
                 }
 
-                if (!parser_expect_token(parser, ts, TOK_EQ))
+                if (parser_match_token(ts, TOK_RPAREN))
                 {
-                    return nullptr;
+                    auto body_stmt = parser_parse_statement(parser, ts);
+                    result = new_foreach_statement_ptn(parser->allocator, it_ident,
+                                                       nullptr, type_spec_expr,
+                                                       body_stmt, begin_fp,
+                                                       body_stmt->self.end_file_pos);
                 }
-
-                Expression_PTN *init_expr = parser_parse_expression(parser, ts);
-                if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+                else
                 {
-                    return nullptr;
+                    if (!parser_expect_token(parser, ts, TOK_EQ))
+                    {
+                        return nullptr;
+                    }
+
+                    Expression_PTN *init_expr = parser_parse_expression(parser, ts);
+                    if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+                    {
+                        return nullptr;
+                    }
+
+                    Declaration_PTN *init_decl =
+                        new_variable_declaration_ptn(parser->allocator, it_ident,
+                                                     type_spec_expr, init_expr,
+                                                     it_ident->self.begin_file_pos,
+                                                     init_expr->self.end_file_pos);
+
+                    Statement_PTN *init_stmt =
+                        new_declaration_statement_ptn(parser->allocator, init_decl,
+                                                      init_decl->self.begin_file_pos,
+                                                      init_decl->self.end_file_pos); 
+
+                    Expression_PTN *cond_expr = parser_parse_expression(parser, ts);
+                    assert(cond_expr);
+
+                    if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
+                    {
+                        return nullptr;
+                    }
+
+                    Statement_PTN *step_stmt = parser_parse_statement(parser, ts);
+                    assert(step_stmt);
+
+                    if (!parser_expect_token(parser, ts, TOK_RPAREN))
+                    {
+                        return nullptr;
+                    }
+
+                    Statement_PTN *body_stmt = parser_parse_statement(parser, ts);
+                    assert(body_stmt);
+
+                    auto end_fp = body_stmt->self.end_file_pos;
+
+                    result = new_for_statement_ptn(parser->allocator, init_stmt,
+                                                   cond_expr, step_stmt, body_stmt,
+                                                   begin_fp, end_fp);
                 }
-
-                Declaration_PTN *init_decl =
-                    new_variable_declaration_ptn(parser->allocator, it_ident,
-                                                 type_spec_expr, init_expr,
-                                                 it_ident->self.begin_file_pos,
-                                                 init_expr->self.end_file_pos);
-
-                Statement_PTN *init_stmt =
-                    new_declaration_statement_ptn(parser->allocator, init_decl,
-                                                  init_decl->self.begin_file_pos,
-                                                  init_decl->self.end_file_pos); 
-
-                Expression_PTN *cond_expr = parser_parse_expression(parser, ts);
-                assert(cond_expr);
-
-                if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-                {
-                    return nullptr;
-                }
-
-                Statement_PTN *step_stmt = parser_parse_statement(parser, ts);
-                assert(step_stmt);
-
-                if (!parser_expect_token(parser, ts, TOK_RPAREN))
-                {
-                    return nullptr;
-                }
-
-                Statement_PTN *body_stmt = parser_parse_statement(parser, ts);
-                assert(body_stmt);
-
-                auto end_fp = body_stmt->self.end_file_pos;
-
-                result = new_for_statement_ptn(parser->allocator, init_stmt, cond_expr,
-                                               step_stmt, body_stmt, begin_fp, end_fp);
             }
 
             assert(result);

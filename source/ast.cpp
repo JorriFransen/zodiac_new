@@ -554,8 +554,8 @@ namespace Zodiac
                     ast_create_expression_from_ptn(allocator,
                                                    ptn->foreach.array_expression);
 
-                auto ii_bfp = ptn->foreach.it_index_identifier->self.begin_file_pos;
-                auto ii_efp = ptn->foreach.it_index_identifier->self.end_file_pos;
+                auto ii_bfp = ptn->self.begin_file_pos;
+                auto ii_efp = ptn->self.begin_file_pos;
                 ii_bfp.file_name = string_append(allocator,
                                                  string_ref("<foreach expansion> "),
                                                  ii_bfp.file_name);
@@ -565,10 +565,18 @@ namespace Zodiac
                                                                ii_bfp, ii_efp);
 
                 auto ptn_idx_ident = ptn->foreach.it_index_identifier;
-
-                auto index_ident = ast_identifier_new(allocator, ptn_idx_ident->atom,
-                                                      ptn_idx_ident->self.begin_file_pos,
-                                                      ptn_idx_ident->self.end_file_pos);
+                AST_Identifier *index_ident = nullptr;
+                if (ptn_idx_ident == nullptr)
+                {
+                    index_ident = ast_identifier_new(allocator, Builtin::atom_it_index,
+                                                     ii_bfp, ii_efp);
+                }
+                else
+                {
+                    index_ident = ast_identifier_new(allocator, ptn_idx_ident->atom,
+                                                     ptn_idx_ident->self.begin_file_pos,
+                                                     ptn_idx_ident->self.end_file_pos);
+                }
 
                 auto idx_ident_expr = ast_identifier_expression_new(allocator,
                                                                     index_ident,
@@ -585,9 +593,18 @@ namespace Zodiac
 
                 auto ptn_it_ident = ptn->foreach.it_identifier;
 
-                auto it_ident = ast_identifier_new(allocator, ptn_it_ident->atom,
-                                                   ptn_it_ident->self.begin_file_pos,
-                                                   ptn_it_ident->self.end_file_pos);
+                AST_Identifier *it_ident = nullptr;
+                if (ptn_it_ident)
+                {
+                    it_ident = ast_identifier_new(allocator, ptn_it_ident->atom,
+                                                  ptn_it_ident->self.begin_file_pos,
+                                                  ptn_it_ident->self.end_file_pos);
+                }
+                else
+                {
+                    it_ident = ast_identifier_new(allocator, Builtin::atom_it,
+                                                  ii_bfp, ii_efp);
+                }
 
                 auto first_it = ast_subscript_expression_new(allocator, array_expr,
                                                              idx_ident_expr,

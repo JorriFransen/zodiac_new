@@ -42,19 +42,19 @@ test_array_for :: func()
         print_array_value("int_array", int_array[i], i);
     }
 
-    // std.print("\n");
+    std.print("\n");
 
-    // for (int_array)
-    // {
-    //     print_array_value("int_array", it, it_index);
-    // }
+    for (int_array)
+    {
+        print_array_value("int_array", it, it_index);
+    }
 
-    // std.print("\n");
+    std.print("\n");
 
-    // for (v: int_array)
-    // {
-    //     print_array_value("int_array", v, it_index);
-    // }
+    for (v: int_array)
+    {
+        print_array_value("int_array", v, it_index);
+    }
 
     std.print("\n");
 
