@@ -535,7 +535,7 @@ namespace Zodiac
 
 
                 return ast_for_statement_new(allocator, init_statements, cond_expr,
-                                             step_statements, body_stmt,
+                                             nullptr, step_statements, body_stmt,
                                              begin_fp, end_fp);
                 break;
             }
@@ -543,7 +543,8 @@ namespace Zodiac
             case Statement_PTN_Kind::FOREACH:
             {
                 Array<AST_Statement *> init_stmts = {};
-                int64_t init_count = ptn->foreach.it_index_identifier ? 2 : 1;
+                int64_t init_count = 1;
+                // int64_t init_count = ptn->foreach.it_index_identifier ? 2 : 1;
                 array_init(allocator, &init_stmts, init_count);
 
                 Array<AST_Statement *> step_statements = {};
@@ -595,10 +596,6 @@ namespace Zodiac
                 auto it_decl = ast_variable_declaration_new(allocator, it_ident, nullptr, 
                                                             first_it, ii_bfp, ii_efp);
                 array_append(var_decls, it_decl);
-                auto it_stmt = ast_declaration_statement_new(allocator, it_decl,
-                                                             ii_bfp, ii_efp);
-                array_append(&init_stmts, it_stmt);
-
                 auto count_ident = ast_identifier_new(allocator, Builtin::atom_count,
                                                       ii_bfp, ii_efp);
 
@@ -624,25 +621,12 @@ namespace Zodiac
                                                                   ii_bfp, ii_efp);
                 array_append(&step_statements, idx_step_expr);
 
-                auto it_ident_expr = ast_identifier_expression_new(allocator, it_ident,
-                                                                   ii_bfp, ii_efp);
-                auto new_it_expr = ast_subscript_expression_new(allocator, array_expr,
-                                                                idx_ident_expr,
-                                                                ii_bfp, ii_efp);
-                auto it_step_stmt = ast_assignment_statement_new(allocator,
-                                                                 it_ident_expr,
-                                                                 new_it_expr,
-                                                                 ii_bfp, ii_efp);
-                array_append(&step_statements, it_step_stmt);
-
                 auto body_stmt =
                     ast_create_statement_from_ptn(allocator, ptn->foreach.body_stmt,
                                                   var_decls);
 
-
-
                 return ast_for_statement_new(allocator, init_stmts, cond_expr,
-                                             step_statements, body_stmt,
+                                             it_decl, step_statements, body_stmt,
                                              begin_fp, end_fp);
             }
 
@@ -1508,6 +1492,7 @@ namespace Zodiac
     AST_Statement *ast_for_statement_new(Allocator *allocator,
                                          Array<AST_Statement *> init_statements,
                                          AST_Expression *cond_expr,
+                                         AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
                                          const File_Pos &begin_fp,
@@ -1518,6 +1503,7 @@ namespace Zodiac
 
         result->for_stmt.init_statements = init_statements;
         result->for_stmt.cond_expr = cond_expr;
+        result->for_stmt.it_decl = it_decl;
         result->for_stmt.step_statements = step_statements;
         result->for_stmt.body_stmt = body_stmt;
         result->for_stmt.scope = nullptr;

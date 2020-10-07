@@ -1018,6 +1018,15 @@ namespace Zodiac
                     result = false;
                 }
 
+                if (ast_stmt->for_stmt.it_decl)
+                {
+                    if (!try_resolve_identifiers(resolver, ast_stmt->for_stmt.it_decl,
+                                                 for_scope))
+                    {
+                        result = false;
+                    }
+                }
+
                 for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
                 {
                     auto step_stmt = ast_stmt->for_stmt.step_statements[i];
@@ -2176,6 +2185,15 @@ namespace Zodiac
                 }
                 else
                 {
+                    if (ast_stmt->for_stmt.it_decl)
+                    {
+                        if (!try_resolve_types(resolver, ast_stmt->for_stmt.it_decl,
+                                               for_scope))
+                        {
+                            result = false;
+                        }
+                    }
+
                     auto cond_expr = ast_stmt->for_stmt.cond_expr;
                     auto cond_type = cond_expr->type;
 
@@ -3911,6 +3929,13 @@ namespace Zodiac
                 queue_emit_bytecode_jobs_from_expression(resolver,
                                                          stmt->for_stmt.cond_expr,
                                                          for_scope);
+
+                if (stmt->for_stmt.it_decl)
+                {
+                    queue_emit_bytecode_jobs_from_declaration(resolver,
+                                                              stmt->for_stmt.it_decl,
+                                                              for_scope);
+                }
 
                 for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++)
                 {

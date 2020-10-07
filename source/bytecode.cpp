@@ -480,6 +480,17 @@ namespace Zodiac
 
         bytecode_builder_append_block(builder, current_func, body_block);
         bytecode_builder_set_insert_point(builder, body_block);
+
+
+        if (stmt->for_stmt.it_decl)
+        {
+            auto it_allocl = bytecode_find_value_for_variable(builder,
+                                                              stmt->for_stmt.it_decl);
+            auto it_init_expr = stmt->for_stmt.it_decl->variable.init_expression;
+            auto it_val = bytecode_emit_expression(builder, it_init_expr);
+            bytecode_emit_storel(builder, it_allocl, it_val);
+        }
+        
         bytecode_emit_statement(builder, stmt->for_stmt.body_stmt);
         for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++)
         {

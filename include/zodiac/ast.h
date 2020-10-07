@@ -227,6 +227,7 @@ namespace Zodiac
             {
                 Array<AST_Statement *> init_statements;
                 AST_Expression *cond_expr;
+                AST_Declaration *it_decl;
                 Array<AST_Statement *> step_statements;
                 AST_Statement *body_stmt;
 
@@ -668,6 +669,7 @@ namespace Zodiac
     AST_Statement *ast_for_statement_new(Allocator *allocator, 
                                          Array<AST_Statement *> init_statements,
                                          AST_Expression *cond_expr,
+                                         AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
                                          const File_Pos &begin_fp,

@@ -312,6 +312,12 @@ namespace Zodiac
                 scope_populate_expression_ast(allocator, ast_stmt->for_stmt.cond_expr,
                                               for_scope);
 
+                if (ast_stmt->for_stmt.it_decl)
+                {
+                    scope_populate_declaration_ast(allocator, ast_stmt->for_stmt.it_decl,
+                                                   for_scope);
+                }
+
                 for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
                 {
                     auto step_stmt = ast_stmt->for_stmt.step_statements[i];
