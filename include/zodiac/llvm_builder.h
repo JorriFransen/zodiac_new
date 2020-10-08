@@ -26,16 +26,18 @@ namespace Zodiac
     {
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
+
         LLVMModuleRef llvm_module;
         LLVMBuilderRef llvm_builder;
 
+        llvm::LLVMContext *llvm_context = nullptr;
         llvm::IRBuilder<> *_llvm_builder = nullptr;
 
         Array<LLVM_Function> functions = {};
 
         Array<llvm::Value *> temps = {};
-        Array<llvm::Value *> allocas = {};
-        Array<llvm::Value *> params = {};
+        Array<llvm::AllocaInst *> allocas = {};
+        Array<llvm::AllocaInst *> params = {};
         Array<llvm::Value *> globals = {};
 
         Stack<llvm::Value *> arg_stack = {};
@@ -48,13 +50,13 @@ namespace Zodiac
 
     struct LLVM_Function_Context
     {
-        LLVMValueRef llvm_function = {};
-        LLVMBasicBlockRef llvm_block = {};
+        llvm::Function *llvm_function = nullptr;
+        llvm::BasicBlock* llvm_block = {};
 
         Bytecode_Function *bc_func = nullptr;
         Bytecode_Block *bc_block = nullptr;
 
-        Array<LLVMBasicBlockRef> llvm_blocks = {};
+        Array<llvm::BasicBlock *> llvm_blocks = {};
 
         int64_t ip = 0;
     };
@@ -77,16 +79,24 @@ namespace Zodiac
 
     void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val);
 
-    LLVMTypeRef llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
-    LLVMTypeRef llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
+    llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
 
-    bool llvm_block_ends_with_terminator(LLVMBasicBlockRef llvm_block);
+    template <typename Type>
+    Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
+    {
+        return static_cast<Type *>(llvm_type_from_ast(builder, ast_type));
+    }
 
-    LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
+
+    llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
+
+    bool llvm_block_ends_with_terminator(llvm::BasicBlock *llvm_block);
+
+    LLVM_Function_Context llvm_create_function_context(llvm::Function *llvm_func,
                                                        Bytecode_Function *bc_func,
-                                                       LLVMBasicBlockRef llvm_block,
+                                                       llvm::BasicBlock *llvm_block,
                                                        Bytecode_Block *bc_block,
-                                                       Array<LLVMBasicBlockRef> llvm_blocks);
+                                                       Array<llvm::BasicBlock *> llvm_blocks);
 
     Const_Value llvm_load_int(Bytecode_Block *block, int64_t *ipp);
     LLVMValueRef llvm_const_int(Const_Value cv);

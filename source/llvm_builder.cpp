@@ -30,6 +30,7 @@ namespace Zodiac
 
         llvm_builder->allocator = allocator;
         llvm_builder->build_data = build_data;
+        llvm_builder->llvm_context = (llvm::LLVMContext*)LLVMGetGlobalContext();
         llvm_builder->llvm_module = LLVMModuleCreateWithName("root_module");
         llvm_builder->llvm_builder = LLVMCreateBuilder();
         llvm_builder->_llvm_builder = llvm::unwrap(llvm_builder->llvm_builder);
@@ -128,12 +129,6 @@ namespace Zodiac
 
         free(builder->allocator, obj_file_name.data);
 
-        // if (obj_emit_failed)
-        // {
-        //     fprintf(stderr, "%s\n", c_err);
-        // }
-        // LLVMDisposeMessage(c_err);
-
         delete llvm_target_machine;
 
         return llvm_run_linker(builder, output_file_name);
@@ -214,16 +209,11 @@ namespace Zodiac
         builder->allocas.count = 0;
         builder->params.count = 0;
 
-        LLVMTypeRef llvm_func_type = llvm_type_from_ast(builder, func_decl->type);
-
-        // LLVMValueRef llvm_func_val = LLVMAddFunction(builder->llvm_module,
-        //                                              func_decl->identifier->atom.data,
-        //                                              llvm_func_type);
-        llvm::FunctionType *_llvm_func_type =
-            llvm::unwrap<llvm::FunctionType>(llvm_func_type);
+        auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder,
+                                                                     func_decl->type);
 
         llvm::Function *llvm_func_val =
-            llvm::Function::Create(_llvm_func_type, llvm::GlobalValue::ExternalLinkage,
+            llvm::Function::Create(llvm_func_type, llvm::GlobalValue::ExternalLinkage,
                                    func_decl->identifier->atom.data,
                                    llvm::unwrap(builder->llvm_module));
         assert(llvm_func_val);
@@ -235,56 +225,60 @@ namespace Zodiac
         }
         else
         {
-            Array<LLVMBasicBlockRef> llvm_blocks = {};
+            Array<llvm::BasicBlock *> llvm_blocks = {};
             array_init(builder->allocator, &llvm_blocks, bc_func->blocks.count);
 
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 auto bc_block = bc_func->blocks[i];
-                auto llvm_block = LLVMAppendBasicBlock(llvm::wrap(llvm_func_val),
-                                                       bc_block->name.data);
+                auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context,
+                                                           bc_block->name.data,
+                                                           llvm_func_val);
                 array_append(&llvm_blocks, llvm_block);
             }
 
-            LLVMPositionBuilderAtEnd(builder->llvm_builder,
-                                     LLVMGetFirstBasicBlock(llvm::wrap(llvm_func_val)));
+            builder->_llvm_builder->SetInsertPoint(&llvm_func_val->front());
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
-                LLVMTypeRef param_type = llvm_type_from_ast(builder,
-                                                            bc_func->parameters[i].value->type);
+                llvm::Type *param_type =
+                    llvm_type_from_ast(builder, bc_func->parameters[i].value->type);
+
                 auto name = bc_func->parameters[i].value->name;
-                LLVMValueRef param_alloca = LLVMBuildAlloca(builder->llvm_builder, param_type,
-                                                            name.data);
-                array_append(&builder->params, llvm::unwrap(param_alloca));
+
+                auto param_alloca =
+                    builder->_llvm_builder->CreateAlloca(param_type, nullptr, name.data);
+
+                array_append(&builder->params, param_alloca);
             }
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
-                LLVMValueRef param_val = LLVMGetParam(llvm::wrap(llvm_func_val), i);
-                LLVMValueRef param_alloca = llvm::wrap(builder->params[i]);
-                LLVMBuildStore(builder->llvm_builder, param_val, param_alloca);
+                auto param_val = llvm_func_val->getArg(i);
+                auto param_alloca = builder->params[i];
+                builder->_llvm_builder->CreateStore(param_val, param_alloca);
             }
 
             for (int64_t i = 0; i < bc_func->local_allocs.count; i++)
             {
                 auto decl = bc_func->local_allocs[i].ast_decl;
                 assert(decl->kind == AST_Declaration_Kind::VARIABLE);
-                LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
-                LLVMValueRef alloca_val = LLVMBuildAlloca(builder->llvm_builder, llvm_type,
-                                                          decl->identifier->atom.data);
-                array_append(&builder->allocas, llvm::unwrap(alloca_val));
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, decl->type);
+                auto alloca_val =
+                    builder->_llvm_builder->CreateAlloca(llvm_type, nullptr,
+                                                         decl->identifier->atom.data);
+
+                array_append(&builder->allocas, alloca_val);
             }
 
-            auto llvm_block = LLVMGetFirstBasicBlock(llvm::wrap(llvm_func_val));
+            auto block_it = llvm_func_val->begin();
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 LLVM_Function_Context func_context =
-                    llvm_create_function_context(llvm::wrap(llvm_func_val), bc_func,
-                                                 llvm_block, bc_func->blocks[i],
-                                                 llvm_blocks);
+                    llvm_create_function_context(llvm_func_val, bc_func, &*block_it,
+                                                 bc_func->blocks[i], llvm_blocks);
                 llvm_emit_block(builder, &func_context);
-                llvm_block = LLVMGetNextBasicBlock(llvm_block);
+                block_it++;
             }
 
             array_free(&llvm_blocks);
@@ -302,8 +296,10 @@ namespace Zodiac
 
         auto name = decl->identifier->atom.data;
 
-        LLVMTypeRef llvm_type = llvm_type_from_ast(builder, decl->type);
-        LLVMValueRef llvm_glob = LLVMAddGlobal(builder->llvm_module, llvm_type, name);
+        llvm::Type *llvm_type = llvm_type_from_ast(builder, decl->type);
+        LLVMValueRef llvm_glob = LLVMAddGlobal(builder->llvm_module,
+                                               llvm::wrap(llvm_type),
+                                               name);
         LLVMSetLinkage(llvm_glob, LLVMPrivateLinkage);
 
         auto bc_val = bc_glob.value;
@@ -329,7 +325,7 @@ namespace Zodiac
         assert(builder);
         assert(func_context);
 
-        LLVMPositionBuilderAtEnd(builder->llvm_builder, func_context->llvm_block);
+        builder->_llvm_builder->SetInsertPoint(func_context->llvm_block);
 
         while (func_context->ip < func_context->bc_block->instructions.count)
         {
@@ -528,8 +524,8 @@ namespace Zodiac
             {
                 bool value = llvm_fetch_from_bytecode<uint8_t>(func_context->bc_block,
                                                                &func_context->ip);
-                LLVMTypeRef llvm_bool_type = llvm_type_from_ast(builder, Builtin::type_bool);
-                LLVMValueRef result = LLVMConstInt(llvm_bool_type, value, false);
+                llvm::Type *llvm_bool_type = llvm_type_from_ast(builder, Builtin::type_bool);
+                LLVMValueRef result = LLVMConstInt(llvm::wrap(llvm_bool_type), value, false);
                 llvm_push_temporary(builder, result);
                 break;
             }
@@ -549,8 +545,9 @@ namespace Zodiac
                 LLVMSetAlignment(llvm_str_glob, 1);
                 LLVMSetGlobalConstant(llvm_str_glob, true);
 
-                LLVMTypeRef dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
-                LLVMValueRef llvm_str_ptr = LLVMConstPointerCast(llvm_str_glob, dest_type);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
+                LLVMValueRef llvm_str_ptr = LLVMConstPointerCast(llvm_str_glob,
+                                                                 llvm::wrap(dest_type));
                 llvm_push_temporary(builder, llvm_str_ptr);
 
                 break;
@@ -1094,10 +1091,9 @@ namespace Zodiac
                                                                     &func_context->ip);
 
                 assert(block_idx < func_context->llvm_blocks.count);
-                LLVMBasicBlockRef target_block = func_context->llvm_blocks[block_idx];
+                llvm::BasicBlock *target_block = func_context->llvm_blocks[block_idx];
 
-                LLVMBuildBr(builder->llvm_builder, target_block);
-
+                builder->_llvm_builder->CreateBr(target_block);
                 break;
             }
 
@@ -1125,13 +1121,15 @@ namespace Zodiac
                 LLVMValueRef cond_val = llvm::wrap(builder->temps[val_idx]);
 
                 assert(then_block_idx < func_context->llvm_blocks.count);
-                LLVMBasicBlockRef then_block = func_context->llvm_blocks[then_block_idx];
+                llvm::BasicBlock *then_block = func_context->llvm_blocks[then_block_idx];
 
                 assert(else_block_idx < func_context->llvm_blocks.count);
-                LLVMBasicBlockRef else_block = func_context->llvm_blocks[else_block_idx];
+                llvm::BasicBlock *else_block = func_context->llvm_blocks[else_block_idx];
 
 
-                LLVMBuildCondBr(builder->llvm_builder, cond_val, then_block, else_block);
+                builder->_llvm_builder->CreateCondBr(llvm::unwrap(cond_val), then_block,
+                                                     else_block);
+                // LLVMBuildCondBr(builder->llvm_builder, cond_val, then_block, else_block);
                 break;
             }
 
@@ -1156,7 +1154,8 @@ namespace Zodiac
 
 
                 auto switch_inst_val = LLVMBuildSwitch(builder->llvm_builder, switch_val,
-                                                       default_block, case_count);
+                                                       llvm::wrap(default_block),
+                                                       case_count);
 
                 for (int64_t i = 0; i < case_count; i++)
                 {
@@ -1168,8 +1167,8 @@ namespace Zodiac
                                                            &func_context->ip);
                     LLVMValueRef llvm_on_val = llvm_const_int(case_value);
                     assert(block_idx < func_context->llvm_blocks.count);
-                    LLVMBasicBlockRef dest_block = func_context->llvm_blocks[block_idx];
-                    LLVMAddCase(switch_inst_val, llvm_on_val, dest_block);
+                    llvm::BasicBlock *dest_block = func_context->llvm_blocks[block_idx];
+                    LLVMAddCase(switch_inst_val, llvm_on_val, llvm::wrap(dest_block));
                 }
 
                 break;
@@ -1195,11 +1194,11 @@ namespace Zodiac
                 bool is_signed = false;
                 if (target_type->integer.sign) is_signed = true;
 
-                LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder, target_type);
+                llvm::Type *_llvm_dest_ty = llvm_type_from_ast(builder, target_type);
+                LLVMTypeRef llvm_dest_ty = llvm::wrap(_llvm_dest_ty);
 
                 if (target_type->kind == AST_Type_Kind::INTEGER)
                 {
-
                     result = LLVMBuildIntCast2(builder->llvm_builder, val, llvm_dest_ty,
                                                is_signed, "");
                 }
@@ -1254,7 +1253,8 @@ namespace Zodiac
                     case Bytecode_Size_Specifier::S64:
                     {
                         auto dest_ty = bytecode_type_from_size_spec(size_spec);
-                        LLVMTypeRef llvm_dest_ty = llvm_type_from_ast(builder, dest_ty);
+                        llvm::Type *_llvm_dest_ty = llvm_type_from_ast(builder, dest_ty);
+                        auto llvm_dest_ty = llvm::wrap(_llvm_dest_ty);
                         LLVMValueRef result = LLVMBuildFPToSI(builder->llvm_builder, val,
                                                               llvm_dest_ty, "");
                         llvm_push_temporary(builder, result);
@@ -1319,11 +1319,11 @@ namespace Zodiac
                 }
                 assert(store_val);
 
-                LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
+                llvm::Type *llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
                 LLVMValueRef llvm_offset_val = llvm::wrap(builder->temps[offset_val_idx]);
-                assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
+                assert(LLVMTypeOf(llvm_offset_val) == llvm::wrap(llvm_idx_type));
 
-                LLVMValueRef zero_val = LLVMConstNull(llvm_idx_type);
+                LLVMValueRef zero_val = LLVMConstNull(llvm::wrap(llvm_idx_type));
                 //LLVMValueRef llvm_offset_val = LLVMConstInt(llvm_idx_type, offset_val, true);
                 LLVMValueRef indices[] = { zero_val, llvm_offset_val };
 
@@ -1390,10 +1390,10 @@ namespace Zodiac
                 }
 
                 LLVMValueRef llvm_offset_val = llvm::wrap(builder->temps[offset_val_idx]);
-                LLVMTypeRef llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
-                assert(LLVMTypeOf(llvm_offset_val) == llvm_idx_type);
+                llvm::Type *llvm_idx_type = llvm_type_from_ast(builder, Builtin::type_u32);
+                assert(LLVMTypeOf(llvm_offset_val) == llvm::wrap(llvm_idx_type));
 
-                LLVMValueRef llvm_zero_val = LLVMConstNull(llvm_idx_type);
+                LLVMValueRef llvm_zero_val = LLVMConstNull(llvm::wrap(llvm_idx_type));
 
                 LLVMValueRef indices[2];
                 unsigned index_count = 0;
@@ -1427,8 +1427,9 @@ namespace Zodiac
         {
             case AST_Type_Kind::INTEGER:
             {
-                LLVMTypeRef llvm_type = llvm_type_from_ast(builder, type);
-                return LLVMConstInt(llvm_type, value->value.integer.s64, type->integer.sign);
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
+                return LLVMConstInt(llvm::wrap(llvm_type), value->value.integer.s64,
+                                     type->integer.sign);
                 break;
             }
 
@@ -1458,12 +1459,12 @@ namespace Zodiac
 
                 string_builder_append(&sb, "=r,{rax},{rdi}");
 
-                LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, 2);
+                llvm::Type *asm_fn_type = llvm_asm_function_type(builder, 2);
 
                 auto constraint_string = string_builder_to_string(sb.allocator, &sb);
                 string_builder_free(&sb);
 
-                LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
+                LLVMValueRef asm_val = LLVMGetInlineAsm(llvm::wrap(asm_fn_type),
                                                         asm_string.data,
                                                         asm_string.length,
                                                         constraint_string.data,
@@ -1472,8 +1473,8 @@ namespace Zodiac
                                                         false,
                                                         LLVMInlineAsmDialectATT);
 
-                LLVMTypeRef arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
-                LLVMValueRef syscall_num = LLVMConstInt(arg_type, 60, true);
+                llvm::Type *arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
+                LLVMValueRef syscall_num = LLVMConstInt(llvm::wrap(arg_type), 60, true);
                 LLVMValueRef args[2] = { syscall_num, val };
                 LLVMBuildCall(builder->llvm_builder, asm_val, args, 2, "");
 
@@ -1515,29 +1516,42 @@ namespace Zodiac
         if (arg_count >= 6) string_builder_append(&sb, ",{r9}");
         if (arg_count >= 7) string_builder_append(&sb, ",{r8}");
 
-        LLVMTypeRef asm_fn_type = llvm_asm_function_type(builder, arg_count);
+        llvm::Type *asm_fn_type = llvm_asm_function_type(builder, arg_count);
 
         Array<LLVMValueRef> llvm_args = {};
         array_init(builder->allocator, &llvm_args, arg_count);
         for (int64_t i = 0 ; i < arg_count; i++)
         {
             llvm::Value *arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
-            LLVMTypeRef arg_type = LLVMTypeOf(llvm::wrap(arg_val)); 
-                LLVMTypeRef dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
+
+            llvm::Type *arg_type = arg_val->getType();
+            llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
+
             if (arg_type != dest_type)
             {
-                LLVMTypeKind type_kind = LLVMGetTypeKind(arg_type);
-                switch (type_kind)
-                {
-                    case LLVMPointerTypeKind:
-                    {
-                        arg_val = llvm::unwrap(LLVMBuildPtrToInt(builder->llvm_builder,
-                                                                 llvm::wrap(arg_val),
-                                                                 dest_type, ""));
-                        break;
-                    }
+                // LLVMTypeKind type_kind = LLVMGetTypeKind(arg_type);
+                // switch (arg_type->getKind())
+                // {
+                //     case LLVMPointerTypeKind:
+                //     {
+                //         arg_val = llvm::unwrap(LLVMBuildPtrToInt(builder->llvm_builder,
+                //                                                  llvm::wrap(arg_val),
+                //                                                  dest_type, ""));
+                //         break;
+                //     }
 
-                    default: assert(false); 
+                //     default: assert(false); 
+                // }
+                if (arg_type->isPointerTy())
+                {
+                    arg_val = llvm::unwrap(LLVMBuildPtrToInt(builder->llvm_builder,
+                                                             llvm::wrap(arg_val),
+                                                             llvm::wrap(dest_type),
+                                                             ""));
+                }
+                else
+                {
+                    assert(false);
                 }
 
             }
@@ -1548,7 +1562,7 @@ namespace Zodiac
 
         auto constraint_str = string_builder_to_string(builder->allocator, &sb);
 
-        LLVMValueRef asm_val = LLVMGetInlineAsm(asm_fn_type,
+        LLVMValueRef asm_val = LLVMGetInlineAsm(llvm::wrap(asm_fn_type),
                                                 (char*)asm_string.data,
                                                 asm_string.length,
                                                 (char*)constraint_str.data,
@@ -1581,7 +1595,7 @@ namespace Zodiac
         array_append(&builder->temps, llvm::unwrap(temp_val));
     }
 
-    LLVMTypeRef llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
+    llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
     {
         assert(builder);
         assert(ast_type);
@@ -1590,56 +1604,58 @@ namespace Zodiac
         assert(ast_type->flags & AST_NODE_FLAG_TYPED);
         assert(ast_type->flags & AST_NODE_FLAG_SIZED);
 
+        auto &c = *builder->llvm_context;
+
         switch (ast_type->kind)
         {
             case AST_Type_Kind::INVALID: assert(false);
 
             case AST_Type_Kind::VOID:
             {
-                return LLVMVoidType();
+                return llvm::Type::getVoidTy(c);
                 break;
             }
 
             case AST_Type_Kind::INTEGER:
             {
-                return LLVMIntType(ast_type->bit_size);
+                return llvm::Type::getIntNTy(c, ast_type->bit_size);
                 break;
             }
 
             case AST_Type_Kind::FLOAT:
             {
                 if (ast_type->bit_size == 32)
-                    return LLVMFloatType();
+                    return llvm::Type::getFloatTy(c);
                 else if (ast_type->bit_size == 64)
-                    return LLVMDoubleType();
+                    return llvm::Type::getDoubleTy(c);
                 break;
             }
 
             case AST_Type_Kind::BOOL:
             {
-                return LLVMIntType(1);
+                return llvm::Type::getIntNTy(c, 1);
                 break;
             }
 
             case AST_Type_Kind::POINTER:
             {
-                LLVMTypeRef base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
-                return LLVMPointerType(base_type, 0);
+                llvm::Type *base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
+                return base_type->getPointerTo();
                 break;
             }
 
             case AST_Type_Kind::FUNCTION:
             {
-                LLVMTypeRef llvm_ret_type = llvm_type_from_ast(builder,
+                llvm::Type *llvm_ret_type = llvm_type_from_ast(builder,
                                                                ast_type->function.return_type);
-                Array<LLVMTypeRef> llvm_arg_types = {};
+                Array<llvm::Type *> llvm_arg_types = {};
                 if (ast_type->function.param_types.count)
                 {
                     array_init(builder->allocator, &llvm_arg_types, 
                                ast_type->function.param_types.count);
                     for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
                     {
-                        LLVMTypeRef arg_type =
+                        llvm::Type *arg_type =
                             llvm_type_from_ast(builder, ast_type->function.param_types[i]);
                         array_append(&llvm_arg_types, arg_type);
                     }
@@ -1647,8 +1663,10 @@ namespace Zodiac
 
                 bool is_vararg = false;
 
-                LLVMTypeRef result = LLVMFunctionType(llvm_ret_type, llvm_arg_types.data,
-                                                      llvm_arg_types.count, is_vararg);
+                llvm::Type *result = llvm::FunctionType::get(llvm_ret_type,
+                                                             { llvm_arg_types.data,
+                                                               (size_t)llvm_arg_types.count },
+                                                             is_vararg);
 
                 if (llvm_arg_types.count)
                 {
@@ -1661,26 +1679,27 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE:
             {
                 auto name = ast_type->structure.declaration->identifier->atom;
-                LLVMTypeRef result = LLVMGetTypeByName(builder->llvm_module, name.data);
+                llvm::StructType *result =
+                    llvm::unwrap(builder->llvm_module)->getTypeByName(name.data);
                 if (result)
                 {
-                    assert(LLVMGetTypeKind(result) == LLVMStructTypeKind);
+                    assert(result->isStructTy());
                 }
                 else
                 {
-                    result = LLVMStructCreateNamed(LLVMGetGlobalContext(), name.data);
+                    result = llvm::StructType::create(c, name.data);
 
                     auto ast_mem_types = ast_type->structure.member_types;
                     assert(ast_mem_types.count);
 
-                    Array<LLVMTypeRef> mem_types = {};
+                    Array<llvm::Type *> mem_types = {};
                     array_init(builder->allocator, &mem_types, ast_mem_types.count);
                     for (int64_t i = 0; i < ast_mem_types.count; i++)
                     {
                         array_append(&mem_types, llvm_type_from_ast(builder, ast_mem_types[i]));
                     }
-
-                    LLVMStructSetBody(result, mem_types.data, mem_types.count, false);
+                    
+                    result->setBody({ mem_types.data, (size_t)mem_types.count }, false);
                 }
 
                 return result;
@@ -1695,9 +1714,10 @@ namespace Zodiac
 
             case AST_Type_Kind::ARRAY:
             {
-                LLVMTypeRef llvm_elem_type = llvm_type_from_ast(builder,
+                llvm::Type *llvm_elem_type = llvm_type_from_ast(builder,
                                                                 ast_type->array.element_type);
-                return LLVMArrayType(llvm_elem_type, ast_type->array.element_count);
+                return llvm::ArrayType::get(llvm_elem_type,
+                                            ast_type->array.element_count);
                 break;
             }
         }
@@ -1706,35 +1726,33 @@ namespace Zodiac
         return {};
     }
 
-    LLVMTypeRef llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)
+    llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)
     {
         assert(builder);
         assert(arg_count >= 0);
         assert(arg_count < 7);
 
-        LLVMTypeRef ret_type = llvm_type_from_ast(builder, Builtin::type_s64);
-        LLVMTypeRef param_types[7] = { ret_type, ret_type, ret_type, ret_type,
+        auto ret_type = llvm_type_from_ast(builder, Builtin::type_s64);
+        llvm::Type *param_types[7] = { ret_type, ret_type, ret_type, ret_type,
                                        ret_type, ret_type, ret_type };
-        LLVMTypeRef result = LLVMFunctionType(ret_type, param_types, arg_count, false);
-
-        return result;
+        return llvm::FunctionType::get(ret_type, { param_types, (size_t)arg_count },
+                                       false);
     }
 
-    bool llvm_block_ends_with_terminator(LLVMBasicBlockRef llvm_block)
+    bool llvm_block_ends_with_terminator(llvm::BasicBlock *llvm_block)
     {
         assert(llvm_block);
 
-        LLVMValueRef term_val = LLVMGetBasicBlockTerminator(llvm_block);
+        if (llvm_block->getTerminator() == nullptr) return false;
         
-        if (term_val == nullptr) return false;
         return true;
     }
 
-    LLVM_Function_Context llvm_create_function_context(LLVMValueRef llvm_func,
+    LLVM_Function_Context llvm_create_function_context(llvm::Function *llvm_func,
                                                        Bytecode_Function *bc_func,
-                                                       LLVMBasicBlockRef llvm_block,
+                                                       llvm::BasicBlock *llvm_block,
                                                        Bytecode_Block *bc_block,
-                                                       Array<LLVMBasicBlockRef> llvm_blocks)
+                                                       Array<llvm::BasicBlock *> llvm_blocks)
     {
         LLVM_Function_Context result = {};
         result.llvm_function = llvm_func;
