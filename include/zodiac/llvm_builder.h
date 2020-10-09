@@ -31,6 +31,7 @@ namespace Zodiac
         LLVMBuilderRef llvm_builder;
 
         llvm::LLVMContext *llvm_context = nullptr;
+        llvm::Module *_llvm_module = nullptr;
         llvm::IRBuilder<> *_llvm_builder = nullptr;
 
         Array<LLVM_Function> functions = {};
@@ -73,11 +74,11 @@ namespace Zodiac
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction inst,
                                LLVM_Function_Context *func_context);
 
-    LLVMValueRef llvm_emit_constant(LLVM_Builder *builder, Bytecode_Value *value);
+    llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Bytecode_Value *value);
     void llvm_emit_exit(LLVM_Builder *builder, LLVM_Function_Context *func_context);
     void llvm_emit_syscall(LLVM_Builder *builder, int32_t arg_count);
 
-    void llvm_push_temporary(LLVM_Builder *builder, LLVMValueRef temp_val);
+    void llvm_push_temporary(LLVM_Builder *builder, llvm::Value *temp_val);
 
     llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
 
@@ -99,7 +100,7 @@ namespace Zodiac
                                                        Array<llvm::BasicBlock *> llvm_blocks);
 
     Const_Value llvm_load_int(Bytecode_Block *block, int64_t *ipp);
-    LLVMValueRef llvm_const_int(Const_Value cv);
+    llvm::ConstantInt *llvm_const_int(LLVM_Builder *builder, Const_Value cv);
 
     template <typename T> 
     T llvm_fetch_from_bytecode(Bytecode_Block *block, int64_t *ipp)
