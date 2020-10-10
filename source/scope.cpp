@@ -440,6 +440,14 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                scope_populate_expression_ast(allocator,
+                                              ast_expr->pre_fix.operand_expression,
+                                              parent_scope);
+                break;
+            }
+
             case AST_Expression_Kind::CALL: break;
 
             case AST_Expression_Kind::ADDROF: assert(false);

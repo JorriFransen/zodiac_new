@@ -1209,6 +1209,19 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                result = true;
+                if (!try_resolve_identifiers(resolver,
+                                             ast_expr->pre_fix.operand_expression,
+                                             scope))
+                {
+                    result = false;
+                }
+
+                break;
+            }
+
             case AST_Expression_Kind::CALL:
             {
                 result = true;
@@ -2677,6 +2690,25 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                result = true;
+
+                auto operand_expr = ast_expr->pre_fix.operand_expression;
+
+                if (try_resolve_types(resolver, operand_expr, scope))
+                {
+                    assert(operand_expr->type);
+                    assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
+                    ast_expr->type = operand_expr->type;
+                }
+                else
+                {
+                    result = false;
+                }
+                break;
+            }
+
             case AST_Expression_Kind::CALL:
             {
                 if (ast_expr->call.is_builtin)
@@ -4119,6 +4151,13 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                auto op_expr = expr->pre_fix.operand_expression;
+                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
+                break;
+            }
+
             case AST_Expression_Kind::CALL:
             {
                 for (int64_t i = 0; i < expr->call.arg_expressions.count; i++)
@@ -4300,6 +4339,7 @@ namespace Zodiac
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
             case AST_Expression_Kind::POST_FIX: assert(false);
+            case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
@@ -4462,6 +4502,13 @@ namespace Zodiac
             case AST_Expression_Kind::POST_FIX:
             {
                 auto op_expr = expr->post_fix.operand_expression;
+                is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
+                break;
+            }
+
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                auto op_expr = expr->pre_fix.operand_expression;
                 is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
                 break;
             }

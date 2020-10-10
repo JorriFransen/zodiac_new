@@ -266,6 +266,7 @@ namespace Zodiac
         BINARY,
         UNARY,
         POST_FIX,
+        PRE_FIX,
 
         CALL,
         ADDROF,
@@ -336,7 +337,7 @@ namespace Zodiac
             {
                 Binary_Operator op;
                 AST_Expression *operand_expression;
-            } post_fix;
+            } post_fix, pre_fix;
 
             struct
             {
@@ -729,6 +730,11 @@ namespace Zodiac
                                                AST_Expression *operand_expr, 
                                                const File_Pos &begin_fp,
                                                const File_Pos &end_fp);
+
+    AST_Expression *ast_prefix_expression_new(Allocator *allocator, Binary_Operator op,
+                                              AST_Expression *operand_expr, 
+                                              const File_Pos &begin_fp,
+                                              const File_Pos &end_fp);
 
     AST_Expression *ast_call_expression_new(Allocator *allocator,
                                             AST_Expression *ident_expr,

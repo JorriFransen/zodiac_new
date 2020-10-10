@@ -294,6 +294,12 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
             break;
         }
 
+        case Expression_PTN_Kind::PRE_FIX:
+        {
+            free_ptn(allocator, ptn->pre_fix.operand_expression);
+            break;
+        }
+
         case Expression_PTN_Kind::DOT:
         {
             free_ptn(allocator, ptn->dot.parent_expression);
@@ -674,6 +680,21 @@ Expression_PTN *new_postfix_expression_ptn(Allocator *allocator, Binary_Operator
     return result;
 }
 
+Expression_PTN *new_prefix_expression_ptn(Allocator *allocator, Binary_Operator op,
+                                          Expression_PTN *operand_expression,
+                                          const File_Pos &begin_fp,
+                                          const File_Pos &end_fp)
+{
+    assert(op == BINOP_ADD || op == BINOP_SUB);
+
+    auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Expression_PTN_Kind::PRE_FIX;
+    result->post_fix.op = op;
+    result->post_fix.operand_expression = operand_expression;
+
+    return result;
+}
+
 Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom atom,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
@@ -912,6 +933,7 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
         case Expression_PTN_Kind::BINARY: assert(false);
         case Expression_PTN_Kind::UNARY: assert(false);
         case Expression_PTN_Kind::POST_FIX: assert(false);
+        case Expression_PTN_Kind::PRE_FIX: assert(false);
         case Expression_PTN_Kind::DOT: assert(false);
         case Expression_PTN_Kind::COMPOUND: assert(false);
         case Expression_PTN_Kind::SUBSCRIPT: assert(false);
@@ -1442,6 +1464,9 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
                 case UNOP_INVALID: assert(false); break;
                 case UNOP_DEREF:   printf("<");   break;
                 case UNOP_MINUS:   printf("-");   break;
+
+                case UNOP_PRE_INC: assert(false);
+                case UNOP_PRE_DEC: assert(false);
             }
             print_expression_ptn(expression->unary.operand_expression, 0);
             printf(")");
@@ -1509,6 +1534,25 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             {
                 assert(false);
             }
+            break;
+        }
+
+        case Expression_PTN_Kind::PRE_FIX:
+        {
+            print_indent(indent);
+            if (expression->pre_fix.op == BINOP_ADD)
+            {
+                printf("++");
+            }
+            else if (expression->pre_fix.op == BINOP_SUB)
+            {
+                printf("--");
+            }
+            else
+            {
+                assert(false);
+            }
+            print_expression_ptn(expression->pre_fix.operand_expression, 0);
             break;
         }
 

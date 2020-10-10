@@ -780,6 +780,38 @@ namespace Zodiac
                 break; 
             }
 
+            case AST_Expression_Kind::PRE_FIX:
+            {
+                auto op_expr = expression->post_fix.operand_expression;
+                Bytecode_Value *operand_val = bytecode_emit_expression(builder, op_expr);
+
+                auto one_val = bytecode_emit_integer_literal(builder, op_expr->type, 1);
+
+                if (expression->post_fix.op == BINOP_ADD)
+                {
+                    bytecode_emit_instruction(builder, Bytecode_Instruction::ADD);
+                }
+                else if (expression->post_fix.op == BINOP_SUB)
+                {
+                    bytecode_emit_instruction(builder, Bytecode_Instruction::SUB);
+                }
+                else assert(false);
+
+                bytecode_emit_size_spec(builder, op_expr->type);
+                bytecode_emit_32(builder, operand_val->local_index);
+                bytecode_emit_32(builder, one_val->local_index);
+
+                auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                                 op_expr->type);
+                bytecode_push_local_temporary(builder, result);
+
+                auto lval = bytecode_emit_lvalue(builder, op_expr);
+
+                bytecode_emit_store(builder, lval, result);
+
+                return result;
+                break; 
+            }
             case AST_Expression_Kind::CALL:
             {
                 return bytecode_emit_call_expression(builder, expression);
@@ -1096,6 +1128,9 @@ namespace Zodiac
 
                 break;
             }
+
+            case UNOP_PRE_INC: assert(false);
+            case UNOP_PRE_DEC: assert(false);
         }
 
         assert(result_type);
@@ -1255,6 +1290,7 @@ namespace Zodiac
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
             case AST_Expression_Kind::POST_FIX: assert(false);
+            case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);

@@ -1210,7 +1210,22 @@ Expression_PTN *parser_parse_unary_expression(Parser *parser, Token_Stream *ts,
     {
         auto operand_expr = parser_parse_unary_expression(parser, ts, is_type);
         auto end_fp = operand_expr->self.end_file_pos;
-        return new_unary_expression_ptn(parser->allocator, op, operand_expr, begin_fp, end_fp);
+
+        if (op == UNOP_PRE_INC)
+        {
+            return new_prefix_expression_ptn(parser->allocator, BINOP_ADD, operand_expr,
+                                             begin_fp, end_fp);
+        }
+        else if (op == UNOP_PRE_DEC)
+        {
+            return new_prefix_expression_ptn(parser->allocator, BINOP_SUB, operand_expr,
+                                             begin_fp, end_fp);
+        }
+        else
+        {
+            return new_unary_expression_ptn(parser->allocator, op, operand_expr,
+                                            begin_fp, end_fp);
+        }
     }
     else
     {
@@ -1353,6 +1368,30 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
         case TOK_DOLLAR:
         {
             result = parser_parse_poly_type_expression(parser, ts);
+            break;
+        }
+
+        // case TOK_PLUS:
+        // {
+        //     ts->next_token();
+        //     if (!parser_expect_token(parser, ts, TOK_PLUS))
+        //     {
+        //         return nullptr;
+        //     }
+
+        //     auto op_expr = parser_parse_expression(parser, ts);
+        //     if (!op_expr) return nullptr;
+
+        //     auto end_fp = op_expr->self.end_file_pos;
+
+        //     result = new_prefix_expression_ptn(parser->allocator, BINOP_ADD, op_expr,
+        //                                        begin_fp, end_fp);
+        //     break;
+        // }
+
+        case TOK_MINUS:
+        {
+            assert(false);
             break;
         }
 
@@ -1799,6 +1838,22 @@ Unary_Operator parser_parse_unary_op(Token_Stream *ts)
         case TOK_MINUS:
         {
             result = UNOP_MINUS;
+
+            if (ts->peek_token(1).kind == TOK_MINUS)
+            {
+                result = UNOP_PRE_DEC;
+                ts->next_token();
+            }
+            break;
+        }
+
+        case TOK_PLUS:
+        {
+            if (ts->peek_token(1).kind == TOK_PLUS)
+            {
+                result = UNOP_PRE_INC;
+                ts->next_token();
+            }
             break;
         }
 
