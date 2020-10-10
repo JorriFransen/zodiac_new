@@ -1,5 +1,4 @@
 
-op-assign statements (+= -= etc.)
 post_inc/dec expressions (i++/i--)
 
 @sizeof() / @offsetof
@@ -25,6 +24,8 @@ Syscall return values
 Check call arg types
 Copy structs on return (bytecode)
 function overloads
+lazy && and ||
+|=, &=, ^=/~=
 
 Custom allocator for stack frame allocls in interpreter
 

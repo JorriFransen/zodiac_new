@@ -591,7 +591,8 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
 
                     result = parser_parse_assignment_statement(parser, ts, expr);
                 }
-                else if (parser_is_add_op(ts) && ts->peek_token(1).kind == TOK_EQ)
+                else if ((parser_is_add_op(ts) || parser_is_mul_op(ts)) &&
+                         ts->peek_token(1).kind == TOK_EQ)
                 {
                     assert(expr->kind == Expression_PTN_Kind::IDENTIFIER ||
                            expr->kind == Expression_PTN_Kind::DOT);
@@ -925,7 +926,17 @@ Statement_PTN *parser_parse_self_assignment_statement(Parser *parser, Token_Stre
     {
         op = parser_parse_add_op(ts);
     }
+    else if (parser_is_mul_op(ts))
+    {
+        op = parser_parse_mul_op(ts);
+    }
     else assert(false);
+
+    assert(op == BINOP_ADD ||
+           op == BINOP_SUB ||
+           op == BINOP_MUL ||
+           op == BINOP_DIV ||
+           op == BINOP_REMAINDER);
 
     if (!parser_expect_token(parser, ts, TOK_EQ))
     {
