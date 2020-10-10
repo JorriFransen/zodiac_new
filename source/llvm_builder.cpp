@@ -388,8 +388,7 @@ namespace Zodiac
 
                 llvm::Value *ret_val =
                     builder->llvm_builder->CreateCall(func.llvm_func,
-                                                       { args.data, (size_t)args.count },
-                                                       "");
+                                                       { args.data, (size_t)args.count });
 
 
                 if (!(func.bc_func->ast_decl->type->function.return_type == Builtin::type_void))
@@ -1478,7 +1477,7 @@ namespace Zodiac
                 llvm::Type *arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
                 auto syscall_num = llvm::ConstantInt::get(arg_type, 60, true);
                 llvm::Value *args[2] = { syscall_num, val };
-                builder->llvm_builder->CreateCall(asm_val, { args, 2 }, "");
+                builder->llvm_builder->CreateCall(asm_fn_type, asm_val, { args, 2 });
 
                 builder->llvm_builder->CreateUnreachable();
 
@@ -1492,7 +1491,11 @@ namespace Zodiac
                     builder->llvm_module->getFunction("ExitProcess");
                 assert(exitprocess_func);
 
-                builder->llvm_builder->CreateCall(exitprocess_func, { &val, 1}, "");
+                auto fn_type =
+                    static_cast<llvm::FunctionType *>(exitprocess_func->getType());
+
+                builder->llvm_builder->CreateCall(fn_type, exitprocess_func,
+                                                  { &val, 1});
                 builder->llvm_builder->CreateUnreachable();
                 break;
             }
@@ -1558,10 +1561,9 @@ namespace Zodiac
 #ifndef NDEBUG
         llvm::Value *result =
 #endif
-            builder->llvm_builder->CreateCall(asm_val,
+            builder->llvm_builder->CreateCall(asm_fn_type, asm_val,
                                                { llvm_args.data,
-                                                 (size_t)llvm_args.count },
-                                               "");
+                                                 (size_t)llvm_args.count });
         
         assert(result);
 
