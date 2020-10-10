@@ -3,8 +3,6 @@
 #include "allocator.h"
 #include "bytecode.h"
 
-#include <llvm-c/Core.h>
-
 #include <llvm/IR/IRBuilder.h>
 
 namespace Zodiac
@@ -27,12 +25,9 @@ namespace Zodiac
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
 
-        LLVMModuleRef llvm_module;
-        LLVMBuilderRef llvm_builder;
-
-        llvm::LLVMContext *llvm_context = nullptr;
-        llvm::Module *_llvm_module = nullptr;
-        llvm::IRBuilder<> *_llvm_builder = nullptr;
+        llvm::LLVMContext llvm_context;
+        llvm::Module *llvm_module = nullptr;
+        llvm::IRBuilder<> *llvm_builder = nullptr;
 
         Array<LLVM_Function> functions = {};
 
