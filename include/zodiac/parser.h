@@ -84,7 +84,10 @@ bool parser_match_token(Token_Stream *ts, Token_Kind kind);
 bool parser_is_token(Token_Stream *ts, Token_Kind kind);
 
 bool parser_is_cmp_op(Token_Stream *ts);
+
+bool parser_is_add_op(const Token &token);
 bool parser_is_add_op(Token_Stream *ts);
+
 bool parser_is_mul_op(Token_Stream *ts);
 
 Unary_Operator parser_parse_unary_op(Token_Stream *ts);

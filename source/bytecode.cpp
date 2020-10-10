@@ -741,7 +741,44 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY:
+            {
+                return bytecode_emit_unary_expression(builder, expression);
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                auto op_expr = expression->post_fix.operand_expression;
+                Bytecode_Value *operand_val = bytecode_emit_expression(builder, op_expr);
+
+                auto one_val = bytecode_emit_integer_literal(builder, op_expr->type, 1);
+
+                if (expression->post_fix.op == BINOP_ADD)
+                {
+                    bytecode_emit_instruction(builder, Bytecode_Instruction::ADD);
+                }
+                else if (expression->post_fix.op == BINOP_SUB)
+                {
+                    bytecode_emit_instruction(builder, Bytecode_Instruction::SUB);
+                }
+                else assert(false);
+
+                bytecode_emit_size_spec(builder, op_expr->type);
+                bytecode_emit_32(builder, operand_val->local_index);
+                bytecode_emit_32(builder, one_val->local_index);
+
+                auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                                 op_expr->type);
+                bytecode_push_local_temporary(builder, result);
+
+                auto lval = bytecode_emit_lvalue(builder, op_expr);
+
+                bytecode_emit_store(builder, lval, result);
+
+                return operand_val;
+                break; 
+            }
 
             case AST_Expression_Kind::CALL:
             {
@@ -1037,6 +1074,37 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_emit_unary_expression(Bytecode_Builder *builder,
+                                                   AST_Expression *expr)
+    {
+        auto operand_val = bytecode_emit_expression(builder, expr->unary.operand_expression);
+
+        AST_Type *result_type = nullptr;
+
+        switch (expr->unary.op)
+        {
+            case UNOP_INVALID: assert(false);
+            case UNOP_DEREF: assert(false);
+
+            case UNOP_MINUS:
+            {
+                result_type = expr->type;
+
+                bytecode_emit_instruction(builder, Bytecode_Instruction::NEG);
+                bytecode_emit_size_spec(builder, expr->type);
+                bytecode_emit_32(builder, operand_val->local_index);
+
+                break;
+            }
+        }
+
+        assert(result_type);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, result_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident)
     {
         assert(builder);
@@ -1186,6 +1254,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
@@ -1641,6 +1710,21 @@ namespace Zodiac
                                          Builtin::type_ptr_u8);
         bytecode_push_local_temporary(builder, result);
         return result;
+    }
+
+    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest,
+                             Bytecode_Value *value)
+    {
+        switch (dest->kind)
+        {
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                bytecode_emit_storel(builder, dest, value);
+                break;
+            }
+            
+            default: assert(false);
+        }
     }
 
     void bytecode_emit_storeg(Bytecode_Builder *builder, Bytecode_Value *dest,
@@ -3062,6 +3146,18 @@ namespace Zodiac
                 bytecode_print_size_spec(sb, size_spec);
                 string_builder_appendf(sb, " %%%" PRIu32 " %%%" PRIu32, lhs_idx, rhs_idx);
                 bci->local_temp_index += 1;
+                break;
+            }
+
+            case Bytecode_Instruction::NEG:
+            {
+                auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+
+                auto op_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRIu64 " = NEG ", bci->local_temp_index++);
+                bytecode_print_size_spec(sb, size_spec);
+                string_builder_appendf(sb, " %%%" PRIu32, op_idx);
                 break;
             }
 

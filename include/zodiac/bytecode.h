@@ -46,15 +46,17 @@ namespace Zodiac
         MUL             = 0x1D,
         DIV             = 0x1E,
 
-        JUMP            = 0x1F,
-        JUMP_IF         = 0x20,
-        SWITCH          = 0x21,
-        CAST_INT        = 0x22,
-        CAST_ENUM       = 0x23,
-        CAST_FLOAT      = 0x24,
-        SYSCALL         = 0x25,
-        AGG_OFFSET_PTR  = 0x26,
-        ARR_OFFSET_PTR  = 0x27,
+        NEG             = 0x1F,
+
+        JUMP            = 0x20,
+        JUMP_IF         = 0x21,
+        SWITCH          = 0x22,
+        CAST_INT        = 0x23,
+        CAST_ENUM       = 0x24,
+        CAST_FLOAT      = 0x25,
+        SYSCALL         = 0x26,
+        AGG_OFFSET_PTR  = 0x27,
+        ARR_OFFSET_PTR  = 0x28,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -260,6 +262,8 @@ namespace Zodiac
                                                           AST_Expression *expression);
     Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder,
                                                     AST_Expression *expr);
+    Bytecode_Value *bytecode_emit_unary_expression(Bytecode_Builder *builder,
+                                                   AST_Expression *expr);
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *lvalue_expr);
     Bytecode_Value *bytecode_emit_addrof(Bytecode_Builder *builder, Bytecode_Value *lvalue);
@@ -295,6 +299,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
     Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder, Bytecode_Value *param);
     Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const Atom &atom);
+    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest,
+                             Bytecode_Value *value);
     void bytecode_emit_storeg(Bytecode_Builder *builder, Bytecode_Value *dest,
                               Bytecode_Value *value);
     void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,

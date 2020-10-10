@@ -1402,6 +1402,18 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             }
             else assert(false);
         }
+        else if (parser_is_add_op(ts) && parser_is_add_op(ts->peek_token(1)))
+        {
+            auto add_op = parser_parse_add_op(ts);
+            auto end_fp = ts->current_token().end_file_pos;
+            auto add_op2 = parser_parse_add_op(ts);
+
+            assert(add_op == add_op2);
+            assert(add_op == BINOP_ADD || add_op == BINOP_SUB);
+
+            result = new_postfix_expression_ptn(parser->allocator, add_op, result,
+                                                begin_fp, end_fp);
+        }
         else
         {
             break;
@@ -1751,10 +1763,15 @@ bool parser_is_cmp_op(Token_Stream *ts)
 
 }
 
+bool parser_is_add_op(const Token &token)
+{
+    return token.kind == TOK_PLUS || token.kind == TOK_MINUS;
+}
+
 bool parser_is_add_op(Token_Stream *ts)
 {
     auto ct = ts->current_token();
-    return ct.kind == TOK_PLUS || ct.kind == TOK_MINUS;
+    return parser_is_add_op(ct);
 }
 
 bool parser_is_mul_op(Token_Stream *ts)
@@ -1776,6 +1793,12 @@ Unary_Operator parser_parse_unary_op(Token_Stream *ts)
         case TOK_LT:
         {
             result = UNOP_DEREF;
+            break;
+        }
+
+        case TOK_MINUS:
+        {
+            result = UNOP_MINUS;
             break;
         }
 

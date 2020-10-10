@@ -125,6 +125,13 @@ namespace Zodiac
                     scope_populate_type_spec_ast(allocator, ast_decl->variable.type_spec,
                                                  parent_scope);
                 }
+
+                if (ast_decl->variable.init_expression)
+                {
+                    scope_populate_expression_ast(allocator,
+                                                  ast_decl->variable.init_expression,
+                                                  parent_scope);
+                }
                 break;
             }
 
@@ -135,6 +142,10 @@ namespace Zodiac
                     scope_populate_type_spec_ast(allocator, ast_decl->constant.type_spec,
                                                  parent_scope);
                 }
+
+                scope_populate_expression_ast(allocator,
+                                              ast_decl->constant.init_expression,
+                                              parent_scope);
                 break;
             }
 
@@ -406,14 +417,25 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY:
             {
-                scope_populate_expression_ast(allocator, ast_expr->binary.lhs, parent_scope);
-                scope_populate_expression_ast(allocator, ast_expr->binary.rhs, parent_scope);
+                scope_populate_expression_ast(allocator, ast_expr->binary.lhs,
+                                              parent_scope);
+                scope_populate_expression_ast(allocator, ast_expr->binary.rhs,
+                                              parent_scope);
                 break;
             }
 
             case AST_Expression_Kind::UNARY: 
             {
-                scope_populate_expression_ast(allocator, ast_expr->unary.operand_expression,
+                scope_populate_expression_ast(allocator,
+                                              ast_expr->unary.operand_expression,
+                                              parent_scope);
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                scope_populate_expression_ast(allocator,
+                                              ast_expr->post_fix.operand_expression,
                                               parent_scope);
                 break;
             }
@@ -427,7 +449,8 @@ namespace Zodiac
                 for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++)
                 {
                     assert(ast_expr->compound.expressions[i]);
-                    scope_populate_expression_ast(allocator, ast_expr->compound.expressions[i],
+                    scope_populate_expression_ast(allocator,
+                                                  ast_expr->compound.expressions[i],
                                                   parent_scope);
                 }
                 break;
@@ -445,10 +468,10 @@ namespace Zodiac
             case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::INTEGER_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::FLOAT_LITERAL: break;
 
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
 
             case AST_Expression_Kind::RANGE:

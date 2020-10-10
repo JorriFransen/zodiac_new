@@ -1184,7 +1184,30 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY:
+            {
+                result = true;
+                if (!try_resolve_identifiers(resolver,
+                                             ast_expr->unary.operand_expression,
+                                             scope))
+                {
+                    result = false;
+                }
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                result = true;
+                if (!try_resolve_identifiers(resolver,
+                                             ast_expr->post_fix.operand_expression,
+                                             scope))
+                {
+                    result = false;
+                }
+
+                break;
+            }
 
             case AST_Expression_Kind::CALL:
             {
@@ -2610,7 +2633,49 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY:
+            {
+                result = true;
+
+                auto op_expr = ast_expr->unary.operand_expression;
+                if (try_resolve_types(resolver, op_expr, scope))
+                {
+                    if (ast_expr->unary.op == UNOP_MINUS)
+                    {
+                        assert(op_expr->type->kind == AST_Type_Kind::INTEGER);
+                        assert(op_expr->type->integer.sign);
+                        ast_expr->type = op_expr->type;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
+                }
+                else
+                {
+                    result = false;
+                }
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                result = true;
+
+                auto operand_expr = ast_expr->post_fix.operand_expression;
+
+                if (try_resolve_types(resolver, operand_expr, scope))
+                {
+                    assert(operand_expr->type);
+                    assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
+                    ast_expr->type = operand_expr->type;
+                }
+                else
+                {
+                    result = false;
+                }
+                break;
+            }
 
             case AST_Expression_Kind::CALL:
             {
@@ -4040,7 +4105,19 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY:
+            {
+                auto op_expr = expr->unary.operand_expression;
+                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                auto op_expr = expr->post_fix.operand_expression;
+                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
+                break;
+            }
 
             case AST_Expression_Kind::CALL:
             {
@@ -4222,6 +4299,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
@@ -4369,14 +4447,22 @@ namespace Zodiac
                 auto lhs = expr->binary.lhs;
                 auto rhs = expr->binary.rhs;
 
-                is_const = ((lhs->flags & AST_EXPR_FLAG_CONST) &&
-                            (rhs->flags & AST_EXPR_FLAG_CONST));
+                is_const = ((lhs->expr_flags & AST_EXPR_FLAG_CONST) &&
+                            (rhs->expr_flags & AST_EXPR_FLAG_CONST));
                 break;
             }
 
             case AST_Expression_Kind::UNARY:
             {
-                assert(false);
+                auto op_expr = expr->unary.operand_expression;
+                is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                auto op_expr = expr->post_fix.operand_expression;
+                is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
                 break;
             }
 

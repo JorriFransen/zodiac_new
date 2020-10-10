@@ -5,7 +5,42 @@ main :: func () -> s64
 {
     std.println("opassign test");
 
+    test_opassign();
+    test_pre_inc();
+
+    return 0;
+}
+
+test_pre_inc :: func ()
+{
+    x := 0;
+    y := x++;
+    
     std.println("x := 0;");
+    std.println("y := x++;");
+
+    std.print("x = ");
+    std.print_num(x);
+    std.print("\ny = ");
+    std.print_num(y);
+
+    std.print("\n");
+
+    x = y--; 
+    std.println("x = y--");
+    std.print("x = ");
+    std.print_num(x);
+    std.print("\ny = ");
+    std.print_num(y);
+
+    std.print("\n");
+
+    return;
+}
+
+test_opassign :: func ()
+{
+    std.println("\nx := 0;");
     x := 0;
     std.print_num(x);
 
@@ -29,10 +64,11 @@ main :: func () -> s64
     x %= 3;
     std.print_num(x);
 
-    std.print("\n");
+    std.print("\n\n");
 
-    return 0;
+    return;
 }
+
 
 #naked #noreturn _start :: func ()
 {

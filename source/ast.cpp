@@ -833,6 +833,17 @@ namespace Zodiac
                 break;
             }
 
+            case Expression_PTN_Kind::POST_FIX:
+            {
+                auto operand_expr =
+                    ast_create_expression_from_ptn(allocator,
+                                                   ptn->post_fix.operand_expression);
+                assert(operand_expr);
+                return ast_postfix_expression_new(allocator, ptn->post_fix.op,
+                                                  operand_expr, begin_fp, end_fp);
+                break;
+            }
+
             case Expression_PTN_Kind::DOT:
             {
                 auto ast_parent_expr = ast_create_expression_from_ptn(allocator,
@@ -1107,6 +1118,8 @@ namespace Zodiac
 
             case Expression_PTN_Kind::BINARY: assert(false);
             case Expression_PTN_Kind::UNARY: assert(false);
+
+            case Expression_PTN_Kind::POST_FIX: assert(false);
 
             case Expression_PTN_Kind::DOT:
             {
@@ -1638,6 +1651,22 @@ namespace Zodiac
 
         result->unary.op = op;
         result->unary.operand_expression = operand_expr;
+
+        return result;
+    }
+
+    AST_Expression *ast_postfix_expression_new(Allocator *allocator, Binary_Operator op,
+                                               AST_Expression *operand_expr, 
+                                               const File_Pos &begin_fp,
+                                               const File_Pos &end_fp)
+    {
+        assert(op == BINOP_ADD || op == BINOP_SUB);
+
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::POST_FIX,
+                                         begin_fp, end_fp);
+
+        result->post_fix.op = op;
+        result->post_fix.operand_expression = operand_expr;
 
         return result;
     }
@@ -2557,9 +2586,23 @@ namespace Zodiac
                 {
                     case UNOP_INVALID: assert(false); break;
                     case UNOP_DEREF: printf("<"); break;
+                    case UNOP_MINUS: printf("-"); break;
                 }
 
                 ast_print_expression(ast_expr->unary.operand_expression, 0);
+                break;
+            }
+
+            case AST_Expression_Kind::POST_FIX:
+            {
+                ast_print_expression(ast_expr->post_fix.operand_expression, 0);
+
+                if (ast_expr->post_fix.op == BINOP_ADD) printf("++");
+                else if (ast_expr->post_fix.op == BINOP_SUB) printf("--");
+                else
+                {
+                    assert(false);
+                }
                 break;
             }
 

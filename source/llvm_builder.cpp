@@ -1090,6 +1090,25 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::NEG:
+            {
+                auto size_spec =
+                    llvm_fetch_from_bytecode<Bytecode_Size_Specifier>(func_context->bc_block,
+                                                                      &func_context->ip);
+                auto op_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                 &func_context->ip);
+
+                auto ast_type = bytecode_type_from_size_spec(size_spec);
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, ast_type);
+
+                llvm::Value *op_val = builder->temps[op_idx];
+                llvm::Value *zero_val = llvm::Constant::getNullValue(llvm_type);
+
+                llvm::Value *result = builder->llvm_builder->CreateSub(zero_val, op_val);
+                llvm_push_temporary(builder, result);
+                break;
+            }
+
             case Bytecode_Instruction::JUMP:
             {
                 auto block_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,

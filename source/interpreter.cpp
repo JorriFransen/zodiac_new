@@ -1123,6 +1123,55 @@ namespace Zodiac
                    break;
                }
 
+                
+                case Bytecode_Instruction::NEG:
+                {
+                    auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
+                    auto val_idx = interpreter_fetch<uint32_t>(interp);
+                    auto val = interpreter_load_temporary(interp, val_idx);
+                    auto result_val = interpreter_push_temporary(interp, val->type);
+
+                    switch (size_spec)
+                    {
+                        case Bytecode_Size_Specifier::INVALID: assert(false);
+                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::FLOAT_FLAG: assert(false);
+                        case Bytecode_Size_Specifier::BIT_SIZE_MASK: assert(false);
+                        case Bytecode_Size_Specifier::U8: assert(false);
+                        case Bytecode_Size_Specifier::U16: assert(false);
+                        case Bytecode_Size_Specifier::U32: assert(false);
+                        case Bytecode_Size_Specifier::R32: assert(false);
+                        case Bytecode_Size_Specifier::U64: assert(false);
+                        case Bytecode_Size_Specifier::R64: assert(false);
+
+                        case Bytecode_Size_Specifier::S8:
+                        {
+                            result_val->value.integer.s8 = -val->value.integer.s8;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::S16:
+                        {
+                            result_val->value.integer.s16 = -val->value.integer.s16;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::S32:
+                        {
+                            result_val->value.integer.s32 = -val->value.integer.s32;
+                            break;
+                        }
+
+                        case Bytecode_Size_Specifier::S64:
+                        {
+                            result_val->value.integer.s64 = -val->value.integer.s64;
+                            break;
+                        }
+                    }
+
+                    break;
+                }
+
                case Bytecode_Instruction::JUMP: 
                {
                    auto block_idx = interpreter_fetch<uint32_t>(interp);

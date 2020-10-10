@@ -28,6 +28,8 @@ namespace Zodiac
         UNOP_INVALID,
 
         UNOP_DEREF,
+
+        UNOP_MINUS,
     };
 
     bool binop_is_cmp(Binary_Operator op);
