@@ -1,0 +1,15 @@
+
+#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
+
+mainCRTStartup :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+
+
+main :: func () -> s64
+{
+    // @exit(111);
+    return 41;
+}

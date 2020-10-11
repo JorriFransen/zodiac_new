@@ -1368,6 +1368,7 @@ namespace Zodiac
 
                case Bytecode_Instruction::SYSCALL:
                {
+#ifdef linux
                    auto arg_count = interpreter_fetch<uint32_t>(interp);
                    Array<int64_t> args = {};
                    array_init(interp->allocator, &args, arg_count);
@@ -1383,6 +1384,9 @@ namespace Zodiac
                    array_free(&args);
 
                    for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack);
+#else
+                   assert(false); // Not supported on windows.
+#endif
                    break;
                }
 

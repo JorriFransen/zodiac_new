@@ -3015,6 +3015,12 @@ namespace Zodiac
         }
         else if (ident_atom == Builtin::atom_syscall)
         {
+#ifndef linux
+            resolver_report_error(resolver, Resolve_Error_Kind::UNSUPPORTED,
+                                  call_expr, "Syscall is only supported on linux");
+            return false;
+#endif
+
             assert(args.count >= 1);
 
             bool arg_res = true;

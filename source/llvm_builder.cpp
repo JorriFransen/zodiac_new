@@ -14,6 +14,8 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/FileSystem.h>
 
+#include <llvm-c/Core.h>
+
 #include <stdio.h>
 
 #include <tracy/Tracy.hpp>
@@ -178,16 +180,16 @@ namespace Zodiac
         auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/bin/Hostx64/x64/link.exe");
 
         string_builder_append(sb, linker_path.data);
-        //string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
         string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
         string_builder_append(sb, " kernel32.lib");
         string_builder_append(sb, " msvcrtd.lib");
         string_builder_appendf(sb, " %s.o", output_file_name);
 
-        auto arg_str = string_builder_to_string(allocator, sb);
+        auto arg_str = string_builder_to_string(builder->allocator, sb);
         if (print_command) printf("Running link command: %s\n", arg_str.data);
-        auto result = execute_process(allocator, {}, arg_str);
-        free(allocator, arg_str.data);
+        auto result = execute_process(builder->allocator, {}, arg_str);
+        free(builder->allocator, arg_str.data);
 
         string_builder_free(sb);
         
@@ -1510,9 +1512,15 @@ namespace Zodiac
                     builder->llvm_module->getFunction("ExitProcess");
                 assert(exitprocess_func);
 
-                auto fn_type =
-                    static_cast<llvm::FunctionType *>(exitprocess_func->getType());
 
+                auto fn_ptr_type = exitprocess_func->getType();
+                assert(fn_ptr_type->isPointerTy());
+                auto fn_type =
+                    static_cast<llvm::FunctionType *>
+                    (fn_ptr_type->getPointerElementType());
+
+                auto arg_type = llvm_type_from_ast(builder, Builtin::type_u32);
+                val = builder->llvm_builder->CreateIntCast(val, arg_type, false);
                 builder->llvm_builder->CreateCall(fn_type, exitprocess_func,
                                                   { &val, 1});
                 builder->llvm_builder->CreateUnreachable();

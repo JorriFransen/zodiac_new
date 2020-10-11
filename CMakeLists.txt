@@ -49,7 +49,6 @@ add_executable(zodiac source/main.cpp)
 target_include_directories(zodiac PRIVATE include/zodiac)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis x86codegen x86AsmParser)
-#message("Linking with llvm libs: " ${llvm_libs})
 
 if (${TRACY_ENABLE})
     message("-- Tracy is enabled")
@@ -65,6 +64,10 @@ if(MSVC)
     target_compile_options(zodiac PRIVATE /W3 /WX)
 
     set(platform_libs shlwapi.lib)
+
+    # add_definitions(-D_DEBUG)
+    # add_definitions(-D_ITERATOR_DEBUG_LEVEL=2) 
+    # set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
 else()
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -pedantic -Werror)
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -Werror)

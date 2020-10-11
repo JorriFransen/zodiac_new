@@ -21,6 +21,8 @@ namespace Zodiac
         MISMATCHING_TYPES,
         ASSIGNING_TO_CONST,
         INCOMPLETE_SWITCH,
+
+        UNSUPPORTED,
     };
 
     struct Resolve_Error

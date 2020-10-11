@@ -48,7 +48,7 @@ int main(int argc, char **argv)
 
     if (options.run_bytecode)
     {
-       Interpreter interp;
+        Interpreter interp;
         interpreter_init(ca, &interp, &build_data);
 
         interpreter_execute_entry(&interp, &resolver.bytecode_builder.program);

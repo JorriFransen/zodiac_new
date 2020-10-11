@@ -48,7 +48,7 @@ Windows build
            Choose between Debug and Release for -DCMAKE_BUILD_TYPE=
      - Build zodiac
        - Start msvc 64 bit dev shell
-       - Invoke cmake with -G ninja and the path to clan-cl like with the llvm build
+       - Invoke cmake with -G ninja and the path to clang-cl like with the llvm build
        - Match the -DCMAKE_BUILD_TYPE= option with the llvm build
          (check if mismatch is possible like on linux)
 

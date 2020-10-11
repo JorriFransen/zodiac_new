@@ -34,6 +34,14 @@ const String os_get_file_name(Allocator *allocator, const String &path)
     return string_copy(allocator, path, start_idx, path.length - start_idx);
 }
 
+const String os_get_file_dir(Allocator *allocator, const String &path)
+{
+    auto end_idx = string_last_index_of(path, '\\');
+    if (end_idx == -1) assert(false);
+
+    return string_copy(allocator, path, 0, end_idx + 1);
+}
+
 const String os_get_absolute_path(Allocator *allocator, const String& path)
 {
     auto size = GetFullPathNameA(path.data, 0, nullptr, nullptr);
