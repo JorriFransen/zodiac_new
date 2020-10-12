@@ -290,6 +290,7 @@ enum class Expression_PTN_Kind
     STRING_LITERAL,
     CHAR_LITERAL,
     BOOL_LITERAL,
+    NULL_LITERAL,
 
     ARRAY_TYPE,
     POINTER_TYPE,
@@ -559,17 +560,23 @@ Expression_PTN *new_char_literal_expression_ptn(Allocator *allocator, char c,
 Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool value,
                                                    const File_Pos &begin_file_pos,
                                                    const File_Pos &end_file_pos);
+Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator, 
+                                                const File_Pos &begin_file_pos,
+                                                const File_Pos &end_file_pos);
 Expression_PTN *new_dot_expression_ptn(Allocator *allocator, Expression_PTN *parent,
-                                       Identifier_PTN *child_ident, const File_Pos &begin_file_pos,
+                                       Identifier_PTN *child_ident,
+                                       const File_Pos &begin_file_pos,
                                        const File_Pos &end_file_pos);
-Expression_PTN *new_compound_expression_ptn(Allocator *allocator, Expression_List_PTN *expr_list,
+Expression_PTN *new_compound_expression_ptn(Allocator *allocator,
+                                            Expression_List_PTN *expr_list,
                                             Expression_PTN *type_expression,
                                             const File_Pos &begin_file_pos,
                                             const File_Pos &end_file_pos);
 Expression_PTN *new_subscript_expression_ptn(Allocator *allocator,
                                              Expression_PTN *pointer_expression,
                                              Expression_PTN *index_expression,
-                                             const File_Pos &begin_fp, const File_Pos &end_fp);
+                                             const File_Pos &begin_fp,
+                                             const File_Pos &end_fp);
 Expression_PTN *new_array_type_expression_ptn(Allocator *allocator,
                                               Expression_PTN *length_expression,
                                               Expression_PTN *element_type_expression,

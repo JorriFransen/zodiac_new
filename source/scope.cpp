@@ -413,7 +413,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER:
             {
-                scope_populate_declaration_ast(allocator, ast_expr->poly_identifier.poly_type_decl,
+                scope_populate_declaration_ast(allocator,
+                                               ast_expr->poly_identifier.poly_type_decl,
                                                parent_scope);
                 break;
             }
@@ -460,7 +461,12 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL: break;
 
-            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::ADDROF:
+            {
+                scope_populate_expression_ast(allocator, ast_expr->addrof.operand_expr,
+                                              parent_scope);
+                break;
+            }
                                                 
             case AST_Expression_Kind::COMPOUND:
             {
@@ -478,7 +484,8 @@ namespace Zodiac
             {
                 scope_populate_expression_ast(allocator, ast_expr->subscript.pointer_expression,
                                               parent_scope);
-                scope_populate_expression_ast(allocator, ast_expr->subscript.index_expression,
+                scope_populate_expression_ast(allocator,
+                                              ast_expr->subscript.index_expression,
                                               parent_scope);
                 break;
             }
@@ -491,6 +498,8 @@ namespace Zodiac
             case AST_Expression_Kind::FLOAT_LITERAL: break;
 
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
+
+            case AST_Expression_Kind::NULL_LITERAL: break;
 
             case AST_Expression_Kind::RANGE:
             {

@@ -285,6 +285,7 @@ namespace Zodiac
         STRING_LITERAL,
         CHAR_LITERAL,
         BOOL_LITERAL,
+        NULL_LITERAL,
 
         RANGE,
     };
@@ -794,6 +795,10 @@ namespace Zodiac
     AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
+
+    AST_Expression *ast_null_literal_expression_new(Allocator *allocator,
+                                                    const File_Pos &begin_fp,
+                                                    const File_Pos &end_fp);
 
     AST_Expression *ast_range_expression_new(Allocator *allocator, 
                                               AST_Expression *begin_expr,

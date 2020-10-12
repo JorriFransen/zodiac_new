@@ -327,6 +327,7 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
         case Expression_PTN_Kind::STRING_LITERAL: break;
         case Expression_PTN_Kind::CHAR_LITERAL: break;
         case Expression_PTN_Kind::BOOL_LITERAL: break;;
+        case Expression_PTN_Kind::NULL_LITERAL:break;
 
         case Expression_PTN_Kind::ARRAY_TYPE:
         {
@@ -784,8 +785,18 @@ Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool va
     return result;
 }
 
+Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator, 
+                                                const File_Pos &begin_file_pos,
+                                                const File_Pos &end_file_pos)
+{
+    auto result = new_ptn<Expression_PTN>(allocator, begin_file_pos, end_file_pos);
+    result->kind = Expression_PTN_Kind::NULL_LITERAL;
+    return result;
+}
+
 Expression_PTN *new_dot_expression_ptn(Allocator *allocator, Expression_PTN *parent,
-                                       Identifier_PTN *child_ident, const File_Pos &begin_fp,
+                                       Identifier_PTN *child_ident,
+                                       const File_Pos &begin_fp,
                                        const File_Pos &end_fp)
 {
     auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
@@ -958,7 +969,8 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
 
             assert(new_identifier);
 
-            return new_identifier_expression_ptn(allocator, new_identifier, begin_fp, end_fp);
+            return new_identifier_expression_ptn(allocator, new_identifier, begin_fp,
+                                                 end_fp);
         }
 
         case Expression_PTN_Kind::BINARY: assert(false);
@@ -973,6 +985,8 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
         case Expression_PTN_Kind::STRING_LITERAL: assert(false);
         case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
         case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
+        case Expression_PTN_Kind::NULL_LITERAL: assert(false);
+
         case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
         case Expression_PTN_Kind::POINTER_TYPE: assert(false);
         case Expression_PTN_Kind::POLY_TYPE: assert(false);
@@ -1396,14 +1410,11 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)
             {
                 auto mem_decl = decl->structure.member_declarations[i];
-                if (mem_decl->kind == Declaration_PTN_Kind::FUNCTION)
-                {
-                    printf("\n");
-                }
+                printf("\n");
                 print_declaration_ptn(mem_decl, indent + 4, false);
             }
             print_indent(indent);
-            printf("}\n");
+            printf("\n}\n");
             if (newline) printf("\n");
             break;
         }
@@ -1429,7 +1440,9 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
 
         case Declaration_PTN_Kind::TYPEDEF:
         {
-            assert(false);
+            print_indent(indent);
+            printf("%s :: typedef ", decl->identifier->atom.data);
+            print_expression_ptn(decl->typedef_decl.type_expression, 0); 
             break;
         }
     }
@@ -1636,6 +1649,13 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         {
             print_indent(indent);
             printf("%s", expression->bool_literal.value ? "true" : "false");
+            break;
+        }
+
+        case Expression_PTN_Kind::NULL_LITERAL:
+        {
+            print_indent(indent);
+            printf("null");
             break;
         }
 

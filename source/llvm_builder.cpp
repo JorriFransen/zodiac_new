@@ -561,11 +561,26 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::LOAD_NULL:
+            {
+                auto type_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                auto type = (*builder->bc_program->types)[type_idx];
+                assert(type->kind == AST_Type_Kind::POINTER);
+
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
+                llvm::Value *llvm_null_val = llvm::Constant::getNullValue(llvm_type);
+                llvm_push_temporary(builder, llvm_null_val);
+                break;
+            }
+            
             case Bytecode_Instruction::STOREG:
             {
 
-                auto glob_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
-                                                                     &func_context->ip);
+                auto glob_index =
+                    llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                       &func_context->ip);
                 auto val_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
 
@@ -616,6 +631,17 @@ namespace Zodiac
                                                                     &func_context->ip);
                 llvm::AllocaInst *alloca = builder->allocas[alloc_idx];
                 llvm_push_temporary(builder, alloca);
+                break;
+            }
+
+            case Bytecode_Instruction::DEREF:
+            {
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                 &func_context->ip);
+                llvm::Value *val = builder->temps[val_idx];
+
+                llvm::Value *deref_val = builder->llvm_builder->CreateLoad(val, "");
+                llvm_push_temporary(builder, deref_val);
                 break;
             }
 
@@ -1678,10 +1704,11 @@ namespace Zodiac
 
                 bool is_vararg = false;
 
-                llvm::Type *result = llvm::FunctionType::get(llvm_ret_type,
-                                                             { llvm_arg_types.data,
-                                                               (size_t)llvm_arg_types.count },
-                                                             is_vararg);
+                llvm::Type *result =
+                    llvm::FunctionType::get(llvm_ret_type,
+                                            { llvm_arg_types.data,
+                                              (size_t)llvm_arg_types.count },
+                                            is_vararg);
 
                 if (llvm_arg_types.count)
                 {

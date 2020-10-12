@@ -1320,6 +1320,7 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
+            case AST_Expression_Kind::NULL_LITERAL:
             {
                 result = true;
                 break;
@@ -2692,6 +2693,11 @@ namespace Zodiac
                         assert(op_expr->type->integer.sign);
                         ast_expr->type = op_expr->type;
                     }
+                    else if (ast_expr->unary.op == UNOP_DEREF)
+                    {
+                        assert(op_expr->type->kind == AST_Type_Kind::POINTER);
+                        ast_expr->type = op_expr->type->pointer.base;
+                    }
                     else
                     {
                         assert(false);
@@ -2977,6 +2983,16 @@ namespace Zodiac
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 ast_expr->type = Builtin::type_bool;
+                result = true;
+                break;
+            }
+
+            case AST_Expression_Kind::NULL_LITERAL:
+            {
+                assert(suggested_type);
+                assert(suggested_type->kind == AST_Type_Kind::POINTER);
+
+                ast_expr->type = suggested_type;
                 result = true;
                 break;
             }
@@ -4267,9 +4283,11 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
+            case AST_Expression_Kind::NULL_LITERAL:
             {
                 break;
             }
+
 
             case AST_Expression_Kind::RANGE:
             {
@@ -4404,6 +4422,8 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::NULL_LITERAL: assert(false);
+
             case AST_Expression_Kind::RANGE: assert(false);
         }
 
@@ -4577,7 +4597,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST: 
             {
-                is_const = (expr->cast.operand_expression->expr_flags & AST_EXPR_FLAG_CONST);
+                is_const =
+                    (expr->cast.operand_expression->expr_flags & AST_EXPR_FLAG_CONST);
                 break;
             }
 
@@ -4586,6 +4607,8 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+
+            case AST_Expression_Kind::NULL_LITERAL: assert(false);
 
             case AST_Expression_Kind::RANGE:
             {

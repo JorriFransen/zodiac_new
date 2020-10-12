@@ -1,7 +1,4 @@
 
-addrof (*) expressions
-null literals
-
 @sizeof() / @offsetof
 
 unions

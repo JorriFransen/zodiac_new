@@ -903,6 +903,13 @@ namespace Zodiac
                 return bytecode_emit_load_str(builder, expression->string_literal.atom);
                 break;
             }
+
+            case AST_Expression_Kind::NULL_LITERAL:
+            {
+                return bytecode_emit_load_null(builder, expression->type);
+                break;
+            }
+
             case AST_Expression_Kind::RANGE: assert(false);
         }
 
@@ -1112,14 +1119,23 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_unary_expression(Bytecode_Builder *builder,
                                                    AST_Expression *expr)
     {
-        auto operand_val = bytecode_emit_expression(builder, expr->unary.operand_expression);
+        auto operand_val = bytecode_emit_expression(builder,
+                                                    expr->unary.operand_expression);
 
         AST_Type *result_type = nullptr;
 
         switch (expr->unary.op)
         {
             case UNOP_INVALID: assert(false);
-            case UNOP_DEREF: assert(false);
+
+            case UNOP_DEREF:
+            {
+                result_type = expr->type;
+                
+                bytecode_emit_instruction(builder, Bytecode_Instruction::DEREF);
+                bytecode_emit_32(builder, operand_val->local_index);
+                break;
+            }
 
             case UNOP_MINUS:
             {
@@ -1335,6 +1351,8 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::NULL_LITERAL: assert(false);
+
             case AST_Expression_Kind::RANGE: assert(false);
         }
 
@@ -1342,7 +1360,8 @@ namespace Zodiac
         return nullptr;
     }
 
-    Bytecode_Value *bytecode_emit_addrof(Bytecode_Builder *builder, Bytecode_Value *lvalue)
+    Bytecode_Value *bytecode_emit_addrof(Bytecode_Builder *builder,
+                                         Bytecode_Value *lvalue)
     {
         if (lvalue->kind == Bytecode_Value_Kind::ALLOCL)
         {
@@ -1674,7 +1693,8 @@ namespace Zodiac
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADG);
         bytecode_emit_32(builder, glob->glob_index);
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, glob->type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         glob->type);
         bytecode_push_local_temporary(builder, result);
 
         return result;
@@ -1687,13 +1707,15 @@ namespace Zodiac
         assert(allocl->type->kind == AST_Type_Kind::INTEGER ||
                allocl->type->kind == AST_Type_Kind::FLOAT ||
                allocl->type->kind == AST_Type_Kind::BOOL ||
+               allocl->type->kind == AST_Type_Kind::POINTER ||
                allocl->type->kind == AST_Type_Kind::ENUM ||
                allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::LOADL);
         bytecode_emit_32(builder, allocl->alloc_index);
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, allocl->type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         allocl->type);
         bytecode_push_local_temporary(builder, result);
 
         return result;
@@ -1751,6 +1773,19 @@ namespace Zodiac
 
         auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
                                          Builtin::type_ptr_u8);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_load_null(Bytecode_Builder *builder, AST_Type *type)
+    {
+        assert(type->kind == AST_Type_Kind::POINTER);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::LOAD_NULL);
+        bytecode_emit_type_index(builder, type);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         type);
         bytecode_push_local_temporary(builder, result);
         return result;
     }
@@ -3086,6 +3121,15 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Instruction::LOAD_NULL:
+            {
+                /*uint32_t type_idx =*/ bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = LOAD_NULL",
+                                       bci->local_temp_index++);
+                break;
+            };
+            
             case Bytecode_Instruction::STOREG:
             {
                 uint32_t glob_index = bytecode_iterator_fetch_32(bci);
@@ -3093,7 +3137,8 @@ namespace Zodiac
 
                 auto name = bci->builder->program.globals[glob_index].value->name;
 
-                string_builder_appendf(sb, "STOREG %%%s %%%" PRIu32, name.data, val_index);
+                string_builder_appendf(sb, "STOREG %%%s %%%" PRIu32, name.data,
+                                       val_index);
                 break;
             }
 
@@ -3141,6 +3186,14 @@ namespace Zodiac
 
                 string_builder_appendf(sb, "%%%" PRIu64 " = ADDROF %%%s",
                                        bci->local_temp_index++, name.data);
+                break;
+            }
+
+            case Bytecode_Instruction::DEREF:
+            {
+                auto tmp_idx = bytecode_iterator_fetch_32(bci);
+                string_builder_appendf(sb, "%%%" PRIu64 " = DEREF %%%" PRIu32,
+                                       bci->local_temp_index++, tmp_idx);
                 break;
             }
 
