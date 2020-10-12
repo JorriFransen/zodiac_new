@@ -1392,7 +1392,8 @@ namespace Zodiac
                     {
                         assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
                                decl->kind == AST_Declaration_Kind::STRUCTURE ||
-                               decl->kind == AST_Declaration_Kind::CONSTANT);
+                               decl->kind == AST_Declaration_Kind::CONSTANT ||
+                               decl->kind == AST_Declaration_Kind::TYPEDEF);
                         ast_expr->dot.child_decl = decl;
                         result = true;
                     }
@@ -2546,6 +2547,18 @@ namespace Zodiac
                         ast_expr->type = child_decl->type; 
                         result = true;
                     }
+                    else if (child_decl->kind == AST_Declaration_Kind::TYPEDEF)
+                    {
+                        if (child_decl->type)
+                        {
+                            ast_expr->type = child_decl->type;
+                            result = true;
+                        }
+                        else
+                        {
+                            result = false;
+                        }
+                    }
                     else
                     {
                         assert(false);
@@ -2785,13 +2798,14 @@ namespace Zodiac
                         for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
                         {
                             auto arg_expr = ast_expr->call.arg_expressions[i];
-                            if (!try_resolve_types(resolver, arg_expr, scope))
+                            auto param_type = func_type->function.param_types[i];
+
+                            if (!try_resolve_types(resolver, arg_expr, param_type, scope))
                             {
                                 arg_res = false;
                             }
                             else
                             {
-                                auto param_type = func_type->function.param_types[i];
                                 assert(param_type);
                                 if (arg_res &&
                                     !(arg_expr->type == param_type))
@@ -2822,7 +2836,7 @@ namespace Zodiac
                                         result = false;
                                     }
                                 }
-                                else if (!arg_res) assert(false);
+                                else if (!arg_res) result = false;
                             }
                         }
 
@@ -3079,11 +3093,11 @@ namespace Zodiac
         }
         else if (ident_atom == Builtin::atom_syscall)
         {
-#ifndef linux
-            resolver_report_error(resolver, Resolve_Error_Kind::UNSUPPORTED,
-                                  call_expr, "Syscall is only supported on linux");
-            return false;
-#endif
+// #ifndef linux
+//             resolver_report_error(resolver, Resolve_Error_Kind::UNSUPPORTED,
+//                                   call_expr, "Syscall is only supported on linux");
+//             return false;
+// #endif
 
             assert(args.count >= 1);
 
@@ -4556,6 +4570,7 @@ namespace Zodiac
                         case AST_Declaration_Kind::FUNCTION:
                         case AST_Declaration_Kind::IMPORT:
                         case AST_Declaration_Kind::TYPE: 
+                        case AST_Declaration_Kind::TYPEDEF: 
                         case AST_Declaration_Kind::ENUM: is_const = true; break;
 
                         default: assert(false);
@@ -4663,7 +4678,7 @@ namespace Zodiac
                     } 
                     else if (type->integer.sign)
                     {
-                        assert(false);
+                        return false;
                     }
                     else
                     {

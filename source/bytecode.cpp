@@ -1433,7 +1433,13 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::BOOL: assert(false);
-            case AST_Type_Kind::POINTER: assert(false);
+
+            case AST_Type_Kind::POINTER:
+            {
+                return bytecode_emit_cast_pointer(builder, operand_expr, target_type);
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
 
@@ -1540,6 +1546,26 @@ namespace Zodiac
        
         assert(false);
         return nullptr;
+    }
+
+    Bytecode_Value *bytecode_emit_cast_pointer(Bytecode_Builder *builder,
+                                               AST_Expression *operand_expr,
+                                               AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::POINTER);
+        assert(operand_expr->type->kind == AST_Type_Kind::POINTER);
+
+        auto operand_val = bytecode_emit_expression(builder, operand_expr);
+        assert(operand_val);
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_POINTER);
+        bytecode_emit_type_index(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
     }
 
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr)
@@ -2190,6 +2216,22 @@ namespace Zodiac
             {
                 result = bytecode_emit_integer_literal(builder, expr->type,
                                                       (int8_t)expr->integer_literal.s64,
+                                                      noload);
+                break;
+            }
+
+            case 16:
+            {
+                result = bytecode_emit_integer_literal(builder, expr->type,
+                                                      expr->integer_literal.s16,
+                                                      noload);
+                break;
+            }
+
+            case 32:
+            {
+                result = bytecode_emit_integer_literal(builder, expr->type,
+                                                      expr->integer_literal.s32,
                                                       noload);
                 break;
             }
@@ -3351,6 +3393,16 @@ namespace Zodiac
                                        bci->local_temp_index++);
                 bytecode_print_size_spec(sb, size_spec); 
                 string_builder_appendf(sb, " %%%" PRIu32, val_idx);
+                break;
+            }
+
+            case Bytecode_Instruction::CAST_POINTER:
+            {
+                /*auto type_idx =*/ bytecode_iterator_fetch_32(bci);
+                auto val_idx = bytecode_iterator_fetch_32(bci);
+
+                string_builder_appendf(sb, "%%%" PRId64 " = CAST_POINTER %%%",
+                                       bci->local_temp_index, val_idx);
                 break;
             }
 

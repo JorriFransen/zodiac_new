@@ -1,5 +1,14 @@
 
-#foreign GetStdHandle :: func (handle_num: s32) -> HANDLE
-// #foreign WriteFile :: func (
+DWORD :: typedef u32;
+LPDWORD :: typedef *DWORD;
+BOOL :: typedef s64;
+HANDLE :: typedef *void;
+LPCVOID :: typedef *void;
 
-WINDOWS_STDOUT_HANDLE_NUM : s32 : -11;
+LPOVERLAPPED :: typedef *void;
+
+#foreign GetStdHandle :: func (handle_num: DWORD) -> HANDLE
+#foreign WriteFile :: func (handle: HANDLE, buffer: LPCVOID, nbyteswrite: DWORD,
+                            pnbyteswritten: LPDWORD, overlapped: LPOVERLAPPED) -> BOOL
+
+WINDOWS_STDOUT_HANDLE_NUM :: @cast(DWORD, -11);

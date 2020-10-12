@@ -5,6 +5,8 @@
 
 #include "common.h"
 
+#include <stdio.h>
+
 namespace Zodiac
 {
     void interpreter_init(Allocator *allocator, Interpreter *interp, Build_Data *build_data)
@@ -256,6 +258,13 @@ namespace Zodiac
 
                     auto func = interp->program->functions[func_index];
                     assert(func);
+
+                    if (func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
+                    {
+                        fprintf(stderr,
+                                "Calling foreign functions from bytecode is not supported yet\n");
+                        assert(false);
+                    }
 
                     interpreter_execute_function(interp, func, arg_count);
                     auto return_frame = stack_pop(&interp->stack_frames);
@@ -1439,6 +1448,11 @@ namespace Zodiac
                    }
 
                    break;
+               }
+
+               case Bytecode_Instruction::CAST_POINTER:
+               {
+                   assert(false);
                }
 
                case Bytecode_Instruction::SYSCALL:

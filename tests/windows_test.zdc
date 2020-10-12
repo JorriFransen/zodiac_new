@@ -1,4 +1,5 @@
 
+std :: import std;
 windows :: import windows;
 
 mainCRTStartup :: func ()
@@ -9,7 +10,12 @@ mainCRTStartup :: func ()
 
 main :: func () -> s64
 {
-    stdout_handle := windows.GetStdHandle(@cast(s32, windows.WINDOWS_STDOUT_HANDLE_NUM));
+    stdout_handle := windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+
+    written : windows.DWORD;
+    str := "Hello World!\n";
+    len := @cast(windows.DWORD, std.strlen(str));
+    windows.WriteFile(stdout_handle, @cast(*void, str), len, *written, null);
 
     return 41;
 }

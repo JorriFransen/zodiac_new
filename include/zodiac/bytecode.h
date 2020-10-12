@@ -56,9 +56,10 @@ namespace Zodiac
         CAST_INT        = 0x25,
         CAST_ENUM       = 0x26,
         CAST_FLOAT      = 0x27,
-        SYSCALL         = 0x28,
-        AGG_OFFSET_PTR  = 0x29,
-        ARR_OFFSET_PTR  = 0x2A,
+        CAST_POINTER    = 0x28,
+        SYSCALL         = 0x29,
+        AGG_OFFSET_PTR  = 0x2A,
+        ARR_OFFSET_PTR  = 0x2B,
     };
 
     enum class Bytecode_Size_Specifier : uint16_t
@@ -285,6 +286,10 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast_float(Bytecode_Builder *builder,
                                              AST_Expression *operand_expr,
                                              AST_Type *target_type);
+
+    Bytecode_Value *bytecode_emit_cast_pointer(Bytecode_Builder *builder,
+                                               AST_Expression *operand_expr,
+                                               AST_Type *target_type);
     
     void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr);
 

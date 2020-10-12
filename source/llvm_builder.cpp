@@ -1320,6 +1320,30 @@ namespace Zodiac
 
             }
 
+            case Bytecode_Instruction::CAST_POINTER:
+            {
+
+                auto type_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                  &func_context->ip);
+
+                auto type = (*builder->bc_program->types)[type_idx];
+
+                auto val_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
+                                                                         &func_context->ip);
+
+                llvm::Value *op_val = builder->temps[val_idx];
+
+                llvm::Type *target_type = llvm_type_from_ast(builder, type);
+
+                assert(op_val->getType()->isPointerTy());
+                assert(target_type->isPointerTy());
+
+                llvm::Value *result =
+                    builder->llvm_builder->CreatePointerCast(op_val, target_type);
+                llvm_push_temporary(builder, result);
+                break;
+            }
+
             case Bytecode_Instruction::SYSCALL:
             {
                 auto arg_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
@@ -1680,8 +1704,15 @@ namespace Zodiac
 
             case AST_Type_Kind::POINTER:
             {
-                llvm::Type *base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
-                return base_type->getPointerTo();
+                if (ast_type->pointer.base == Builtin::type_void)
+                {
+                    return llvm_type_from_ast(builder, Builtin::type_ptr_u8);
+                }
+                else
+                {
+                    llvm::Type *base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
+                    return base_type->getPointerTo();
+                }
                 break;
             }
 
