@@ -8,7 +8,7 @@ LPCVOID :: typedef *void;
 LPOVERLAPPED :: typedef *void;
 
 #foreign GetStdHandle :: func (handle_num: DWORD) -> HANDLE
-#foreign WriteFile :: func (handle: HANDLE, buffer: LPCVOID, nbyteswrite: DWORD,
+#foreign WriteFile :: func (handle: HANDLE, buffer: *u8, nbyteswrite: DWORD,
                             pnbyteswritten: LPDWORD, overlapped: LPOVERLAPPED) -> BOOL
 
 WINDOWS_STDOUT_HANDLE_NUM :: @cast(DWORD, -11);
