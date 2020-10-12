@@ -11,7 +11,8 @@
 namespace Zodiac
 {
 
-    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder, Build_Data *bd)
+    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder,
+                               Build_Data *bd)
     {
         assert(allocator);
         assert(builder);
@@ -49,8 +50,8 @@ namespace Zodiac
             {
                 if (decl->variable.init_expression)
                 {
-                    auto init_val = bytecode_emit_expression(builder,
-                                                             decl->variable.init_expression);
+                    auto init_val =
+                        bytecode_emit_expression(builder, decl->variable.init_expression);
                     assert(init_val);
 
                     auto allocl_val = bytecode_find_value_for_variable(builder, decl);
@@ -74,6 +75,8 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
+
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
@@ -1137,12 +1140,14 @@ namespace Zodiac
 
         assert(result_type);
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, result_type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         result_type);
         bytecode_push_local_temporary(builder, result);
         return result;
     }
 
-    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident)
+    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder,
+                                             AST_Identifier *ident)
     {
         assert(builder);
         assert(ident);
@@ -1178,6 +1183,8 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::FUNCTION: assert(false);
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
+
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 

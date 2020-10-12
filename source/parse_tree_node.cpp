@@ -109,6 +109,12 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             array_free(&ptn->enum_decl.members);
             break;
         }
+
+        case Declaration_PTN_Kind::TYPEDEF:
+        {
+            free_ptn(allocator, ptn->typedef_decl.type_expression);
+            break;
+        }
     }
 }
 
@@ -554,10 +560,12 @@ Declaration_PTN *new_variable_declaration_ptn(Allocator *allocator, Identifier_P
     return result;
 }
 
-Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator,
+                                            Identifier_PTN *identifier,
                                             Array<Declaration_PTN*> members,
                                             Array<Parameter_PTN*> parameters,
-                                            const File_Pos &begin_fp, const File_Pos &end_fp)
+                                            const File_Pos &begin_fp,
+                                            const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
     result->kind = Declaration_PTN_Kind::STRUCT;
@@ -570,7 +578,8 @@ Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN
 Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
                                           Identifier_PTN *identifier,
                                           Expression_PTN *type_spec_expr,
-                                          Array<PTN*> members, const File_Pos &begin_fp,
+                                          Array<PTN*> members,
+                                          const File_Pos &begin_fp,
                                           const File_Pos &end_fp)
 
 {
@@ -582,10 +591,26 @@ Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
     return result;
 }
 
-Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+
+Declaration_PTN *new_typedef_declaration_ptn(Allocator *allocator,
+                                             Identifier_PTN *identifier,
+                                             Expression_PTN *type_expr, 
+                                             const File_Pos &begin_fp, 
+                                             const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::TYPEDEF;
+    result->identifier = identifier;
+    result->typedef_decl.type_expression = type_expr;
+    return result;
+}
+
+Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator,
+                                              Identifier_PTN *identifier,
                                               Expression_PTN *type_expr,
                                               Expression_PTN *init_expr,
-                                              const File_Pos &begin_fp, const File_Pos &end_fp)
+                                              const File_Pos &begin_fp,
+                                              const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
     result->kind = Declaration_PTN_Kind::CONSTANT;
@@ -896,6 +921,12 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
         case Declaration_PTN_Kind::FUNCTION: assert(false);
         case Declaration_PTN_Kind::STRUCT: assert(false);
         case Declaration_PTN_Kind::ENUM: assert(false);
+
+        case Declaration_PTN_Kind::TYPEDEF:
+        {
+            assert(false);
+            break;
+        }
     }
 
     assert(false);
@@ -1393,6 +1424,12 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_indent(indent);
             printf("}\n");
             if (newline) printf("\n");
+            break;
+        }
+
+        case Declaration_PTN_Kind::TYPEDEF:
+        {
+            assert(false);
             break;
         }
     }

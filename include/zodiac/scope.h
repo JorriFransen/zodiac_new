@@ -41,13 +41,15 @@ namespace Zodiac
                                         Scope *parent_scope);
     void scope_populate_statement_ast(Allocator *allocator, AST_Statement *ast_stmt,
                                       Scope *parent_scope);
-    void scope_populate_expression_ast(Allocator *allocator, AST_Expression *ast_expr, Scope *scope);
+    void scope_populate_expression_ast(Allocator *allocator, AST_Expression *ast_expr,
+                                       Scope *scope);
     void scope_populate_type_spec_ast(Allocator *allocator, AST_Type_Spec *type_spec,
                                       Scope *parent_scope);
     void scope_add_declaration(Allocator *allocator, Scope *scope, AST_Declaration *adecl);
     void scope_grow(Allocator *allocator, Scope *scope);
 
-    Scope *scope_new(Allocator *allocator, Scope_Kind kind, Scope *parent, int64_t initial_cap = 4);
+    Scope *scope_new(Allocator *allocator, Scope_Kind kind, Scope *parent,
+                     int64_t initial_cap = 4);
 
     void scope_print(Scope *scope);
     void scope_print(String_Builder *sb, Scope *scope, int64_t indent = 0);
