@@ -59,7 +59,8 @@ namespace Zodiac
         return ast_module;
     }
 
-    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator, Declaration_PTN *ptn,
+    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
+                                                     Declaration_PTN *ptn,
                                                      Array<AST_Declaration*> *var_decls)
     {
         assert(allocator);
@@ -335,13 +336,26 @@ namespace Zodiac
                                                 begin_fp, ptn->self.end_file_pos);
                 break;
             }
+
+            case Declaration_PTN_Kind::TYPEDEF:
+            {
+                auto type_spec =
+                    ast_create_type_spec_from_expression_ptn(allocator,
+                                                  ptn->typedef_decl.type_expression);
+
+                return ast_typedef_declaration_new(allocator, ast_ident, type_spec,
+                                                   ast_ident->begin_file_pos,
+                                                   ptn->self.end_file_pos);
+                break;
+            }
         }
 
         assert(false);
         return nullptr;
     }
 
-    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator, Parameter_PTN *ptn, 
+    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
+                                                     Parameter_PTN *ptn, 
                                                      AST_Type_Spec *type_spec)
     {
         auto id_begin_fp = ptn->identifier->self.begin_file_pos;
@@ -1218,8 +1232,8 @@ namespace Zodiac
         return nullptr;
     }
 
-    AST_Identifier *ast_identifier_new(Allocator *allocator, Atom& atom, const File_Pos &begin_fp,
-                                       const File_Pos &end_fp)
+    AST_Identifier *ast_identifier_new(Allocator *allocator, Atom& atom,
+                                       const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         auto result = ast_node_new<AST_Identifier>(allocator, begin_fp, end_fp);
 
@@ -1239,8 +1253,10 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind, 
-                                         AST_Identifier *identifier, const File_Pos &begin_fp,
+    AST_Declaration *ast_declaration_new(Allocator *allocator,
+                                         AST_Declaration_Kind kind,
+                                         AST_Identifier *identifier,
+                                         const File_Pos &begin_fp,
                                          const File_Pos &end_fp)
     {
         auto result = ast_node_new<AST_Declaration>(allocator, begin_fp, end_fp);
@@ -1251,13 +1267,14 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_import_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_import_declaration_new(Allocator *allocator,
+                                                AST_Identifier *identifier,
                                                 AST_Expression *ident_expr,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp)
     {
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT, identifier,
-                                          begin_fp, end_fp);
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT,
+                                          identifier, begin_fp, end_fp);
 
         result->import.ident_expression = ident_expr;
         result->import.ast_module = nullptr;
@@ -1410,6 +1427,18 @@ namespace Zodiac
         result->enum_decl.member_declarations = member_decls;
         result->enum_decl.member_scope = nullptr;
 
+        return result;
+    }
+
+    AST_Declaration *ast_typedef_declaration_new(Allocator *allocator,
+                                                 AST_Identifier *identifier,
+                                                 AST_Type_Spec *type_spec,
+                                                 const File_Pos &begin_fp,
+                                                 const File_Pos &end_fp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::TYPEDEF,
+                                          identifier, begin_fp, end_fp);
+        result->typedef_decl.type_spec = type_spec;
         return result;
     }
 
@@ -2230,6 +2259,8 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
 
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
+
             case AST_Declaration_Kind::STRUCTURE:
             {
                 printf(" :: struct");
@@ -2871,6 +2902,8 @@ namespace Zodiac
                 string_builder_append(sb, " (type)");
                 break;
             }
+
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
 
             case AST_Declaration_Kind::STRUCTURE:
             {

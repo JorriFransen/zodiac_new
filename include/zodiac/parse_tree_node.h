@@ -192,6 +192,7 @@ enum class Declaration_PTN_Kind
     FUNCTION,
     STRUCT,
     ENUM,
+    TYPEDEF,
 
 };
 
@@ -238,6 +239,11 @@ struct Declaration_PTN
             Expression_PTN *type_spec;
             Array<PTN*> members;
         } enum_decl;
+
+        struct 
+        {
+            Expression_PTN *type_expression;
+        } typedef_decl;
 
         struct
         {
@@ -492,6 +498,12 @@ Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator, Identifier_PTN *
                                           Expression_PTN *type_spec_expr,
                                           Array<PTN*> members, const File_Pos &begin_fp,
                                           const File_Pos &end_fp);
+
+Declaration_PTN *new_typedef_declaration_ptn(Allocator *allocator,
+                                             Identifier_PTN *identifier,
+                                             Expression_PTN *type_expr, 
+                                             const File_Pos &begin_fp, 
+                                             const File_Pos &end_fp);
 
 Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                               Expression_PTN *type_expr,

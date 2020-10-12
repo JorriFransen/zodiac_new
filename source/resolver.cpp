@@ -803,6 +803,18 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
 
+            case AST_Declaration_Kind::TYPEDEF:
+            {
+                result = true;
+
+                if (!try_resolve_identifiers(resolver, ast_decl->typedef_decl.type_spec,
+                                             scope))
+                {
+                    result = false;
+                }
+                break;
+            }
+
             case AST_Declaration_Kind::STRUCTURE:
             {
                 assert(ast_decl->structure.parameters.count == 0);
@@ -1521,7 +1533,8 @@ namespace Zodiac
                 assert(decl);
                 assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
                        decl->kind == AST_Declaration_Kind::ENUM ||
-                       decl->kind == AST_Declaration_Kind::TYPE);
+                       decl->kind == AST_Declaration_Kind::TYPE ||
+                       decl->kind == AST_Declaration_Kind::TYPEDEF);
 
                 break;
             }
@@ -1535,7 +1548,8 @@ namespace Zodiac
             case AST_Type_Spec_Kind::DOT:
             {
                 result = true;
-                if (!try_resolve_identifiers_dot_expr(resolver, ast_ts->dot_expression, scope))
+                if (!try_resolve_identifiers_dot_expr(resolver, ast_ts->dot_expression,
+                                                      scope))
                 {
                     result = false;
                 }
@@ -1891,8 +1905,8 @@ namespace Zodiac
                         {
                             AST_Type *ac_type = inferred_return_type;
                             if (!ac_type) ac_type = Builtin::type_void;
-                            resolver_report_mismatching_types(resolver, ast_decl, ret_type,
-                                                              ac_type);
+                            resolver_report_mismatching_types(resolver, ast_decl,
+                                                              ret_type, ac_type);
                             result = false;
                         }
                     }
@@ -1902,7 +1916,8 @@ namespace Zodiac
                 {
                     if (ast_decl->decl_flags & AST_DECL_FLAG_NORETURN)
                     {
-                        assert(ast_decl->type->function.return_type == Builtin::type_void);
+                        assert(ast_decl->type->function.return_type ==
+                                Builtin::type_void);
                     }
                     assert(ast_decl->type);
                     assert(ast_decl->function.type_spec->type);
@@ -1914,6 +1929,24 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
+
+            case AST_Declaration_Kind::TYPEDEF:
+            {
+                result = true;
+                AST_Type *result_type = nullptr;
+                if (try_resolve_types(resolver, ast_decl->typedef_decl.type_spec,
+                                      scope, &result_type, nullptr))
+                {
+                    assert(result_type);
+                    ast_decl->type = result_type;
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
+                else 
+                {
+                    result = false;
+                }
+                break;
+            }
 
             case AST_Declaration_Kind::STRUCTURE:
             {
@@ -3103,12 +3136,14 @@ namespace Zodiac
                 assert(decl);
                 assert(decl->kind == AST_Declaration_Kind::STRUCTURE ||
                        decl->kind == AST_Declaration_Kind::ENUM ||
-                       decl->kind == AST_Declaration_Kind::TYPE);
+                       decl->kind == AST_Declaration_Kind::TYPE ||
+                       decl->kind == AST_Declaration_Kind::TYPEDEF);
+
                 if (decl->type)
                 {
-                *type_target = decl->type;
-                ts->type = decl->type;
-                result = true;
+                    *type_target = decl->type;
+                    ts->type = decl->type;
+                    result = true;
                 }
                 else
                 {
@@ -3120,14 +3155,15 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POINTER:
             {
                 AST_Type *base_type = nullptr;
-                result = try_resolve_types(resolver, ts->base_type_spec, scope, &base_type,
-                                           nullptr);
+                result = try_resolve_types(resolver, ts->base_type_spec, scope,
+                                           &base_type, nullptr);
                 if (result)
                 {
                     assert(base_type);
-                    *type_target = build_data_find_or_create_pointer_type(resolver->allocator,
-                                                                          resolver->build_data,
-                                                                          base_type);
+                    *type_target =
+                        build_data_find_or_create_pointer_type(resolver->allocator,
+                                                               resolver->build_data,
+                                                               base_type);
                     assert(*type_target);
                     ts->type = *type_target;
                 }
@@ -3329,7 +3365,8 @@ namespace Zodiac
                         result = try_resolve_sizes(resolver, decl->type, scope);
                         if (result && decl->variable.init_expression)
                         {
-                            result = try_resolve_sizes(resolver, decl->variable.init_expression,
+                            result = try_resolve_sizes(resolver,
+                                                       decl->variable.init_expression,
                                                        scope);
                         }
 
@@ -3342,6 +3379,8 @@ namespace Zodiac
                     case AST_Declaration_Kind::PARAMETER: assert(false);
                     case AST_Declaration_Kind::FUNCTION: assert(false);
                     case AST_Declaration_Kind::TYPE: assert(false);
+                    case AST_Declaration_Kind::TYPEDEF: assert(false);
+
                     case AST_Declaration_Kind::STRUCTURE: assert(false);
                     case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
@@ -3940,7 +3979,8 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < body->block.statements.count; i++)
                 {
-                    queue_emit_bytecode_jobs_from_statement(resolver, body->block.statements[i],
+                    queue_emit_bytecode_jobs_from_statement(resolver,
+                                                            body->block.statements[i],
                                                             body->block.scope);
                 }
 
@@ -3949,6 +3989,8 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
+
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 

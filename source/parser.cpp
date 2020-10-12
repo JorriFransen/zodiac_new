@@ -179,6 +179,17 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
                                                   identifier->self.begin_file_pos,
                                                   end_fp);
         }
+        else if (parser_is_token(ts, TOK_KW_TYPEDEF))
+        {
+            ts->next_token();
+            auto type_expr = parser_parse_expression(parser, ts); 
+            assert(type_expr);
+
+            result = new_typedef_declaration_ptn(parser->allocator, identifier,
+                                                 type_expr,
+                                                 identifier->self.begin_file_pos,
+                                                 type_expr->self.end_file_pos);
+        }
         else if (parser_is_token(ts, TOK_KW_STRUCT))
         {
             assert(!specified_type);

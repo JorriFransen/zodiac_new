@@ -14,7 +14,9 @@ print_vec2 :: func (v: *Vec2)
     return;
 }
 
-add_vec2 :: func (v: *Vec2)
+Vec2_Ptr :: typedef *Vec2;
+
+add_vec2 :: func (v: Vec2_Ptr)
 {
     return v.x + v.y;
 }

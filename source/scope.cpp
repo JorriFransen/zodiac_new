@@ -168,9 +168,11 @@ namespace Zodiac
                     scope_new(allocator, Scope_Kind::PARAMETER, parent_scope,
                               ast_decl->function.parameter_declarations.count);
 
-                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
+                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count;
+                     i++)
                 {
-                    scope_populate_ast(allocator, ast_decl->function.parameter_declarations[i],
+                    scope_populate_ast(allocator,
+                                       ast_decl->function.parameter_declarations[i],
                                        ast_decl->function.parameter_scope);
                 }
 
@@ -184,6 +186,13 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
                                               
+            case AST_Declaration_Kind::TYPEDEF:
+            {
+                scope_populate_type_spec_ast(allocator, ast_decl->typedef_decl.type_spec,
+                                             parent_scope);
+                break;
+            }
+
             case AST_Declaration_Kind::STRUCTURE:
             {
                 assert(ast_decl->structure.parameter_scope == nullptr);
@@ -207,7 +216,8 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
                 {
-                    scope_populate_ast(allocator, ast_decl->structure.member_declarations[i],
+                    scope_populate_ast(allocator,
+                                        ast_decl->structure.member_declarations[i],
                                        ast_decl->structure.member_scope);
                 }
                 break;
