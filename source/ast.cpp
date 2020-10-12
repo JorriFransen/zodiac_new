@@ -716,9 +716,10 @@ namespace Zodiac
                             AST_Expression *case_expr = nullptr;
                             if (!switch_case_expr.range_end_expr)
                             {
+                                auto ptn_case_expr = switch_case_expr.expression;
                                 case_expr =
                                     ast_create_expression_from_ptn(allocator,
-                                                                   switch_case_expr.expression);
+                                                                   ptn_case_expr);
                             }
                             else
                             {
@@ -773,7 +774,8 @@ namespace Zodiac
         return nullptr;
     }
 
-    AST_Expression *ast_create_expression_from_ptn(Allocator *allocator, Expression_PTN *ptn)
+    AST_Expression *ast_create_expression_from_ptn(Allocator *allocator,
+                                                   Expression_PTN *ptn)
     {
         assert(allocator);
 
@@ -953,10 +955,11 @@ namespace Zodiac
 
             case Expression_PTN_Kind::STRING_LITERAL:
             {
-                return ast_string_literal_expression_new(allocator, ptn->string_literal.atom,
+                return ast_string_literal_expression_new(allocator,
+                                                         ptn->string_literal.atom,
                                                          begin_fp, end_fp);
                 break;
-            };
+            }
 
             case Expression_PTN_Kind::CHAR_LITERAL:
             {
@@ -966,8 +969,15 @@ namespace Zodiac
 
             case Expression_PTN_Kind::BOOL_LITERAL:
             {
-                return ast_boolean_literal_expression_new(allocator, ptn->bool_literal.value,
+                return ast_boolean_literal_expression_new(allocator,
+                                                          ptn->bool_literal.value,
                                                           begin_fp, end_fp);
+                break;
+            }
+
+            case Expression_PTN_Kind::NULL_LITERAL:
+            {
+                return ast_null_literal_expression_new(allocator, begin_fp, end_fp);
                 break;
             }
 
@@ -975,10 +985,11 @@ namespace Zodiac
 
             case Expression_PTN_Kind::POINTER_TYPE:
             {
+                auto ptn_operand_expr = ptn->pointer_type.pointee_type_expression;
                 auto operand_expr =
-                    ast_create_expression_from_ptn(allocator,
-                                                   ptn->pointer_type.pointee_type_expression);
-                return ast_addrof_expression_new(allocator, operand_expr, begin_fp, end_fp);
+                    ast_create_expression_from_ptn(allocator, ptn_operand_expr);
+                return ast_addrof_expression_new(allocator, operand_expr,
+                                                 begin_fp, end_fp);
                 break;
             }
 
@@ -1164,6 +1175,8 @@ namespace Zodiac
             case Expression_PTN_Kind::CHAR_LITERAL: assert(false);
             case Expression_PTN_Kind::BOOL_LITERAL: assert(false);
 
+            case Expression_PTN_Kind::NULL_LITERAL: assert(false);
+
             case Expression_PTN_Kind::ARRAY_TYPE:
             {
                 auto length_ptn = ptn->array_type.length_expression;
@@ -1173,12 +1186,12 @@ namespace Zodiac
                 {
                     length_expr = ast_create_expression_from_ptn(allocator, length_ptn);
                 }
-                auto ast_elem_ts = ast_create_type_spec_from_expression_ptn(allocator,
-                                                                            elem_type_ptn);
+                auto ast_elem_ts =
+                    ast_create_type_spec_from_expression_ptn(allocator, elem_type_ptn);
                 assert(ast_elem_ts);
 
-                return ast_array_type_spec_new(allocator, length_expr, ast_elem_ts, begin_fp,
-                                               end_fp);
+                return ast_array_type_spec_new(allocator, length_expr, ast_elem_ts,
+                                               begin_fp, end_fp);
                 break;
             }
 
@@ -1855,6 +1868,17 @@ namespace Zodiac
         return result;
     }
 
+    AST_Expression *ast_null_literal_expression_new(Allocator *allocator,
+                                                    const File_Pos &begin_fp,
+                                                    const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::NULL_LITERAL,
+                                         begin_fp, end_fp);
+        result->expr_flags |= AST_EXPR_FLAG_CONST;
+
+        return result;
+    }
+
     AST_Expression *ast_range_expression_new(Allocator *allocator, 
                                               AST_Expression *begin_expr,
                                               AST_Expression *end_expr)
@@ -2237,7 +2261,8 @@ namespace Zodiac
             case AST_Declaration_Kind::FUNCTION:
             {
                 printf(" :: func (");
-                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count; i++)
+                for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count;
+                     i++)
                 {
                     if (i > 0) printf(", ");
                     auto param_decl = ast_decl->function.parameter_declarations[i];
@@ -2259,7 +2284,12 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
 
-            case AST_Declaration_Kind::TYPEDEF: assert(false);
+            case AST_Declaration_Kind::TYPEDEF:
+            {
+                printf(" :: typedef ");
+                ast_print_type_spec(ast_decl->typedef_decl.type_spec);
+                break;
+            }
 
             case AST_Declaration_Kind::STRUCTURE:
             {
@@ -2789,6 +2819,12 @@ namespace Zodiac
             case AST_Expression_Kind::BOOL_LITERAL:
             {
                 printf("%s", ast_expr->bool_literal.value ? "true" : "false");
+                break;
+            }
+
+            case AST_Expression_Kind::NULL_LITERAL:
+            {
+                printf("null");
                 break;
             }
 

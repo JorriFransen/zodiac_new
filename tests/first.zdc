@@ -28,6 +28,14 @@ global_int : s64;
 
 main :: func () -> s64
 {
+    int_ptr : *s64 = null;
+    x : s64 = 55;
+    int_ptr = *x;
+
+    std.print("<int_ptr: ");
+    std.print_num(<int_ptr);
+    std.print("\n");
+
     std.print("glob_int_const: ");
     std.print_num(glob_int_const);
     std.println(" ");

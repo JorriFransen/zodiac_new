@@ -239,7 +239,8 @@ namespace Zodiac
                 case Bytecode_Instruction::EXIT:
                 {
                     uint32_t temp_index = interpreter_fetch<uint32_t>(interp);
-                    Bytecode_Value *exit_code = interpreter_load_temporary(interp, temp_index);
+                    Bytecode_Value *exit_code = interpreter_load_temporary(interp,
+                                                                           temp_index);
                     assert(exit_code);
                     
                     interp->running = false;
@@ -388,9 +389,11 @@ namespace Zodiac
                            source_allocl->type->kind == AST_Type_Kind::FLOAT ||
                            source_allocl->type->kind == AST_Type_Kind::BOOL ||
                            source_allocl->type->kind == AST_Type_Kind::ENUM ||
+                           source_allocl->type->kind == AST_Type_Kind::POINTER ||
                            source_allocl->type->kind == AST_Type_Kind::STRUCTURE);
 
-                    auto dest_val = interpreter_push_temporary(interp, source_allocl->type);
+                    auto dest_val = interpreter_push_temporary(interp,
+                                                               source_allocl->type);
 
                     switch (source_allocl->type->kind)
                     {
@@ -398,6 +401,7 @@ namespace Zodiac
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
                         case AST_Type_Kind::ENUM:
+                        case AST_Type_Kind::POINTER:
                         {
                             dest_val->value = source_allocl->value;
                             break;
@@ -428,8 +432,8 @@ namespace Zodiac
                     auto ptr_val = interpreter_load_temporary(interp, ptr_idx);
                     assert(ptr_val->type->kind == AST_Type_Kind::POINTER);
 
-                    auto result_val = interpreter_push_temporary(interp,
-                                                                 ptr_val->type->pointer.base);
+                    auto result_val =
+                        interpreter_push_temporary(interp, ptr_val->type->pointer.base);
                     assert(result_val->type->bit_size % 8 == 0);
                     
                     switch (result_val->type->bit_size)
@@ -489,7 +493,8 @@ namespace Zodiac
                 case Bytecode_Instruction::LOAD_BOOL:
                 {
                     bool value = interpreter_fetch<uint8_t>(interp);
-                    auto result_value = interpreter_push_temporary(interp, Builtin::type_bool);
+                    auto result_value = interpreter_push_temporary(interp,
+                                                                   Builtin::type_bool);
                     result_value->value.boolean = value;
                     break;
                 }
@@ -497,11 +502,23 @@ namespace Zodiac
                 case Bytecode_Instruction::LOAD_STR:
                 {
                     auto str_idx = interpreter_fetch<uint32_t>(interp);
-                    auto result_value = interpreter_push_temporary(interp, Builtin::type_ptr_u8);
-                    result_value->value.pointer = (void*)interp->program->strings[str_idx].data;
+                    auto result_value = interpreter_push_temporary(interp,
+                                                                   Builtin::type_ptr_u8);
+                    result_value->value.pointer =
+                        (void*)interp->program->strings[str_idx].data;
                     break;
                 }
 
+                case Bytecode_Instruction::LOAD_NULL:
+                {
+                    auto type_idx = interpreter_fetch<uint32_t>(interp);
+                    auto type = (*interp->program->types)[type_idx];
+                    auto result_value = interpreter_push_temporary(interp, type);
+
+                    result_value->value.pointer = nullptr;
+                    break;
+                }
+                
                 case Bytecode_Instruction::STOREG:
                 {
                     auto glob_index = interpreter_fetch<uint32_t>(interp);
@@ -549,6 +566,7 @@ namespace Zodiac
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
                         case AST_Type_Kind::ENUM:
+                        case AST_Type_Kind::POINTER:
                         {
                             dest_allocl->value = source_val->value;
                             break;
@@ -662,6 +680,62 @@ namespace Zodiac
                     }
                     else assert(false);
 
+                    break;
+                }
+
+                case Bytecode_Instruction::DEREF:
+                {
+                    auto temp_index = interpreter_fetch<int32_t>(interp);
+                    auto arg_val = interpreter_load_temporary(interp, temp_index);
+                    assert(arg_val->type);
+                    assert(arg_val->type->kind == AST_Type_Kind::POINTER);
+
+                    auto base_type = arg_val->type->pointer.base;
+
+                    auto result_val = interpreter_push_temporary(interp, base_type);
+
+                    switch (base_type->kind)
+                    {
+                        case AST_Type_Kind::INTEGER:
+                        {
+                            switch (base_type->bit_size)
+                            {
+                                case 8:
+                                {
+                                    result_val->value.integer.s8 =
+                                        *((int8_t*)arg_val->value.pointer);
+                                    break;
+                                }
+
+                                case 16:
+                                {
+                                    result_val->value.integer.s16 =
+                                        *((int16_t*)arg_val->value.pointer);
+                                    break;
+                                }
+
+                                case 32:
+                                {
+                                    result_val->value.integer.s32 =
+                                        *((int32_t*)arg_val->value.pointer);
+                                    break;
+                                }
+
+                                case 64: 
+                                {
+                                    result_val->value.integer.s64 =
+                                        *((int64_t*)arg_val->value.pointer);
+                                    break;
+                                }
+
+                                default: assert(false);
+
+                            }
+                            break;
+                        }
+
+                        default: assert(false);
+                    }
                     break;
                 }
 
@@ -861,6 +935,7 @@ namespace Zodiac
                     auto result_val = interpreter_push_temporary(interp, lhs_val->type);
 
                     assert(lhs_val->type == rhs_val->type);
+
 
                     switch (size_spec)
                     {
@@ -1473,7 +1548,8 @@ namespace Zodiac
 
                case Bytecode_Instruction::ARR_OFFSET_PTR:
                {
-                   auto store_kind = interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
+                   auto store_kind =
+                       interpreter_fetch<Bytecode_Value_Type_Specifier>(interp);
                    auto store_idx = interpreter_fetch<uint32_t>(interp);
                    auto offset_idx = interpreter_fetch<uint32_t>(interp);
 
