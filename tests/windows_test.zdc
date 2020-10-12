@@ -1,5 +1,5 @@
 
-#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
+windows :: import windows;
 
 mainCRTStartup :: func ()
 {
@@ -7,9 +7,11 @@ mainCRTStartup :: func ()
     @exit(exit_code);
 }
 
-
 main :: func () -> s64
 {
-    // @exit(111);
+    stdout_handle := windows.GetStdHandle(@cast(s32, windows.WINDOWS_STDOUT_HANDLE_NUM));
+
     return 41;
 }
+
+#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

@@ -1,0 +1,5 @@
+
+#foreign GetStdHandle :: func (handle_num: s32) -> HANDLE
+// #foreign WriteFile :: func (
+
+WINDOWS_STDOUT_HANDLE_NUM : s32 : -11;

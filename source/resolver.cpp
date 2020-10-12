@@ -1378,7 +1378,8 @@ namespace Zodiac
                     if (decl)
                     {
                         assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
-                               decl->kind == AST_Declaration_Kind::STRUCTURE);
+                               decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                               decl->kind == AST_Declaration_Kind::CONSTANT);
                         ast_expr->dot.child_decl = decl;
                         result = true;
                     }
@@ -2505,6 +2506,16 @@ namespace Zodiac
                             result = true;
                         }
                     }
+                    else if (child_decl->kind == AST_Declaration_Kind::CONSTANT)
+                    {
+                        assert(child_decl->type);
+                        ast_expr->type = child_decl->type; 
+                        result = true;
+                    }
+                    else
+                    {
+                        assert(false);
+                    }
                 }
                 else
                 {
@@ -2738,38 +2749,42 @@ namespace Zodiac
                             if (!try_resolve_types(resolver, arg_expr, scope))
                             {
                                 arg_res = false;
-                                assert(false);
                             }
-
-                            auto param_type = func_type->function.param_types[i];
-                            assert(param_type);
-                            if (arg_res &&
-                                !(arg_expr->type == param_type))
+                            else
                             {
-                                if (resolver_valid_type_conversion(arg_expr->type, param_type))
+                                auto param_type = func_type->function.param_types[i];
+                                assert(param_type);
+                                if (arg_res &&
+                                    !(arg_expr->type == param_type))
                                 {
-                                    auto new_arg_expr =
-                                        ast_cast_expression_new(resolver->allocator,
-                                                                arg_expr, param_type,
-                                                                arg_expr->begin_file_pos,
-                                                                arg_expr->end_file_pos);
-                                    new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                                    ast_expr->call.arg_expressions[i] = new_arg_expr;
-
-                                    if (!try_resolve_types(resolver, new_arg_expr, scope))
+                                    if (resolver_valid_type_conversion(arg_expr->type,
+                                                                       param_type))
                                     {
-                                        assert(false); 
+                                        auto new_arg_expr =
+                                            ast_cast_expression_new(resolver->allocator,
+                                                                    arg_expr,
+                                                                    param_type,
+                                                                    arg_expr->begin_file_pos,
+                                                                    arg_expr->end_file_pos);
+
+                                        new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                                        ast_expr->call.arg_expressions[i] = new_arg_expr;
+
+                                        if (!try_resolve_types(resolver, new_arg_expr, scope))
+                                        {
+                                            assert(false); 
+                                        }
+                                    }
+                                    else 
+                                    {
+                                        resolver_report_mismatching_types(resolver, arg_expr,
+                                                                         param_type, arg_expr->type);
+                                        arg_res = false;
+                                        result = false;
                                     }
                                 }
-                                else 
-                                {
-                                    resolver_report_mismatching_types(resolver, arg_expr,
-                                                                     param_type, arg_expr->type);
-                                    arg_res = false;
-                                    result = false;
-                                }
+                                else if (!arg_res) assert(false);
                             }
-                            else if (!arg_res) assert(false);
                         }
 
 
@@ -4119,7 +4134,8 @@ namespace Zodiac
                     decl_kind != AST_Declaration_Kind::PARAMETER &&
                     decl_kind != AST_Declaration_Kind::CONSTANT &&
                     decl_kind != AST_Declaration_Kind::ENUM &&
-                    decl_kind != AST_Declaration_Kind::TYPE)
+                    decl_kind != AST_Declaration_Kind::TYPE &&
+                    decl_kind != AST_Declaration_Kind::IMPORT)
                 {
                     assert(false); 
                 }
@@ -4174,7 +4190,8 @@ namespace Zodiac
 
                 if (expr->call.is_builtin)
                 {
-                    //assert(false);
+                    //@TODO: For things like @exit on windows (which calls ExitProcess) 
+                    //        the corresponding foreign function should be queued.
                 }
                 else
                 {

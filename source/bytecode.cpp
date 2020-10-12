@@ -87,6 +87,8 @@ namespace Zodiac
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
+        // printf("[Bytecode] Emitting function: %s\n", decl->identifier->atom.data);
+
         for (int64_t i = 0; i < builder->program.functions.count; i++)
         {
             if (builder->program.functions[i]->ast_decl == decl) assert(false);
@@ -660,13 +662,13 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT:
             {
-                if (expression->type->kind == AST_Type_Kind::ENUM)
+                if (expression->dot.child_decl &&
+                    (expression->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT))
                 {
                     auto decl = expression->dot.child_decl;
-                    assert(decl);
-                    assert(decl->kind == AST_Declaration_Kind::CONSTANT);
                     auto init_expr = decl->constant.init_expression;
                     return bytecode_emit_expression(builder, init_expr);
+
                 }
                 else if (expression->expr_flags & AST_EXPR_FLAG_DOT_COUNT)
                 {
