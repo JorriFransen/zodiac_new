@@ -1,0 +1,26 @@
+
+std :: import std;
+
+structs :: import structs;
+using structs;
+
+main :: func() -> s64
+{
+    std.print("offsetof test\n");
+
+    std.print("\n@offsetof(x, Vec3) = ");
+    std.print_num(@offsetof(x, Vec3));
+    return 0;
+}
+
+#naked #noreturn _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+#noreturn posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}
+

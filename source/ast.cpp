@@ -788,6 +788,13 @@ namespace Zodiac
 
             case Expression_PTN_Kind::CALL:
             {
+                if (ptn->call.is_builtin) 
+                {
+                    assert(false); // This should create a builtin call expression, which 
+                                   //  means that the resolving of this will need to be 
+                                   //  seperated from regular call resolving as well
+                }
+
                 AST_Expression *ident_expr =
                     ast_create_expression_from_ptn(allocator, ptn->call.ident_expression);
                 assert(ident_expr);
