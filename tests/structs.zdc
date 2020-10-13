@@ -1,0 +1,46 @@
+
+
+Entity :: struct
+{
+    name          : *u8;
+    position      : Vec2;
+    bounding_rect : Aabb;
+}
+
+Aabb :: struct
+{
+    position : Vec2;
+    size     : Vec2;
+}
+
+Aabb_alt :: struct
+{
+    p1 : Vec2;
+    p2 : Vec2;
+}
+
+Vec2 :: struct
+{
+    x : float;
+    y : float; 
+}
+
+Vec2d :: struct
+{
+    x : double;
+    y : double; 
+}
+
+Vec3 :: struct
+{
+    x : float;
+    y : float; 
+    z : float; 
+}
+
+Vec3d :: struct
+{
+    x : double;
+    y : double; 
+    z : double; 
+}
