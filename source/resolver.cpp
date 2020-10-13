@@ -1266,9 +1266,21 @@ namespace Zodiac
                 {
                     auto atom = ast_expr->call.ident_expression->identifier->atom;
                     if (atom == Builtin::atom_exit) { }
-                    else if (atom == Builtin::atom_syscall) { }
-                    else if (atom == Builtin::atom_cast) {} 
-                    else assert(false);
+                    else if (atom == Builtin::atom_syscall ||
+                             atom == Builtin::atom_cast ||
+                             atom == Builtin::atom_sizeof ||
+                             atom == Builtin::atom_offsetof)
+                    {}
+                    else 
+                    {
+                        resolver_report_error(
+                                resolver,
+                                Resolve_Error_Kind::UNKNOWN_BUILTIN_FUNCTION,
+                                ast_expr,
+                                "Unknown builtin function: @%s\n", 
+                                atom.data);
+                        result = false;
+                    }
                 }
 
                 bool arg_res = true;
@@ -3139,7 +3151,35 @@ namespace Zodiac
             } 
             return result;
         }
-        else assert(false);
+        else if (ident_atom == Builtin::atom_sizeof)
+        {
+            bool result = true;
+
+            assert(args.count == 1);
+
+            auto type_expr = args[0];
+
+            if (!try_resolve_types(resolver, type_expr, scope))
+            {
+                result = false;
+            }
+            else 
+            {
+                assert(type_expr->type);
+
+                call_expr->type = Builtin::type_s64;
+            }
+
+
+            return result;
+        }
+        else
+        {
+            resolver_report_error(resolver, Resolve_Error_Kind::UNIMPLEMENTED,
+                                  call_expr, "Unimplemented builtin function: @%s",
+                                  ident_atom.data);
+            return false;
+        }
 
         assert(false);
         return false;
@@ -4207,6 +4247,7 @@ namespace Zodiac
                     decl_kind != AST_Declaration_Kind::CONSTANT &&
                     decl_kind != AST_Declaration_Kind::ENUM &&
                     decl_kind != AST_Declaration_Kind::TYPE &&
+                    decl_kind != AST_Declaration_Kind::STRUCTURE &&
                     decl_kind != AST_Declaration_Kind::IMPORT)
                 {
                     assert(false); 
@@ -4571,6 +4612,7 @@ namespace Zodiac
                         case AST_Declaration_Kind::IMPORT:
                         case AST_Declaration_Kind::TYPE: 
                         case AST_Declaration_Kind::TYPEDEF: 
+                        case AST_Declaration_Kind::STRUCTURE:
                         case AST_Declaration_Kind::ENUM: is_const = true; break;
 
                         default: assert(false);

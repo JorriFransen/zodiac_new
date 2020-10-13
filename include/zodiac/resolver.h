@@ -18,6 +18,8 @@ namespace Zodiac
     {
         INVALID,
         UNDECLARED_IDENTIFIER,
+        UNKNOWN_BUILTIN_FUNCTION,
+        UNIMPLEMENTED,
         MISMATCHING_TYPES,
         ASSIGNING_TO_CONST,
         INCOMPLETE_SWITCH,

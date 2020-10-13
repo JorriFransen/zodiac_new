@@ -5,6 +5,8 @@
 #include "parser.h"
 #include "const_interpreter.h"
 
+#include "resolver.h"
+
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -991,6 +993,9 @@ namespace Zodiac
         }
         else if (atom == Builtin::atom_syscall)
         {
+#ifndef linux
+            assert(false);
+#endif
             assert(arg_exprs.count >= 1);
 
             for (int64_t i = 0; i < arg_exprs.count; i++)
@@ -1008,7 +1013,18 @@ namespace Zodiac
 
             return bytecode_emit_cast(builder, operand, target_type);
         }
-        else assert(false);
+        else if (atom == Builtin::atom_sizeof)
+        {
+            assert(arg_exprs.count == 1);
+
+            auto type = arg_exprs[0]->type;
+            return bytecode_emit_integer_literal(builder, Builtin::type_s64, 
+                                                 type->bit_size);
+        }
+        else 
+        {
+            assert(false);
+        }
 
         return return_value;
     }
