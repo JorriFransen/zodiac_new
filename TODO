@@ -1,11 +1,11 @@
 
-@offsetof
-
-When looking up struct members we use the regular scope_find_declaration, but I think this is wrong, since this will search parent scopes. We should extend this so that the search behaviour is dependend on the type of scope. Eg. struct/aggregate scopes will search their own scopes (and maybe child scopes in case of anon nested aggregates) and not their parent scopes.
-
 Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
 
 unions
+
+When looking up struct members we use the regular scope_find_declaration, but I think this is wrong, since this will search parent scopes. We should extend this so that the search behaviour is dependend on the type of scope. Eg. struct/aggregate scopes will search their own scopes (and maybe child scopes in case of anon nested aggregates) and not their parent scopes.
+    EDIT: I think we do the wrong declaration, but we check it agains the struct after, so all we need to do is report an error. We probably want to do the scope stuff anyways for correctness(/efficiency)
+
 
 Statements (function bodies) should remember their inferred return type, since an error might be reported on this in a later cycle. At the momement inferred return type will be null or type_void if the statement has been resolved in a previous cycle.
 
