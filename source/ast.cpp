@@ -311,20 +311,6 @@ namespace Zodiac
 
                     array_append(&ast_members, ast_member);
 
-                    auto init_expr = ast_member->constant.init_expression;
-                    if (init_expr)
-                    {
-                        if (init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL)
-                        {
-                            ast_member->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_INTINIT;
-                        }
-                        else if (init_expr->kind == AST_Expression_Kind::IDENTIFIER)
-                        {
-                            ast_member->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT;
-                        }
-                        else assert(false);
-                    }
-
                 }
 
                 return ast_enum_declaration_new(allocator, ast_ident, ast_ts, ast_members,
@@ -437,8 +423,25 @@ namespace Zodiac
 
         assert(identifier);
 
-        return ast_constant_declaration_new(allocator, identifier, nullptr, init_expr,
-                                            ptn->begin_file_pos, ptn->end_file_pos);
+        auto result = ast_constant_declaration_new(allocator, identifier, nullptr,
+                                                   init_expr, ptn->begin_file_pos,
+                                                   ptn->end_file_pos);
+        result->decl_flags |= AST_DECL_FLAG_IS_ENUM_MEMBER;
+
+        if (init_expr)
+        {
+            if (init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL)
+            {
+                result->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_INTINIT;
+            }
+            else if (init_expr->kind == AST_Expression_Kind::IDENTIFIER)
+            {
+                result->decl_flags |= AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT;
+            }
+            else assert(false);
+        }
+
+        return result;
     }
 
     AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 

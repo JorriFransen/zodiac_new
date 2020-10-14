@@ -4,13 +4,6 @@ std :: import std;
 structs :: import structs;
 using structs;
 
-non_struct_mem : s64;
-
-Hello :: struct
-{
-    struct_mem : s64;
-}
-
 main :: func() -> s64
 {
     std.print("offsetof test\n");
@@ -21,11 +14,6 @@ main :: func() -> s64
     std.print_num(@offsetof(y, Vec3));
     std.print("\n@offsetof(z, Vec3) = ");
     std.print_num(@offsetof(z, Vec3));
-
-    t : Hello;
-    t.struct_mem = 4;
-    t.non_struct_mem = 4;
-
 
     std.print("\n");
     return 0;

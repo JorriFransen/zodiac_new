@@ -143,9 +143,16 @@ namespace Zodiac
                                                  parent_scope);
                 }
 
-                scope_populate_expression_ast(allocator,
-                                              ast_decl->constant.init_expression,
-                                              parent_scope);
+                if (ast_decl->constant.init_expression)
+                {
+                    scope_populate_expression_ast(allocator,
+                                                  ast_decl->constant.init_expression,
+                                                  parent_scope);
+                }
+                else
+                {
+                    assert(ast_decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER);
+                }
                 break;
             }
 
