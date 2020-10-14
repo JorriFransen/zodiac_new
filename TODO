@@ -1,6 +1,8 @@
 
 @offsetof
 
+When looking up struct members we use the regular scope_find_declaration, but I think this is wrong, since this will search parent scopes. We should extend this so that the search behaviour is dependend on the type of scope. Eg. struct/aggregate scopes will search their own scopes (and maybe child scopes in case of anon nested aggregates) and not their parent scopes.
+
 Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
 
 unions

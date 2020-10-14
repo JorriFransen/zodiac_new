@@ -1016,6 +1016,46 @@ namespace Zodiac
             return bytecode_emit_integer_literal(builder, Builtin::type_s64, 
                                                  type->bit_size);
         }
+        else if (atom == Builtin::atom_offsetof)
+        {
+            assert(arg_exprs.count == 2);
+
+            auto mem_name = arg_exprs[0];
+            auto struct_name = arg_exprs[1];
+
+            auto struct_decl = struct_name->identifier->declaration;
+            assert(struct_decl);
+
+            auto struct_type = struct_name->type;
+            assert(struct_type);
+
+            auto mem_decl = mem_name->identifier->declaration;
+            assert(mem_decl);
+
+            int64_t offset = 0;
+            bool found = false;
+
+            for (int64_t i = 0; i < struct_decl->structure.member_declarations.count; i++)
+            {
+                auto struct_mem = struct_decl->structure.member_declarations[i];
+                if (struct_mem == mem_decl)
+                {
+                    found = true;
+                    break;
+                }
+
+                auto mem_type = struct_mem->type;
+                assert(mem_type);
+
+                auto mem_size = mem_type->bit_size;
+                assert(mem_size % 8 == 0);
+                
+                offset += mem_size / 8;
+            }
+
+            assert(found);
+            return bytecode_emit_integer_literal(builder, Builtin::type_s64, offset);
+        }
         else 
         {
             assert(false);

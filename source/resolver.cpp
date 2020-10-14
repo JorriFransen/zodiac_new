@@ -1284,12 +1284,46 @@ namespace Zodiac
 
                 auto atom = ast_expr->builtin_call.identifier->atom;
 
+                bool check_all_args = true;
+                auto &args = ast_expr->builtin_call.arg_expressions;
+
                 if (atom == Builtin::atom_exit) { }
                 else if (atom == Builtin::atom_syscall ||
                          atom == Builtin::atom_cast ||
-                         atom == Builtin::atom_sizeof ||
-                         atom == Builtin::atom_offsetof)
+                         atom == Builtin::atom_sizeof)
                 {}
+                else if (atom == Builtin::atom_offsetof)
+                {
+                    check_all_args = false;
+
+                    // Arg 0 is the struct member name
+                    // Arg 1 is the struct name
+                    assert(args.count == 2);
+
+                    auto mem_name = args[0];
+                    auto struct_name = args[1];
+
+                    assert(mem_name->kind == AST_Expression_Kind::IDENTIFIER);
+                    assert(struct_name->kind == AST_Expression_Kind::IDENTIFIER);
+
+                    if (!try_resolve_identifiers(resolver, struct_name, scope))
+                    {
+                        assert(false);
+                        result = false;
+                    }
+                    else
+                    {
+                        auto struct_decl = struct_name->identifier->declaration;
+                        assert(struct_decl);
+                        assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                        if (!try_resolve_identifiers(resolver, mem_name,
+                                                     struct_decl->structure.member_scope))
+                        {
+                            result = false;
+                        }
+                    }
+                }
                 else 
                 {
                     resolver_report_error(
@@ -1301,14 +1335,15 @@ namespace Zodiac
                     result = false;
                 }
 
-                auto &args = ast_expr->builtin_call.arg_expressions;
-
-                for (int64_t i = 0; i < args.count; i++)
+                if (check_all_args)
                 {
-                    auto arg = args[i];
-                    if (!try_resolve_identifiers(resolver, arg, scope))
+                    for (int64_t i = 0; i < args.count; i++)
                     {
-                        result = false;
+                        auto arg = args[i];
+                        if (!try_resolve_identifiers(resolver, arg, scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
                 break;
@@ -3183,6 +3218,38 @@ namespace Zodiac
 
             return result;
         }
+        else if (ident_atom == Builtin::atom_offsetof)
+        {
+            bool result = true;
+
+            assert(args.count == 2);
+
+            auto mem_name = args[0];
+            auto struct_name = args[1];
+
+            if (!try_resolve_types(resolver, struct_name, scope))
+            {
+                result = false;
+            }
+            else
+            {
+                auto struct_decl = struct_name->identifier->declaration;
+                assert(struct_decl);
+
+                if (!scope_find_declaration(struct_decl->structure.member_scope, 
+                                            mem_name->identifier))
+                {
+                    result = false;
+                }
+            }
+
+            if (result)
+            {
+                call_expr->type = Builtin::type_s64;
+            }
+
+            return result;
+        }
         else
         {
             resolver_report_error(resolver, Resolve_Error_Kind::UNIMPLEMENTED,
@@ -4344,12 +4411,9 @@ namespace Zodiac
                 }
                 else if (atom == Builtin::atom_syscall ||
                          atom == Builtin::atom_sizeof ||
-                         atom == Builtin::atom_cast)
+                         atom == Builtin::atom_cast ||
+                         atom == Builtin::atom_offsetof)
                 { /* Nothing needs to be queued */ }
-                else if (atom == Builtin::atom_offsetof)
-                {
-                    assert(false);
-                }
                 else 
                 {
                     assert(false);
@@ -4712,13 +4776,10 @@ namespace Zodiac
                     auto op_expr = expr->builtin_call.arg_expressions[1];
                     is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
                 }
-                else if (atom == Builtin::atom_sizeof)
+                else if (atom == Builtin::atom_sizeof ||
+                         atom == Builtin::atom_offsetof)
                 {
                     is_const = true;
-                }
-                else if (atom == Builtin::atom_offsetof)
-                {
-                    assert(false);
                 }
                 else 
                 {
