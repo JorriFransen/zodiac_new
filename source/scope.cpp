@@ -459,7 +459,23 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CALL: break;
+            case AST_Expression_Kind::CALL:
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                Array<AST_Expression *> args;
+
+                if (ast_expr->kind == AST_Expression_Kind::CALL)
+                    args = ast_expr->call.arg_expressions;
+                else
+                    args = ast_expr->builtin_call.arg_expressions;
+
+                for (int64_t i = 0; i < args.count; i++)
+                {
+                    auto arg = args[i];
+                    scope_populate_expression_ast(allocator, arg, parent_scope);
+                }
+                break;
+            }
 
             case AST_Expression_Kind::ADDROF:
             {

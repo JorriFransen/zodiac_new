@@ -825,6 +825,12 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                return bytecode_emit_builtin_call_expression(builder, expression);
+                break;
+            }
+
             case AST_Expression_Kind::ADDROF:
             {
                 auto result = bytecode_emit_lvalue(builder, expression->addrof.operand_expr);
@@ -929,35 +935,28 @@ namespace Zodiac
         assert(expression->kind == AST_Expression_Kind::CALL); 
 
         Bytecode_Value *return_value = nullptr;
-        
-        if (expression->call.is_builtin)
+    
+        assert(expression->call.callee_declaration);
+        Bytecode_Function *func =
+            bytecode_find_function_for_decl(builder, expression->call.callee_declaration);
+
+        assert(func);
+
+        for (int64_t i = 0; i < expression->call.arg_expressions.count; i++)
         {
-            return_value = bytecode_emit_builtin_call_expression(builder, expression);
+            bytecode_emit_call_arg(builder, expression->call.arg_expressions[i]);
         }
-        else
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CALL);
+        bytecode_emit_32(builder, func->index);
+        bytecode_emit_32(builder, expression->call.arg_expressions.count);
+
+        auto ret_type = func->ast_decl->type->function.return_type;
+        if (ret_type != Builtin::type_void)
         {
-            assert(expression->call.callee_declaration);
-            Bytecode_Function *func =
-                bytecode_find_function_for_decl(builder, expression->call.callee_declaration);
-
-            assert(func);
-
-            for (int64_t i = 0; i < expression->call.arg_expressions.count; i++)
-            {
-                bytecode_emit_call_arg(builder, expression->call.arg_expressions[i]);
-            }
-
-            bytecode_emit_instruction(builder, Bytecode_Instruction::CALL);
-            bytecode_emit_32(builder, func->index);
-            bytecode_emit_32(builder, expression->call.arg_expressions.count);
-
-            auto ret_type = func->ast_decl->type->function.return_type;
-            if (ret_type != Builtin::type_void)
-            {
-                return_value = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
-                                                  ret_type);
-                bytecode_push_local_temporary(builder, return_value);
-            }
+            return_value = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                              ret_type);
+            bytecode_push_local_temporary(builder, return_value);
         }
 
         return return_value;
@@ -968,16 +967,12 @@ namespace Zodiac
     {
         assert(builder);
         assert(expression);
-        assert(expression->kind == AST_Expression_Kind::CALL);
-        assert(expression->call.is_builtin == true);
-
-        auto ident_expr = expression->call.ident_expression;
-        assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
+        assert(expression->kind == AST_Expression_Kind::BUILTIN_CALL);
 
         Bytecode_Value *return_value = nullptr;
 
-        auto atom = ident_expr->identifier->atom;
-        auto arg_exprs = expression->call.arg_expressions;
+        auto atom = expression->builtin_call.identifier->atom;
+        auto arg_exprs = expression->builtin_call.arg_expressions;
         if (atom == Builtin::atom_exit)
         {
             assert(arg_exprs.count == 1);
@@ -1333,6 +1328,7 @@ namespace Zodiac
             case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
 

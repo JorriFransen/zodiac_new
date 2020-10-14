@@ -42,6 +42,7 @@ namespace Zodiac
             case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
 

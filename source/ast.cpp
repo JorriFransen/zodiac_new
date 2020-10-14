@@ -354,6 +354,25 @@ namespace Zodiac
         return nullptr;
     }
 
+    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+                                                   Expression_PTN *ptn)
+    {
+        switch (ptn->kind)
+        {
+            case Expression_PTN_Kind::IDENTIFIER:
+            {
+                return ast_identifier_new(allocator, ptn->identifier->atom,
+                                          ptn->self.begin_file_pos,
+                                          ptn->self.end_file_pos);
+                break;
+            }
+
+            default: assert(false);
+        }
+
+        assert(false);
+    }
+
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Parameter_PTN *ptn, 
                                                      AST_Type_Spec *type_spec)
@@ -788,17 +807,6 @@ namespace Zodiac
 
             case Expression_PTN_Kind::CALL:
             {
-                if (ptn->call.is_builtin) 
-                {
-                    assert(false); // This should create a builtin call expression, which 
-                                   //  means that the resolving of this will need to be 
-                                   //  seperated from regular call resolving as well
-                }
-
-                AST_Expression *ident_expr =
-                    ast_create_expression_from_ptn(allocator, ptn->call.ident_expression);
-                assert(ident_expr);
-
                 Array<AST_Expression*> arg_exprs = {};
                 if (ptn->call.arg_list)
                 {
@@ -815,8 +823,23 @@ namespace Zodiac
                     }
                 }
 
+                if (ptn->call.is_builtin) 
+                {
+                    AST_Identifier *identifier =
+                        ast_create_identifier_from_ptn(allocator,
+                                                       ptn->call.ident_expression);
+                    assert(identifier);
+                    return ast_builtin_call_expression_new(allocator, identifier, 
+                                                           arg_exprs, begin_fp, end_fp);
+                }
+
+                AST_Expression *ident_expr =
+                    ast_create_expression_from_ptn(allocator, ptn->call.ident_expression);
+                assert(ident_expr);
+
+
                 return ast_call_expression_new(allocator, ident_expr, arg_exprs,
-                                               ptn->call.is_builtin, begin_fp, end_fp);
+                                               begin_fp, end_fp);
                 break;
             }
 
@@ -1750,7 +1773,7 @@ namespace Zodiac
 
     AST_Expression *ast_call_expression_new(Allocator *allocator, AST_Expression *ident_expr,
                                             Array<AST_Expression*> arg_expressions,
-                                            bool is_builtin, const File_Pos &begin_fp,
+                                            const File_Pos &begin_fp,
                                             const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::CALL, begin_fp,
@@ -1758,8 +1781,22 @@ namespace Zodiac
 
         result->call.ident_expression = ident_expr;
         result->call.arg_expressions = arg_expressions;
-        result->call.is_builtin = is_builtin;
         result->call.callee_declaration = nullptr;
+
+        return result;
+    }
+
+    AST_Expression *ast_builtin_call_expression_new(Allocator *allocator,
+                                                    AST_Identifier *identifier,
+                                                    Array<AST_Expression*> arg_expressions,
+                                                    const File_Pos &begin_fp,
+                                                    const File_Pos &end_fp)
+    {
+        auto result = ast_expression_new(allocator, AST_Expression_Kind::BUILTIN_CALL,
+                                         begin_fp, end_fp);
+
+        result->builtin_call.identifier = identifier;
+        result->builtin_call.arg_expressions = arg_expressions;
 
         return result;
     }
@@ -2720,10 +2757,6 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL: 
             {
-                if (ast_expr->call.is_builtin)
-                {
-                    printf("@");
-                }
                 ast_print_expression(ast_expr->call.ident_expression, 0);
                 printf("(");
                 for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
@@ -2734,6 +2767,8 @@ namespace Zodiac
                 printf(")");
                 break;
             }
+
+            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
 
             case AST_Expression_Kind::ADDROF:
             {

@@ -275,6 +275,7 @@ namespace Zodiac
         PRE_FIX,
 
         CALL,
+        BUILTIN_CALL,
         ADDROF,
         COMPOUND,
         SUBSCRIPT,
@@ -350,10 +351,15 @@ namespace Zodiac
             {
                 AST_Expression *ident_expression;
                 Array<AST_Expression*> arg_expressions;
-                bool is_builtin;
 
                 AST_Declaration *callee_declaration;
             } call;
+
+            struct
+            {
+                AST_Identifier *identifier;
+                Array<AST_Expression*> arg_expressions;
+            } builtin_call;
 
             struct
             {
@@ -545,6 +551,9 @@ namespace Zodiac
 
     AST_Module *ast_create_from_parsed_file(Allocator *allocator,
                                             Parsed_File *parsed_file);
+
+    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+                                                   Expression_PTN *ptn);
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Declaration_PTN *ptn,
@@ -752,8 +761,14 @@ namespace Zodiac
     AST_Expression *ast_call_expression_new(Allocator *allocator,
                                             AST_Expression *ident_expr,
                                             Array<AST_Expression*> arg_expressions,
-                                            bool is_builtin, const File_Pos &begin_fp,
+                                            const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
+
+    AST_Expression *ast_builtin_call_expression_new(Allocator *allocator,
+                                                    AST_Identifier *identifier,
+                                                    Array<AST_Expression*> arg_expressions,
+                                                    const File_Pos &begin_fp,
+                                                    const File_Pos &end_fp);
 
     AST_Expression *ast_addrof_expression_new(Allocator *allocator,
                                               AST_Expression *operand_expr,

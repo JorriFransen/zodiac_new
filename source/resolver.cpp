@@ -1237,50 +1237,27 @@ namespace Zodiac
             case AST_Expression_Kind::CALL:
             {
                 result = true;
-                if (!ast_expr->call.is_builtin)
+                if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression,
+                                            scope))
                 {
-                    if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression,
-                                                scope))
+                    auto ident_expr = ast_expr->call.ident_expression;
+                    AST_Declaration *callee_decl = nullptr;
+                    if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
                     {
-                        auto ident_expr = ast_expr->call.ident_expression;
-                        AST_Declaration *callee_decl = nullptr;
-                        if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
-                        {
-                            callee_decl = ident_expr->identifier->declaration;
-                        }
-                        else if (ident_expr->kind == AST_Expression_Kind::DOT)
-                        {
-                            callee_decl = ident_expr->dot.child_decl; 
-                        }
-                        else assert(false);
-                        assert(callee_decl);
-                        assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
-                        ast_expr->call.callee_declaration = callee_decl;
-                    } 
-                    else
-                    {
-                        result = false;
+                        callee_decl = ident_expr->identifier->declaration;
                     }
-                }
+                    else if (ident_expr->kind == AST_Expression_Kind::DOT)
+                    {
+                        callee_decl = ident_expr->dot.child_decl; 
+                    }
+                    else assert(false);
+                    assert(callee_decl);
+                    assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+                    ast_expr->call.callee_declaration = callee_decl;
+                } 
                 else
                 {
-                    auto atom = ast_expr->call.ident_expression->identifier->atom;
-                    if (atom == Builtin::atom_exit) { }
-                    else if (atom == Builtin::atom_syscall ||
-                             atom == Builtin::atom_cast ||
-                             atom == Builtin::atom_sizeof ||
-                             atom == Builtin::atom_offsetof)
-                    {}
-                    else 
-                    {
-                        resolver_report_error(
-                                resolver,
-                                Resolve_Error_Kind::UNKNOWN_BUILTIN_FUNCTION,
-                                ast_expr,
-                                "Unknown builtin function: @%s\n", 
-                                atom.data);
-                        result = false;
-                    }
+                    result = false;
                 }
 
                 bool arg_res = true;
@@ -1298,6 +1275,42 @@ namespace Zodiac
                     if (!arg_res) result = false;
                 }
 
+                break;
+            }
+
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                result = true;
+
+                auto atom = ast_expr->builtin_call.identifier->atom;
+
+                if (atom == Builtin::atom_exit) { }
+                else if (atom == Builtin::atom_syscall ||
+                         atom == Builtin::atom_cast ||
+                         atom == Builtin::atom_sizeof ||
+                         atom == Builtin::atom_offsetof)
+                {}
+                else 
+                {
+                    resolver_report_error(
+                            resolver,
+                            Resolve_Error_Kind::UNKNOWN_BUILTIN_FUNCTION,
+                            ast_expr,
+                            "Unknown builtin function: @%s\n", 
+                            atom.data);
+                    result = false;
+                }
+
+                auto &args = ast_expr->builtin_call.arg_expressions;
+
+                for (int64_t i = 0; i < args.count; i++)
+                {
+                    auto arg = args[i];
+                    if (!try_resolve_identifiers(resolver, arg, scope))
+                    {
+                        result = false;
+                    }
+                }
                 break;
             }
 
@@ -2786,78 +2799,72 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL:
             {
-                if (ast_expr->call.is_builtin)
+                if (!try_resolve_types(resolver, ast_expr->call.ident_expression, scope))
                 {
-                    result = try_resolve_builtin_call_types(resolver, ast_expr, scope);
+                    result = false;
+                    break;
                 }
+
                 else
                 {
+                    auto func_type = ast_expr->call.ident_expression->type;
+                    assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                    if (!try_resolve_types(resolver, ast_expr->call.ident_expression, scope))
+                    bool arg_res = true;
+
+                    assert(ast_expr->call.arg_expressions.count ==
+                           func_type->function.param_types.count);
+
+                    for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
                     {
-                        result = false;
-                    }
-                    else
-                    {
-                        auto func_type = ast_expr->call.ident_expression->type;
-                        assert(func_type->kind == AST_Type_Kind::FUNCTION);
+                        auto arg_expr = ast_expr->call.arg_expressions[i];
+                        auto param_type = func_type->function.param_types[i];
 
-                        bool arg_res = true;
-
-                        assert(ast_expr->call.arg_expressions.count ==
-                               func_type->function.param_types.count);
-
-                        for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
+                        if (!try_resolve_types(resolver, arg_expr, param_type, scope))
                         {
-                            auto arg_expr = ast_expr->call.arg_expressions[i];
-                            auto param_type = func_type->function.param_types[i];
-
-                            if (!try_resolve_types(resolver, arg_expr, param_type, scope))
+                            arg_res = false;
+                        }
+                        else
+                        {
+                            assert(param_type);
+                            if (arg_res &&
+                                !(arg_expr->type == param_type))
                             {
-                                arg_res = false;
-                            }
-                            else
-                            {
-                                assert(param_type);
-                                if (arg_res &&
-                                    !(arg_expr->type == param_type))
+                                if (resolver_valid_type_conversion(arg_expr->type,
+                                                                   param_type))
                                 {
-                                    if (resolver_valid_type_conversion(arg_expr->type,
-                                                                       param_type))
-                                    {
-                                        auto new_arg_expr =
-                                            ast_cast_expression_new(resolver->allocator,
-                                                                    arg_expr,
-                                                                    param_type,
-                                                                    arg_expr->begin_file_pos,
-                                                                    arg_expr->end_file_pos);
+                                    auto new_arg_expr =
+                                        ast_cast_expression_new(resolver->allocator,
+                                                                arg_expr,
+                                                                param_type,
+                                                                arg_expr->begin_file_pos,
+                                                                arg_expr->end_file_pos);
 
-                                        new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                                        ast_expr->call.arg_expressions[i] = new_arg_expr;
+                                    new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                                    ast_expr->call.arg_expressions[i] = new_arg_expr;
 
-                                        if (!try_resolve_types(resolver, new_arg_expr, scope))
-                                        {
-                                            assert(false); 
-                                        }
-                                    }
-                                    else 
+                                    if (!try_resolve_types(resolver, new_arg_expr, scope))
                                     {
-                                        resolver_report_mismatching_types(resolver, arg_expr,
-                                                                         param_type, arg_expr->type);
-                                        arg_res = false;
-                                        result = false;
+                                        assert(false); 
                                     }
                                 }
-                                else if (!arg_res) result = false;
+                                else 
+                                {
+                                    resolver_report_mismatching_types(resolver, arg_expr,
+                                                                     param_type, arg_expr->type);
+                                    arg_res = false;
+                                    result = false;
+                                }
                             }
+                            else if (!arg_res) result = false;
                         }
+                    }
 
 
-                        if (arg_res)
-                        {
-                            ast_expr->type = func_type->function.return_type;
-                            result = true;
-                        }
+                    if (arg_res)
+                    {
+                        ast_expr->type = func_type->function.return_type;
+                        result = true;
                     }
                 }
 
@@ -2866,6 +2873,12 @@ namespace Zodiac
                     assert(ast_expr->type);
                 }
                 
+                break;
+            }
+
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                result = try_resolve_builtin_call_types(resolver, ast_expr, scope);
                 break;
             }
 
@@ -3079,15 +3092,12 @@ namespace Zodiac
     {
         assert(resolver);
         assert(call_expr);
-        assert(call_expr->kind == AST_Expression_Kind::CALL);
+        assert(call_expr->kind == AST_Expression_Kind::BUILTIN_CALL);
         assert(scope);
 
-        auto ident_expr = call_expr->call.ident_expression;
-        assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
+        auto ident_atom = call_expr->builtin_call.identifier->atom;
 
-        auto ident_atom = ident_expr->identifier->atom;
-
-        auto &args = call_expr->call.arg_expressions;
+        auto &args = call_expr->builtin_call.arg_expressions;
 
         if (ident_atom == Builtin::atom_exit)
         {
@@ -4301,25 +4311,51 @@ namespace Zodiac
                     queue_emit_bytecode_jobs_from_expression(resolver, arg_expr, scope);
                 }
 
-                if (expr->call.is_builtin)
+                auto callee_decl = expr->call.callee_declaration;
+                assert(callee_decl);
+                assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+                if (!(callee_decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
                 {
-                    //@TODO: For things like @exit on windows (which calls ExitProcess) 
-                    //        the corresponding foreign function should be queued.
+                    auto func_parent_scope = callee_decl->function.parameter_scope->parent;
+                    assert(func_parent_scope);
+                    queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl,
+                                                              func_parent_scope);
+                    queue_emit_bytecode_job(resolver, callee_decl, scope);
                 }
-                else
+                break;
+            }
+
+            case AST_Expression_Kind::BUILTIN_CALL: 
+            {
+                auto &args = expr->builtin_call.arg_expressions;
+                for (int64_t i = 0; i < args.count; i++)
                 {
-                    auto callee_decl = expr->call.callee_declaration;
-                    assert(callee_decl);
-                    assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
-                    if (!(callee_decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
-                    {
-                        auto func_parent_scope = callee_decl->function.parameter_scope->parent;
-                        assert(func_parent_scope);
-                        queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl,
-                                                                  func_parent_scope);
-                        queue_emit_bytecode_job(resolver, callee_decl, scope);
-                    }
+                    auto arg_expr = args[i];
+                    queue_emit_bytecode_jobs_from_expression(resolver, arg_expr, scope);
                 }
+
+                auto atom = expr->builtin_call.identifier->atom;
+
+                if (atom == Builtin::atom_exit)
+                {
+#ifdef WIN32
+                    assert(false); // Queue ExitProcess foreign function.
+#endif
+                }
+                else if (atom == Builtin::atom_syscall ||
+                         atom == Builtin::atom_sizeof ||
+                         atom == Builtin::atom_cast)
+                { /* Nothing needs to be queued */ }
+                else if (atom == Builtin::atom_offsetof)
+                {
+                    assert(false);
+                }
+                else 
+                {
+                    assert(false);
+                }
+                break;
+
                 break;
             }
 
@@ -4479,6 +4515,7 @@ namespace Zodiac
             case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
 
@@ -4652,6 +4689,41 @@ namespace Zodiac
             {
                 auto op_expr = expr->pre_fix.operand_expression;
                 is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
+                break;
+            }
+
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                auto atom = expr->builtin_call.identifier->atom;
+
+                if (atom == Builtin::atom_exit)
+                {
+                    assert(expr->builtin_call.arg_expressions.count == 1);
+                    auto op_expr = expr->builtin_call.arg_expressions[0];
+                    is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
+                }
+                else if (atom == Builtin::atom_syscall)
+                {
+                    is_const = false;
+                }
+                else if (atom == Builtin::atom_cast)
+                {
+                    assert(expr->builtin_call.arg_expressions.count == 2);
+                    auto op_expr = expr->builtin_call.arg_expressions[1];
+                    is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
+                }
+                else if (atom == Builtin::atom_sizeof)
+                {
+                    is_const = true;
+                }
+                else if (atom == Builtin::atom_offsetof)
+                {
+                    assert(false);
+                }
+                else 
+                {
+                    assert(false);
+                }
                 break;
             }
 
