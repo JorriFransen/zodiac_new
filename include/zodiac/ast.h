@@ -553,6 +553,8 @@ namespace Zodiac
                                             Parsed_File *parsed_file);
 
     AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+                                                   Identifier_PTN *ptn);
+    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
                                                    Expression_PTN *ptn);
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,

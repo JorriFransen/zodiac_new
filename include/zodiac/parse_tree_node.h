@@ -53,7 +53,7 @@ struct PT_Node
 };
 
 typedef PT_Node PTN;
-
+ 
 struct Identifier_PTN
 {
     static PTN_Kind _kind;

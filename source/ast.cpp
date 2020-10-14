@@ -70,13 +70,8 @@ namespace Zodiac
 
         if (ptn->identifier)
         {
-            auto id_begin_fp = ptn->identifier->self.begin_file_pos;
-
-            auto id_end_fp = ptn->identifier->self.end_file_pos;
-
             assert(ptn->identifier);
-            ast_ident = ast_identifier_new(allocator, ptn->identifier->atom, id_begin_fp,
-                                           id_end_fp);
+            ast_ident = ast_create_identifier_from_ptn(allocator, ptn->identifier);
             assert(ast_ident);
             begin_fp = ast_ident->begin_file_pos;
         }
@@ -355,6 +350,14 @@ namespace Zodiac
     }
 
     AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+                                                   Identifier_PTN *ptn)
+    {
+        return ast_identifier_new(allocator, ptn->atom,
+                                  ptn->self.begin_file_pos,
+                                  ptn->self.end_file_pos);
+    }
+
+    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
                                                    Expression_PTN *ptn)
     {
         switch (ptn->kind)
@@ -377,11 +380,7 @@ namespace Zodiac
                                                      Parameter_PTN *ptn, 
                                                      AST_Type_Spec *type_spec)
     {
-        auto id_begin_fp = ptn->identifier->self.begin_file_pos;
-        auto id_end_fp = ptn->identifier->self.end_file_pos;
-
-        auto ast_ident = ast_identifier_new(allocator, ptn->identifier->atom, id_begin_fp,
-                                            id_end_fp);
+        auto ast_ident = ast_create_identifier_from_ptn(allocator, ptn->identifier);
         assert(ast_ident);
         auto begin_fp = ast_ident->begin_file_pos;
         auto end_fp = ast_ident->end_file_pos;
@@ -406,9 +405,7 @@ namespace Zodiac
             case PT_Node_Kind::IDENTIFIER:
             {
                 Identifier_PTN *ident = (Identifier_PTN*)ptn;
-                identifier = ast_identifier_new(allocator, ident->atom,
-                                                ptn->begin_file_pos,
-                                                ptn->end_file_pos);
+                identifier = ast_create_identifier_from_ptn(allocator, ident);
                 break;
             }
 
@@ -424,9 +421,7 @@ namespace Zodiac
                 assert(declaration->kind == Declaration_PTN_Kind::CONSTANT);
                 assert(declaration->constant.type_expression == nullptr);
 
-                identifier = ast_identifier_new(allocator, ident->atom,
-                                                ident->self.begin_file_pos,
-                                                ident->self.end_file_pos);
+                identifier = ast_create_identifier_from_ptn(allocator, ident);
 
                 auto init_expression = declaration->constant.init_expression;
                 if (init_expression)
@@ -606,9 +601,8 @@ namespace Zodiac
                 }
                 else
                 {
-                    index_ident = ast_identifier_new(allocator, ptn_idx_ident->atom,
-                                                     ptn_idx_ident->self.begin_file_pos,
-                                                     ptn_idx_ident->self.end_file_pos);
+                    index_ident = ast_create_identifier_from_ptn(allocator,
+                                                                 ptn_idx_ident);
                 }
 
                 auto idx_ident_expr = ast_identifier_expression_new(allocator,
@@ -629,9 +623,7 @@ namespace Zodiac
                 AST_Identifier *it_ident = nullptr;
                 if (ptn_it_ident)
                 {
-                    it_ident = ast_identifier_new(allocator, ptn_it_ident->atom,
-                                                  ptn_it_ident->self.begin_file_pos,
-                                                  ptn_it_ident->self.end_file_pos);
+                    it_ident = ast_create_identifier_from_ptn(allocator, ptn_it_ident);
                 }
                 else
                 {
@@ -845,11 +837,8 @@ namespace Zodiac
 
             case Expression_PTN_Kind::IDENTIFIER:
             {
-                auto id_begin_fp = ptn->identifier->self.begin_file_pos;
-                auto id_end_fp = ptn->identifier->self.end_file_pos;
-
-                AST_Identifier *identifier = ast_identifier_new(allocator, ptn->identifier->atom,
-                                                                id_begin_fp, id_end_fp);
+                auto identifier = ast_create_identifier_from_ptn(allocator,
+                                                                 ptn->identifier);
                 return ast_identifier_expression_new(allocator, identifier, begin_fp, end_fp);
 
                 break;
@@ -907,12 +896,8 @@ namespace Zodiac
                                                                       ptn->dot.parent_expression);
                 assert(ast_parent_expr);
 
-                auto id_begin_fp = ptn->dot.child_identifier->self.begin_file_pos;
-                auto id_end_fp = ptn->dot.child_identifier->self.end_file_pos;
-
-                auto ast_child_ident = ast_identifier_new(allocator,
-                                                          ptn->dot.child_identifier->atom,
-                                                          id_begin_fp, id_end_fp);
+                auto ast_child_ident =
+                    ast_create_identifier_from_ptn(allocator, ptn->dot.child_identifier);
                 assert(ast_child_ident);
 
                 return ast_dot_expression_new(allocator, ast_parent_expr, ast_child_ident,
@@ -1027,25 +1012,15 @@ namespace Zodiac
             {
                 assert(ptn->poly_type.identifier);
 
-                auto id_begin_file_pos = ptn->poly_type.identifier->self.begin_file_pos;
-                auto id_end_file_pos = ptn->poly_type.identifier->self.end_file_pos;
-
-                auto ast_ident = ast_identifier_new(allocator, ptn->poly_type.identifier->atom,
-                                                    id_begin_file_pos, id_end_file_pos);
+                auto ast_ident =
+                    ast_create_identifier_from_ptn(allocator, ptn->poly_type.identifier);
                 assert(ast_ident);
 
                 AST_Identifier *ast_spec_ident = nullptr;
                 if (ptn->poly_type.specification_identifier)
                 {
-                    auto spec_id_begin_fp =
-                        ptn->poly_type.specification_identifier->self.begin_file_pos;
-                    auto spec_id_end_fp =
-                        ptn->poly_type.specification_identifier->self.end_file_pos;
-
-                    ast_spec_ident =
-                        ast_identifier_new(allocator,
-                                           ptn->poly_type.specification_identifier->atom,
-                                           spec_id_begin_fp, spec_id_end_fp);
+                    ast_spec_ident = ast_create_identifier_from_ptn(allocator,
+                                               ptn->poly_type.specification_identifier);
                     assert(ast_spec_ident);
                 }
 
@@ -1171,11 +1146,7 @@ namespace Zodiac
 
             case Expression_PTN_Kind::IDENTIFIER:
             {
-                auto id_begin_fp = ptn->identifier->self.begin_file_pos;
-                auto id_end_fp = ptn->identifier->self.end_file_pos;
-
-                AST_Identifier *ident = ast_identifier_new(allocator, ptn->identifier->atom,
-                                                           id_begin_fp, id_end_fp);
+                auto ident = ast_create_identifier_from_ptn(allocator, ptn->identifier);
                 assert(ident);
 
                 return ast_identifier_type_spec_new(allocator, ident, begin_fp, end_fp);
@@ -1238,25 +1209,15 @@ namespace Zodiac
 
             case Expression_PTN_Kind::POLY_TYPE:
             {
-                auto id_begin_fp = ptn->poly_type.identifier->self.begin_file_pos;
-                auto id_end_fp = ptn->poly_type.identifier->self.end_file_pos;
-
-                auto ast_ident = ast_identifier_new(allocator, ptn->poly_type.identifier->atom,
-                                                    id_begin_fp, id_end_fp);
+                auto ast_ident = ast_create_identifier_from_ptn(allocator,
+                                                            ptn->poly_type.identifier);
                 assert(ast_ident);
 
                 AST_Identifier *ast_spec_ident = nullptr;
                 if (ptn->poly_type.specification_identifier)
                 {
-                    auto spec_id_begin_fp = 
-                        ptn->poly_type.specification_identifier->self.begin_file_pos;
-                    auto spec_id_end_fp = 
-                        ptn->poly_type.specification_identifier->self.end_file_pos;
-
-                    ast_spec_ident =
-                        ast_identifier_new(allocator,
-                                           ptn->poly_type.specification_identifier->atom,
-                                           spec_id_begin_fp, spec_id_end_fp);
+                    ast_spec_ident = ast_create_identifier_from_ptn(allocator,
+                                            ptn->poly_type.specification_identifier);
                     assert(ast_spec_ident);
                 }
 
