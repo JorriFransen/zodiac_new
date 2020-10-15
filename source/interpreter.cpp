@@ -1283,10 +1283,7 @@ namespace Zodiac
 
                case Bytecode_Instruction::SWITCH:
                {
-#ifndef NDEBUG
-                   auto type_idx =
-#endif
-                       interpreter_fetch<uint32_t>(interp);
+                   /*auto type_idx =*/ interpreter_fetch<uint32_t>(interp);
 
                    auto val_idx = interpreter_fetch<uint32_t>(interp);
                    auto case_count = interpreter_fetch<uint32_t>(interp);

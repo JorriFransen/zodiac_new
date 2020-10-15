@@ -2326,9 +2326,11 @@ namespace Zodiac
                         }
                     }
 
+#ifndef NDEBUG
+                    auto cond_type = ast_stmt->for_stmt.cond_expr->type;
                     assert(cond_type);
-
                     assert(cond_type->kind == AST_Type_Kind::BOOL);
+#endif
                 }
 
                 for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
