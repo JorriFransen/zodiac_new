@@ -33,7 +33,8 @@ namespace Zodiac
         ast_node->end_file_pos = end_fp;
     }
 
-    AST_Module *ast_create_from_parsed_file(Allocator *allocator, Parsed_File *parsed_file)
+    AST_Module *ast_create_from_parsed_file(Allocator *allocator, Parsed_File *parsed_file,
+                                            Scope *global_scope)
     {
         ZoneScoped
 
@@ -43,11 +44,14 @@ namespace Zodiac
         Array<AST_Declaration*> global_decls = {};
         array_init(allocator, &global_decls);
 
+        Scope *module_scope = scope_new(allocator, Scope_Kind::MODULE,
+                                        global_scope, parsed_file->declarations.count);
+
         for (int64_t i = 0; i < parsed_file->declarations.count; i++)
         {
             AST_Declaration *ast_decl =
                 ast_create_declaration_from_ptn(allocator, parsed_file->declarations[i],
-                                                nullptr);
+                                                nullptr, module_scope);
             ast_decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
             assert(ast_decl);
             array_append(&global_decls, ast_decl);
@@ -58,14 +62,16 @@ namespace Zodiac
         auto begin_fp = array_first(&global_decls)->begin_file_pos;
         auto end_fp = array_last(&global_decls)->end_file_pos;
 
-        AST_Module *ast_module = ast_module_new(allocator, global_decls, begin_fp, end_fp);
+        AST_Module *ast_module = ast_module_new(allocator, global_decls, module_scope,
+                                                begin_fp, end_fp);
         assert(ast_module);
         return ast_module;
     }
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Declaration_PTN *ptn,
-                                                     Array<AST_Declaration*> *var_decls)
+                                                     Array<AST_Declaration*> *var_decls,
+                                                     Scope *parent_scope)
     {
         assert(allocator);
 
@@ -214,11 +220,14 @@ namespace Zodiac
                 Array<AST_Declaration*> ast_var_decls = {};
                 array_init(allocator, &ast_var_decls);
 
+                Scope *param_scope = scope_new(allocator, Scope_Kind::PARAMETER,
+                                               parent_scope,  ast_param_decls.count);
+
                 AST_Statement *ast_body = nullptr;
                 if (ptn->function.body)
                 {
                     ast_body = ast_create_statement_from_ptn(allocator, ptn->function.body,
-                                                             &ast_var_decls);
+                                                             &ast_var_decls, param_scope);
                     assert(ast_body);
                 }
 
@@ -231,6 +240,7 @@ namespace Zodiac
                 return ast_function_declaration_new(allocator, ast_ident, ast_type,
                                                     ast_param_decls, ast_var_decls, ast_body,
                                                     is_naked, is_noreturn, is_foreign,
+                                                    param_scope,
                                                     begin_fp, end_fp);
                 break;
             }
@@ -248,7 +258,7 @@ namespace Zodiac
                         auto ptn_mem_decl = ptn->structure.member_declarations[i];
                         auto ast_mem_decl = ast_create_declaration_from_ptn(allocator,
                                                                             ptn_mem_decl,
-                                                                            nullptr);
+                                                                            nullptr, nullptr);
                         assert(ast_mem_decl);
 
                         array_append(&ast_member_decls, ast_mem_decl);
@@ -289,6 +299,7 @@ namespace Zodiac
 
                 return ast_structure_declaration_new(allocator, ast_ident,
                                                      ast_member_decls, ast_parameters,
+                                                     parent_scope,
                                                      begin_fp, end_fp);
                 break;
             }
@@ -318,6 +329,7 @@ namespace Zodiac
                 }
 
                 return ast_enum_declaration_new(allocator, ast_ident, ast_ts, ast_members,
+                                                parent_scope,
                                                 begin_fp, ptn->self.end_file_pos);
                 break;
             }
@@ -450,7 +462,8 @@ namespace Zodiac
     }
 
     AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 
-                                                 Array<AST_Declaration*> *var_decls)
+                                                 Array<AST_Declaration*> *var_decls,
+                                                 Scope *parent_scope)
     {
         assert(ptn);
         auto begin_fp = ptn->self.begin_file_pos;
@@ -463,6 +476,8 @@ namespace Zodiac
             case Statement_PTN_Kind::BLOCK:
             {
                 Array<AST_Statement*> ast_block_stmts = {};
+                Scope *block_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope,
+                                               ptn->block.statements.count);
                 if (ptn->block.statements.count)
                 {
                     array_init(allocator, &ast_block_stmts);
@@ -471,14 +486,16 @@ namespace Zodiac
                     {
                         AST_Statement *ast_block_stmt =
                             ast_create_statement_from_ptn(allocator,
-                                                          ptn->block.statements[i], var_decls);
+                                                          ptn->block.statements[i],
+                                                          var_decls, block_scope);
                         assert(ast_block_stmt);
 
                         array_append(&ast_block_stmts, ast_block_stmt);
                     }
                 }
 
-                return ast_block_statement_new(allocator, ast_block_stmts, begin_fp, end_fp);
+                return ast_block_statement_new(allocator, ast_block_stmts, block_scope,
+                                              begin_fp, end_fp);
                 break; 
             }
 
@@ -486,7 +503,7 @@ namespace Zodiac
             {
                 auto ast_declaration = ast_create_declaration_from_ptn(allocator,
                                                                        ptn->declaration,
-                                                                       var_decls);
+                                                                       var_decls, nullptr);
                 assert(ast_declaration);
                 return ast_declaration_statement_new(allocator, ast_declaration, begin_fp, end_fp);
                 break;
@@ -539,8 +556,21 @@ namespace Zodiac
                 auto cond_expr = ast_create_expression_from_ptn(allocator,
                                                                 ptn->while_stmt.cond_expr);
                 auto body = ast_create_statement_from_ptn(allocator, ptn->while_stmt.body,
-                                                          var_decls);
-                return ast_while_statement_new(allocator, cond_expr, body, begin_fp, end_fp);
+                                                          var_decls, parent_scope);
+                Scope *body_scope = nullptr;
+
+                if (body->kind == AST_Statement_Kind::BLOCK)
+                {
+                    body_scope = body->block.scope;
+                }
+                else
+                {
+                    assert(false);
+                }
+
+                assert(body_scope);
+                return ast_while_statement_new(allocator, cond_expr, body, body_scope,
+                                               begin_fp, end_fp);
                 break;
             }
 
@@ -548,18 +578,18 @@ namespace Zodiac
             {
                 auto init_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.init_stmt,
-                                                               var_decls);
+                                                               var_decls, parent_scope);
 
                 auto cond_expr = ast_create_expression_from_ptn(allocator,
                                                                 ptn->for_stmt.cond_expr);
 
                 auto step_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.step_stmt,
-                                                               var_decls);
+                                                               var_decls, parent_scope);
 
                 auto body_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.body_stmt,
-                                                               var_decls);
+                                                               var_decls, nullptr);
 
                 Array<AST_Statement *> init_statements = {};
                 array_init(allocator, &init_statements, 1);
@@ -673,7 +703,7 @@ namespace Zodiac
 
                 auto body_stmt =
                     ast_create_statement_from_ptn(allocator, ptn->foreach.body_stmt,
-                                                  var_decls);
+                                                  var_decls, nullptr);
 
                 return ast_for_statement_new(allocator, init_stmts, cond_expr,
                                              it_decl, step_statements, body_stmt,
@@ -686,16 +716,41 @@ namespace Zodiac
                                                                 ptn->if_stmt.cond_expr);
                 auto then_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->if_stmt.then_stmt,
-                                                               var_decls);
+                                                               var_decls, parent_scope);
+                Scope *then_scope = nullptr;
+
+                if (then_stmt->kind == AST_Statement_Kind::BLOCK) 
+                    then_scope = then_stmt->block.scope;
+                else 
+                {
+                    then_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                }
+
+                assert(then_scope);
+
+                Scope *else_scope = nullptr;
+
                 AST_Statement *else_stmt = nullptr;
                 if (ptn->if_stmt.else_stmt)
                 {
                     else_stmt = ast_create_statement_from_ptn(allocator,
                                                               ptn->if_stmt.else_stmt,
-                                                              var_decls); 
+                                                              var_decls, parent_scope); 
+
+                    if (else_stmt->kind == AST_Statement_Kind::BLOCK)
+                        else_scope = else_stmt->block.scope;
+                    else if (else_stmt->kind == AST_Statement_Kind::IF)
+                        else_scope = else_stmt->if_stmt.then_scope;
+                    else
+                    {
+                        assert(false);
+                    }
+
+                    assert(else_scope);
                 }
 
                 return ast_if_statement_new(allocator, cond_expr, then_stmt, else_stmt,
+                                            then_scope, else_scope,
                                             begin_fp, end_fp);
                 break;
             }
@@ -763,7 +818,8 @@ namespace Zodiac
 
                     AST_Statement *body = ast_create_statement_from_ptn(allocator,
                                                                         ptn_case.body,
-                                                                        var_decls);
+                                                                        var_decls, 
+                                                                        parent_scope);
 
                     AST_Switch_Case *ast_case = ast_switch_case_new(allocator,
                                                                     case_expressions,
@@ -1256,11 +1312,15 @@ namespace Zodiac
     }
 
     AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls,
+                               Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp)
     {
+        assert(module_scope->kind == Scope_Kind::MODULE);
+
         auto result = ast_node_new<AST_Module>(allocator, begin_fp, end_fp);
 
         result->declarations = decls;
+        result->module_scope = module_scope;
         
         return result;
     }
@@ -1362,12 +1422,15 @@ namespace Zodiac
                                                   AST_Statement *body,
                                                   bool is_naked, bool is_noreturn,
                                                   bool is_foreign,
+                                                  Scope *param_scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp)
     {
         if (body) assert(body->kind == AST_Statement_Kind::BLOCK);
 
         assert(identifier);
+        assert(param_scope->kind == Scope_Kind::PARAMETER);
+
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::FUNCTION, identifier,
                                           begin_fp, end_fp);
 
@@ -1375,7 +1438,7 @@ namespace Zodiac
         result->function.parameter_declarations = parameter_declarations;
         result->function.variable_declarations = variable_declarations;
         result->function.body = body;
-        result->function.parameter_scope = nullptr;
+        result->function.parameter_scope = param_scope;
 
         if (is_naked)
         {
@@ -1411,17 +1474,24 @@ namespace Zodiac
                                                    AST_Identifier *identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters,
+                                                   Scope *parent_scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp)
     {
+        assert(parent_scope);
+
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STRUCTURE,
                                           identifier, begin_fp, end_fp);
 
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
 
-        result->structure.parameter_scope = nullptr;
-        result->structure.member_scope = nullptr;
+        auto param_scope = scope_new(allocator, Scope_Kind::PARAMETER, parent_scope,
+                                     parameters.count);
+        result->structure.parameter_scope = param_scope;
+
+        result->structure.member_scope = scope_new(allocator, Scope_Kind::AGGREGATE,
+                                                   param_scope, member_decls.count);
 
         return result;
     }
@@ -1430,6 +1500,7 @@ namespace Zodiac
                                               AST_Identifier *identifier,
                                               AST_Type_Spec *ast_ts,
                                               Array<AST_Declaration*> member_decls,
+                                              Scope *parent_scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp)
     {
@@ -1437,7 +1508,8 @@ namespace Zodiac
                                           identifier, begin_fp, end_fp);
         result->enum_decl.type_spec = ast_ts;
         result->enum_decl.member_declarations = member_decls;
-        result->enum_decl.member_scope = nullptr;
+        result->enum_decl.member_scope = scope_new(allocator, Scope_Kind::AGGREGATE,
+                                                    parent_scope, member_decls.count);
 
         return result;
     }
@@ -1495,12 +1567,15 @@ namespace Zodiac
     }
 
     AST_Statement *ast_block_statement_new(Allocator *allocator, Array<AST_Statement*> statements,
+                                           Scope *block_scope,
                                            const File_Pos &begin_fp, const File_Pos &end_fp)
     {
+        assert(block_scope->kind == Scope_Kind::BLOCK);
+
         auto result = ast_statement_new(allocator, AST_Statement_Kind::BLOCK, begin_fp, end_fp);
 
         result->block.statements = statements;
-        result->block.scope = nullptr;
+        result->block.scope = block_scope;
 
         return result;
     }
@@ -1560,14 +1635,15 @@ namespace Zodiac
     }
 
     AST_Statement *ast_while_statement_new(Allocator *allocator, AST_Expression *cond_expr,
-                                           AST_Statement *body, const File_Pos & begin_fp,
+                                           AST_Statement *body, Scope *body_scope,
+                                           const File_Pos & begin_fp,
                                            const File_Pos &end_fp)
     {
         auto result = ast_statement_new(allocator, AST_Statement_Kind::WHILE, begin_fp, end_fp);
 
         result->while_stmt.cond_expr = cond_expr;
         result->while_stmt.body = body;
-        result->while_stmt.body_scope = nullptr;
+        result->while_stmt.body_scope = body_scope;
 
         return result;
     }
@@ -1596,16 +1672,25 @@ namespace Zodiac
 
     AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *then_stmt, AST_Statement *else_stmt,
+                                           Scope *then_scope, Scope *else_scope,
                                            const File_Pos & begin_fp, const File_Pos &end_fp)
     {
         assert(cond_expr);
         assert(then_stmt);
+        assert(then_scope);
+
+        if (else_stmt)
+        {
+            assert(else_scope);
+        }
 
         auto result = ast_statement_new(allocator, AST_Statement_Kind::IF, begin_fp, end_fp);
 
         result->if_stmt.cond_expr = cond_expr;
         result->if_stmt.then_stmt = then_stmt;
         result->if_stmt.else_stmt = else_stmt;
+        result->if_stmt.then_scope = then_scope;
+        result->if_stmt.else_scope = else_scope;
 
         return result;
     }

@@ -52,6 +52,7 @@ namespace Zodiac
     void scope_populate_ast(Allocator *allocator, AST_Node *anode, Scope *parent_scope)
     {
         assert(allocator);
+        assert(parent_scope);
 
         if (parent_scope) assert(anode->kind != AST_Node_Kind::MODULE ||
                                  parent_scope->kind == Scope_Kind::GLOBAL); 
@@ -64,12 +65,10 @@ namespace Zodiac
             case AST_Node_Kind::MODULE:
             {
                 auto ast_module = static_cast<AST_Module*>(anode);
-                assert(ast_module->module_scope == nullptr);
+                assert(ast_module->module_scope);
 
                 assert(parent_scope);
                 assert(parent_scope->kind == Scope_Kind::GLOBAL);
-                ast_module->module_scope = scope_new(allocator, Scope_Kind::MODULE, parent_scope,
-                                                     ast_module->declarations.count);
 
                 for (int64_t i = 0; i < ast_module->declarations.count; i++)
                 {
@@ -168,12 +167,8 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                assert(ast_decl->function.parameter_scope == nullptr);
+                assert(ast_decl->function.parameter_scope);
                 assert(parent_scope);
-
-                ast_decl->function.parameter_scope =
-                    scope_new(allocator, Scope_Kind::PARAMETER, parent_scope,
-                              ast_decl->function.parameter_declarations.count);
 
                 for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count;
                      i++)
@@ -202,24 +197,15 @@ namespace Zodiac
 
             case AST_Declaration_Kind::STRUCTURE:
             {
-                assert(ast_decl->structure.parameter_scope == nullptr);
-                assert(ast_decl->structure.member_scope == nullptr);
+                assert(ast_decl->structure.parameter_scope);
+                assert(ast_decl->structure.member_scope);
                 assert(parent_scope);
-
-                ast_decl->structure.parameter_scope = 
-                    scope_new(allocator, Scope_Kind::PARAMETER, parent_scope,
-                              ast_decl->structure.parameters.count);
 
                 for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++)
                 {
                     scope_populate_ast(allocator, ast_decl->structure.parameters[i],
                                        ast_decl->structure.parameter_scope);
                 }
-
-                ast_decl->structure.member_scope = 
-                    scope_new(allocator, Scope_Kind::AGGREGATE,
-                              ast_decl->structure.parameter_scope,
-                              ast_decl->structure.member_declarations.count);
 
                 for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
                 {
@@ -232,12 +218,8 @@ namespace Zodiac
 
             case AST_Declaration_Kind::ENUM:
             {
-                assert(ast_decl->enum_decl.member_scope == nullptr);
+                assert(ast_decl->enum_decl.member_scope);
                 assert(parent_scope);
-
-                ast_decl->enum_decl.member_scope =
-                    scope_new(allocator, Scope_Kind::AGGREGATE, parent_scope,
-                              ast_decl->enum_decl.member_declarations.count);
 
                 for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
                 {
@@ -249,7 +231,7 @@ namespace Zodiac
 
             case AST_Declaration_Kind::POLY_TYPE:
             {
-                //
+                assert(false);
                 break;
             }
         }
@@ -266,8 +248,7 @@ namespace Zodiac
 
             case AST_Statement_Kind::BLOCK:
             {
-                assert(ast_stmt->block.scope == nullptr);
-                ast_stmt->block.scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+                assert(ast_stmt->block.scope);
 
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
                 {
@@ -318,42 +299,41 @@ namespace Zodiac
             {
                 scope_populate_expression_ast(allocator, ast_stmt->while_stmt.cond_expr,
                                               parent_scope);
-                auto while_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
-                assert(ast_stmt->while_stmt.body_scope == nullptr);
-                ast_stmt->while_stmt.body_scope = while_scope;
-                scope_populate_statement_ast(allocator, ast_stmt->while_stmt.body, while_scope);
+                assert(ast_stmt->while_stmt.body_scope);
+                scope_populate_statement_ast(allocator, ast_stmt->while_stmt.body,
+                                             ast_stmt->while_stmt.body_scope);
                 break;
             }
             
             case AST_Statement_Kind::FOR:
             {
-                auto for_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
-                assert(ast_stmt->for_stmt.scope == nullptr);
-                ast_stmt->for_stmt.scope = for_scope;
+                assert(ast_stmt->for_stmt.scope);
 
                 for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
                 {
                     auto init_stmt = ast_stmt->for_stmt.init_statements[i];
-                    scope_populate_statement_ast(allocator, init_stmt, for_scope);
+                    scope_populate_statement_ast(allocator, init_stmt,
+                                                 ast_stmt->for_stmt.scope);
                 }
 
                 scope_populate_expression_ast(allocator, ast_stmt->for_stmt.cond_expr,
-                                              for_scope);
+                                              ast_stmt->for_stmt.scope);
 
                 if (ast_stmt->for_stmt.it_decl)
                 {
                     scope_populate_declaration_ast(allocator, ast_stmt->for_stmt.it_decl,
-                                                   for_scope);
+                                                   ast_stmt->for_stmt.scope);
                 }
 
                 for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
                 {
                     auto step_stmt = ast_stmt->for_stmt.step_statements[i];
-                    scope_populate_statement_ast(allocator, step_stmt, for_scope);
+                    scope_populate_statement_ast(allocator, step_stmt,
+                                                 ast_stmt->for_stmt.scope);
                 }
 
                 scope_populate_statement_ast(allocator, ast_stmt->for_stmt.body_stmt,
-                                             for_scope);
+                                             ast_stmt->for_stmt.scope);
 
                 break;
             }
@@ -362,14 +342,15 @@ namespace Zodiac
             {
                 scope_populate_expression_ast(allocator, ast_stmt->if_stmt.cond_expr,
                                               parent_scope);
-                auto then_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
-                ast_stmt->if_stmt.then_scope = then_scope;
-                scope_populate_statement_ast(allocator, ast_stmt->if_stmt.then_stmt, then_scope);
+                auto then_scope = ast_stmt->if_stmt.then_scope;
+                assert(then_scope);
+                scope_populate_statement_ast(allocator, ast_stmt->if_stmt.then_stmt,
+                                              then_scope);
 
                 if (ast_stmt->if_stmt.else_stmt)
                 {
-                    auto else_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
-                    ast_stmt->if_stmt.else_scope = else_scope;
+                    auto else_scope = ast_stmt->if_stmt.else_scope;
+                    assert(else_scope);
                     scope_populate_statement_ast(allocator, ast_stmt->if_stmt.else_stmt,
                                                  else_scope);
                 }

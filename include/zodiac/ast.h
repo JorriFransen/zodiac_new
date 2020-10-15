@@ -551,7 +551,8 @@ namespace Zodiac
     }
 
     AST_Module *ast_create_from_parsed_file(Allocator *allocator,
-                                            Parsed_File *parsed_file);
+                                            Parsed_File *parsed_file,
+                                            Scope *global_scope);
 
     AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
                                                    Identifier_PTN *ptn);
@@ -560,7 +561,8 @@ namespace Zodiac
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Declaration_PTN *ptn,
-                                                     Array<AST_Declaration*> *var_decls);
+                                                     Array<AST_Declaration*> *var_decls,
+                                                     Scope *parent_scope);
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Parameter_PTN *ptn,
@@ -569,7 +571,8 @@ namespace Zodiac
     AST_Declaration *ast_create_enum_member_from_ptn(Allocator *allocator, PT_Node *ptn);
 
     AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 
-                                                 Array<AST_Declaration*> *var_decls);
+                                                 Array<AST_Declaration*> *var_decls,
+                                                 Scope *parent_scope);
 
     AST_Expression *ast_create_expression_from_ptn(Allocator *allocator,
                                                    Expression_PTN *ptn);
@@ -582,6 +585,7 @@ namespace Zodiac
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls, 
+                               Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind, 
@@ -625,6 +629,7 @@ namespace Zodiac
                                                   AST_Statement *body,
                                                   bool is_naked, bool is_noreturn,
                                                   bool is_foreign,
+                                                  Scope *param_scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp);
 
@@ -635,6 +640,7 @@ namespace Zodiac
                                                    AST_Identifier *identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters,
+                                                   Scope *scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
@@ -642,6 +648,7 @@ namespace Zodiac
                                               AST_Identifier *identifier,
                                               AST_Type_Spec *ast_ts,
                                               Array<AST_Declaration*> member_decls,
+                                              Scope *parent_scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
@@ -668,6 +675,7 @@ namespace Zodiac
 
     AST_Statement *ast_block_statement_new(Allocator *allocator,
                                            Array<AST_Statement*> statements,
+                                           Scope *block_scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
@@ -696,7 +704,8 @@ namespace Zodiac
                                                 const File_Pos &end_fp);
 
     AST_Statement *ast_while_statement_new(Allocator *allocator, AST_Expression *cond_expr,
-                                           AST_Statement *body, const File_Pos &begin_fp,
+                                           AST_Statement *body, Scope *body_scope,
+                                           const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
     AST_Statement *ast_for_statement_new(Allocator *allocator, 
@@ -711,6 +720,7 @@ namespace Zodiac
     AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *then_stmt,
                                            AST_Statement *else_stmt,
+                                           Scope *then_scope, Scope *else_scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 

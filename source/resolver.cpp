@@ -405,7 +405,8 @@ namespace Zodiac
 
                 if (options->print_parse_tree) parsed_file_print(&parsed_file);
 
-                auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file);
+                auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file,
+                                                              resolver->global_scope);
                 assert(module_ast);
 
                 if (options->print_ast) ast_print(module_ast);
@@ -2155,9 +2156,9 @@ namespace Zodiac
                 // Blocks hold their own scope
                 if (scope)
                 {
+                    assert(ast_stmt->block.scope);
                     assert(scope == ast_stmt->block.scope->parent);
                 }
-                assert(ast_stmt->block.scope);
 
                 bool block_res = true;
 
@@ -2286,8 +2287,8 @@ namespace Zodiac
 
                 resolver_push_break_node(resolver, ast_stmt);
 
-                if (!try_resolve_types(resolver, ast_stmt->while_stmt.body,
-                                       ast_stmt->while_stmt.body_scope, inferred_return_type))
+                if (!try_resolve_types(resolver, ast_stmt->while_stmt.body, scope,
+                                       inferred_return_type))
                 {
                     result = false;
                 }
@@ -2372,16 +2373,16 @@ namespace Zodiac
                     result = false;
                 }
 
-                if (!try_resolve_types(resolver, ast_stmt->if_stmt.then_stmt, 
-                                       ast_stmt->if_stmt.then_scope, inferred_return_type))
+                if (!try_resolve_types(resolver, ast_stmt->if_stmt.then_stmt, scope,
+                                       inferred_return_type))
                 {
                     result = false;
                 }
 
                 if (ast_stmt->if_stmt.else_stmt)
                 {
-                    if (!try_resolve_types(resolver, ast_stmt->if_stmt.else_stmt, 
-                                           ast_stmt->if_stmt.else_scope, inferred_return_type))
+                    if (!try_resolve_types(resolver, ast_stmt->if_stmt.else_stmt, scope,
+                                           inferred_return_type))
                     {
                         result = false;
                     }
