@@ -1365,7 +1365,29 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::BINARY: assert(false);
-            case AST_Expression_Kind::UNARY: assert(false);
+
+            case AST_Expression_Kind::UNARY:
+            {
+                assert(lvalue_expr->unary.op == UNOP_DEREF);
+
+                auto op_lvalue =
+                    bytecode_emit_expression(builder,
+                                             lvalue_expr->unary.operand_expression);
+
+                assert(op_lvalue->type->kind == AST_Type_Kind::POINTER);
+
+                return op_lvalue;
+
+
+
+                // auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                //                                  op_lvalue->type);
+                // bytecode_push_local_temporary(builder, result);
+
+                // return result;
+                break;
+            }
+
             case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);

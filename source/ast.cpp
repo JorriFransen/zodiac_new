@@ -1800,6 +1800,7 @@ namespace Zodiac
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
         result->dot.child_index = -1;
+        result->dot.child_decl = nullptr;
 
         return result;
     }

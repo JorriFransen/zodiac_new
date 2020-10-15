@@ -4612,7 +4612,14 @@ namespace Zodiac
             case AST_Expression_Kind::DOT: return expr->dot.child_decl;
 
             case AST_Expression_Kind::BINARY: assert(false);
-            case AST_Expression_Kind::UNARY: assert(false);
+
+            case AST_Expression_Kind::UNARY:
+            {
+                assert(expr->unary.op == UNOP_DEREF);
+                return resolver_get_declaration(expr->unary.operand_expression);
+                break;
+            }
+
             case AST_Expression_Kind::POST_FIX: assert(false);
             case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);

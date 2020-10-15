@@ -34,6 +34,7 @@ test_array_for :: func()
 {
     INT_COUNT :: 5;
     int_array : [INT_COUNT]s64;
+    modify_index := INT_COUNT - 1;
 
     for (i := 0; i < int_array.count; i = i + 1)
     {
@@ -44,6 +45,17 @@ test_array_for :: func()
     {
         print_array_value("int_array", int_array[i], i);
 
+        if (i == modify_index)
+        {
+            modify_index -= 1;
+
+            int_array[i] = int_array[i] * 2;
+
+            ptr := *int_array[i];
+            <ptr = int_array[i] * 2;
+
+            <ptr *= 2;
+        }
     }
 
     std.print("\n");
@@ -51,6 +63,18 @@ test_array_for :: func()
     for (int_array)
     {
         print_array_value("int_array", it, it_index);
+
+        if (it_index == modify_index)
+        {
+            modify_index -= 1;
+
+            int_array[it_index] = it * 2;
+
+            // ptr := *it;
+            // <ptr = it * 2;
+
+            // <it = it * 2;
+        }
     }
 
     std.print("\n");
@@ -58,6 +82,13 @@ test_array_for :: func()
     for (v: int_array)
     {
         print_array_value("int_array", v, it_index);
+
+        if (it_index == modify_index)
+        {
+            modify_index -= 1;
+
+            int_array[it_index] = v * 2;
+        }
     }
 
     std.print("\n");
@@ -65,6 +96,18 @@ test_array_for :: func()
     for (v, i: int_array)
     {
         print_array_value("int_array", v, i);
+
+        if (i == modify_index)
+        {
+            int_array[i] = v * 2;
+        }
+    }
+
+    std.print("\n");
+
+    for (int_array)
+    {
+        print_array_value("int_array", it, it_index);
     }
 
     return;

@@ -891,16 +891,27 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
 
         default:
         {
+            Statement_PTN *result = nullptr;
+
             auto expr = parser_parse_expression(parser, ts);
             assert(expr);
-            auto end_fp = ts->current_token().end_file_pos;
-            auto result =  new_expression_statement_ptn(parser->allocator, expr,
-                                                        begin_fp, end_fp);
+            if (parser_is_token(ts, TOK_EQ))
+            {
+                result = parser_parse_assignment_statement(parser, ts, expr);
+            }
+            else
+            {
+                result =  new_expression_statement_ptn(parser->allocator, expr,
+                                                       begin_fp,
+                                                       expr->self.end_file_pos);
+            }
+
             if (parser_match_token(ts, TOK_SEMICOLON))
             {
                 result->self.flags |= PTN_FLAG_SEMICOLON; 
             }
 
+            assert(result);
             return result;
         }
     }
@@ -914,7 +925,9 @@ Statement_PTN *parser_parse_assignment_statement(Parser *parser, Token_Stream *t
 {
     assert(ident_expression->kind == Expression_PTN_Kind::IDENTIFIER ||
            ident_expression->kind == Expression_PTN_Kind::DOT ||
-           ident_expression->kind == Expression_PTN_Kind::SUBSCRIPT);
+           ident_expression->kind == Expression_PTN_Kind::SUBSCRIPT ||
+           (ident_expression->kind == Expression_PTN_Kind::UNARY &&
+            ident_expression->unary.op == UNOP_DEREF));
 
     if (!parser_expect_token(parser, ts, TOK_EQ))
     {
