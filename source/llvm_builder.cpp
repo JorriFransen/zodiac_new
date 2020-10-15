@@ -14,8 +14,6 @@
 #include <llvm/Support/Host.h>
 #include <llvm/Support/FileSystem.h>
 
-#include <llvm-c/Core.h>
-
 #include <stdio.h>
 
 #include <tracy/Tracy.hpp>

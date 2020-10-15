@@ -1103,7 +1103,7 @@ namespace Zodiac
                 bool case_expr_res = true;
                 bool case_body_res = true;
 
-                for (uint64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
+                for (int64_t i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
                 {
                     AST_Switch_Case *case_stmt = ast_stmt->switch_stmt.cases[i];
 
@@ -1487,7 +1487,7 @@ namespace Zodiac
                         assert(child_ident->declaration);
 
                         bool found = false;
-                        for (uint64_t i = 0;
+                        for (int64_t i = 0;
                              i < parent_decl->enum_decl.member_declarations.count;
                              i++)
                         {
@@ -2083,7 +2083,7 @@ namespace Zodiac
                                                           scope);
 
                 auto mem_decls = ast_decl->enum_decl.member_declarations;
-                for (uint64_t i = 0; i < mem_decls.count; i++)
+                for (int64_t i = 0; i < mem_decls.count; i++)
                 {
                     auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);

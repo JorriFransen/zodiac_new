@@ -631,7 +631,7 @@ namespace Zodiac
             }
         }
 
-        assert(emitted_case_exprs == stmt->switch_stmt.case_expr_count);
+        assert(emitted_case_exprs == (int)stmt->switch_stmt.case_expr_count);
 
         auto func = builder->current_function;
 
@@ -3748,14 +3748,16 @@ namespace Zodiac
         if (size_spec == Bytecode_Size_Specifier::R32)
         {
             uint32_t raw_val = bytecode_iterator_fetch_32(bci);
-            float val = *((float*)&raw_val);
+            float *val_ptr = (float *)&raw_val;
+            float val = *val_ptr;
 
             string_builder_appendf(sb, "float %f", val);
         }
         else if (size_spec == Bytecode_Size_Specifier::R64)
         {
             uint64_t raw_val = bytecode_iterator_fetch_64(bci);
-            double val = *((double*)&raw_val);
+            double *val_ptr = (double *)&raw_val;
+            double val = *val_ptr;
             string_builder_append(sb, "double %f", val);
         }
         else assert(false);
