@@ -106,6 +106,7 @@ namespace Zodiac
             //assert(decl->decl_flags & AST_DECL_FLAG_IS_NAKED);
             assert(!builder->program.entry_function);
             builder->program.entry_function = func;
+            func->flags |= BYTECODE_FUNC_FLAG_CRT_ENTRY;
         }
         if (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY)
         {

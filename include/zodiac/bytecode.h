@@ -172,6 +172,7 @@ namespace Zodiac
         BYTECODE_FUNC_FLAG_NAKED       = 0x01,
         BYTECODE_FUNC_FLAG_NORETURN    = 0x02,
         BYTECODE_FUNC_FLAG_FOREIGN     = 0x04,
+        BYTECODE_FUNC_FLAG_CRT_ENTRY   = 0x08,
     };
 
     struct Bytecode_Function

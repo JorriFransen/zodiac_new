@@ -274,7 +274,15 @@ namespace Zodiac
                             }
 
                             if (!options->dont_emit_llvm)
-                                queue_emit_llvm_func_job(resolver, job->result.bc_func);
+                            {
+                                auto bc_func = job->result.bc_func;
+                                bool is_entry = (bc_func->flags & BYTECODE_FUNC_FLAG_CRT_ENTRY);
+                                
+                                if (!(options->link_c && is_entry))
+                                {
+                                    queue_emit_llvm_func_job(resolver, bc_func);
+                                }
+                            }
                         }
                         else if (decl->kind == AST_Declaration_Kind::VARIABLE)
                         {

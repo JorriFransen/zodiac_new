@@ -1,0 +1,28 @@
+
+std :: import std;
+
+#foreign puts :: func(cstr: *u8) -> s64
+#foreign printf :: func(fmt: *u8) -> s64
+
+main :: func() -> s64
+{
+    std.println("foreign test");
+
+    puts("Printing with puts");
+    printf("Printing with printf\n");
+
+
+    std.print("\n");
+
+    return 0;
+}
+#naked #noreturn _start :: func ()
+{
+    posix_call_main_and_exit();
+}
+
+#noreturn posix_call_main_and_exit :: func ()
+{
+    exit_code := main();
+    @exit(exit_code);
+}

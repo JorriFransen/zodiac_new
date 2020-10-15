@@ -146,7 +146,24 @@ namespace Zodiac
         bool print_command = options->print_link_command || options->verbose;
 
 #if linux
-        string_builder_appendf(sb, "ld -static %s.o -o %s", output_file_name, output_file_name);
+        if (options->link_c)
+        {
+            string_builder_append(sb, "ld ");
+            string_builder_append(sb, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
+            string_builder_append(sb, "/usr/lib64/Scrt1.o /usr/lib64/crti.o -lc ");
+        }
+        else
+        {
+
+            string_builder_appendf(sb, "ld -static -nostdlib ");
+        }
+
+        string_builder_appendf(sb, " %s.o -o %s", output_file_name, output_file_name);
+
+        if (options->link_c)
+        {
+            string_builder_appendf(sb, " /usr/lib64/crtn.o");
+        }
 
         auto link_cmd = string_builder_to_string(builder->allocator, sb);
         if (print_command) printf("Running linker: %s\n", link_cmd.data);
