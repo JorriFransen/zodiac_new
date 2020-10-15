@@ -714,6 +714,7 @@ namespace Zodiac
                                          AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
+                                         Scope *body_scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 

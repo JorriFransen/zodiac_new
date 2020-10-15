@@ -576,20 +576,21 @@ namespace Zodiac
 
             case Statement_PTN_Kind::FOR:
             {
+                auto for_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
                 auto init_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.init_stmt,
-                                                               var_decls, parent_scope);
+                                                               var_decls, for_scope);
 
                 auto cond_expr = ast_create_expression_from_ptn(allocator,
                                                                 ptn->for_stmt.cond_expr);
 
                 auto step_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.step_stmt,
-                                                               var_decls, parent_scope);
+                                                               var_decls, for_scope);
 
                 auto body_stmt = ast_create_statement_from_ptn(allocator,
                                                                ptn->for_stmt.body_stmt,
-                                                               var_decls, nullptr);
+                                                               var_decls, for_scope);
 
                 Array<AST_Statement *> init_statements = {};
                 array_init(allocator, &init_statements, 1);
@@ -599,9 +600,9 @@ namespace Zodiac
                 array_init(allocator, &step_statements, 1);
                 array_append(&step_statements, step_stmt);
 
-
                 return ast_for_statement_new(allocator, init_statements, cond_expr,
                                              nullptr, step_statements, body_stmt,
+                                             for_scope,
                                              begin_fp, end_fp);
                 break;
             }
@@ -701,12 +702,15 @@ namespace Zodiac
                                                                   ii_bfp, ii_efp);
                 array_append(&step_statements, idx_step_expr);
 
+                auto for_scope = scope_new(allocator, Scope_Kind::BLOCK, parent_scope);
+
                 auto body_stmt =
                     ast_create_statement_from_ptn(allocator, ptn->foreach.body_stmt,
-                                                  var_decls, nullptr);
+                                                  var_decls, for_scope);
 
                 return ast_for_statement_new(allocator, init_stmts, cond_expr,
                                              it_decl, step_statements, body_stmt,
+                                             for_scope,
                                              begin_fp, end_fp);
             }
 
@@ -1654,9 +1658,12 @@ namespace Zodiac
                                          AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
+                                         Scope *body_scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp)
     {
+        assert(body_scope->kind == Scope_Kind::BLOCK);
+
         auto result = ast_statement_new(allocator, AST_Statement_Kind::FOR, begin_fp,
                                         end_fp);
 
@@ -1665,7 +1672,7 @@ namespace Zodiac
         result->for_stmt.it_decl = it_decl;
         result->for_stmt.step_statements = step_statements;
         result->for_stmt.body_stmt = body_stmt;
-        result->for_stmt.scope = nullptr;
+        result->for_stmt.scope = body_scope;
 
         return result;
     }
