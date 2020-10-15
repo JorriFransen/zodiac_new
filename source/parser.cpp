@@ -1468,7 +1468,11 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
         {
             auto add_op = parser_parse_add_op(ts);
             auto end_fp = ts->current_token().end_file_pos;
-            auto add_op2 = parser_parse_add_op(ts);
+
+#ifndef NDEBUG
+            auto add_op2 =
+#endif
+                parser_parse_add_op(ts);
 
             assert(add_op == add_op2);
             assert(add_op == BINOP_ADD || add_op == BINOP_SUB);

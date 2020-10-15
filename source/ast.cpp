@@ -360,6 +360,7 @@ namespace Zodiac
         }
 
         assert(false);
+        return nullptr;
     }
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,

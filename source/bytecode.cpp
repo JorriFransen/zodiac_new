@@ -1026,8 +1026,8 @@ namespace Zodiac
             auto struct_decl = struct_name->identifier->declaration;
             assert(struct_decl);
 
-            auto struct_type = struct_name->type;
-            assert(struct_type);
+            // auto struct_type = struct_name->type;
+            // assert(struct_type);
 
             auto mem_decl = mem_name->identifier->declaration;
             assert(mem_decl);
@@ -3696,7 +3696,10 @@ namespace Zodiac
     void bytecode_print_im_enum(String_Builder *sb, Bytecode_Iterator *bci,
                                 AST_Type *type)
     {
-        auto size_spec = (Bytecode_Size_Specifier)bytecode_iterator_fetch_16(bci);
+#ifndef NDEBUG
+        auto size_spec = (Bytecode_Size_Specifier)
+#endif
+            bytecode_iterator_fetch_16(bci);
 
 
 

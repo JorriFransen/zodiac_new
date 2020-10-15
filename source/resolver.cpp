@@ -2326,34 +2326,9 @@ namespace Zodiac
                         }
                     }
 
-                    auto cond_expr = ast_stmt->for_stmt.cond_expr;
-                    auto cond_type = cond_expr->type;
-
                     assert(cond_type);
 
                     assert(cond_type->kind == AST_Type_Kind::BOOL);
-
-                    // if (cond_type != Builtin::type_bool)
-                    // {
-                    //     assert(resolver_valid_type_conversion(cond_type,
-                    //                                           Builtin::type_bool));
-
-                    //     auto begin_fp = cond_expr->begin_file_pos;
-                    //     auto end_fp = cond_expr->end_file_pos;
-
-                    //     ast_stmt->for_stmt.cond_expr =
-                    //         ast_cast_expression_new(resolver->allocator,
-                    //                                 cond_expr, Builtin::type_bool,
-                    //                                 begin_fp, end_fp);
-
-                    //     ast_stmt->for_stmt.cond_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
-
-                    //     if (!try_resolve_types(resolver, ast_stmt->for_stmt.cond_expr,
-                    //                            for_scope))
-                    //     {
-                    //         assert(false);
-                    //     }
-                    // }
                 }
 
                 for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
