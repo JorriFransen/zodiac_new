@@ -412,9 +412,9 @@ namespace Zodiac
                 if (options->print_ast) ast_print(module_ast);
 
 
-                { ZoneScopedNC("scope_populate_ast", 0x00ff00)
-                scope_populate_ast(resolver->allocator, module_ast, resolver->global_scope);
-                }
+                // { ZoneScopedNC("scope_populate_ast", 0x00ff00)
+                // scope_populate_ast(resolver->allocator, module_ast, resolver->global_scope);
+                // }
 
                 result = true;
 
@@ -998,7 +998,7 @@ namespace Zodiac
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->while_stmt.cond_expr, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 resolver_push_break_node(resolver, ast_stmt);
@@ -1072,7 +1072,7 @@ namespace Zodiac
                 result = true;
                 if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.cond_expr, scope))
                 {
-                    assert(false); 
+                    result = false;
                 }
 
                 if (!try_resolve_identifiers(resolver, ast_stmt->if_stmt.then_stmt,
@@ -1364,17 +1364,17 @@ namespace Zodiac
                                                 
             case AST_Expression_Kind::SUBSCRIPT:
             {
+                result = true;
                 if (!try_resolve_identifiers(resolver, ast_expr->subscript.pointer_expression,
                                              scope))
                 {
-                    assert(false);
+                    result = false;
                 }
                 if (!try_resolve_identifiers(resolver, ast_expr->subscript.index_expression,
                                              scope))
                 {
-                    assert(false);
+                    result = false;
                 }
-                result = true;
                 break;
             }
 
@@ -1484,22 +1484,30 @@ namespace Zodiac
                     {
                         auto mem_scope = parent_decl->enum_decl.member_scope;
                         auto child_decl = scope_find_declaration(mem_scope, child_ident); 
-                        assert(child_decl);
-                        assert(child_ident->declaration);
-
-                        bool found = false;
-                        for (int64_t i = 0;
-                             i < parent_decl->enum_decl.member_declarations.count;
-                             i++)
+                        if (!child_decl)
                         {
-                            auto mem_decl = parent_decl->enum_decl.member_declarations[i];
-                            if (mem_decl == child_decl)
-                            {
-                                found = true;
-                                break; 
-                            }
+                            resolver_report_undeclared_identifier(resolver, child_ident);
+                            result = false;
                         }
-                        assert(found);
+                        else
+                        {
+                            assert(child_ident->declaration);
+
+                            bool found = false;
+                            for (int64_t i = 0;
+                                 i < parent_decl->enum_decl.member_declarations.count;
+                                 i++)
+                            {
+                                auto mem_decl =
+                                    parent_decl->enum_decl.member_declarations[i];
+                                if (mem_decl == child_decl)
+                                {
+                                    found = true;
+                                    break; 
+                                }
+                            }
+                            assert(found);
+                        }
                     }
 
                     ast_expr->dot.child_decl = child_ident->declaration;
@@ -2612,18 +2620,21 @@ namespace Zodiac
                     assert(parent_type);
                     if (parent_type->kind == AST_Type_Kind::ENUM)
                     {
-#ifndef NDEBUG
                         auto member_ident = ast_expr->dot.child_identifier;
                         assert(member_ident);
-                        assert(member_ident->declaration);
+                        if (member_ident->declaration)
+                        {
+                            auto mem_decl = member_ident->declaration;
+                            assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+                            assert(mem_decl->type);
 
-                        auto mem_decl = member_ident->declaration;
-                        assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
-                        assert(mem_decl->type);
-#endif
-
-                        ast_expr->type = parent_type;
-                        result = true;
+                            ast_expr->type = parent_type;
+                            result = true;
+                        }
+                        else
+                        {
+                            result = false;
+                        }
                     }
                     else if (parent_type->kind == AST_Type_Kind::ARRAY)
                     {

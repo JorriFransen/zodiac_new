@@ -566,7 +566,8 @@ namespace Zodiac
 
     AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
                                                      Parameter_PTN *ptn,
-                                                     AST_Type_Spec *type_spec);
+                                                     AST_Type_Spec *type_spec,
+                                                     Scope *scope);
 
     AST_Declaration *ast_create_enum_member_from_ptn(Allocator *allocator, PT_Node *ptn);
 
@@ -640,7 +641,7 @@ namespace Zodiac
                                                    AST_Identifier *identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters,
-                                                   Scope *scope,
+                                                   Scope *param_scope, Scope *mem_scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
@@ -648,7 +649,7 @@ namespace Zodiac
                                               AST_Identifier *identifier,
                                               AST_Type_Spec *ast_ts,
                                               Array<AST_Declaration*> member_decls,
-                                              Scope *parent_scope,
+                                              Scope *enum_scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
@@ -714,7 +715,7 @@ namespace Zodiac
                                          AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt, 
-                                         Scope *body_scope,
+                                         Scope *for_scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
