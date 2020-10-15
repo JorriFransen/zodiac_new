@@ -2815,8 +2815,18 @@ namespace Zodiac
                     }
                     else if (ast_expr->unary.op == UNOP_DEREF)
                     {
-                        assert(op_expr->type->kind == AST_Type_Kind::POINTER);
-                        ast_expr->type = op_expr->type->pointer.base;
+                        if (op_expr->type->kind != AST_Type_Kind::POINTER)
+                        {
+                            resolver_report_error(resolver,
+                                                  Resolve_Error_Kind::INVALID_DEREF,
+                                                  ast_expr, 
+                                                  "Cannot dereference an expression of non pointer type.");
+                            result = false;
+                        }
+                        else
+                        {
+                            ast_expr->type = op_expr->type->pointer.base;
+                        }
                     }
                     else
                     {

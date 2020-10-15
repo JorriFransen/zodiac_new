@@ -71,10 +71,12 @@ test_array_for :: func()
 
             int_array[it_index] = it * 2;
 
-            // ptr := *it;
-            // <ptr = it * 2;
+            // This has no effect since it is a local copy of an element in the array
+            ptr := *it;
+            <ptr = it * 5;
 
-            // <it = it * 2;
+            // This has no effect since it is a local copy of an element in the array
+            <ptr = it * 10;
         }
     }
 

@@ -1,7 +1,7 @@
 
-ld -dynamic-linker /lib64/ld-linux-x86-64.so.2  /usr/lib64/Scrt1.o /usr/lib64/crti.o foreign_test.o -lc /usr/lib64/crtn.o
-
 foreign function calls in bytecode
+
+/* Emit warnings when taking a pointer to an iterator. */
 
 Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
 
