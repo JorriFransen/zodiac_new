@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include <tracy/Tracy.hpp>
+
 Lexer lexer_create(Allocator *allocator, Build_Data *build_data)
 {
     Lexer result = {};
@@ -23,6 +25,8 @@ void lexer_init(Allocator *allocator, Build_Data *build_data, Lexer *lexer)
 
 Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
 {
+    ZoneScoped
+
     String file_path = _file_path;
 
     Lexed_File result = {};

@@ -10,6 +10,8 @@
 
 #include <inttypes.h>
 
+#include <tracy/Tracy.hpp>
+
 namespace Zodiac
 {
 
@@ -33,6 +35,8 @@ namespace Zodiac
 
     AST_Module *ast_create_from_parsed_file(Allocator *allocator, Parsed_File *parsed_file)
     {
+        ZoneScoped
+
         assert(allocator);
         assert(parsed_file);
 

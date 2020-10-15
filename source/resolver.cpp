@@ -389,6 +389,8 @@ namespace Zodiac
 
             case Resolve_Job_Kind::PARSE:
             {
+                ZoneScopedNC("try_resolve_job (PARSE)", 0x0000ff)
+
                 Lexed_File lexed_file = lexer_lex_file(&resolver->lexer, job->parse.module_path);
                 assert(lexed_file.valid);
 
@@ -409,7 +411,9 @@ namespace Zodiac
                 if (options->print_ast) ast_print(module_ast);
 
 
+                { ZoneScopedNC("scope_populate_ast", 0x00ff00)
                 scope_populate_ast(resolver->allocator, module_ast, resolver->global_scope);
+                }
 
                 result = true;
 

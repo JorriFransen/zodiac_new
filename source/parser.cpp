@@ -8,6 +8,8 @@
 #include <cstdarg>
 #include <inttypes.h>
 
+#include <tracy/Tracy.hpp>
+
 namespace Zodiac
 {
 
@@ -27,6 +29,8 @@ void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data)
 
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
 {
+    ZoneScoped
+
     Parsed_File result = {};
     array_init(parser->allocator, &result.declarations);
 

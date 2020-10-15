@@ -11,10 +11,14 @@
 
 #include <stdio.h>
 
+#include <tracy/TracyC.h>
+
 using namespace Zodiac;
 
 int main(int argc, char **argv)
 {
+    TracyCZoneN(tcz_init, "init", true);
+
     auto options = parse_command_line(argc, argv);
 
     if (!options.valid) return 1;
@@ -28,6 +32,8 @@ int main(int argc, char **argv)
 
     Resolver resolver = {};
     resolver_init(ca, ca, &resolver, &build_data, options.file_path);
+
+    TracyCZoneEnd(tcz_init);
 
     start_resolving(&resolver, true);
     Resolve_Result rr = finish_resolving(&resolver);
