@@ -34,33 +34,13 @@ namespace Zodiac
             return result;
         }
 
-        String file_path = string_ref(argv[1]);
-
-        if (string_equal(file_path, "-help")) // This is a bit of a hack, works for now 
-        {
-            print_usage();
-            result.help = true; 
-            result.valid = false;
-            return result;
-        }
-        else
-        {
-            if (!is_regular_file(file_path))
-            {
-                print_usage();
-                result.valid = false;
-                return result;
-            }
-            result.file_path = file_path;
-        }
-
-        if (argc > 2)
+        if (argc > 1)
         {
             auto ta = temp_allocator_get();
             Array<String> option_tokens = {};
-            array_init(ta, &option_tokens, argc - 2);
+            array_init(ta, &option_tokens, argc - 1);
 
-            tokenize_command_line(argc - 2, argv + 2, &option_tokens); 
+            tokenize_command_line(argc - 1, argv + 1, &option_tokens); 
             result.valid = parse_command_line(&result, option_tokens);
 
             if (!result.valid)
@@ -100,7 +80,8 @@ namespace Zodiac
 
                     array_append(tokens, string_ref("="));
                 }
-                else if (c == '-' || c == '_' || c == '.' || is_alpha(c))
+                else if (c == '-' || c == '_' || c == '.' || c == '/' || c == '\\' ||
+                         is_alpha(c))
                 {
                     length++;
                 }
@@ -130,6 +111,8 @@ namespace Zodiac
             String option_name = {};
             bool valid = true;
 
+            bool invalid_path = false;
+
             if (string_starts_with(option, "-"))
             {
                 if (string_starts_with(option, "--"))
@@ -141,15 +124,36 @@ namespace Zodiac
                     option_name = string_ref(option.data + 1, option.length - 1);
                 }
             }
+            else if (!options->file_path.data)
+            {
+                if (is_regular_file(option))
+                {
+                    options->file_path = option;
+                    continue;
+                }
+                else
+                {
+                    valid = false;
+                    invalid_path = true;
+                    fprintf(stderr, "zodiac: Invalid FILE_PATH: '%s'\n", option.data); 
+                }
+            }
             else 
             {
                 valid = false;
+                invalid_path = true;
+                fprintf(stderr, "zodiac: Invalid option: '%s'\n", option.data);
+                fprintf(stderr, "        FILE_PATH is already set to '%s'\n",
+                        options->file_path.data);
             }
 
             if (!valid)
             {
-                fprintf(stderr, "zodiac: Invalid option format: '%.*s'\n",
-                        (int)option.length, option.data);
+                if (!invalid_path)
+                {
+                    fprintf(stderr, "zodiac: Invalid option format: '%.*s'\n",
+                            (int)option.length, option.data);
+                }
                 return false;
             }
 
