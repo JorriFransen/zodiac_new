@@ -2819,7 +2819,7 @@ namespace Zodiac
                         {
                             resolver_report_error(resolver,
                                                   Resolve_Error_Kind::INVALID_DEREF,
-                                                  ast_expr, 
+                                                  ast_expr,
                                                   "Cannot dereference an expression of non pointer type.");
                             result = false;
                         }

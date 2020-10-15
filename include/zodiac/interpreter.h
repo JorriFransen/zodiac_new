@@ -4,6 +4,8 @@
 #include "bytecode.h"
 #include "stack.h"
 
+#include <dyncall.h>
+
 namespace Zodiac
 {
     struct Stack_Frame
@@ -39,6 +41,8 @@ namespace Zodiac
 
         Bytecode_Value exit_code_value = {};
         bool exited = false;
+
+        DCCallVM *dc_vm = nullptr;
     };
 
     void interpreter_init(Allocator *allocator, Interpreter *interp, Build_Data *build_data);
@@ -47,6 +51,8 @@ namespace Zodiac
     void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program);
     void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
                                       int64_t arg_count);
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count);
     void interpreter_execute_block(Interpreter *interp, Bytecode_Block *block);
 
     Stack_Frame interpreter_create_stack_frame(Allocator *allocator, Bytecode_Function *func);

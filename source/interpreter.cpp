@@ -27,6 +27,10 @@ namespace Zodiac
         stack_init(allocator, &interp->temp_stack);
         stack_init(allocator, &interp->allocl_stack);
         stack_init(allocator, &interp->arg_stack);
+
+        interp->dc_vm = dcNewCallVM(4096);
+        dcMode(interp->dc_vm, DC_CALL_C_DEFAULT);
+        dcReset(interp->dc_vm);
     }
 
     void interpreter_free(Interpreter *interp)
@@ -216,6 +220,52 @@ namespace Zodiac
         }
     }
 
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count)
+    {
+        dcReset(interp->dc_vm);
+
+        for (int64_t i = 0; i < arg_count; i++)
+        {
+            auto arg = stack_peek_ptr(&interp->arg_stack, (arg_count - 1) - i);
+
+            switch (arg->type->kind)
+            {
+                case AST_Type_Kind::POINTER:
+                {
+                    dcArgPointer(interp->dc_vm, arg->value.pointer);
+                    break;
+                }
+
+                case AST_Type_Kind::INTEGER:
+                {
+                    assert(false);
+                    break;
+                }
+
+                default: assert(false);
+            }
+        }
+
+        if (strcmp(func->ast_decl->identifier->atom.data, "printf") == 0)
+        {
+            dcCallInt(interp->dc_vm, (void*)&printf);
+        }
+        else if (strcmp(func->ast_decl->identifier->atom.data, "puts") == 0)
+        {
+            dcCallInt(interp->dc_vm, (void*)&puts);
+            // fflush(stdout);
+            // puts("test...");
+        }
+        else assert(false);
+
+        for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack); 
+
+
+        // assert(false);
+        // Pop args
+    }
+
     void interpreter_execute_block(Interpreter *interp, Bytecode_Block *block)
     {
         assert(interp);
@@ -261,9 +311,16 @@ namespace Zodiac
 
                     if (func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
                     {
-                        fprintf(stderr,
-                                "Calling foreign functions from bytecode is not supported yet\n");
-                        assert(false);
+                        interpreter_execute_foreign_function(interp, func, arg_count);
+                        auto ret_type = func->ast_decl->type->function.return_type;
+                        if (ret_type != Builtin::type_void)
+                        {
+                            Bytecode_Value *return_value =
+                                interpreter_push_temporary(interp, ret_type);
+
+                            assert(return_value->type->kind == AST_Type_Kind::INTEGER);
+                        }
+                        break;
                     }
 
                     interpreter_execute_function(interp, func, arg_count);
