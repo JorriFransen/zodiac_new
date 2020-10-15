@@ -1378,13 +1378,6 @@ namespace Zodiac
 
                 return op_lvalue;
 
-
-
-                // auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
-                //                                  op_lvalue->type);
-                // bytecode_push_local_temporary(builder, result);
-
-                // return result;
                 break;
             }
 

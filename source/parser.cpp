@@ -610,7 +610,8 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                          ts->peek_token(1).kind == TOK_EQ)
                 {
                     assert(expr->kind == Expression_PTN_Kind::IDENTIFIER ||
-                           expr->kind == Expression_PTN_Kind::DOT);
+                           expr->kind == Expression_PTN_Kind::DOT ||
+                           expr->kind == Expression_PTN_Kind::SUBSCRIPT);
 
                     result = parser_parse_self_assignment_statement(parser, ts, expr);
                 }
@@ -899,6 +900,11 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
             {
                 result = parser_parse_assignment_statement(parser, ts, expr);
             }
+            else if ((parser_is_add_op(ts) || parser_is_mul_op(ts)) &&
+                      ts->peek_token(1).kind == TOK_EQ)
+            {
+                result = parser_parse_self_assignment_statement(parser, ts, expr);
+            }
             else
             {
                 result =  new_expression_statement_ptn(parser->allocator, expr,
@@ -946,7 +952,10 @@ Statement_PTN *parser_parse_self_assignment_statement(Parser *parser, Token_Stre
                                                       Expression_PTN *ident_expression)
 {
     assert(ident_expression->kind == Expression_PTN_Kind::IDENTIFIER ||
-           ident_expression->kind == Expression_PTN_Kind::DOT);
+           ident_expression->kind == Expression_PTN_Kind::DOT ||
+           ident_expression->kind == Expression_PTN_Kind::SUBSCRIPT ||
+           (ident_expression->kind == Expression_PTN_Kind::UNARY &&
+            ident_expression->unary.op == UNOP_DEREF));
 
     Binary_Operator op = BINOP_INVALID;
 
