@@ -164,6 +164,7 @@ namespace Zodiac
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
 
     bool try_resolve_identifiers(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+    bool try_resolve_identifiers(Resolver *resolver, AST_Identifier *identifier, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope);
     bool try_resolve_identifiers(Resolver *resolver, AST_Expression *ast_expr, Scope *scope);
@@ -173,6 +174,8 @@ namespace Zodiac
 
     bool try_resolve_types(Resolver *resolver, AST_Node *ast_node, Scope *scope, 
                            AST_Type **inferred_return_type);
+    bool try_resolve_types(Resolver *resolver, AST_Identifier *identifier,
+                           AST_Type **type_dest, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope);
     bool try_resolve_types(Resolver *resolver, AST_Statement *ast_stmt, Scope *scope,
                            AST_Type **inferred_return_type);

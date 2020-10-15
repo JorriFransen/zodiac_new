@@ -630,6 +630,31 @@ namespace Zodiac
         return result;
     }
 
+    bool try_resolve_identifiers(Resolver *resolver, AST_Identifier *identifier, Scope *scope)
+    {
+
+        bool result = true;
+
+        auto decl = scope_find_declaration(scope, identifier);
+        if (!decl)
+        {
+            resolver_report_undeclared_identifier(resolver, identifier);
+            result = false; 
+        }
+        else
+        {
+            assert(identifier->declaration);
+        }
+
+
+        if (result)
+        {
+            identifier->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        }
+        return result;
+
+    }
+
     bool try_resolve_identifiers(Resolver *resolver, AST_Declaration *ast_decl, Scope *scope)
     {
         assert(resolver);
@@ -770,6 +795,8 @@ namespace Zodiac
                                                      ast_decl->constant.init_expression,
                                                      scope);
                 }
+
+                if (result) queue_type_job(resolver, ast_decl, scope);   
 
                 break;
             }
@@ -1178,17 +1205,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER:
             {
-                auto decl = scope_find_declaration(scope, ast_expr->identifier);
-                if (!decl)
-                {
-                    resolver_report_undeclared_identifier(resolver, ast_expr->identifier);
-                    result = false; 
-                }
-                else
-                {
-                    assert(ast_expr->identifier->declaration);
-                    result = true;
-                }
+                result = try_resolve_identifiers(resolver, ast_expr->identifier, scope);
                 break;
             }
 
@@ -1752,6 +1769,39 @@ namespace Zodiac
         }
 
         if (result) assert(ast_node->flags & AST_NODE_FLAG_TYPED);
+
+        return result;
+    }
+
+    bool try_resolve_types(Resolver *resolver, AST_Identifier *identifier, AST_Type **type_dest,
+                           Scope *scope)
+    {
+        if (type_dest) assert(*type_dest == nullptr);
+
+        bool result = true;
+
+        auto ident = identifier;
+        assert(ident->declaration);
+        if (ident->declaration->flags & AST_NODE_FLAG_TYPED)
+        {
+            if (!ident->declaration->type)
+            {
+                assert(ident->declaration->kind == AST_Declaration_Kind::IMPORT);
+            }
+            else
+            {
+                *type_dest = ident->declaration->type;
+            }
+        }
+        else
+        {
+            result = false;
+        }
+
+        if (result)
+        {
+            identifier->flags |= AST_NODE_FLAG_TYPED;
+        }
 
         return result;
     }
@@ -2537,25 +2587,10 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER:
             {
-                auto ident = ast_expr->identifier;
-                assert(ident->declaration);
-                if (ident->declaration->flags & AST_NODE_FLAG_TYPED)
-                {
-                    if (ident->declaration->type)
-                    {
-                        ast_expr->type = ident->declaration->type;
-                        result = true;
-                    }
-                    else
-                    {
-                        assert(ident->declaration->kind == AST_Declaration_Kind::IMPORT);
-                        result = true;
-                    }
-                }
-                else
-                {
-                    result = false;
-                }
+                AST_Type *result_type = nullptr;
+                result = try_resolve_types(resolver, ast_expr->identifier, &result_type,
+                                           scope);
+                if (result) ast_expr->type = result_type;
                 break;
             }
 
@@ -3453,7 +3488,8 @@ namespace Zodiac
                 {
                     if (!try_resolve_types(resolver, length_expr, scope))
                     {
-                        assert(false);
+                        result = false;
+                        break;
                     }
 
                     assert(length_expr->type);

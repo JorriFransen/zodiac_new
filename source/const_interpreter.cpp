@@ -13,7 +13,27 @@ namespace Zodiac
         switch (expr->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
-            case AST_Expression_Kind::IDENTIFIER: assert(false);
+                                               
+            case AST_Expression_Kind::IDENTIFIER:
+            {
+                auto ident = expr->identifier;
+                assert(ident->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(ident->flags & AST_NODE_FLAG_TYPED);
+
+                auto decl = ident->declaration;
+                assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(decl->flags & AST_NODE_FLAG_TYPED);
+
+                assert(decl->kind == AST_Declaration_Kind::CONSTANT);
+                auto init_expr = decl->constant.init_expression;
+                assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(init_expr->flags & AST_NODE_FLAG_TYPED);
+
+                assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+                return const_interpret_expression(init_expr);
+                break;
+            }
+
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
             case AST_Expression_Kind::DOT:

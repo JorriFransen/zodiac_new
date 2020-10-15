@@ -1593,7 +1593,7 @@ Expression_PTN *parser_parse_array_type_expression(Parser *parser, Token_Stream 
     Expression_PTN *length_expr = nullptr;
     if (!parser_is_token(ts, TOK_RBRACK))
     {
-        length_expr = parser_parse_number_literal_expression(parser, ts);
+        length_expr = parser_parse_expression(parser, ts);
     }
 
     if (!parser_expect_token(parser, ts, TOK_RBRACK))

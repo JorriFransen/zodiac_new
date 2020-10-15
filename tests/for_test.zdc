@@ -32,7 +32,8 @@ main :: func() -> s64
 
 test_array_for :: func()
 {
-    int_array : [5]s64;
+    INT_COUNT :: 5;
+    int_array : [INT_COUNT]s64;
 
     for (i := 0; i < int_array.count; i = i + 1)
     {
@@ -42,6 +43,7 @@ test_array_for :: func()
     for (i := 0; i < int_array.count; i = i + 1)
     {
         print_array_value("int_array", int_array[i], i);
+
     }
 
     std.print("\n");
