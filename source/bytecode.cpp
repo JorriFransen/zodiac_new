@@ -2657,6 +2657,8 @@ namespace Zodiac
         if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
             result->flags |= BYTECODE_FUNC_FLAG_NORETURN;
 
+        result->pointer = nullptr;
+
         return result;
     }
 

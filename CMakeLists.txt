@@ -63,7 +63,8 @@ target_link_libraries(zodiac ${llvm_libs})
 
 add_subdirectory(lib/dyncall-1.1)
 target_include_directories(zodiac PRIVATE lib/dyncall-1.1/dyncall)
-target_link_libraries(zodiac dyncall_s)
+target_include_directories(zodiac PRIVATE lib/dyncall-1.1/dynload)
+target_link_libraries(zodiac dyncall_s dynload_s)
 
 if(MSVC)
     target_compile_options(zodiac PRIVATE /W3 /WX)

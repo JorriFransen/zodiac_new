@@ -57,7 +57,7 @@ int main(int argc, char **argv)
         Interpreter interp;
         interpreter_init(ca, &interp, &build_data);
 
-        interpreter_execute_entry(&interp, &resolver.bytecode_builder.program);
+        interpreter_execute_program(&interp, &resolver.bytecode_builder.program);
         printf("Interpreter exited with code: %" PRId64 "\n",
                interp.exit_code_value.value.integer.s64);
 

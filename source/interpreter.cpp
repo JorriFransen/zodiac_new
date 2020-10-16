@@ -31,6 +31,7 @@ namespace Zodiac
         interp->dc_vm = dcNewCallVM(4096);
         dcMode(interp->dc_vm, DC_CALL_C_DEFAULT);
         dcReset(interp->dc_vm);
+        interp->dl_this_exe_lib = dlLoadLibrary(nullptr);
     }
 
     void interpreter_free(Interpreter *interp)
@@ -43,7 +44,7 @@ namespace Zodiac
         stack_free(&interp->arg_stack);
     }
 
-    void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program)
+    void interpreter_execute_program(Interpreter *interp, Bytecode_Program *program)
     {
         assert(interp);
         assert(program);
@@ -67,6 +68,38 @@ namespace Zodiac
 
             Bytecode_Value new_glob = *glob.value;
             array_append(&interp->globals, new_glob);
+        }
+
+        DLLib *libs[] = { interp->dl_this_exe_lib };
+        auto lib_count = sizeof(libs) / sizeof(DLLib *);
+
+        for (int64_t i = 0; i < program->functions.count; i++)
+        {
+            auto func = program->functions[i];
+            if (func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
+            {
+                assert(func->pointer == nullptr);
+                    
+                void *sym = nullptr;
+
+                for (int64_t lib_idx = 0; lib_idx < lib_count; lib_idx++)
+                {
+                    auto sym_ = dlFindSymbol(libs[lib_idx],
+                                             func->ast_decl->identifier->atom.data);
+                    if (sym_)
+                    {
+                        sym = sym_;
+                        break;
+                    }
+                }
+
+                if (!sym) 
+                {
+                    assert(false);
+                }
+
+                func->pointer = sym;
+            }
         }
 
         interpreter_execute_function(interp, program->bytecode_entry_function, 0);
@@ -220,52 +253,6 @@ namespace Zodiac
         }
     }
 
-    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
-                                              int64_t arg_count)
-    {
-        dcReset(interp->dc_vm);
-
-        for (int64_t i = 0; i < arg_count; i++)
-        {
-            auto arg = stack_peek_ptr(&interp->arg_stack, (arg_count - 1) - i);
-
-            switch (arg->type->kind)
-            {
-                case AST_Type_Kind::POINTER:
-                {
-                    dcArgPointer(interp->dc_vm, arg->value.pointer);
-                    break;
-                }
-
-                case AST_Type_Kind::INTEGER:
-                {
-                    assert(false);
-                    break;
-                }
-
-                default: assert(false);
-            }
-        }
-
-        if (strcmp(func->ast_decl->identifier->atom.data, "printf") == 0)
-        {
-            dcCallInt(interp->dc_vm, (void*)&printf);
-        }
-        else if (strcmp(func->ast_decl->identifier->atom.data, "puts") == 0)
-        {
-            dcCallInt(interp->dc_vm, (void*)&puts);
-            // fflush(stdout);
-            // puts("test...");
-        }
-        else assert(false);
-
-        for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack); 
-
-
-        // assert(false);
-        // Pop args
-    }
-
     void interpreter_execute_block(Interpreter *interp, Bytecode_Block *block)
     {
         assert(interp);
@@ -312,14 +299,6 @@ namespace Zodiac
                     if (func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
                     {
                         interpreter_execute_foreign_function(interp, func, arg_count);
-                        auto ret_type = func->ast_decl->type->function.return_type;
-                        if (ret_type != Builtin::type_void)
-                        {
-                            Bytecode_Value *return_value =
-                                interpreter_push_temporary(interp, ret_type);
-
-                            assert(return_value->type->kind == AST_Type_Kind::INTEGER);
-                        }
                         break;
                     }
 
@@ -1828,5 +1807,85 @@ namespace Zodiac
         assert(interp->running);
 
         return (Bytecode_Instruction)interpreter_fetch<uint8_t>(interp);
+    }
+    
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count)
+    {
+        assert(func->flags & BYTECODE_FUNC_FLAG_FOREIGN);
+
+        dcReset(interp->dc_vm);
+
+        DCpointer dc_func_ptr = func->pointer;
+
+        assert(dc_func_ptr);
+
+        for (int64_t i = 0; i < arg_count; i++)
+        {
+            auto arg = stack_peek_ptr(&interp->arg_stack, (arg_count - 1) - i);
+            interpreter_push_foreign_arg(interp, arg);
+        }
+
+        auto func_type = func->ast_decl->type;
+        auto return_type = func_type->function.return_type;
+
+        Bytecode_Value *return_value = nullptr;
+
+        if (return_type != Builtin::type_void)
+        {
+            return_value = interpreter_push_temporary(interp, return_type);
+        }
+
+        switch (return_type->kind)
+        {
+            case AST_Type_Kind::INTEGER:
+            {
+                int result = dcCallInt(interp->dc_vm, dc_func_ptr);
+
+                //@TODO: @FIXME: @CLEANUP: Generalize this "Assigning to int" since we are
+                //                          doing a very similar thing in a couple of 
+                //                          places by now
+                if (return_type->integer.sign)
+                {
+                    switch (return_type->bit_size)
+                    {
+                        case 8: return_value->value.integer.s8 = (int8_t)result; break;
+                        case 16: return_value->value.integer.s16 = (int16_t)result; break;
+                        case 32: return_value->value.integer.s32 = (int32_t)result; break;
+                        case 64: return_value->value.integer.s64 = (int64_t)result; break;
+                        default: assert(false);
+                    }
+                }
+                else
+                {
+                    assert(false);
+                }
+                break;
+            }
+
+            default: assert(false);
+        }
+
+        for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack); 
+    }
+
+    void interpreter_push_foreign_arg(Interpreter *interp, Bytecode_Value *arg_val)
+    {
+        switch (arg_val->type->kind)
+        {
+            case AST_Type_Kind::POINTER:
+            {
+                dcArgPointer(interp->dc_vm, arg_val->value.pointer);
+                break;
+            }
+
+            case AST_Type_Kind::INTEGER:
+            {
+                assert(false); 
+                break;
+            }
+
+            default: assert(false);
+        }
     }
 }

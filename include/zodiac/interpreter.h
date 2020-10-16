@@ -5,6 +5,7 @@
 #include "stack.h"
 
 #include <dyncall.h>
+#include <dynload.h>
 
 namespace Zodiac
 {
@@ -21,6 +22,12 @@ namespace Zodiac
         Bytecode_Value return_value = {};
 
         Array<Bytecode_Value> parameters = {};
+    };
+
+    struct Foreign_Symbol
+    {
+        Bytecode_Function *bytecode_function = nullptr;
+        DCpointer dc_function = nullptr;
     };
 
     struct Interpreter
@@ -43,16 +50,15 @@ namespace Zodiac
         bool exited = false;
 
         DCCallVM *dc_vm = nullptr;
+        DLLib *dl_this_exe_lib = nullptr;
     };
 
     void interpreter_init(Allocator *allocator, Interpreter *interp, Build_Data *build_data);
     void interpreter_free(Interpreter *interp);
 
-    void interpreter_execute_entry(Interpreter *interp, Bytecode_Program *program);
+    void interpreter_execute_program(Interpreter *interp, Bytecode_Program *program);
     void interpreter_execute_function(Interpreter *interp, Bytecode_Function *func,
                                       int64_t arg_count);
-    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
-                                              int64_t arg_count);
     void interpreter_execute_block(Interpreter *interp, Bytecode_Block *block);
 
     Stack_Frame interpreter_create_stack_frame(Allocator *allocator, Bytecode_Function *func);
@@ -83,5 +89,9 @@ namespace Zodiac
 
         return result;
     }
+
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count);
+    void interpreter_push_foreign_arg(Interpreter *interp, Bytecode_Value *arg_val);
 
 }

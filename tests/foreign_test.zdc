@@ -6,13 +6,13 @@ std :: import std;
 
 main :: func() -> s64
 {
-    // std.println("foreign test");
+    std.println("foreign test");
 
     puts("Printing with puts");
     printf("Printing with printf\n");
 
 
-    // std.print("\n");
+    std.print("\n");
 
     return 0;
 }

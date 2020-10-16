@@ -189,6 +189,10 @@ namespace Zodiac
         Bytecode_Block *last_block = nullptr;
 
         AST_Declaration *ast_decl = nullptr;
+        
+        // Used for dyncall pointers in the interpreter, might use for function pointers/
+        //  dyncall callbacks later.
+        void *pointer = nullptr;  
     };
 
     struct Bytecode_Global

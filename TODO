@@ -1,6 +1,4 @@
 
-foreign function calls in bytecode
-
 Iterating arrays by pointer.
 
 Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
