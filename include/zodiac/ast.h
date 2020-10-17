@@ -539,6 +539,12 @@ namespace Zodiac
         };
     };
 
+    struct AST_Builder
+    {
+        Allocator *allocator = nullptr;
+        Build_Data *build_data = nullptr;
+    };
+
     void ast_node_init(AST_Node *ast_node, AST_Node_Kind kind, const File_Pos &begin_fp,
                        const File_Pos &end_fp);
 
@@ -550,36 +556,36 @@ namespace Zodiac
         return result;
     }
 
-    AST_Module *ast_create_from_parsed_file(Allocator *allocator,
+    AST_Module *ast_create_from_parsed_file(AST_Builder *ast_builder,
                                             Parsed_File *parsed_file,
                                             Scope *global_scope);
 
-    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder,
                                                    Identifier_PTN *ptn);
-    AST_Identifier *ast_create_identifier_from_ptn(Allocator *allocator,
+    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder,
                                                    Expression_PTN *ptn);
 
-    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
+    AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Declaration_PTN *ptn,
                                                      Array<AST_Declaration*> *var_decls,
                                                      Scope *parent_scope);
 
-    AST_Declaration *ast_create_declaration_from_ptn(Allocator *allocator,
+    AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Parameter_PTN *ptn,
                                                      AST_Type_Spec *type_spec,
                                                      Scope *scope);
 
-    AST_Declaration *ast_create_enum_member_from_ptn(Allocator *allocator, PT_Node *ptn);
+    AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn);
 
-    AST_Statement *ast_create_statement_from_ptn(Allocator *allocator, Statement_PTN *ptn, 
+    AST_Statement *ast_create_statement_from_ptn(AST_Builder *ast_builder, Statement_PTN *ptn, 
                                                  Array<AST_Declaration*> *var_decls,
                                                  Scope *parent_scope);
 
-    AST_Expression *ast_create_expression_from_ptn(Allocator *allocator,
+    AST_Expression *ast_create_expression_from_ptn(AST_Builder *ast_builder,
                                                    Expression_PTN *ptn);
-    AST_Type_Spec *ast_create_type_spec_from_ptn(Allocator *allocator, PT_Node *ptn);
+    AST_Type_Spec *ast_create_type_spec_from_ptn(AST_Builder *ast_builder, PT_Node *ptn);
 
-    AST_Type_Spec *ast_create_type_spec_from_expression_ptn(Allocator *allocator,
+    AST_Type_Spec *ast_create_type_spec_from_expression_ptn(AST_Builder *ast_builder,
                                                             Expression_PTN *ptn);
 
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom,

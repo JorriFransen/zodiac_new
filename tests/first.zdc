@@ -28,7 +28,7 @@ global_int : s64;
 main :: func () -> s64
 {
     int_ptr : *s64 = null;
-    x : s64 = \ 55;
+    x : s64 = 55;
     int_ptr = *x;
 
     std.print("<int_ptr: ");

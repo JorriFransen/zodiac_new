@@ -417,7 +417,8 @@ namespace Zodiac
 
                 if (options->print_parse_tree) parsed_file_print(&parsed_file);
 
-                auto module_ast = ast_create_from_parsed_file(resolver->allocator, &parsed_file,
+                AST_Builder ast_builder = { resolver->allocator, resolver->build_data };
+                auto module_ast = ast_create_from_parsed_file(&ast_builder, &parsed_file,
                                                               resolver->global_scope);
                 assert(module_ast);
 
