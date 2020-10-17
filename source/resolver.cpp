@@ -796,7 +796,8 @@ namespace Zodiac
                                                      scope);
                 }
 
-                if (result) queue_type_job(resolver, ast_decl, scope);   
+                if (result && !(ast_decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER))
+                    queue_type_job(resolver, ast_decl, scope);   
 
                 break;
             }
