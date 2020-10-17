@@ -7,34 +7,13 @@
 #include "parser.h"
 #include "lexer.h"
 #include "llvm_builder.h"
+#include "zodiac_error.h"
 
 #include <cstdarg>
 
 namespace Zodiac
 {
     struct Resolve_Job;
-
-    enum class Resolve_Error_Kind
-    {
-        INVALID,
-        UNDECLARED_IDENTIFIER,
-        UNKNOWN_BUILTIN_FUNCTION,
-        UNIMPLEMENTED,
-        MISMATCHING_TYPES,
-        ASSIGNING_TO_CONST,
-        INCOMPLETE_SWITCH,
-        INVALID_DEREF,
-
-    };
-
-    struct Resolve_Error
-    {
-        Resolve_Error_Kind kind = Resolve_Error_Kind::INVALID;
-
-        const char *message = nullptr;
-        int64_t message_size = -1;
-        AST_Node *ast_node = nullptr;
-    };
 
     struct Parsed_Module
     {
@@ -56,7 +35,6 @@ namespace Zodiac
     struct Resolver
     {
         Allocator *allocator = nullptr;
-        Allocator *err_allocator = nullptr;
 
         String first_file_path = {}; // Full absolute path with extension
         String first_file_name = {}; // File name without extension
@@ -88,7 +66,6 @@ namespace Zodiac
 
         bool parse_error = false;
         bool llvm_error = false;
-        Array<Resolve_Error> errors = {};
     };
 
     struct Resolve_Result
@@ -150,7 +127,7 @@ namespace Zodiac
         } result = {};
     };
 
-    void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
+    void resolver_init(Allocator *allocator,  Resolver *resolver,
                        Build_Data *build_data, String first_file_path);
 
     void start_resolving(Resolver *resolver, bool blocking);
@@ -267,14 +244,4 @@ namespace Zodiac
     void resolver_report_undeclared_identifier(Resolver *resolver, AST_Identifier *identifier);
     void resolver_report_mismatching_types(Resolver *resolver, AST_Node *node,
                                            AST_Type *expected_type, AST_Type *actual_type);
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
-                               const char *fmt, ...);
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
-                               const char *fmt, va_list args);
-
-    void resolver_report_errors(Resolver *resolver);
-    void resolver_clear_errors(Resolver *resolver);
-
-    Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
-                                      int64_t message_size, AST_Node *ast_node);
 }

@@ -16,14 +16,13 @@
 
 namespace Zodiac
 {
-    void resolver_init(Allocator *allocator, Allocator *err_allocator, Resolver *resolver,
+    void resolver_init(Allocator *allocator, Resolver *resolver,
                        Build_Data *build_data, String first_file_path)
     {
         assert(allocator);
         assert(resolver);
 
         resolver->allocator = allocator;
-        resolver->err_allocator = err_allocator;
 
         if (is_relative_path(first_file_path))
         {
@@ -60,11 +59,10 @@ namespace Zodiac
 
         resolver->progression = {};
 
-        array_init(err_allocator, &resolver->parsed_modules);
+        array_init(allocator, &resolver->parsed_modules);
 
         resolver->llvm_error = false;
         resolver->parse_error = false;
-        array_init(err_allocator, &resolver->errors);
 
         
         //@TODO: initialize with builtin global count
@@ -95,7 +93,9 @@ namespace Zodiac
     {
         assert(resolver);
 
-        if (resolver->errors.count == 0 &&
+        auto bd = resolver->build_data;
+
+        if (bd->errors.count == 0 &&
             !resolver->parse_error &&
             !resolver->llvm_error)
         {
@@ -111,7 +111,7 @@ namespace Zodiac
         }
 
         Resolve_Result result = {};
-        result.error_count = resolver->errors.count;
+        result.error_count = bd->errors.count;
         result.parse_error = resolver->parse_error;
         result.llvm_error = resolver->llvm_error;
         return result;
@@ -342,11 +342,11 @@ namespace Zodiac
 
             if (resolver_has_progressed(resolver))
             {
-                resolver_clear_errors(resolver);
+                zodiac_clear_errors(resolver->build_data);
             } 
-            else if (resolver->errors.count)
+            else if (resolver->build_data->errors.count)
             {
-                resolver_report_errors(resolver);
+                zodiac_report_errors(resolver->build_data);
                 done = true;
             }
 
@@ -976,8 +976,9 @@ namespace Zodiac
 
                     if (lhs_decl->kind == AST_Declaration_Kind::CONSTANT)
                     {
-                        resolver_report_error(resolver, Resolve_Error_Kind::ASSIGNING_TO_CONST,
-                                              ast_stmt, "Assigning to a constant value");
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::ASSIGNING_TO_CONST,
+                                            ast_stmt, "Assigning to a constant value");
                         result = false;
                     }
                     else
@@ -1359,12 +1360,10 @@ namespace Zodiac
                 }
                 else 
                 {
-                    resolver_report_error(
-                            resolver,
-                            Resolve_Error_Kind::UNKNOWN_BUILTIN_FUNCTION,
-                            ast_expr,
-                            "Unknown builtin function: @%s\n", 
-                            atom.data);
+                    zodiac_report_error(resolver->build_data,
+                                        Zodiac_Error_Kind::UNKNOWN_BUILTIN_FUNCTION,
+                                        ast_expr, "Unknown builtin function: @%s\n",
+                                        atom.data);
                     result = false;
                 }
 
@@ -2820,10 +2819,10 @@ namespace Zodiac
                     {
                         if (op_expr->type->kind != AST_Type_Kind::POINTER)
                         {
-                            resolver_report_error(resolver,
-                                                  Resolve_Error_Kind::INVALID_DEREF,
-                                                  ast_expr,
-                                                  "Cannot dereference an expression of non pointer type.");
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::INVALID_DEREF,
+                                                ast_expr,
+                                                "Cannot dereference an expression of non pointer type.");
                             result = false;
                         }
                         else
@@ -3200,7 +3199,7 @@ namespace Zodiac
         else if (ident_atom == Builtin::atom_syscall)
         {
 // #ifndef linux
-//             resolver_report_error(resolver, Resolve_Error_Kind::UNSUPPORTED,
+//             zodiac_report_error(resolver, Zodiac_Error_Kind::UNSUPPORTED,
 //                                   call_expr, "Syscall is only supported on linux");
 //             return false;
 // #endif
@@ -3301,9 +3300,9 @@ namespace Zodiac
         }
         else
         {
-            resolver_report_error(resolver, Resolve_Error_Kind::UNIMPLEMENTED,
-                                  call_expr, "Unimplemented builtin function: @%s",
-                                  ident_atom.data);
+            zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::UNIMPLEMENTED,
+                                call_expr, "Unimplemented builtin function: @%s",
+                                ident_atom.data);
             return false;
         }
 
@@ -3915,10 +3914,11 @@ namespace Zodiac
 
         if (unhandled_umvs.count)
         {
-            resolver_report_error(resolver, Resolve_Error_Kind::INCOMPLETE_SWITCH,
-                                  ast_stmt,
-                                  "Incomplete switch case, %" PRId64 " unhandled enum values.",
-                                  unhandled_umvs.count);
+            zodiac_report_error(resolver->build_data,
+                                Zodiac_Error_Kind::INCOMPLETE_SWITCH,
+                                ast_stmt,
+                                "Incomplete switch case, %" PRId64 " unhandled enum values.",
+                                unhandled_umvs.count);
 
             auto edecl = enum_type->enum_type.declaration;
 
@@ -3928,11 +3928,11 @@ namespace Zodiac
                 Const_Value cv = { .type = enum_type, .integer = unhandled_umvs[i] };
                 auto emem = ast_find_enum_member(enum_type, cv);
 
-                resolver_report_error(resolver, Resolve_Error_Kind::INCOMPLETE_SWITCH,
-                                      ast_stmt, 
-                                      "Unhandled enum value: %s.%s",
-                                      edecl->identifier->atom.data,
-                                      emem->identifier->atom.data);
+                zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::INCOMPLETE_SWITCH,
+                                    ast_stmt, 
+                                    "Unhandled enum value: %s.%s",
+                                    edecl->identifier->atom.data,
+                                    emem->identifier->atom.data);
             }
 
             return false;
@@ -5071,32 +5071,36 @@ namespace Zodiac
         assert(resolver);
         assert(identifier);
 
+        auto bd = resolver->build_data;
+
         auto atom = identifier->atom;
 
-        for (int64_t i = 0; i < resolver->errors.count; i++)
+        for (int64_t i = 0; i < bd->errors.count; i++)
         {
-            auto &err = resolver->errors[i];
-            if (err.kind == Resolve_Error_Kind::UNDECLARED_IDENTIFIER &&
+            auto &err = bd->errors[i];
+            if (err.kind == Zodiac_Error_Kind::UNDECLARED_IDENTIFIER &&
                     err.ast_node == identifier)
             {
                 return;
             }
         }
 
-        resolver_report_error(resolver,
-                              Resolve_Error_Kind::UNDECLARED_IDENTIFIER,
-                              identifier,
-                              "Reference to undeclared identifier: '%.*s'",
-                              (int)atom.length, atom.data);
+        zodiac_report_error(resolver->build_data,
+                            Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                            identifier,
+                            "Reference to undeclared identifier: '%.*s'",
+                            (int)atom.length, atom.data);
     }
 
     void resolver_report_mismatching_types(Resolver *resolver, AST_Node *node,
                                            AST_Type *expected_type, AST_Type *actual_type)
     {
-        for (int64_t i = 0; i < resolver->errors.count; i++)
+        auto bd = resolver->build_data;
+
+        for (int64_t i = 0; i < bd->errors.count; i++)
         {
-            auto &err = resolver->errors[i];
-            if (err.kind == Resolve_Error_Kind::MISMATCHING_TYPES &&
+            auto &err = bd->errors[i];
+            if (err.kind == Zodiac_Error_Kind::MISMATCHING_TYPES &&
                     err.ast_node == node)
             {
                 return;
@@ -5108,74 +5112,12 @@ namespace Zodiac
         auto expected_type_str = ast_type_to_string(ta, expected_type);
         auto actual_type_str = ast_type_to_string(ta, actual_type);
 
-        resolver_report_error(resolver,
-                              Resolve_Error_Kind::MISMATCHING_TYPES,
-                              node, 
-                              "Mismatching types: expected '%s', got '%s'",
-                              expected_type_str.data,
-                              actual_type_str.data);
+        zodiac_report_error(resolver->build_data,
+                            Zodiac_Error_Kind::MISMATCHING_TYPES,
+                            node, 
+                            "Mismatching types: expected '%s', got '%s'",
+                            expected_type_str.data,
+                            actual_type_str.data);
     }
 
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
-                               const char *fmt, ...)
-    {
-        va_list args;
-        va_start(args, fmt);
-        resolver_report_error(resolver, kind, ast_node, fmt, args);
-        va_end(args);
-    }
-
-    void resolver_report_error(Resolver *resolver, Resolve_Error_Kind kind, AST_Node *ast_node,
-                               const char *fmt, va_list args)
-    {
-        auto allocator = resolver->err_allocator;
-
-        va_list args_copy;
-        va_copy(args_copy, args);
-        auto size = vsnprintf(nullptr, 0, fmt, args_copy);
-        va_end(args_copy);
-
-        char *buf = alloc_array<char>(allocator, size + 1);
-        assert(buf);
-
-        auto written_size = vsnprintf(buf, size + 1, fmt, args);
-        assert(written_size <= size); 
-
-        Resolve_Error err = resolver_make_error(kind, buf, written_size, ast_node);
-        array_append(&resolver->errors, err);
-    }
-
-    void resolver_report_errors(Resolver *resolver)
-    {
-        fprintf(stderr, "\n");
-        for (int64_t i = 0; i < resolver->errors.count; i++)
-        {
-            auto &err = resolver->errors[i];
-            auto node = err.ast_node;
-            auto &bfp = node->begin_file_pos;
-
-            fprintf(stderr, "Error: %.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
-                    (int)bfp.file_name.length, bfp.file_name.data,
-                    bfp.line, bfp.column,
-                    (int)err.message_size, err.message);
-        }
-        fprintf(stderr, "\n");
-    }
-
-    void resolver_clear_errors(Resolver *resolver)
-    {
-        for (int64_t i = 0; i < resolver->errors.count; i++)
-        {
-            auto &err = resolver->errors[i];
-            free(resolver->err_allocator, err.message);
-        }
-
-        resolver->errors.count = 0;
-    }
-
-    Resolve_Error resolver_make_error(Resolve_Error_Kind kind, const char *message,
-                                      int64_t message_size, AST_Node *ast_node)
-    {
-        return { kind, message, message_size, ast_node };
-    }
 }

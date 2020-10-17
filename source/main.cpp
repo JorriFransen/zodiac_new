@@ -26,12 +26,12 @@ int main(int argc, char **argv)
     auto ca = c_allocator_get();
 
     Build_Data build_data = {};
-    build_data_init(ca, &build_data, &options);
+    build_data_init(ca, &build_data, ca, &options);
     builtin_initialize_atoms(&build_data.atom_table);
     builtin_initialize_types(ca, &build_data);
 
     Resolver resolver = {};
-    resolver_init(ca, ca, &resolver, &build_data, options.file_path);
+    resolver_init(ca, &resolver, &build_data, options.file_path);
 
     TracyCZoneEnd(tcz_init);
 

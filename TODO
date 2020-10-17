@@ -1,4 +1,6 @@
 
+Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
+
 Check for redeclarations.
 
 Make using actually import declarations into it's scope, instead of tagging the scope with the using.
@@ -6,8 +8,6 @@ Make using actually import declarations into it's scope, instead of tagging the 
 Iterating arrays by pointer.
 
 Builtin dynamic arrays.
-
-Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
 
 unions
 
@@ -31,7 +31,6 @@ result of cmp ops should be bool
 recursive functions
 recursive structs
 Syscall return values
-Check call arg types
 Copy structs on return (bytecode)
 function overloads
 lazy && and ||

@@ -9,6 +9,8 @@ namespace Zodiac
     struct String;
     struct String_Builder;
 
+    struct Build_Data;
+
     struct PT_Node;
     struct Identifier_PTN;
     struct Declaration_PTN;

@@ -4,7 +4,8 @@
 
 namespace Zodiac
 {
-    void build_data_init(Allocator *allocator, Build_Data *build_data, Options *options)
+    void build_data_init(Allocator *allocator, Build_Data *build_data,
+                         Allocator *err_allocator, Options *options)
     {
         build_data->options = options;
 
@@ -20,6 +21,9 @@ namespace Zodiac
         }
 
         array_init(allocator, &build_data->type_table);
+
+        build_data->err_allocator = err_allocator;
+        array_init(err_allocator, &build_data->errors);
     }
 
     AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator,
