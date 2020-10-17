@@ -1,9 +1,12 @@
 
 Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
+    (bytecode builder, interpreter)
+
+Check for redeclarations.
+    (functions, nested scopes...)
 
 Do we really need the parser struct/object????
 
-Check for redeclarations.
 
 Make using actually import declarations into it's scope, instead of tagging the scope with the using.
 

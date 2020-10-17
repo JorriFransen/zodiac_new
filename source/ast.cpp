@@ -353,7 +353,7 @@ namespace Zodiac
                     assert(ast_member->constant.type_spec == nullptr);
 
                     array_append(&ast_members, ast_member);
-                    scope_add_declaration(enum_scope, ast_member);
+                    ast_scope_add_declaration(ast_builder, enum_scope, ast_member);
                 }
 
                 result = ast_enum_declaration_new(ast_builder->allocator, ast_ident, ast_ts,
@@ -377,7 +377,7 @@ namespace Zodiac
         }
 
         assert(result);
-        scope_add_declaration(parent_scope, result);
+        ast_scope_add_declaration(ast_builder, parent_scope, result);
         return result;
     }
 
@@ -424,7 +424,7 @@ namespace Zodiac
                                                     end_fp);
         assert(result);
         
-        scope_add_declaration(scope, result);
+        ast_scope_add_declaration(ast_builder, scope, result);
         return result;
     }
 
@@ -693,7 +693,7 @@ namespace Zodiac
                     ast_variable_declaration_new(ast_builder->allocator, index_ident, nullptr, zero,
                                                  ii_bfp, ii_efp);
                 array_append(var_decls, index_decl);
-                scope_add_declaration(for_scope, index_decl);
+                ast_scope_add_declaration(ast_builder, for_scope, index_decl);
                 auto index_stmt = ast_declaration_statement_new(ast_builder->allocator, index_decl,
                                                                ii_bfp, ii_efp);
                 array_append(&init_stmts, index_stmt);
@@ -718,7 +718,7 @@ namespace Zodiac
                 auto it_decl = ast_variable_declaration_new(ast_builder->allocator, it_ident,
                                                             nullptr, first_it, ii_bfp, ii_efp);
                 array_append(var_decls, it_decl);
-                scope_add_declaration(for_scope, it_decl);
+                ast_scope_add_declaration(ast_builder, for_scope, it_decl);
                 auto count_ident = ast_identifier_new(ast_builder->allocator, Builtin::atom_count,
                                                       ii_bfp, ii_efp);
 
@@ -2285,6 +2285,21 @@ namespace Zodiac
         }
 
         return nullptr;
+    }
+
+    void ast_scope_add_declaration(AST_Builder *ast_builder, Scope *scope, AST_Declaration *decl)
+    {
+        assert(decl->identifier);
+
+        auto redecl = scope_find_declaration(scope, decl->identifier);
+        if (redecl)
+        {
+            zodiac_report_error(ast_builder->build_data, Zodiac_Error_Kind::REDECLARATION,
+                                decl->identifier, "Redeclaration of identifier: '%s'",
+                                decl->identifier->atom.data);
+        }
+
+        scope_add_declaration(scope, decl);
     }
 
     void ast_print_indent(uint64_t indent)

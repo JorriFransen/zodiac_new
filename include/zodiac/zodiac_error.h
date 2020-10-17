@@ -15,6 +15,8 @@ namespace Zodiac
         // Parse errors
         UNEXPECTED_TOKEN,
 
+        REDECLARATION,
+
         // Resolve errors
         UNDECLARED_IDENTIFIER,
         UNKNOWN_BUILTIN_FUNCTION,
