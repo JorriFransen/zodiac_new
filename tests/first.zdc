@@ -116,7 +116,7 @@ main :: func () -> s64
     return 0;
 }
 
-#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
+// #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
 mainCRTStartup :: func ()
 {

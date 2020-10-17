@@ -4,6 +4,7 @@
 #include "os.h"
 
 #include "common.h"
+#include "temp_allocator.h"
 
 #include <stdio.h>
 
@@ -72,6 +73,9 @@ namespace Zodiac
 
         DLLib *libs[] = { interp->dl_this_exe_lib };
         auto lib_count = sizeof(libs) / sizeof(DLLib *);
+    
+        Array<Atom> not_found_libs = {};
+        array_init(temp_allocator_get(), &not_found_libs);
 
         for (int64_t i = 0; i < program->functions.count; i++)
         {
@@ -80,12 +84,12 @@ namespace Zodiac
             {
                 assert(func->pointer == nullptr);
                     
+                auto sym_name = func->ast_decl->identifier->atom;
                 void *sym = nullptr;
 
                 for (int64_t lib_idx = 0; lib_idx < lib_count; lib_idx++)
                 {
-                    auto sym_ = dlFindSymbol(libs[lib_idx],
-                                             func->ast_decl->identifier->atom.data);
+                    auto sym_ = dlFindSymbol(libs[lib_idx], sym_name.data);
                     if (sym_)
                     {
                         sym = sym_;
@@ -95,12 +99,21 @@ namespace Zodiac
 
                 if (!sym) 
                 {
-                    assert(false);
+                    array_append(&not_found_libs, sym_name);
                 }
 
                 func->pointer = sym;
             }
         }
+
+        for (int64_t i = 0; i < not_found_libs.count; i++)
+        {
+            fprintf(stderr, "Could not find foreign function: '%s'\n",
+                    not_found_libs[i].data);
+        }
+
+        if (not_found_libs.count) return;
+
 
         interpreter_execute_function(interp, program->bytecode_entry_function, 0);
 
