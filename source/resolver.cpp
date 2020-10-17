@@ -400,7 +400,11 @@ namespace Zodiac
                 ZoneScopedNC("try_resolve_job (PARSE)", 0x0000ff)
 
                 Lexed_File lexed_file = lexer_lex_file(&resolver->lexer, job->parse.module_path);
-                assert(lexed_file.valid);
+                if (!lexed_file.valid) 
+                {
+                    result = false;
+                    break;
+                }
 
                 Token_Stream *token_stream = lexer_new_token_stream(resolver->allocator,
                                                                     &lexed_file);
@@ -5078,8 +5082,11 @@ namespace Zodiac
         for (int64_t i = 0; i < bd->errors.count; i++)
         {
             auto &err = bd->errors[i];
+
+            assert(err.info.is_ast_node);
+
             if (err.kind == Zodiac_Error_Kind::UNDECLARED_IDENTIFIER &&
-                    err.ast_node == identifier)
+                err.info.ast_node == identifier)
             {
                 return;
             }
@@ -5100,8 +5107,10 @@ namespace Zodiac
         for (int64_t i = 0; i < bd->errors.count; i++)
         {
             auto &err = bd->errors[i];
+            assert(err.info.is_ast_node);
+
             if (err.kind == Zodiac_Error_Kind::MISMATCHING_TYPES &&
-                    err.ast_node == node)
+                err.info.ast_node == node)
             {
                 return;
             }

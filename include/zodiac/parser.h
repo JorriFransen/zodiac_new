@@ -14,7 +14,6 @@ struct Parser
 {
     Allocator *allocator = nullptr;
     Build_Data *build_data = nullptr;
-    int64_t error_count = 0;
 };
 
 Parser parser_create(Allocator *allocator, Build_Data *build_data);
@@ -92,8 +91,6 @@ bool parser_is_mul_op(Token_Stream *ts);
 
 Unary_Operator parser_parse_unary_op(Token_Stream *ts);
 
-void parser_report_error(Parser *parser, Token_Stream *ts, const char *format, ...);
-void parser_report_error(Parser *parser, Token_Stream *ts, const char *format, va_list args);
 void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Token &tok);
 
 bool parser_make_escape_char(char c, char *dest);

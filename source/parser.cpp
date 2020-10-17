@@ -24,7 +24,6 @@ void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data)
 {
     parser->allocator = allocator;
     parser->build_data = build_data;
-    parser->error_count = 0;
 }
 
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
@@ -38,7 +37,11 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
     {
         auto ptn = parser_parse_declaration(parser, ts);
 
-        if (!ptn) break;
+        if (!ptn)
+        {
+            result.valid = false;
+            break;
+        }
 
         if (!(ptn->self.flags & PTN_FLAG_SEMICOLON) &&
             ptn->kind != Declaration_PTN_Kind::FUNCTION &&
@@ -47,7 +50,7 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
         {
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
             {
-                assert(false);
+                result.valid = false;
                 break;
             }
             else
@@ -58,7 +61,6 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
         array_append(&result.declarations, ptn);
     }
 
-    result.valid = parser->error_count == 0;
     return result;
 }
 
@@ -223,6 +225,8 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
     else if (parser_match_token(ts, TOK_EQ))
     {
         auto expression = parser_parse_expression(parser, ts);
+        if (!expression) return nullptr;
+
         auto sc_efp = ts->current_token().end_file_pos;
         auto end_fp = expression->self.end_file_pos;
         if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
@@ -585,7 +589,8 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
             if (ts->peek_token(1).kind == TOK_COLON)
             {
                 auto decl = parser_parse_declaration(parser, ts);
-                assert(decl);
+                if (!decl) return nullptr;
+
                 result = new_declaration_statement_ptn(parser->allocator, decl, begin_fp,
                                                        decl->self.end_file_pos);
                 if (decl->self.flags & PTN_FLAG_SEMICOLON)
@@ -1182,7 +1187,7 @@ Expression_PTN *parser_parse_expression(Parser *parser, Token_Stream *ts, bool i
 Expression_PTN *parser_parse_cmp_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)
 {
     auto lhs = parser_parse_add_expression(parser, ts, is_type);
-    assert(lhs);
+    if (!lhs) return nullptr;
 
     while (parser_is_cmp_op(ts))
     {
@@ -1202,7 +1207,7 @@ Expression_PTN *parser_parse_cmp_expression(Parser *parser, Token_Stream *ts, bo
 Expression_PTN *parser_parse_add_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)
 {
     auto lhs = parser_parse_mul_expression(parser, ts, is_type);
-    assert(lhs);
+    if (!lhs) return nullptr;
 
     while (parser_is_add_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
@@ -1221,7 +1226,7 @@ Expression_PTN *parser_parse_add_expression(Parser *parser, Token_Stream *ts, bo
 Expression_PTN *parser_parse_mul_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)
 {
     auto lhs = parser_parse_unary_expression(parser, ts, is_type);
-    assert(lhs);
+    if (!lhs) return nullptr;
 
     while (parser_is_mul_op(ts) && !(ts->peek_token(1).kind == TOK_EQ))
     {
@@ -1275,7 +1280,6 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
 {
     auto ct = ts->current_token();
     auto begin_fp = ct.begin_file_pos;
-
     Expression_PTN *result = nullptr;
 
     switch (ct.kind)
@@ -1420,24 +1424,6 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         }
 
-        // case TOK_PLUS:
-        // {
-        //     ts->next_token();
-        //     if (!parser_expect_token(parser, ts, TOK_PLUS))
-        //     {
-        //         return nullptr;
-        //     }
-
-        //     auto op_expr = parser_parse_expression(parser, ts);
-        //     if (!op_expr) return nullptr;
-
-        //     auto end_fp = op_expr->self.end_file_pos;
-
-        //     result = new_prefix_expression_ptn(parser->allocator, BINOP_ADD, op_expr,
-        //                                        begin_fp, end_fp);
-        //     break;
-        // }
-
         case TOK_MINUS:
         {
             assert(false);
@@ -1459,6 +1445,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
         {
             auto ct = ts->current_token();
             parser_report_unexpected_token(parser, ts, ct);
+            return nullptr;
             break;
         }
     }
@@ -1814,7 +1801,9 @@ bool parser_expect_token(Parser *parser, Token_Stream *ts, Token_Kind kind)
     if (!parser_match_token(ts, kind))
     {
         auto ct = ts->current_token();
-        parser_report_error(parser, ts, "Expected token: \"%s\", got: \"%s\"",
+        zodiac_report_error(parser->build_data, Zodiac_Error_Kind::UNEXPECTED_TOKEN,
+                            ct.begin_file_pos, ct.end_file_pos,
+                            "Expected token: \"%s\", got \"%s\"",
                             token_kind_name(kind), token_kind_name(ct.kind));
         return false;
     }
@@ -1923,34 +1912,6 @@ Unary_Operator parser_parse_unary_op(Token_Stream *ts)
     return result;
 }
 
-void parser_report_error(Parser *parser, Token_Stream *ts, const char *format, ...)
-{
-    assert(parser);
-    assert(ts);
-    assert(format);
-
-    va_list args;
-    va_start(args, format);
-    parser_report_error(parser, ts, format, args);
-    va_end(args);
-}
-
-void parser_report_error(Parser *parser, Token_Stream *ts, const char *format, va_list args)
-{
-    assert(parser);
-    assert(ts);
-    assert(format);
-
-    auto ct = ts->current_token();
-    auto bfp = ct.begin_file_pos;
-
-    parser->error_count += 1;
-
-    fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: ",
-            bfp.file_name.data, bfp.line, bfp.column);
-    vfprintf(stderr, format, args);
-    fprintf(stderr, "\n");
-}
 
 void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Token &tok)
 {
@@ -1965,15 +1926,17 @@ void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Toke
         {
             c_prefix_len = 1;
         }
-        parser_report_error(parser, ts,
+
+        zodiac_report_error(parser->build_data, Zodiac_Error_Kind::UNEXPECTED_TOKEN,
+                            tok.begin_file_pos, tok.end_file_pos,
                             "Unexpected token when parsing expression: '%s', (%d), '%.*s%c'",
-                            tok_kind_name, (int)tok.c,
-                            (int)c_prefix_len, c_prefix,
-                            c);
+                            tok_kind_name, (int)tok.c, (int)c_prefix_len, c_prefix, c);
+
     }
     else
     {
-        parser_report_error(parser, ts,
+        zodiac_report_error(parser->build_data, Zodiac_Error_Kind::UNEXPECTED_TOKEN,
+                            tok.begin_file_pos, tok.end_file_pos,
                             "Unexpected token when parsing expression: '%s', '%.*s'",
                             tok_kind_name, tok.atom.length, tok.atom.data);
     }

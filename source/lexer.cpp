@@ -56,7 +56,14 @@ Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
     while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
     {
         Token t = next_token(&ld);
-        array_append(&ld.lexed_file.tokens, t);
+
+        if (t.kind == TOK_INVALID)
+        {
+            ld.lexed_file.valid = false;
+            break;
+        }
+
+       array_append(&ld.lexed_file.tokens, t);
     }
 
     return ld.lexed_file;
@@ -185,9 +192,13 @@ restart:
                 return lex_number_literal(ld);
             }
 
-            fprintf(stderr, "%s:%" PRIu64 ":%" PRIu64 ": Error: Unexpected character: '%c'\n", 
-                    ld->file_path.data, ld->current_line, ld->current_column, c);
-            assert(false);
+            File_Pos fp = { ld->file_index, ld->current_line, ld->current_column,
+                            string_ref(ld->file_path.data) };
+
+            zodiac_report_error(ld->lexer->build_data,
+                                Zodiac_Error_Kind::UNEXPECTED_TOKEN,
+                                fp, fp, "Unexpected character: '%c'\n", c);
+            return {};
             break;
         }
     }
