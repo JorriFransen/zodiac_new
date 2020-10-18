@@ -9,7 +9,6 @@ message("LLVM_INCLUDE_DIRS=${LLVM_INCLUDE_DIRS}")
 message("LLVM_DEFINITIONS=${LLVM_DEFINITIONS}")
 
 include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
 
 set (ZODIAC_COMPILER_SOURCE
     source/main.cpp
@@ -51,10 +50,11 @@ add_executable(zodiac source/main.cpp)
 target_include_directories(zodiac PRIVATE include/zodiac)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader analysis x86codegen x86AsmParser)
+target_compile_definitions(zodiac PRIVATE ${LLVM_DEFINITIONS})
 
 if (${TRACY_ENABLE})
     message("-- Tracy is enabled")
-    add_definitions(-DTRACY_ENABLE)
+    target_compile_definitions(zodiac PRIVATE TRACY_ENABLE=1)
     set(ZODIAC_COMPILER_SOURCE ${ZODIAC_COMPILER_SOURCE} ./lib/tracy/TracyClient.cpp)
 endif()
 target_include_directories(zodiac PRIVATE ./lib)
