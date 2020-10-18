@@ -83,6 +83,65 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     bool is_noreturn = false;
     bool is_foreign = false;
 
+    if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_IF)
+    {
+        // Static if
+
+        auto begin_fp = ts->current_token().begin_file_pos;
+        ts->next_token();
+        ts->next_token();
+
+        if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
+
+        auto cond_expr = parser_parse_expression(parser, ts);
+        if (!cond_expr) return nullptr;
+
+        if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
+
+        if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
+
+        Array<Declaration_PTN *> then_decls = {};
+        array_init(parser->allocator, &then_decls);
+
+        while (!parser_is_token(ts, TOK_RBRACE))
+        {
+            auto decl = parser_parse_declaration(parser, ts);
+            if (!decl) return nullptr;
+            array_append(&then_decls, decl);
+        }
+
+        auto end_fp = ts->current_token().end_file_pos;
+        ts->next_token();
+
+        Array<Declaration_PTN *> else_decls = {};
+
+        if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_ELSE)
+        {
+            array_init(parser->allocator, &else_decls);
+
+            ts->next_token();
+            ts->next_token();
+
+            if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
+
+            while (!parser_is_token(ts, TOK_RBRACE))
+            {
+                auto decl = parser_parse_declaration(parser, ts);
+                if (!decl) return nullptr;
+                array_append(&else_decls, decl);
+            }
+
+            end_fp = ts->current_token().end_file_pos;
+            ts->next_token();
+        }
+
+        auto result = new_static_if_declaration_ptn(parser->allocator, cond_expr,
+                                                    then_decls, else_decls,
+                                                    begin_fp, end_fp);
+        result->self.flags |= PTN_FLAG_SEMICOLON;
+        return result;
+    }
+
     while (ts->current_token().kind == TOK_POUND)
     {
         auto directive_tok = ts->next_token();

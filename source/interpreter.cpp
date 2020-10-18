@@ -63,6 +63,7 @@ namespace Zodiac
 #ifndef NDEBUG
             auto type = glob.value->type;
             assert(type->kind == AST_Type_Kind::INTEGER ||
+                   type->kind == AST_Type_Kind::POINTER ||
                    type->kind == AST_Type_Kind::FLOAT ||
                    type->kind == AST_Type_Kind::BOOL);
 #endif
@@ -430,6 +431,7 @@ namespace Zodiac
                     auto global = &interp->globals[glob_index];
 
                     assert(global->type->kind == AST_Type_Kind::INTEGER ||
+                           global->type->kind == AST_Type_Kind::POINTER ||
                            global->type->kind == AST_Type_Kind::FLOAT ||
                            global->type->kind == AST_Type_Kind::BOOL);
 
@@ -438,6 +440,7 @@ namespace Zodiac
                     switch (global->type->kind)
                     {
                         case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::POINTER:
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
                         {
@@ -606,6 +609,7 @@ namespace Zodiac
                     switch (source_val->type->kind)
                     {
                         case AST_Type_Kind::INTEGER:
+                        case AST_Type_Kind::POINTER:
                         case AST_Type_Kind::FLOAT:
                         case AST_Type_Kind::BOOL:
                         {

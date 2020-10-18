@@ -287,7 +287,8 @@ namespace Zodiac
                         else if (decl->kind == AST_Declaration_Kind::VARIABLE)
                         {
                             assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
-                            queue_emit_llvm_global_job(resolver, job->result.bc_global);
+                            if (!options->dont_emit_llvm)
+                                queue_emit_llvm_global_job(resolver, job->result.bc_global);
                         }
                     }
 
@@ -789,7 +790,11 @@ namespace Zodiac
                     }
                 }
 
-                if (result) queue_type_job(resolver, ast_decl, scope);   
+                if (result &&
+                    !(ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
+                {
+                    queue_type_job(resolver, ast_decl, scope);   
+                }
 
                 break;
             }
@@ -813,7 +818,9 @@ namespace Zodiac
                 if (result &&
                     !(ast_decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER) &&
                     !(ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
+                {
                     queue_type_job(resolver, ast_decl, scope);   
+                }
 
                 break;
             }

@@ -19,5 +19,3 @@ main :: func () -> s64
 
     return 41;
 }
-
-#foreign #noreturn ExitProcess :: func (exit_code: u32) -> void

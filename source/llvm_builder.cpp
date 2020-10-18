@@ -1508,16 +1508,25 @@ namespace Zodiac
     llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Bytecode_Value *value)
     {
         assert(value->kind == Bytecode_Value_Kind::GLOBAL);
+        assert(value->is_const);
 
         auto type = value->type;
+        llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
 
         switch (type->kind)
         {
             case AST_Type_Kind::INTEGER:
             {
-                llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
                 return llvm::ConstantInt::get(llvm_type, value->value.integer.s64,
                                               type->integer.sign);
+                break;
+            }
+
+            case AST_Type_Kind::POINTER:
+            {
+                assert(value->value.pointer == nullptr);
+
+                return llvm::Constant::getNullValue(llvm_type);
                 break;
             }
 

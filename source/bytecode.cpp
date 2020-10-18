@@ -1783,6 +1783,7 @@ namespace Zodiac
         assert(glob->kind == Bytecode_Value_Kind::GLOBAL);
         assert(glob->type);
         assert(glob->type->kind == AST_Type_Kind::INTEGER ||
+               glob->type->kind == AST_Type_Kind::POINTER ||
                glob->type->kind == AST_Type_Kind::FLOAT ||
                glob->type->kind == AST_Type_Kind::BOOL);
 
@@ -2690,6 +2691,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_new_zero_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                             AST_Type *type)
     {
+        auto result = bytecode_new_value(builder, kind, type);
+
         switch (type->kind)
         {
             case AST_Type_Kind::INVALID: assert(false);
@@ -2697,16 +2700,21 @@ namespace Zodiac
 
             case AST_Type_Kind::INTEGER:
             {
-                auto result = bytecode_new_value(builder, kind, type);
                 result->value.integer = {};
                 result->is_const = true;
-                return result;
                 break;
             }
 
             case AST_Type_Kind::FLOAT: assert(false);
             case AST_Type_Kind::BOOL: assert(false);
-            case AST_Type_Kind::POINTER: assert(false);
+
+            case AST_Type_Kind::POINTER:
+            {
+                result->value.pointer = nullptr;
+                result->is_const = true;
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
@@ -2714,8 +2722,7 @@ namespace Zodiac
             case AST_Type_Kind::ARRAY: assert(false);
         }
 
-        assert(false);
-        return nullptr;
+        return result;
     }
 
     Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,

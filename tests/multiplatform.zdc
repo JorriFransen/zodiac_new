@@ -1,0 +1,36 @@
+
+
+main :: func() -> s64
+{
+    print("Hello, World! from multiple platforms...\n");
+    return 42;
+}
+
+#if (PLATFORM_WINDOWS)
+{
+    std :: import std;
+    windows :: import windows;
+
+    stdout : windows.HANDLE;
+
+    print :: func(str: *u8)
+    {
+        written : windows.DWORD;
+        len := @cast(windows.DWORD, std.strlen(str));
+        windows.WriteFile(stdout, str, len, *written, null);
+
+        return;
+    }
+
+    mainCRTStartup :: func ()
+    {
+        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+
+        exit_code := main();
+        @exit(exit_code);
+    }
+}
+#else
+{
+    // @static_assert(false);
+}

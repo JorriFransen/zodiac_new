@@ -374,6 +374,8 @@ namespace Zodiac
                                                      ptn->self.end_file_pos);
                 break;
             }
+
+            case Declaration_PTN_Kind::STATIC_IF: assert(false);
         }
 
         assert(result);

@@ -115,6 +115,8 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             free_ptn(allocator, ptn->typedef_decl.type_expression);
             break;
         }
+
+        case Declaration_PTN_Kind::STATIC_IF: assert(false);
     }
 }
 
@@ -633,6 +635,21 @@ Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN 
     return result;
 }
 
+Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator, 
+                                               Expression_PTN *cond_expr,
+                                               Array<Declaration_PTN *> then_decls,
+                                               Array<Declaration_PTN *> else_decls,
+                                               const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::STATIC_IF;
+    result->static_if.cond_expression = cond_expr;
+    result->static_if.then_declarations = then_decls;
+    result->static_if.else_declarations = else_decls;
+
+    return result;
+}
+
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -938,6 +955,8 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
             assert(false);
             break;
         }
+
+        case Declaration_PTN_Kind::STATIC_IF: assert(false);
     }
 
     assert(false);
@@ -1445,6 +1464,8 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_expression_ptn(decl->typedef_decl.type_expression, 0); 
             break;
         }
+
+        case Declaration_PTN_Kind::STATIC_IF: assert(false);
     }
 }
 
