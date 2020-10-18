@@ -1,7 +1,4 @@
 
-Generalize error reporting (so we can call it from byte code as well, and use the same api everywhere).
-    (bytecode builder, interpreter)
-
 Check for redeclarations.
     (functions, nested scopes...)
 

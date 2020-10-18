@@ -25,6 +25,9 @@ namespace Zodiac
         ASSIGNING_TO_CONST,
         INCOMPLETE_SWITCH,
         INVALID_DEREF,
+
+        // Iterp errors
+        FOREIGN_FUNCTION_NOT_FOUND,
     };
 
     struct Zodiac_Error_Info

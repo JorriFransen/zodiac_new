@@ -74,8 +74,8 @@ namespace Zodiac
         DLLib *libs[] = { interp->dl_this_exe_lib };
         auto lib_count = sizeof(libs) / sizeof(DLLib *);
     
-        Array<Atom> not_found_libs = {};
-        array_init(temp_allocator_get(), &not_found_libs);
+        Array<Bytecode_Function *> not_found_funcs = {};
+        array_init(temp_allocator_get(), &not_found_funcs);
 
         for (int64_t i = 0; i < program->functions.count; i++)
         {
@@ -99,20 +99,24 @@ namespace Zodiac
 
                 if (!sym) 
                 {
-                    array_append(&not_found_libs, sym_name);
+                    array_append(&not_found_funcs, func);
                 }
 
                 func->pointer = sym;
             }
         }
 
-        for (int64_t i = 0; i < not_found_libs.count; i++)
+        for (int64_t i = 0; i < not_found_funcs.count; i++)
         {
-            fprintf(stderr, "Could not find foreign function: '%s'\n",
-                    not_found_libs[i].data);
+            auto func = not_found_funcs[i];
+            zodiac_report_error(interp->build_data,
+                                Zodiac_Error_Kind::FOREIGN_FUNCTION_NOT_FOUND,
+                                func->ast_decl,
+                                "Foreign function not found: '%s'\n", 
+                                func->ast_decl->identifier->atom.data);
         }
 
-        if (not_found_libs.count) return;
+        if (not_found_funcs.count) return;
 
 
         interpreter_execute_function(interp, program->bytecode_entry_function, 0);

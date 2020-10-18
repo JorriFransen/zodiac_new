@@ -66,6 +66,11 @@ int main(int argc, char **argv)
 
     if (options.print_llvm) llvm_print(ca, &resolver.llvm_builder);
 
+    if (build_data.errors.count != 0)
+    {
+        zodiac_report_errors(&build_data);
+    }
+
     return 0;
 }
 
