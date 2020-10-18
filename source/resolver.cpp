@@ -2683,9 +2683,11 @@ namespace Zodiac
                         assert(member_ident);
                         if (member_ident->declaration)
                         {
+#ifndef NDEBUG
                             auto mem_decl = member_ident->declaration;
                             assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
                             assert(mem_decl->type);
+#endif
 
                             ast_expr->type = parent_type;
                             result = true;
