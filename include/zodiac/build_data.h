@@ -18,6 +18,7 @@ namespace Zodiac
         Array<AST_Type*> type_table = {};
 
         Allocator *err_allocator = nullptr;
+
         Array<Zodiac_Error> errors = {};
     };
 

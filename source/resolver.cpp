@@ -5093,10 +5093,10 @@ namespace Zodiac
         {
             auto &err = bd->errors[i];
 
-            assert(err.info.is_ast_node);
+            assert(err.site.is_ast_node);
 
             if (err.kind == Zodiac_Error_Kind::UNDECLARED_IDENTIFIER &&
-                err.info.ast_node == identifier)
+                err.site.ast_node == identifier)
             {
                 return;
             }
@@ -5117,10 +5117,10 @@ namespace Zodiac
         for (int64_t i = 0; i < bd->errors.count; i++)
         {
             auto &err = bd->errors[i];
-            assert(err.info.is_ast_node);
+            assert(err.site.is_ast_node);
 
             if (err.kind == Zodiac_Error_Kind::MISMATCHING_TYPES &&
-                err.info.ast_node == node)
+                err.site.ast_node == node)
             {
                 return;
             }

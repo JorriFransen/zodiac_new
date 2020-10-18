@@ -7,10 +7,13 @@
 
 namespace Zodiac
 {
-    Zodiac_Error zodiac_make_error(Zodiac_Error_Kind kind, const char *message,
-                                   int64_t message_size, Zodiac_Error_Info info)
+    Zodiac_Error zodiac_make_error(Build_Data *build_data, Zodiac_Error_Kind kind,
+                                   String message, Zodiac_Error_Site site)
     {
-        return { kind, message, message_size, info };
+        Zodiac_Error result = { kind, site, {} };
+        array_init(build_data->err_allocator, &result.messages, 1);
+        array_append(&result.messages, { message, site });
+        return result; 
     }
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
@@ -18,8 +21,8 @@ namespace Zodiac
     {
         va_list args;
         va_start(args, fmt);
-        Zodiac_Error_Info info = { .is_ast_node = true, .ast_node = ast_node };
-        zodiac_report_error(build_data, kind, info, fmt, args);
+        Zodiac_Error_Site site = { .is_ast_node = true, .ast_node = ast_node };
+        zodiac_report_error(build_data, kind, site, fmt, args);
         va_end(args);
     }
 
@@ -28,28 +31,39 @@ namespace Zodiac
     {
         va_list args;
         va_start(args, fmt);
-        Zodiac_Error_Info info = { false, { { bfp, efp } } };
-        zodiac_report_error(build_data, kind, info, fmt, args);
+        Zodiac_Error_Site site = { false, { { bfp, efp } } };
+        zodiac_report_error(build_data, kind, site, fmt, args);
         va_end(args);
 
     }
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
-                             Zodiac_Error_Info err_info, const char *fmt, va_list args)
+                             Zodiac_Error_Site site, const char *fmt, va_list args)
     {
-        auto allocator = build_data->err_allocator;
-
-        va_list args_copy;
-        va_copy(args_copy, args);
-        auto size = vsnprintf(nullptr, 0, fmt, args_copy);
-        va_end(args_copy);
-        char *buf = alloc_array<char>(allocator, size + 1); assert(buf);
-
-        auto written_size = vsnprintf(buf, size + 1, fmt, args);
-        assert(written_size <= size); 
-
-        Zodiac_Error err = zodiac_make_error(kind, buf, written_size, err_info);
+        String message = string_print_format(build_data->err_allocator, fmt, args);
+        Zodiac_Error err = zodiac_make_error(build_data, kind, message, site);
         array_append(&build_data->errors, err);
+    }
+
+    void zodiac_report_info(Build_Data *build_data, AST_Node *ast_node,
+                            const char *fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        Zodiac_Error_Site site = { .is_ast_node = true, .ast_node = ast_node };
+        zodiac_report_info(build_data, site, fmt, args);
+        va_end(args);
+    }
+
+    void zodiac_report_info(Build_Data *build_data, Zodiac_Error_Site site,
+                            const char *fmt, va_list args)
+    {
+        assert(build_data->errors.count);
+
+        auto &last_err = array_last(build_data->errors);
+
+        String message = string_print_format(build_data->err_allocator, fmt, args);
+        array_append(&last_err.messages, { message, site });
     }
 
     void zodiac_report_errors(Build_Data *build_data)
@@ -59,21 +73,35 @@ namespace Zodiac
         {
             auto &err = build_data->errors[i];
 
-            File_Pos bfp = {};
-            if (err.info.is_ast_node)
+            for (int64_t m_i = 0; m_i < err.messages.count; m_i++)
             {
-                bfp = err.info.ast_node->begin_file_pos;
-            }
-            else
-            {
-                bfp = err.info.begin_file_pos;
-            }
+                    auto &msg = err.messages[m_i];
+
+                File_Pos bfp = {};
+                if (msg.site.is_ast_node)
+                {
+                    bfp = msg.site.ast_node->begin_file_pos;
+                }
+                else
+                {
+                    bfp = msg.site.begin_file_pos;
+                }
 
 
-            fprintf(stderr, "Error: %.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
-                    (int)bfp.file_name.length, bfp.file_name.data,
-                    bfp.line, bfp.column,
-                    (int)err.message_size, err.message);
+                if (m_i == 0)
+                {
+                    fprintf(stderr, "Error: ");
+                }
+                else 
+                {
+                    fprintf(stderr, "       ");
+                }
+
+                fprintf(stderr, "%.*s:%" PRIu64 ":%" PRIu64 ": %.*s\n",
+                        (int)bfp.file_name.length, bfp.file_name.data,
+                        bfp.line, bfp.column,
+                        (int)msg.message.length, msg.message.data);
+            }
         }
         fprintf(stderr, "\n");
     }
@@ -83,7 +111,13 @@ namespace Zodiac
         for (int64_t i = 0; i < build_data->errors.count; i++)
         {
             auto &err = build_data->errors[i];
-            free(build_data->err_allocator, err.message);
+
+            for (int64_t m_i = 0; m_i < err.messages.count; m_i++)
+            {
+                auto &msg = err.messages[m_i];
+
+                free(build_data->err_allocator, msg.message.data);
+            }
         }
 
         build_data->errors.count = 0;

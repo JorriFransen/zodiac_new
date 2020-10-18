@@ -2289,14 +2289,27 @@ namespace Zodiac
 
     void ast_scope_add_declaration(AST_Builder *ast_builder, Scope *scope, AST_Declaration *decl)
     {
-        assert(decl->identifier);
+        assert(decl->identifier ||
+               decl->kind == AST_Declaration_Kind::USING);
 
-        auto redecl = scope_find_declaration(scope, decl->identifier);
+        AST_Declaration *redecl = nullptr;
+
+        if (decl->identifier)
+        {
+            redecl = scope_find_declaration(scope, decl->identifier);
+        }
+        else
+        {
+            assert(decl->kind == AST_Declaration_Kind::USING);
+        }
+
         if (redecl)
         {
             zodiac_report_error(ast_builder->build_data, Zodiac_Error_Kind::REDECLARATION,
                                 decl->identifier, "Redeclaration of identifier: '%s'",
                                 decl->identifier->atom.data);
+            zodiac_report_info(ast_builder->build_data, redecl->identifier, 
+                               "Previous declaration was here");
         }
 
         scope_add_declaration(scope, decl);

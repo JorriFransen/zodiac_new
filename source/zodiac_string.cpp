@@ -2,6 +2,7 @@
 #include "zodiac_string.h"
 
 #include <string.h>
+#include <stdio.h>
 
 namespace Zodiac
 {
@@ -201,6 +202,22 @@ bool string_equal(const String &a, const String &b)
     }
 
     return true;
+}
+
+const String string_print_format(Allocator *allocator, const char *fmt, va_list args)
+{
+    va_list args_copy;
+    va_copy(args_copy, args);
+    auto size = vsnprintf(nullptr, 0, fmt, args_copy);
+    va_end(args_copy);
+
+    char *buf = alloc_array<char>(allocator, size + 1);
+    assert(buf);
+
+    auto written_size = vsnprintf(buf, size + 1, fmt, args);
+    assert(written_size <= size);
+
+    return string_ref(buf, written_size);
 }
 
 const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count)

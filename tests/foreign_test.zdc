@@ -4,8 +4,6 @@ std :: import std;
 #foreign puts :: func(cstr: *u8) -> s64
 #foreign printf :: func(fmt: *u8) -> s64
 
-#foreign dummy_func :: func() -> void
-
 main :: func() -> s64
 {
     std.println("foreign test");

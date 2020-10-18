@@ -4,6 +4,8 @@
 
 #include "common.h"
 
+#include <cstdarg>
+
 namespace Zodiac
 {
 
@@ -77,6 +79,8 @@ bool string_ends_with(const String &a, const String &b);
 
 bool string_equal(const String &a, const char *b);
 bool string_equal(const String &a, const String &b);
+
+const String string_print_format(Allocator *allocator, const char *fmt, va_list args);
 
 const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count);
 }

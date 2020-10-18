@@ -126,10 +126,16 @@ Element_Type array_first(Array<Element_Type> *array)
 }
 
 template <typename Element_Type>
-Element_Type array_last(Array<Element_Type> *array)
+Element_Type &array_last(Array<Element_Type> *array)
 {
-    assert(array->count >= 1);
-    return array->data[array->count - 1];
+    return array_last(*array);
+}
+
+template <typename Element_Type>
+Element_Type &array_last(const Array<Element_Type> &array)
+{
+    assert(array.count >= 1);
+    return array.data[array.count - 1];
 }
 
 }

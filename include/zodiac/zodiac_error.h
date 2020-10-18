@@ -30,7 +30,7 @@ namespace Zodiac
         FOREIGN_FUNCTION_NOT_FOUND,
     };
 
-    struct Zodiac_Error_Info
+    struct Zodiac_Error_Site
     {
         bool is_ast_node = false;
 
@@ -46,25 +46,34 @@ namespace Zodiac
         };
     };
 
+    struct Zodiac_Error_Message
+    {
+        String message = {};
+        Zodiac_Error_Site site = {};
+    };
+
     struct Zodiac_Error
     {
         Zodiac_Error_Kind kind = Zodiac_Error_Kind::INVALID;
 
-        const char *message = nullptr;
-        int64_t message_size = -1;
-
-        Zodiac_Error_Info info = {};
+        Zodiac_Error_Site site = {};
+        Array<Zodiac_Error_Message> messages = {};
     };
 
-    Zodiac_Error zodiac_make_error(Zodiac_Error_Kind kind, const char *message,
-                                   int64_t message_size, Zodiac_Error_Info info);
+    Zodiac_Error zodiac_make_error(Build_Data *build_data, Zodiac_Error_Kind kind,
+                                   String message, Zodiac_Error_Site site);
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                              AST_Node *ast_node, const char *fmt, ...);
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                              File_Pos bfp, File_Pos efp, const char *fmt, ...);
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
-                             Zodiac_Error_Info err_info, const char *fmt, va_list args);
+                             Zodiac_Error_Site site, const char *fmt, va_list args);
+
+    void zodiac_report_info(Build_Data *build_data, AST_Node *ast_node,
+                            const char *fmt, ...);
+    void zodiac_report_info(Build_Data *build_data, Zodiac_Error_Site site,
+                            const char *fmt, va_list args);
 
     void zodiac_report_errors(Build_Data *build_data);
     void zodiac_clear_errors(Build_Data *build_data);
