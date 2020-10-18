@@ -1,9 +1,5 @@
 
-Check for redeclarations.
-    (functions, nested scopes...)
-
 Do we really need the parser struct/object????
-
 
 Make using actually import declarations into it's scope, instead of tagging the scope with the using.
 
