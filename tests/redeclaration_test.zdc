@@ -9,9 +9,18 @@ main :: func() -> s64
     x : s64;
     x : s64; // Illegal
 
+    y : float;
+    {
+        y : float; // Shadowing is also illegal
+    }
+
+    func1();
 
     return 0;
 }
+
+func1 :: func() -> void { return; }
+func1 :: func() -> void { return; }
 
 #naked #noreturn _start :: func ()
 {
