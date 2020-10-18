@@ -71,7 +71,16 @@ namespace Zodiac
             array_append(&interp->globals, new_glob);
         }
 
-        DLLib *libs[] = { interp->dl_this_exe_lib };
+#if _WIN32
+        DLLib *kernel32_lib = dlLoadLibrary("kernel32.dll");
+        assert(kernel32_lib);
+#endif
+
+        DLLib *libs[] = { interp->dl_this_exe_lib,
+#if _WIN32
+                          kernel32_lib,
+#endif
+                        };
         auto lib_count = sizeof(libs) / sizeof(DLLib *);
     
         Array<Bytecode_Function *> not_found_funcs = {};
@@ -112,7 +121,7 @@ namespace Zodiac
             zodiac_report_error(interp->build_data,
                                 Zodiac_Error_Kind::FOREIGN_FUNCTION_NOT_FOUND,
                                 func->ast_decl,
-                                "Foreign function not found: '%s'\n", 
+                                "Foreign function not found: '%s'", 
                                 func->ast_decl->identifier->atom.data);
         }
 
@@ -1880,6 +1889,13 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::POINTER:
+            {
+                void *result = dcCallPointer(interp->dc_vm, dc_func_ptr);
+                return_value->value.pointer = result;
+                break;
+            }
+
             default: assert(false);
         }
 
@@ -1898,7 +1914,14 @@ namespace Zodiac
 
             case AST_Type_Kind::INTEGER:
             {
-                assert(false); 
+                switch (arg_val->type->bit_size)
+                {
+                    case 8: dcArgInt(interp->dc_vm, arg_val->value.integer.s8); break;
+                    case 16: dcArgInt(interp->dc_vm, arg_val->value.integer.s16); break;
+                    case 32: dcArgInt(interp->dc_vm, arg_val->value.integer.s32); break;
+                    case 64: dcArgInt(interp->dc_vm, arg_val->value.integer.s64); break;
+                    default: assert(false);
+                }
                 break;
             }
 

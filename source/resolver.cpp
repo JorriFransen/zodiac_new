@@ -4471,9 +4471,9 @@ namespace Zodiac
 
                 if (atom == Builtin::atom_exit)
                 {
-#ifdef WIN32
-                    assert(false); // Queue ExitProcess foreign function.
-#endif
+// #ifdef WIN32
+//                     assert(false); // Queue ExitProcess foreign function.
+// #endif
                 }
                 else if (atom == Builtin::atom_syscall ||
                          atom == Builtin::atom_sizeof ||
