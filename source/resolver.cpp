@@ -763,7 +763,9 @@ namespace Zodiac
                     else
                     {
                         assert(module->module_scope);
-                        ast_decl->using_decl.import_scope = module->module_scope;
+
+                        auto using_scope = module->module_scope;
+                        result = resolver_import_using_scope(resolver, scope, using_scope);
                     }
                 }
 
@@ -4755,6 +4757,58 @@ namespace Zodiac
                 array_append(&enum_type->enum_type.unique_member_values,
                              { .s64 = current_value });
             }
+        }
+
+        return result;
+    }
+
+    bool resolver_import_using_scope(Resolver *resolver, Scope *current_scope, Scope *using_scope)
+    {
+        assert(current_scope != using_scope);
+
+        Scope_Block *scope_block = &using_scope->first_block;
+
+        bool result = true;
+
+        while (scope_block)
+        {
+            for (int64_t i = 0; i < scope_block->decl_count; i++)
+            {
+                AST_Declaration *decl = scope_block->declarations[i];
+
+                if (decl->identifier)
+                {
+                    auto redecl = scope_find_declaration(current_scope, decl->identifier);
+
+                    if (redecl)
+                    {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::REDECLARATION, decl->identifier,
+                                            "Redeclaration of identifier: '%s'",
+                                            decl->identifier->atom.data);
+
+                        zodiac_report_info(resolver->build_data, redecl->identifier, 
+                                           "Previous declaration was here");
+
+                        result = false;
+                    }
+                    else
+                    {
+                        scope_add_declaration(current_scope, decl);
+                    }
+                }
+                else if (decl->kind == AST_Declaration_Kind::USING)
+                {
+                    assert(false);
+                }
+                else
+                {
+                    assert(false);
+                }
+
+            }
+
+            scope_block = scope_block->next_block;
         }
 
         return result;

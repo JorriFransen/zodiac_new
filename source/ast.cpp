@@ -1417,7 +1417,6 @@ namespace Zodiac
                                           begin_fp, end_fp);
 
         result->using_decl.ident_expr = import_ident_expr;
-        result->using_decl.import_scope = nullptr;
 
         return result;
     }

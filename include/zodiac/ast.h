@@ -119,7 +119,6 @@ namespace Zodiac
             struct
             {
                 AST_Expression *ident_expr; 
-                Scope *import_scope;
             } using_decl;
 
             struct

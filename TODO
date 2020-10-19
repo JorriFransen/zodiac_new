@@ -1,6 +1,4 @@
 
-Make using actually import declarations into it's scope, instead of tagging the scope with the using.
-
 Iterating arrays by pointer.
 
 Builtin dynamic arrays.
