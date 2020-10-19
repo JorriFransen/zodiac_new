@@ -717,6 +717,12 @@ namespace Zodiac
                                                              idx_ident_expr,
                                                              ii_bfp, ii_efp);
 
+                if (ptn->foreach.it_is_pointer)
+                {
+                    first_it = ast_addrof_expression_new(ast_builder->allocator, first_it,
+                                                         ii_bfp, ii_efp);
+                }
+
                 auto it_decl = ast_variable_declaration_new(ast_builder->allocator, it_ident,
                                                             nullptr, first_it, ii_bfp, ii_efp);
                 array_append(var_decls, it_decl);

@@ -157,6 +157,7 @@ struct Statement_PTN
             Identifier_PTN *it_index_identifier; 
             Expression_PTN *array_expression;
             Statement_PTN *body_stmt;
+            bool it_is_pointer;
         } foreach;
 
         struct
@@ -464,6 +465,7 @@ Statement_PTN *new_for_statement_ptn(Allocator *allocator, Statement_PTN *init_s
                                      const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *it_ident,
+                                         bool it_is_pointer,
                                          Identifier_PTN *it_idx_ident,
                                          Expression_PTN *array_expr,
                                          Statement_PTN *body_stmt,

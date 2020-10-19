@@ -472,6 +472,7 @@ Statement_PTN *new_if_statement_ptn(Allocator *allocator, Expression_PTN *cond_e
 }
 
 Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *it_ident,
+                                         bool it_is_pointer,
                                          Identifier_PTN *it_idx_ident,
                                          Expression_PTN *array_expr,
                                          Statement_PTN *body_stmt,
@@ -488,6 +489,7 @@ Statement_PTN *new_foreach_statement_ptn(Allocator *allocator, Identifier_PTN *i
     result->foreach.it_index_identifier = it_idx_ident;
     result->foreach.array_expression = array_expr;
     result->foreach.body_stmt = body_stmt;
+    result->foreach.it_is_pointer = it_is_pointer;
 
     return result;
 }

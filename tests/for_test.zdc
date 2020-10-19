@@ -32,7 +32,7 @@ main :: func() -> s64
 
 test_array_for :: func()
 {
-    INT_COUNT :: 5;
+    INT_COUNT :: 6;
     int_array : [INT_COUNT]s64;
     modify_index := INT_COUNT - 1;
 
@@ -91,6 +91,20 @@ test_array_for :: func()
             modify_index -= 1;
 
             int_array[it_index] = v * 2;
+        }
+    }
+
+    std.print("\n");
+
+    for (*v: int_array)
+    {
+        print_array_value("int_array", <v, it_index);
+
+        if (it_index == modify_index)
+        {
+            modify_index -= 1;
+
+            <v = <v * 3;
         }
     }
 

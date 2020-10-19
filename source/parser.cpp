@@ -785,8 +785,15 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                 return nullptr;
             }
 
+            bool it_is_pointer = false;
+
+            if (parser_match_token(ts, TOK_STAR))
+            {
+                it_is_pointer = true;
+            }
+
             Identifier_PTN *it_ident = parser_parse_identifier(parser, ts);
-            assert(it_ident);
+            if (!it_ident) return nullptr;
 
             Identifier_PTN *it_idx_ident = nullptr;
             Expression_PTN *array_expr = nullptr;
@@ -814,20 +821,22 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                 Statement_PTN *body_stmt = parser_parse_statement(parser, ts);
                 assert(body_stmt);
 
-                result = new_foreach_statement_ptn(parser->allocator, it_ident,
+                result = new_foreach_statement_ptn(parser->allocator, it_ident, it_is_pointer,
                                                    it_idx_ident, array_expr, body_stmt,
                                                    begin_fp,
                                                    body_stmt->self.end_file_pos);
             }
             else if (parser_match_token(ts, TOK_RPAREN))
             {
+                assert(!it_is_pointer);
+
                 auto array_expr =
                     new_identifier_expression_ptn(parser->allocator, it_ident,
                                                   it_ident->self.begin_file_pos,
                                                   it_ident->self.end_file_pos);
 
                 auto body_stmt = parser_parse_statement(parser, ts);
-                result = new_foreach_statement_ptn(parser->allocator, nullptr, nullptr,
+                result = new_foreach_statement_ptn(parser->allocator, nullptr, false, nullptr,
                                                    array_expr, body_stmt, begin_fp,
                                                    body_stmt->self.end_file_pos);
             }
@@ -848,13 +857,15 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                 if (parser_match_token(ts, TOK_RPAREN))
                 {
                     auto body_stmt = parser_parse_statement(parser, ts);
-                    result = new_foreach_statement_ptn(parser->allocator, it_ident,
+                    result = new_foreach_statement_ptn(parser->allocator, it_ident, it_is_pointer,
                                                        nullptr, type_spec_expr,
                                                        body_stmt, begin_fp,
                                                        body_stmt->self.end_file_pos);
                 }
                 else
                 {
+                    assert(!it_is_pointer);
+
                     if (!parser_expect_token(parser, ts, TOK_EQ))
                     {
                         return nullptr;
