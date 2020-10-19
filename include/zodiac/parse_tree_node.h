@@ -196,7 +196,7 @@ enum class Declaration_PTN_Kind
     TYPEDEF,
 
     STATIC_IF,
-
+    STATIC_ASSERT,
 };
 
 struct Declaration_PTN
@@ -260,6 +260,11 @@ struct Declaration_PTN
             Array<Declaration_PTN *> then_declarations;
             Array<Declaration_PTN *> else_declarations;
         } static_if;
+
+        struct 
+        {
+            Expression_PTN *cond_expression;
+        } static_assert_decl;
     };
 
     Declaration_PTN() {}
@@ -531,6 +536,10 @@ Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
                                                Array<Declaration_PTN *> then_decls,
                                                Array<Declaration_PTN *> else_decls,
                                                const File_Pos &begin_fp, const File_Pos &end_fp);
+
+Declaration_PTN *new_static_assert_declaration_ptn(Allocator *allocator,
+                                                   Expression_PTN *cond_expr,
+                                                   const File_Pos bfp, const File_Pos &efp);
 
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,

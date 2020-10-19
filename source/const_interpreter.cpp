@@ -96,7 +96,19 @@ namespace Zodiac
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+
+            case AST_Expression_Kind::BOOL_LITERAL:
+            {
+                assert(expr->type->kind == AST_Type_Kind::BOOL);
+
+                Const_Value result = {};
+                result.type = Builtin::type_bool;
+                result.boolean = expr->bool_literal.value;
+
+                return result;
+                break;
+            }
+
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
 
             case AST_Expression_Kind::RANGE: assert(false);

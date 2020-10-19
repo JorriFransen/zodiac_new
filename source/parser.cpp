@@ -86,7 +86,6 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_IF)
     {
         // Static if
-
         auto begin_fp = ts->current_token().begin_file_pos;
         ts->next_token();
         ts->next_token();
@@ -139,6 +138,34 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
                                                     then_decls, else_decls,
                                                     begin_fp, end_fp);
         result->self.flags |= PTN_FLAG_SEMICOLON;
+        return result;
+    }
+    else if (parser_is_token(ts, TOK_AT) && ts->peek_token(1).kind == TOK_IDENTIFIER)
+    {
+        // Static assert on declaration level
+
+        auto bfp = ts->current_token().begin_file_pos;
+
+        auto id_tok = ts->next_token();
+        assert(id_tok.atom == Builtin::atom_static_assert);
+        ts->next_token();
+
+        if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
+
+        auto cond_expr = parser_parse_expression(parser, ts);
+        if (!cond_expr) return nullptr;
+
+        auto efp = ts->current_token().end_file_pos;
+        if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
+
+
+        auto result = new_static_assert_declaration_ptn(parser->allocator, cond_expr, bfp, efp);
+
+        if (parser_match_token(ts, TOK_SEMICOLON))
+        {
+            result->self.flags |= PTN_FLAG_SEMICOLON;
+        }
+
         return result;
     }
 
@@ -962,6 +989,40 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
         case TOK_KW_SWITCH:
         {
             return parser_parse_switch_statement(parser, ts);
+            break;
+        }
+
+        case TOK_AT:
+        {
+            auto bfp = ts->current_token().begin_file_pos;
+
+            auto id_tok = ts->peek_token(1);
+            assert(id_tok.kind == TOK_IDENTIFIER);
+
+            if (id_tok.atom == Builtin::atom_static_assert)
+            {
+                ts->next_token();
+                ts->next_token();
+
+                if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
+
+                auto cond_expr = parser_parse_expression(parser, ts);
+                if (!cond_expr) return nullptr;
+
+                auto efp = ts->current_token().begin_file_pos;
+                if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
+
+                auto sa_decl = new_static_assert_declaration_ptn(parser->allocator, cond_expr,
+                                                                 bfp, efp);
+                return new_declaration_statement_ptn(parser->allocator, sa_decl, bfp, efp);
+            }
+            else
+            {
+                // Builtin call
+                auto expr = parser_parse_expression(parser, ts);
+                return new_expression_statement_ptn(parser->allocator, expr,
+                                                    bfp, expr->self.end_file_pos);
+            }
             break;
         }
 

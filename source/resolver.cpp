@@ -946,6 +946,20 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
+                                                  
+            case AST_Declaration_Kind::STATIC_ASSERT:
+            {
+                if (!try_resolve_identifiers(resolver, ast_decl->static_assert_decl.cond_expression, scope))
+                {
+                    result = false;
+                }
+
+                // We need to queue a type job, because otherwise the condition will not be checked, 
+                //  and no error will be shown if there is other errors.
+
+                if (result) queue_type_job(resolver, ast_decl, scope);
+                break;
+            }
         }
 
         if (result && apply_flag) ast_decl->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1761,7 +1775,8 @@ namespace Zodiac
                     if (result)
                         assert(decl->type ||
                                decl->kind == AST_Declaration_Kind::IMPORT ||
-                               decl->kind == AST_Declaration_Kind::USING);
+                               decl->kind == AST_Declaration_Kind::USING ||
+                               decl->kind == AST_Declaration_Kind::STATIC_ASSERT);
                 }
                 break;
             }
@@ -2209,6 +2224,36 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
+                                                  
+            case AST_Declaration_Kind::STATIC_ASSERT:
+            {
+                auto cond_expr = ast_decl->static_assert_decl.cond_expression;
+                if (!try_resolve_types(resolver, cond_expr, scope))
+                {
+                    result = false;
+                }
+                else 
+                {
+                    assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+                    assert(cond_expr->expr_flags & AST_EXPR_FLAG_CONST);
+                    
+                    auto c_res = const_interpret_expression(cond_expr);
+
+                    if (!c_res.boolean)
+                    {
+                        result = false;
+                        zodiac_report_error(resolver->build_data, 
+                                            Zodiac_Error_Kind::STATIC_ASSERTION_FAILED,
+                                            ast_decl, "Static assertion failed!");
+                    }
+                    else
+                    {
+                        ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                    }
+
+                }
+                break;
+            }
         }
 
         if (result)
@@ -2216,7 +2261,8 @@ namespace Zodiac
             assert(ast_decl->flags & AST_NODE_FLAG_TYPED);
             assert(ast_decl->type ||
                    ast_decl->kind == AST_Declaration_Kind::IMPORT ||
-                   ast_decl->kind == AST_Declaration_Kind::USING);
+                   ast_decl->kind == AST_Declaration_Kind::USING ||
+                   ast_decl->kind == AST_Declaration_Kind::STATIC_ASSERT);
         }
 
         return result;
@@ -3620,6 +3666,8 @@ namespace Zodiac
                     case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
                     case AST_Declaration_Kind::ENUM: assert(false);
+                                                     
+                    case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
                 }
                 break;
             }
@@ -4226,11 +4274,10 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::TYPEDEF: assert(false);
-
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
-
             case AST_Declaration_Kind::ENUM: assert(false); assert(false);
+            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
     }
     
@@ -5147,22 +5194,7 @@ namespace Zodiac
         assert(resolver);
         assert(identifier);
 
-        auto bd = resolver->build_data;
-
         auto atom = identifier->atom;
-
-        for (int64_t i = 0; i < bd->errors.count; i++)
-        {
-            auto &err = bd->errors[i];
-
-            assert(err.site.is_ast_node);
-
-            if (err.kind == Zodiac_Error_Kind::UNDECLARED_IDENTIFIER &&
-                err.site.ast_node == identifier)
-            {
-                return;
-            }
-        }
 
         zodiac_report_error(resolver->build_data,
                             Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
@@ -5174,20 +5206,6 @@ namespace Zodiac
     void resolver_report_mismatching_types(Resolver *resolver, AST_Node *node,
                                            AST_Type *expected_type, AST_Type *actual_type)
     {
-        auto bd = resolver->build_data;
-
-        for (int64_t i = 0; i < bd->errors.count; i++)
-        {
-            auto &err = bd->errors[i];
-            assert(err.site.is_ast_node);
-
-            if (err.kind == Zodiac_Error_Kind::MISMATCHING_TYPES &&
-                err.site.ast_node == node)
-            {
-                return;
-            }
-        }
-
         auto ta = temp_allocator_get();
 
         auto expected_type_str = ast_type_to_string(ta, expected_type);

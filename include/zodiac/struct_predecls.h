@@ -54,7 +54,11 @@ namespace Zodiac
     {
         AST_Type *type = nullptr;
 
-        Integer_Literal integer = {};
+        union
+        {
+            Integer_Literal integer = {};
+            bool boolean;
+        };
     };
 
 }

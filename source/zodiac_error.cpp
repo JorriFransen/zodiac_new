@@ -40,9 +40,39 @@ namespace Zodiac
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                              Zodiac_Error_Site site, const char *fmt, va_list args)
     {
-        String message = string_print_format(build_data->err_allocator, fmt, args);
-        Zodiac_Error err = zodiac_make_error(build_data, kind, message, site);
-        array_append(&build_data->errors, err);
+        bool duplicate = false;
+
+        for (int64_t i = 0; i < build_data->errors.count; i++)
+        {
+            auto &ex_err = build_data->errors[i];
+
+            if (ex_err.kind != kind) continue;
+
+            if (ex_err.site.is_ast_node == true && site.is_ast_node == true)
+            {
+                if (ex_err.site.ast_node == site.ast_node)
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+            else if (ex_err.site.is_ast_node == false && site.is_ast_node == false)
+            {
+                if (ex_err.site.begin_file_pos == site.begin_file_pos &&
+                    ex_err.site.end_file_pos == site.end_file_pos)
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+        }
+
+        if (!duplicate)
+        {
+            String message = string_print_format(build_data->err_allocator, fmt, args);
+            Zodiac_Error err = zodiac_make_error(build_data, kind, message, site);
+            array_append(&build_data->errors, err);
+        }
     }
 
     void zodiac_report_info(Build_Data *build_data, AST_Node *ast_node,
@@ -108,16 +138,22 @@ namespace Zodiac
 
     void zodiac_clear_errors(Build_Data *build_data)
     {
-        for (int64_t i = 0; i < build_data->errors.count; i++)
+
+        for (int64_t i = build_data->errors.count - 1; i >= 0; i--)
         {
             auto &err = build_data->errors[i];
 
-            for (int64_t m_i = 0; m_i < err.messages.count; m_i++)
-            {
-                auto &msg = err.messages[m_i];
+            // if (err.kind != Zodiac_Error_Kind::STATIC_ASSERTION_FAILED)
+            // {
+                for (int64_t m_i = 0; m_i < err.messages.count; m_i++)
+                {
+                    auto &msg = err.messages[m_i];
 
-                free(build_data->err_allocator, msg.message.data);
-            }
+                    free(build_data->err_allocator, msg.message.data);
+                }
+
+                // array_unordered_remove(&build_data->errors, i);
+            // }
         }
 
         build_data->errors.count = 0;

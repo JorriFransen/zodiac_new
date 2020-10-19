@@ -25,6 +25,7 @@ namespace Zodiac
         ASSIGNING_TO_CONST,
         INCOMPLETE_SWITCH,
         INVALID_DEREF,
+        STATIC_ASSERTION_FAILED,
 
         // Iterp errors
         FOREIGN_FUNCTION_NOT_FOUND,

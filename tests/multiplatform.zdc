@@ -1,36 +1,51 @@
 
 
+@static_assert(false);
+
 main :: func() -> s64
 {
+    @static_assert(false);
     print("Hello, World! from multiple platforms...\n");
     return 42;
 }
 
-#if (PLATFORM_WINDOWS)
-{
-    std :: import std;
-    windows :: import windows;
+// #if (PLATFORM_WINDOWS)
+// {
+//     std :: import std;
+//     windows :: import windows;
 
-    stdout : windows.HANDLE;
+//     stdout : windows.HANDLE;
 
-    print :: func(str: *u8)
-    {
-        written : windows.DWORD;
-        len := @cast(windows.DWORD, std.strlen(str));
-        windows.WriteFile(stdout, str, len, *written, null);
+//     print :: func(str: *u8)
+//     {
+//         written : windows.DWORD;
+//         len := @cast(windows.DWORD, std.strlen(str));
+//         windows.WriteFile(stdout, str, len, *written, null);
 
-        return;
-    }
+//         return;
+//     }
 
-    mainCRTStartup :: func ()
-    {
-        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+//     mainCRTStartup :: func ()
+//     {
+//         stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
 
-        exit_code := main();
-        @exit(exit_code);
-    }
-}
-#else
-{
-    // @static_assert(false);
-}
+//         exit_code := main();
+//         @exit(exit_code);
+//     }
+// }
+// #else
+// {
+//     @static_assert(false);
+// }
+
+// #naked #noreturn _start :: func ()
+// {
+//     posix_call_main_and_exit();
+// }
+
+// #noreturn posix_call_main_and_exit :: func ()
+// {
+//     exit_code := main();
+//     @exit(exit_code);
+// }
+

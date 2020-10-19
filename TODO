@@ -1,4 +1,7 @@
 
+When linking with the c runtime the entry point should be main instead of _start/MainCRTStartup
+
+Passing arguments to main
 
 unions
 
@@ -9,8 +12,6 @@ When looking up struct members we use the regular scope_find_declaration, but I 
 Statements (function bodies) should remember their inferred return type, since an error might be reported on this in a later cycle. At the momement inferred return type will be null or type_void if the statement has been resolved in a previous cycle.
 
 make jump if more like llvm's condbr
-
-result of cmp ops should be bool
 
 ::TypedStructLiterals
   I think this was meant to parse this:
@@ -30,7 +31,6 @@ lazy && and ||
 
 Custom allocator for stack frame allocls in interpreter
 
-Linking with c runtime (entry point main instead of _start)
 
 Inherit noreturn when a noreturn function is called
 

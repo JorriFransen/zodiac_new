@@ -40,6 +40,7 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(noreturn)         \
     DEFINE_BUILTIN_ATOM(foreign)          \
     DEFINE_BUILTIN_ATOM(allow_incomplete) \
+    DEFINE_BUILTIN_ATOM(static_assert)    \
     DEFINE_BUILTIN_ATOM(syscall)          \
     DEFINE_BUILTIN_ATOM(cast)             \
     DEFINE_BUILTIN_ATOM(sizeof)           \

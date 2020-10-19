@@ -77,6 +77,8 @@ namespace Zodiac
         ENUM,
 
         POLY_TYPE,
+
+        STATIC_ASSERT,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -167,6 +169,11 @@ namespace Zodiac
             {
                 AST_Identifier *specification_identifier;
             } poly_type;
+
+            struct
+            {
+                AST_Expression *cond_expression;
+            } static_assert_decl;
         };
     };
 
@@ -669,6 +676,11 @@ namespace Zodiac
                                                    AST_Identifier *spec_ident,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
+
+    AST_Declaration  *ast_static_assert_declaration_new(Allocator *allocator,
+                                                        AST_Expression *cond_expr,
+                                                        const File_Pos &bfp,
+                                                        const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Array<AST_Expression *> case_exprs,
