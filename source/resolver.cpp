@@ -590,8 +590,7 @@ namespace Zodiac
                     {
                         queue_ident_job(resolver, decl, module->module_scope);
                     }
-                    else if ((decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
-                             decl->kind != AST_Declaration_Kind::VARIABLE)
+                    else if ((decl->flags & AST_NODE_FLAG_RESOLVED_ID))
                     {
                         queue_type_job(resolver, decl, module->module_scope); 
                     }
