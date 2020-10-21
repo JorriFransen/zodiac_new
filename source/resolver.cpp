@@ -980,7 +980,7 @@ namespace Zodiac
 
                 Const_Value cond_val = const_interpret_expression(cond_expr);
 
-                resolver_push_active_static_branch(resolver, !cond_val.boolean);
+                resolver_push_active_static_branch(resolver, cond_val.boolean);
 
                 auto then_decls = ast_decl->static_if.then_declarations;
                 for (int64_t i = 0; i < then_decls.count; i++)
@@ -993,7 +993,7 @@ namespace Zodiac
                 }
 
                 resolver_pop_active_static_branch(resolver);
-                resolver_push_active_static_branch(resolver, cond_val.boolean);
+                resolver_push_active_static_branch(resolver, !cond_val.boolean);
 
                 auto else_decls = ast_decl->static_if.else_declarations;
                 for (int64_t i = 0; i < else_decls.count; i++)
