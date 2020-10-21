@@ -53,6 +53,7 @@ namespace Zodiac
         AST_Declaration *bc_entry_decl = nullptr;
 
         Stack<AST_Node *> break_node_stack = {};
+        Stack<bool> active_static_branch_stack = {};
 
         Queue<Resolve_Job*> parse_job_queue = {};
         Queue<Resolve_Job*> ident_job_queue = {};
@@ -180,6 +181,10 @@ namespace Zodiac
 
     void resolver_push_break_node(Resolver *resolver, AST_Node *node);
     void resolver_pop_break_node(Resolver *resolver);
+
+    void resolver_push_active_static_branch(Resolver *resolver, bool active);
+    void resolver_pop_active_static_branch(Resolver *resolver);
+    bool resolver_is_active_static_branch(Resolver *resolver);
 
     AST_Type *find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope);

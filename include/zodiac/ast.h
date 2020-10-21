@@ -30,7 +30,11 @@ namespace Zodiac
         AST_NODE_FLAG_RESOLVED_ID              = 0x01,
         AST_NODE_FLAG_TYPED                    = 0x02,
         AST_NODE_FLAG_SIZED                    = 0x04,
-        AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION = 0x08
+
+        AST_NODE_FLAG_QUEUED_TYPING            = 0x08,
+        AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION = 0x10,
+
+
     };
 
     struct AST_Node
