@@ -415,7 +415,7 @@ namespace Zodiac
                     auto ast_decl = ast_create_declaration_from_ptn(ast_builder, ptn_decl,
                                                                     var_decls, else_scope);
 
-                    array_append(&then_decls, ast_decl);
+                    array_append(&else_decls, ast_decl);
                 }
 
                 result = ast_static_if_declaration_new(ast_builder->allocator, cond_expr, 

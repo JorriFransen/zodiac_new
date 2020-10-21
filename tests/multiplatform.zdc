@@ -53,8 +53,8 @@ main :: func() -> s64
         @exit(exit_code);
     }
 }
-// #else
-// {
-//     @static_assert(false);
-// }
+#else
+{
+    @static_assert(false);
+}
  

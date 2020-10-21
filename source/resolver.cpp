@@ -364,6 +364,11 @@ namespace Zodiac
     {
         auto p = &resolver->progression;
 
+        if (p->scope_imports_done)
+        {
+            return true;
+        }
+
         return (queue_count(&resolver->parse_job_queue) != p->parse_job_count) ||
                (queue_count(&resolver->ident_job_queue) != p->ident_job_count) ||
                (queue_count(&resolver->type_job_queue) != p->type_job_count) ||
@@ -376,6 +381,8 @@ namespace Zodiac
     void resolver_save_progression(Resolver *resolver)
     {
         auto p = &resolver->progression;
+
+        p->scope_imports_done = false;
 
         p->parse_job_count = queue_count(&resolver->parse_job_queue);
         p->ident_job_count = queue_count(&resolver->ident_job_queue);
@@ -958,27 +965,43 @@ namespace Zodiac
                 {
                     result = false;
                 }
-
-                auto then_decls = ast_decl->static_if.then_declarations;
-                for (int64_t i = 0; i < then_decls.count; i++)
+                else
                 {
-                    if (!try_resolve_identifiers(resolver, then_decls[i],
-                                                 ast_decl->static_if.then_scope))
-                    {
-                        result = false;
-                    }
+                    queue_type_job(resolver, cond_expr, scope);
                 }
 
-                auto else_decls = ast_decl->static_if.else_declarations;
-                for (int64_t i = 0; i < else_decls.count; i++)
+                if (!(cond_expr->flags & AST_NODE_FLAG_TYPED))
                 {
-                    if (!try_resolve_identifiers(resolver, else_decls[i],
-                                                 ast_decl->static_if.else_scope))
-                    {
-                        result = false;
-                    }
+                    result = false;
+                    break;
                 }
 
+                Const_Value cond_val = const_interpret_expression(cond_expr);
+
+                if (cond_val.boolean)
+                {
+                    auto then_decls = ast_decl->static_if.then_declarations;
+                    for (int64_t i = 0; i < then_decls.count; i++)
+                    {
+                        if (!try_resolve_identifiers(resolver, then_decls[i],
+                                                     ast_decl->static_if.then_scope))
+                        {
+                            result = false;
+                        }
+                    }
+                }
+                else
+                {
+                    auto else_decls = ast_decl->static_if.else_declarations;
+                    for (int64_t i = 0; i < else_decls.count; i++)
+                    {
+                        if (!try_resolve_identifiers(resolver, else_decls[i],
+                                                     ast_decl->static_if.else_scope))
+                        {
+                            result = false;
+                        }
+                    }
+                }
                 break;
             }
 
@@ -2281,36 +2304,40 @@ namespace Zodiac
 
                 Const_Value cond_val = const_interpret_expression(cond_expr);
                 bool import_then = cond_val.boolean;
-                bool import_else = !import_then;
 
                 auto then_scope = ast_decl->static_if.then_scope;
                 auto else_scope = ast_decl->static_if.else_scope;
 
-                for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
+                if (import_then)
                 {
-                    auto decl = ast_decl->static_if.then_declarations[i];
+                    for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
+                    {
+                        auto decl = ast_decl->static_if.then_declarations[i];
 
-                    if (!try_resolve_types(resolver, decl, then_scope))
-                    {
-                        result = false;
-                    }
-                    else if (import_then && !resolver_import_from_static_if(resolver, decl, scope))
-                    {
-                        result = false;
+                        if (!try_resolve_types(resolver, decl, then_scope))
+                        {
+                            result = false;
+                        }
+                        else if (!resolver_import_from_static_if(resolver, decl, scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
-
-                for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
+                else
                 {
-                    auto decl = ast_decl->static_if.else_declarations[i];
+                    for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
+                    {
+                        auto decl = ast_decl->static_if.else_declarations[i];
 
-                    if (!try_resolve_types(resolver, decl, else_scope))
-                    {
-                        result = false;
-                    }
-                    else if (import_else && resolver_import_from_static_if(resolver, decl, scope))
-                    {
-                        result = false;
+                        if (!try_resolve_types(resolver, decl, else_scope))
+                        {
+                            result = false;
+                        }
+                        else if (!resolver_import_from_static_if(resolver, decl, scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
 
@@ -4949,6 +4976,7 @@ namespace Zodiac
                     }
                     else
                     {
+                        resolver->progression.scope_imports_done = true;
                         scope_add_declaration(current_scope, decl);
                     }
                 }
@@ -4979,6 +5007,8 @@ namespace Zodiac
                 assert(!redecl);
                 if (redecl) return false;
             }
+
+            resolver->progression.scope_imports_done = true;
 
             scope_add_declaration(scope, decl);
             decl->decl_flags |= AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF;

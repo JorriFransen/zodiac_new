@@ -23,6 +23,8 @@ namespace Zodiac
 
     struct Resolver_Progression
     {
+        bool scope_imports_done = false;
+
         int64_t parse_job_count = 0;
         int64_t ident_job_count = 0;
         int64_t type_job_count = 0;
