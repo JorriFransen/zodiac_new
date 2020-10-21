@@ -1,7 +1,4 @@
 
-Fix static if (both branches are typed, which causes static asserts in the false branch to trigger).
-if else for static if
-
 Passing arguments to main
 
 When linking with the c runtime the entry point should be main instead of _start/MainCRTStartup
