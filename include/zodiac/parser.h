@@ -37,6 +37,9 @@ Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,
 Declaration_PTN *parser_parse_import_declaration(Parser *parser, Token_Stream *ts,
                                                  Identifier_PTN *identifier);
 
+Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream *ts,
+                                                    bool elseif = false);
+
 Identifier_PTN *parser_parse_identifier(Parser *parser, Token_Stream *ts);
 
 Function_Proto_PTN *parser_parse_function_prototype(Parser *parser, Token_Stream *ts);

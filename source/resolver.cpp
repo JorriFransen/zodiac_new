@@ -217,11 +217,13 @@ namespace Zodiac
 
                     // Size jobs are queued when types are first created
                     free_job(resolver, job);
+                    resolver->progression.type_job_finish_count += 1;
                 }
                 else
                 {
                     assert(job->ast_node->kind == AST_Node_Kind::EXPRESSION);
                     free_job(resolver, job);
+                    resolver->progression.type_job_finish_count += 1;
                 }
 
             } }
@@ -346,7 +348,7 @@ namespace Zodiac
             }
 
 
-            if (resolver_has_progressed(resolver))
+            if (resolver_has_progressed(resolver) && !resolver->parse_error)
             {
                 zodiac_clear_errors(resolver->build_data);
             } 
@@ -366,6 +368,11 @@ namespace Zodiac
     {
         auto p = &resolver->progression;
 
+        if (p->type_job_finish_count > 0)
+        {
+            return true;
+        }
+
         if (p->scope_imports_done)
         {
             return true;
@@ -384,6 +391,7 @@ namespace Zodiac
     {
         auto p = &resolver->progression;
 
+        p->type_job_finish_count = 0;
         p->scope_imports_done = false;
 
         p->parse_job_count = queue_count(&resolver->parse_job_queue);
@@ -5043,6 +5051,12 @@ namespace Zodiac
     {
         if (!(decl->decl_flags & AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF))
         {
+
+            while (scope->kind == Scope_Kind::STATIC_IF)
+            {
+                assert(scope->parent);
+                scope = scope->parent;
+            }
             if (decl->identifier)
             {
                 auto redecl = scope_find_declaration(scope, decl->identifier);

@@ -85,60 +85,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
 
     if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_IF)
     {
-        // Static if
-        auto begin_fp = ts->current_token().begin_file_pos;
-        ts->next_token();
-        ts->next_token();
-
-        if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
-
-        auto cond_expr = parser_parse_expression(parser, ts);
-        if (!cond_expr) return nullptr;
-
-        if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
-
-        if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
-
-        Array<Declaration_PTN *> then_decls = {};
-        array_init(parser->allocator, &then_decls);
-
-        while (!parser_is_token(ts, TOK_RBRACE))
-        {
-            auto decl = parser_parse_declaration(parser, ts);
-            if (!decl) return nullptr;
-            array_append(&then_decls, decl);
-        }
-
-        auto end_fp = ts->current_token().end_file_pos;
-        ts->next_token();
-
-        Array<Declaration_PTN *> else_decls = {};
-
-        if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_ELSE)
-        {
-            array_init(parser->allocator, &else_decls);
-
-            ts->next_token();
-            ts->next_token();
-
-            if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
-
-            while (!parser_is_token(ts, TOK_RBRACE))
-            {
-                auto decl = parser_parse_declaration(parser, ts);
-                if (!decl) return nullptr;
-                array_append(&else_decls, decl);
-            }
-
-            end_fp = ts->current_token().end_file_pos;
-            ts->next_token();
-        }
-
-        auto result = new_static_if_declaration_ptn(parser->allocator, cond_expr,
-                                                    then_decls, else_decls,
-                                                    begin_fp, end_fp);
-        result->self.flags |= PTN_FLAG_SEMICOLON;
-        return result;
+        return parser_parse_static_if_declaration(parser, ts);
     }
     else if (parser_is_token(ts, TOK_AT) && ts->peek_token(1).kind == TOK_IDENTIFIER)
     {
@@ -184,7 +131,13 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
         {
             is_foreign = true;
         }
-        else assert(false);
+        else 
+        {
+            zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID_DIRECTIVE, 
+                                directive_tok.begin_file_pos, directive_tok.end_file_pos,
+                                "Invalid directive: '#%s'", directive_tok.atom.data);
+            return nullptr;
+        }
         ts->next_token();
     }
 
@@ -517,6 +470,94 @@ Declaration_PTN *parser_parse_import_declaration(Parser *parser, Token_Stream *t
                                              identifier->self.begin_file_pos, end_fp);
     result->self.flags |= PTN_FLAG_SEMICOLON;
     return result;
+}
+
+Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream *ts,
+                                                    bool elseif/*= false*/)
+{
+    auto begin_fp = ts->current_token().begin_file_pos;
+
+    if (!parser_expect_token(parser, ts, TOK_POUND)) return nullptr;
+
+    if (elseif)
+    {
+        auto ft = ts->current_token();
+        assert(ft.kind == TOK_IDENTIFIER);
+        assert(ft.atom == Builtin::atom_elseif);
+        ts->next_token();
+    }
+    else
+    {
+        if (!parser_expect_token(parser, ts, TOK_KW_IF)) return nullptr;
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
+
+    auto cond_expr = parser_parse_expression(parser, ts);
+    if (!cond_expr) return nullptr;
+
+    if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
+
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
+
+    Array<Declaration_PTN *> then_decls = {};
+    array_init(parser->allocator, &then_decls);
+
+    while (!parser_is_token(ts, TOK_RBRACE))
+    {
+        auto decl = parser_parse_declaration(parser, ts);
+        if (!decl) return nullptr;
+        array_append(&then_decls, decl);
+    }
+
+    auto end_fp = ts->current_token().end_file_pos;
+    ts->next_token();
+
+    Array<Declaration_PTN *> else_decls = {};
+
+    if (parser_is_token(ts, TOK_POUND) &&
+        ts->peek_token(1).kind == TOK_IDENTIFIER &&
+        ts->peek_token(1).atom == Builtin::atom_elseif)
+    {
+        auto else_if_decl = parser_parse_static_if_declaration(parser, ts, true);
+        if (!else_if_decl) return nullptr;
+
+        array_init(parser->allocator, &else_decls, 1);
+        array_append(&else_decls, else_if_decl);
+
+        auto result = new_static_if_declaration_ptn(parser->allocator, cond_expr, then_decls,
+                                                    else_decls, begin_fp, 
+                                                    else_if_decl->self.end_file_pos); 
+        result->self.flags |= PTN_FLAG_SEMICOLON;
+        return result;
+
+    }
+    else if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_ELSE)
+    {
+        array_init(parser->allocator, &else_decls);
+
+        ts->next_token();
+        ts->next_token();
+
+        if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
+
+        while (!parser_is_token(ts, TOK_RBRACE))
+        {
+            auto decl = parser_parse_declaration(parser, ts);
+            if (!decl) return nullptr;
+            array_append(&else_decls, decl);
+        }
+
+        end_fp = ts->current_token().end_file_pos;
+        ts->next_token();
+    }
+
+    auto result = new_static_if_declaration_ptn(parser->allocator, cond_expr,
+                                                then_decls, else_decls,
+                                                begin_fp, end_fp);
+    result->self.flags |= PTN_FLAG_SEMICOLON;
+    return result;
+
 }
 
 Identifier_PTN *parser_parse_identifier(Parser *parser, Token_Stream *ts)

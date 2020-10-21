@@ -14,6 +14,7 @@ namespace Zodiac
         
         // Parse errors
         UNEXPECTED_TOKEN,
+        INVALID_DIRECTIVE,
 
         REDECLARATION,
 
