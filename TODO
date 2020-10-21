@@ -1,4 +1,6 @@
 
+Calls shouln't wait for the function body of the callee to be typed, just the function header. This should save a lot of cycles where we are just waiting for the body to be resolved, but we only need to know the arguments and return type. If we do this right, recursive functions should be fairly easy to implement later.
+
 Passing arguments to main
 
 When linking with the c runtime the entry point should be main instead of _start/MainCRTStartup
