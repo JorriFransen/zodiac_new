@@ -45,6 +45,8 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(cast)             \
     DEFINE_BUILTIN_ATOM(sizeof)           \
     DEFINE_BUILTIN_ATOM(offsetof)         \
+    DEFINE_BUILTIN_ATOM(PLATFORM_LINUX)   \
+    DEFINE_BUILTIN_ATOM(PLATFORM_WINDOWS) \
 
 #undef DEFINE_BUILTIN_TYPE
 
@@ -73,5 +75,5 @@ namespace Zodiac
     AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, uint64_t size,
                                       bool sign);
 
-    void builtin_populate_scope(Allocator *allocator, Scope *global_scope);
+    Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *global_scope);
 }

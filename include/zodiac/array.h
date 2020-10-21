@@ -50,6 +50,20 @@ void array_init(Allocator *allocator, Array<Element_Type> *array, int64_t capaci
 }
 
 template <typename Element_Type>
+void array_init(Allocator *allocator, Array<Element_Type> *array)
+{
+    array_init(allocator, array, DEFAULT_ARRAY_CAPACITY);
+}
+
+template <typename Element_Type>
+Array<Element_Type> array_create(Allocator *allocator, int64_t capacity)
+{
+    Array<Element_Type> result = {};
+    array_init(allocator, &result, capacity);
+    return result;
+}
+
+template <typename Element_Type>
 void array_free(Array<Element_Type> *array)
 {
     if (array->allocator && array->data)
@@ -59,12 +73,6 @@ void array_free(Array<Element_Type> *array)
     array->count = 0;
     array->capacity = 0;
     array->allocator = nullptr;
-}
-
-template <typename Element_Type>
-void array_init(Allocator *allocator, Array<Element_Type> *array)
-{
-    array_init(allocator, array, DEFAULT_ARRAY_CAPACITY);
 }
 
 template <typename Element_Type>

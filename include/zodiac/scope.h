@@ -12,6 +12,7 @@ namespace Zodiac
         PARAMETER,
         BLOCK,
         AGGREGATE,
+        STATIC_IF,
     };
 
     struct Scope_Block

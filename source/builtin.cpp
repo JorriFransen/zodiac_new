@@ -91,11 +91,11 @@ AST_Type *builtin_initialize_type(Allocator *allocator, Builtin_Type_Kind kind, 
     return result;
 }
 
-void builtin_populate_scope(Allocator *allocator, Scope *global_scope)
+Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *global_scope)
 {
     assert(global_scope);
 
-    File_Pos fp = { 0, 0, 0, string_ref("builtin") };
+    File_Pos fp = { 0, 0, 0, string_ref("<builtin type>") };
 
     #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) { \
         auto ident = ast_identifier_new(allocator, Builtin::atom_##name, fp, fp); \
@@ -107,6 +107,41 @@ void builtin_populate_scope(Allocator *allocator, Scope *global_scope)
     BUILTIN_TYPE_LIST
 
     #undef DEFINE_BUILTIN_TYPE
+
+    auto decls_to_resolve = array_create<AST_Declaration *>(allocator, 2);
+
+    // @TODO: @CLEANUP: Use the targetplatform enum here
+    bool platform_linux = false;
+    bool platform_windows = false;
+
+#if linux
+    platform_linux = true;
+#elif _WIN32
+    platform_windows = true
+#else
+        assert(false);
+#endif
+
+    fp.file_name = string_ref("<builtin PLATFORM_LINUX>");
+    auto ident_PLATFORM_LINUX = ast_identifier_new(allocator, Builtin::atom_PLATFORM_LINUX, fp, fp);
+    auto expr_PLATFORM_LINUX = ast_boolean_literal_expression_new(allocator, platform_linux, fp, fp);
+    auto decl_PLATFORM_LINUX = ast_constant_declaration_new(allocator, ident_PLATFORM_LINUX,
+                                                            nullptr, expr_PLATFORM_LINUX, fp, fp);
+    decl_PLATFORM_LINUX->decl_flags |= AST_DECL_FLAG_GLOBAL;
+    scope_add_declaration(global_scope, decl_PLATFORM_LINUX);
+    array_append(&decls_to_resolve, decl_PLATFORM_LINUX);
+
+    auto ident_PLATFORM_WINDOWS = ast_identifier_new(allocator, Builtin::atom_PLATFORM_WINDOWS,
+                                                     fp, fp);
+    auto expr_PLATFORM_WINDOWS = ast_boolean_literal_expression_new(allocator, platform_windows,
+                                                                    fp, fp);
+    auto decl_PLATFORM_WINDOWS = ast_constant_declaration_new(allocator, ident_PLATFORM_WINDOWS,
+                                                              nullptr, expr_PLATFORM_WINDOWS, fp, fp);
+    decl_PLATFORM_WINDOWS->decl_flags |= AST_DECL_FLAG_GLOBAL;
+    scope_add_declaration(global_scope, decl_PLATFORM_WINDOWS);
+    array_append(&decls_to_resolve, decl_PLATFORM_WINDOWS);
+
+    return decls_to_resolve;
 }
 
 

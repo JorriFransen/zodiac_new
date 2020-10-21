@@ -167,6 +167,12 @@ namespace Zodiac
                 string_builder_append(sb, "AGGREGATE:\n");
                 break;
             }
+
+            case Scope_Kind::STATIC_IF:
+            {
+                string_builder_append(sb, "STATIC_IF:\n");
+                break;
+            }
         }
 
         indent += 1;

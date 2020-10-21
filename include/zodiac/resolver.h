@@ -231,6 +231,7 @@ namespace Zodiac
     bool resolver_assign_enum_initializers(Resolver *resolver, AST_Declaration *decl,
                                            AST_Type *enum_type);
     bool resolver_import_using_scope(Resolver *resolver, Scope *current_scope, Scope *using_scope);
+    bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl, Scope *scope);
 
     void resolver_inherit_const(AST_Expression *expr);
 

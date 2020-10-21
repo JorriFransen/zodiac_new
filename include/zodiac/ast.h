@@ -78,6 +78,7 @@ namespace Zodiac
 
         POLY_TYPE,
 
+        STATIC_IF,
         STATIC_ASSERT,
     };
 
@@ -85,16 +86,17 @@ namespace Zodiac
 
     enum AST_Declaration_Flag__ : AST_Declaration_Flag
     {
-        AST_DECL_FLAG_NONE                  = 0x000,
-        AST_DECL_FLAG_IS_NAKED              = 0x001,
-        AST_DECL_FLAG_IS_ENTRY              = 0x002,
-        AST_DECL_FLAG_IS_BYTECODE_ENTRY     = 0x004,
-        AST_DECL_FLAG_NORETURN              = 0x008,
-        AST_DECL_FLAG_FOREIGN               = 0x010,
-        AST_DECL_FLAG_GLOBAL                = 0x020,
-        AST_DECL_FLAG_IS_ENUM_MEMBER        = 0x040,
-        AST_DECL_FLAG_ENUM_MEMBER_INTINIT   = 0x080,
-        AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT = 0x100,
+        AST_DECL_FLAG_NONE                    = 0x000,
+        AST_DECL_FLAG_IS_NAKED                = 0x001,
+        AST_DECL_FLAG_IS_ENTRY                = 0x002,
+        AST_DECL_FLAG_IS_BYTECODE_ENTRY       = 0x004,
+        AST_DECL_FLAG_NORETURN                = 0x008,
+        AST_DECL_FLAG_FOREIGN                 = 0x010,
+        AST_DECL_FLAG_GLOBAL                  = 0x020,
+        AST_DECL_FLAG_IS_ENUM_MEMBER          = 0x040,
+        AST_DECL_FLAG_ENUM_MEMBER_INTINIT     = 0x080,
+        AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT   = 0x100,
+        AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF = 0x200,
     };
 
     struct AST_Declaration : public AST_Node
@@ -169,6 +171,16 @@ namespace Zodiac
             {
                 AST_Identifier *specification_identifier;
             } poly_type;
+
+            struct
+            {
+                AST_Expression *cond_expression;
+                Array<AST_Declaration *> then_declarations;
+                Array<AST_Declaration *> else_declarations;
+
+                Scope *then_scope;
+                Scope *else_scope;
+            } static_if;
 
             struct
             {
@@ -676,6 +688,12 @@ namespace Zodiac
                                                    AST_Identifier *spec_ident,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
+
+    AST_Declaration *ast_static_if_declaration_new(Allocator *allocator, AST_Expression *cond_expr,
+                                                   Array<AST_Declaration *> then_decls,
+                                                   Array<AST_Declaration *> else_decls,
+                                                   Scope *then_scope, Scope *else_scope,
+                                                   const File_Pos &bfp, const File_Pos &efp);
 
     AST_Declaration  *ast_static_assert_declaration_new(Allocator *allocator,
                                                         AST_Expression *cond_expr,

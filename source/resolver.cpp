@@ -67,7 +67,14 @@ namespace Zodiac
         
         //@TODO: initialize with builtin global count
         resolver->global_scope = scope_new(allocator, Scope_Kind::GLOBAL, nullptr);
-        builtin_populate_scope(allocator, resolver->global_scope);
+        auto decls_to_resolve = builtin_populate_scope(allocator, resolver->global_scope);
+
+        for (int64_t i = 0; i < decls_to_resolve.count; i++)
+        {
+            queue_ident_job(resolver, decls_to_resolve[i], resolver->global_scope);
+        }
+
+        array_free(&decls_to_resolve);
 
         queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, nullptr);
 
@@ -198,10 +205,6 @@ namespace Zodiac
                         {
                             queue_emit_bytecode_jobs_from_declaration(resolver, decl,
                                                                       job->node_scope);
-                        }
-                        else if (decl->decl_flags & AST_DECL_FLAG_FOREIGN) 
-                        {
-                            queue_emit_bytecode_job(resolver, decl, job->node_scope);
                         }
                     }
                     else if (decl->kind == AST_Declaration_Kind::VARIABLE &&
@@ -947,9 +950,43 @@ namespace Zodiac
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
                                                   
+            case AST_Declaration_Kind::STATIC_IF:
+            {
+                auto cond_expr = ast_decl->static_if.cond_expression;
+
+                if (!try_resolve_identifiers(resolver, cond_expr, scope))
+                {
+                    result = false;
+                }
+
+                auto then_decls = ast_decl->static_if.then_declarations;
+                for (int64_t i = 0; i < then_decls.count; i++)
+                {
+                    if (!try_resolve_identifiers(resolver, then_decls[i],
+                                                 ast_decl->static_if.then_scope))
+                    {
+                        result = false;
+                    }
+                }
+
+                auto else_decls = ast_decl->static_if.else_declarations;
+                for (int64_t i = 0; i < else_decls.count; i++)
+                {
+                    if (!try_resolve_identifiers(resolver, else_decls[i],
+                                                 ast_decl->static_if.else_scope))
+                    {
+                        result = false;
+                    }
+                }
+
+                break;
+            }
+
             case AST_Declaration_Kind::STATIC_ASSERT:
             {
-                if (!try_resolve_identifiers(resolver, ast_decl->static_assert_decl.cond_expression, scope))
+                if (!try_resolve_identifiers(resolver,
+                                             ast_decl->static_assert_decl.cond_expression,
+                                             scope))
                 {
                     result = false;
                 }
@@ -1776,6 +1813,7 @@ namespace Zodiac
                         assert(decl->type ||
                                decl->kind == AST_Declaration_Kind::IMPORT ||
                                decl->kind == AST_Declaration_Kind::USING ||
+                               decl->kind == AST_Declaration_Kind::STATIC_IF ||
                                decl->kind == AST_Declaration_Kind::STATIC_ASSERT);
                 }
                 break;
@@ -1855,7 +1893,8 @@ namespace Zodiac
 
         if (ast_decl->flags & AST_NODE_FLAG_TYPED)
         {
-            assert(ast_decl->type != nullptr);
+            assert(ast_decl->type != nullptr ||
+                   ast_decl->kind == AST_Declaration_Kind::IMPORT);
             return true;
         }
 
@@ -2225,6 +2264,64 @@ namespace Zodiac
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
                                                   
+            case AST_Declaration_Kind::STATIC_IF:
+            {
+                result = true;
+
+                auto cond_expr = ast_decl->static_if.cond_expression;
+
+                if (!try_resolve_types(resolver, cond_expr, scope))
+                {
+                    result = false;
+                    break;
+                }
+
+                assert(cond_expr->type == Builtin::type_bool);
+                assert(cond_expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+                Const_Value cond_val = const_interpret_expression(cond_expr);
+                bool import_then = cond_val.boolean;
+                bool import_else = !import_then;
+
+                auto then_scope = ast_decl->static_if.then_scope;
+                auto else_scope = ast_decl->static_if.else_scope;
+
+                for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
+                {
+                    auto decl = ast_decl->static_if.then_declarations[i];
+
+                    if (!try_resolve_types(resolver, decl, then_scope))
+                    {
+                        result = false;
+                    }
+                    else if (import_then && !resolver_import_from_static_if(resolver, decl, scope))
+                    {
+                        result = false;
+                    }
+                }
+
+                for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
+                {
+                    auto decl = ast_decl->static_if.else_declarations[i];
+
+                    if (!try_resolve_types(resolver, decl, else_scope))
+                    {
+                        result = false;
+                    }
+                    else if (import_else && resolver_import_from_static_if(resolver, decl, scope))
+                    {
+                        result = false;
+                    }
+                }
+
+                if (result)
+                {
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                }
+
+                break;
+            }
+
             case AST_Declaration_Kind::STATIC_ASSERT:
             {
                 auto cond_expr = ast_decl->static_assert_decl.cond_expression;
@@ -2262,6 +2359,7 @@ namespace Zodiac
             assert(ast_decl->type ||
                    ast_decl->kind == AST_Declaration_Kind::IMPORT ||
                    ast_decl->kind == AST_Declaration_Kind::USING ||
+                   ast_decl->kind == AST_Declaration_Kind::STATIC_IF ||
                    ast_decl->kind == AST_Declaration_Kind::STATIC_ASSERT);
         }
 
@@ -3667,6 +3765,8 @@ namespace Zodiac
 
                     case AST_Declaration_Kind::ENUM: assert(false);
                                                      
+                    case AST_Declaration_Kind::STATIC_IF: assert(false);
+
                     case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
                 }
                 break;
@@ -4256,16 +4356,22 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                assert(scope->kind == Scope_Kind::MODULE);
+                assert(scope->kind == Scope_Kind::MODULE ||
+                       scope->kind == Scope_Kind::STATIC_IF);;
 
                 auto body = entry_decl->function.body;
-                assert(body);
-
-                for (int64_t i = 0; i < body->block.statements.count; i++)
+                if (body)
                 {
-                    queue_emit_bytecode_jobs_from_statement(resolver,
-                                                            body->block.statements[i],
-                                                            body->block.scope);
+                    for (int64_t i = 0; i < body->block.statements.count; i++)
+                    {
+                        queue_emit_bytecode_jobs_from_statement(resolver,
+                                                                body->block.statements[i],
+                                                                body->block.scope);
+                    }
+                }
+                else
+                {
+                    assert(entry_decl->decl_flags & AST_DECL_FLAG_FOREIGN);
                 }
 
                 queue_emit_bytecode_job(resolver, entry_decl, scope);
@@ -4277,6 +4383,8 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::ENUM: assert(false); assert(false);
+            case AST_Declaration_Kind::STATIC_IF: assert(false);
+
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
     }
@@ -4859,6 +4967,43 @@ namespace Zodiac
         }
 
         return result;
+    }
+
+    bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl, Scope *scope)
+    {
+        if (!(decl->decl_flags & AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF))
+        {
+            if (decl->identifier)
+            {
+                auto redecl = scope_find_declaration(scope, decl->identifier);
+                assert(!redecl);
+                if (redecl) return false;
+            }
+
+            scope_add_declaration(scope, decl);
+            decl->decl_flags |= AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF;
+            
+            if (scope->kind == Scope_Kind::MODULE &&
+                decl->kind == AST_Declaration_Kind::FUNCTION)
+            {
+                if (is_entry_decl(resolver, decl))
+                {
+                    assert(!resolver->entry_decl);
+                    decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                    resolver->entry_decl = decl;
+                    queue_emit_bytecode_jobs_from_declaration(resolver, decl, scope);
+                }
+                else if (is_bc_entry_decl(resolver, decl))
+                {
+                    assert(!resolver->bc_entry_decl);
+                    decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
+                    resolver->bc_entry_decl = decl;
+                    queue_emit_bytecode_jobs_from_declaration(resolver, decl, scope);
+                }
+            }
+        }
+
+        return true;
     }
 
     void resolver_inherit_const(AST_Expression *expr)

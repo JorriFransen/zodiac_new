@@ -116,7 +116,21 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::STATIC_IF: assert(false);
+        case Declaration_PTN_Kind::STATIC_IF:
+        {
+            free_ptn(allocator, ptn->static_if.cond_expression);
+
+            for (int64_t i = 0; i < ptn->static_if.then_declarations.count; i++)
+            {
+                free_ptn(allocator, ptn->static_if.then_declarations[i]);
+            }
+
+            for (int64_t i = 0; i < ptn->static_if.else_declarations.count; i++)
+            {
+                free_ptn(allocator, ptn->static_if.else_declarations[i]);
+            }
+            break;
+        }
 
         case Declaration_PTN_Kind::STATIC_ASSERT:
         {
