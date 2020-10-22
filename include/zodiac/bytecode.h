@@ -252,6 +252,7 @@ namespace Zodiac
     void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder, Build_Data *bd);
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
+    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
                                                           AST_Declaration *decl);
     Bytecode_Global bytecode_emit_global_variable(Bytecode_Builder *builder,

@@ -134,6 +134,8 @@ namespace Zodiac
 
         FrameMark
 
+        int cycle_count = 0;
+
         while (!done)
         {
             ZoneScopedNCS("compiler_pump", 0xffff00, 32)
@@ -178,6 +180,7 @@ namespace Zodiac
                     {
                         queue_type_job(resolver, job->declaration, job->node_scope);
                     }
+
                     free_job(resolver, job);
                 }
             } }
@@ -203,11 +206,12 @@ namespace Zodiac
 
                     if (decl->kind == AST_Declaration_Kind::FUNCTION)
                     {
-                        if (decl == resolver->entry_decl)
-                        {
-                            queue_emit_bytecode_jobs_from_declaration(resolver, decl,
-                                                                      job->node_scope);
-                        }
+                        queue_emit_bytecode_job(resolver, decl, job->node_scope);
+                        // if (decl == resolver->entry_decl)
+                        // {
+                            // queue_emit_bytecode_jobs_from_declaration(resolver, decl,
+                            //                                           job->node_scope);
+                        // }
                     }
                     else if (decl->kind == AST_Declaration_Kind::VARIABLE &&
                              (decl->decl_flags & AST_DECL_FLAG_GLOBAL))
@@ -326,12 +330,16 @@ namespace Zodiac
 
                 auto job = queue_dequeue(&resolver->emit_llvm_binary_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
-                free_job(resolver, job);
 
                 if (!job_done)
                 {
-                    resolver->llvm_error = true;
-                    done = true;
+                    // resolver->llvm_error = true;
+                    // done = true;
+                    queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
+                }
+                else
+                {
+                    free_job(resolver, job);
                 }
             } }
 
@@ -361,7 +369,11 @@ namespace Zodiac
             resolver_save_progression(resolver);
 
             FrameMark
+
+            cycle_count += 1;
         }
+
+        if (options->verbose) printf("Resolving finished in %d cycles\n", cycle_count);
     }
 
     bool resolver_has_progressed(Resolver *resolver)
@@ -882,7 +894,6 @@ namespace Zodiac
                         result = false;
                     }
                 }
-
                 break;
             }
 
@@ -2100,18 +2111,6 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                //if (!ast_decl->function.type_spec->type &&
-                    //!try_resolve_types(resolver, ast_decl->function.type_spec, scope,
-                                       //&ast_decl->type))
-                //{
-                    //result = false;
-                    //break;
-                //}
-                //else
-                //{
-                    //assert(ast_decl->type);
-                //}
-
                 int param_fail_count = 0;
 
                 auto param_decls = ast_decl->function.parameter_declarations;
@@ -2136,21 +2135,42 @@ namespace Zodiac
                     result = false;
                     break;
                 }
-
-                //if (body) assert(inferred_return_type);
+                if (!inferred_return_type) inferred_return_type = Builtin::type_void;
                 
-                if (!ast_decl->function.type_spec->type &&
-                    !try_resolve_types(resolver, ast_decl->function.type_spec, scope,
-                                       &ast_decl->type, inferred_return_type))
+                if (!ast_decl->function.type_spec->type) 
                 {
-                    result = false;
-                    break;
+                    if (!ast_decl->function.type_spec->function.return_type_spec)
+                    {
+                        auto new_ts =
+                            ast_type_spec_from_type_new(resolver->allocator, inferred_return_type);
+
+                        ast_decl->function.type_spec->function.return_type_spec = new_ts;
+                    }
+
+                    if (!try_resolve_types(resolver, ast_decl->function.type_spec, scope,
+                                           &ast_decl->type, inferred_return_type))
+                    {
+                        result = false;
+                        break;
+                    }
                 }
                 else
                 {
-                    assert(ast_decl->type);
+                    // assert(ast_decl->type ||
+                    //        (ast_decl->function.type_spec && ));
+                    AST_Type * func_type = ast_decl->type;
+                    if (!func_type)
+                    {
+                        assert(ast_decl->function.type_spec);
+                        assert(ast_decl->function.type_spec->type);
 
-                    auto ret_type = ast_decl->type->function.return_type;
+                        func_type = ast_decl->function.type_spec->type;
+                        ast_decl->type = func_type;
+                    }
+
+                    assert(func_type->kind == AST_Type_Kind::FUNCTION);
+
+                    auto ret_type = func_type->function.return_type;
 
                     if (body && !(ast_decl->decl_flags & AST_DECL_FLAG_NORETURN))
                     {
@@ -2498,32 +2518,35 @@ namespace Zodiac
 
             case AST_Statement_Kind::RETURN:
             {
+                AST_Type *return_type = nullptr;
                 if (ast_stmt->expression)
                 {
-                    assert(inferred_return_type);
                     result = try_resolve_types(resolver, ast_stmt->expression, scope);
                     if (result && (ast_stmt->expression->flags & AST_NODE_FLAG_TYPED))
                     {
                         assert(ast_stmt->expression->type);
                         ast_stmt->flags |= AST_NODE_FLAG_TYPED;
-
-                        if (*inferred_return_type)
-                        {
-                            assert(*inferred_return_type == ast_stmt->expression->type);
-                        }
-                        else
-                        {
-                            *inferred_return_type = ast_stmt->expression->type;
-                        }
+                        return_type = ast_stmt->expression->type;
                     }
                 } 
                 else
                 {
                     result = true;
+                    return_type = Builtin::type_void;
                 }
 
                 if (result)
                 {
+                    assert(inferred_return_type);
+                    if (*inferred_return_type)
+                    {
+                        assert(*inferred_return_type == return_type);
+                    }
+                    else
+                    {
+                        *inferred_return_type = return_type;
+                    }
+
                     ast_stmt->flags |= AST_NODE_FLAG_TYPED;
                 }
                 break;
@@ -3099,73 +3122,94 @@ namespace Zodiac
 
             case AST_Expression_Kind::CALL:
             {
-                if (!try_resolve_types(resolver, ast_expr->call.ident_expression, scope))
-                {
-                    result = false;
-                    break;
-                }
+                auto decl = resolver_get_declaration(ast_expr->call.ident_expression);
+                assert(decl);
+                assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+                auto ts = decl->function.type_spec;
 
+                AST_Type *func_type = nullptr;
+
+                if (!(ts->flags & AST_NODE_FLAG_TYPED))
+                {
+                    if (!try_resolve_types(resolver, ts, scope, &func_type, nullptr))
+                    {
+                        if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID))
+                        {
+                            return false;
+                        }
+
+                        if (!try_resolve_types(resolver, decl, scope))
+                        {
+                            return false;
+                        }
+
+                        assert(decl->type);
+                        func_type = decl->type;
+                    }
+                }
                 else
                 {
-                    auto func_type = ast_expr->call.ident_expression->type;
-                    assert(func_type->kind == AST_Type_Kind::FUNCTION);
+                    assert(ts->type);
+                    func_type = ts->type;
+                }
 
-                    bool arg_res = true;
+                assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                    assert(ast_expr->call.arg_expressions.count ==
-                           func_type->function.param_types.count);
+                bool arg_res = true;
 
-                    for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
+                assert(ast_expr->call.arg_expressions.count ==
+                       func_type->function.param_types.count);
+
+                for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
+                {
+                    auto arg_expr = ast_expr->call.arg_expressions[i];
+                    auto param_type = func_type->function.param_types[i];
+
+                    if (!try_resolve_types(resolver, arg_expr, param_type, scope))
                     {
-                        auto arg_expr = ast_expr->call.arg_expressions[i];
-                        auto param_type = func_type->function.param_types[i];
-
-                        if (!try_resolve_types(resolver, arg_expr, param_type, scope))
+                        arg_res = false;
+                    }
+                    else
+                    {
+                        assert(param_type);
+                        if (arg_res &&
+                            !(arg_expr->type == param_type))
                         {
-                            arg_res = false;
-                        }
-                        else
-                        {
-                            assert(param_type);
-                            if (arg_res &&
-                                !(arg_expr->type == param_type))
+                            if (resolver_valid_type_conversion(arg_expr->type,
+                                                               param_type))
                             {
-                                if (resolver_valid_type_conversion(arg_expr->type,
-                                                                   param_type))
-                                {
-                                    auto new_arg_expr =
-                                        ast_cast_expression_new(resolver->allocator,
-                                                                arg_expr,
-                                                                param_type,
-                                                                arg_expr->begin_file_pos,
-                                                                arg_expr->end_file_pos);
+                                auto new_arg_expr =
+                                    ast_cast_expression_new(resolver->allocator,
+                                                            arg_expr,
+                                                            param_type,
+                                                            arg_expr->begin_file_pos,
+                                                            arg_expr->end_file_pos);
 
-                                    new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                                    ast_expr->call.arg_expressions[i] = new_arg_expr;
+                                new_arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                                ast_expr->call.arg_expressions[i] = new_arg_expr;
 
-                                    if (!try_resolve_types(resolver, new_arg_expr, scope))
-                                    {
-                                        assert(false); 
-                                    }
-                                }
-                                else 
+                                if (!try_resolve_types(resolver, new_arg_expr, scope))
                                 {
-                                    resolver_report_mismatching_types(resolver, arg_expr,
-                                                                     param_type, arg_expr->type);
-                                    arg_res = false;
-                                    result = false;
+                                    assert(false); 
                                 }
                             }
-                            else if (!arg_res) result = false;
+                            else 
+                            {
+                                resolver_report_mismatching_types(resolver, arg_expr,
+                                                                 param_type, arg_expr->type);
+                                arg_res = false;
+                                result = false;
+                            }
                         }
+                        else if (!arg_res) result = false;
                     }
+                }
 
 
-                    if (arg_res)
-                    {
-                        ast_expr->type = func_type->function.return_type;
-                        result = true;
-                    }
+                if (arg_res)
+                {
+                    ast_expr->type = func_type->function.return_type;
+                    result = true;
                 }
 
                 if (result)
@@ -3619,6 +3663,8 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::FUNCTION:
             {
+                if (!ts->function.return_type_spec) return false;
+
                 auto param_count = ts->function.parameter_type_specs.count;
                 Array<AST_Type*> param_types = {};
 
@@ -3696,6 +3742,12 @@ namespace Zodiac
                     result = true;
                     ts->type = func_type;
                     *type_target = func_type;
+
+                    assert(ts->function.from_declaration);
+                    auto bc_func = bytecode_register_function(&resolver->bytecode_builder,
+                                                              ts->function.from_declaration);
+
+                    llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
                 }
                 break;
             }
@@ -4400,384 +4452,6 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
     }
 
-    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver,
-                                                   AST_Declaration *entry_decl,
-                                                   Scope *scope)
-    {
-        switch (entry_decl->kind)
-        {
-            case AST_Declaration_Kind::INVALID: assert(false);
-            case AST_Declaration_Kind::IMPORT: assert(false);
-
-            case AST_Declaration_Kind::USING: assert(false);
-
-            case AST_Declaration_Kind::VARIABLE:
-            {
-                auto init_expr = entry_decl->variable.init_expression;
-                if (init_expr)
-                {
-                    queue_emit_bytecode_jobs_from_expression(resolver, init_expr, scope);
-                }
-                break;
-            }
-
-            case AST_Declaration_Kind::CONSTANT:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         entry_decl->constant.init_expression,
-                                                         scope);
-                break;
-            }
-
-            case AST_Declaration_Kind::PARAMETER: assert(false);
-
-            case AST_Declaration_Kind::FUNCTION:
-            {
-                assert(scope->kind == Scope_Kind::MODULE ||
-                       scope->kind == Scope_Kind::STATIC_IF);;
-
-                auto body = entry_decl->function.body;
-                if (body)
-                {
-                    for (int64_t i = 0; i < body->block.statements.count; i++)
-                    {
-                        queue_emit_bytecode_jobs_from_statement(resolver,
-                                                                body->block.statements[i],
-                                                                body->block.scope);
-                    }
-                }
-                else
-                {
-                    assert(entry_decl->decl_flags & AST_DECL_FLAG_FOREIGN);
-                }
-
-                queue_emit_bytecode_job(resolver, entry_decl, scope);
-                break;
-            }
-
-            case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::TYPEDEF: assert(false);
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
-            case AST_Declaration_Kind::POLY_TYPE: assert(false);
-            case AST_Declaration_Kind::ENUM: assert(false); assert(false);
-            case AST_Declaration_Kind::STATIC_IF: assert(false);
-
-            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
-        }
-    }
-    
-    void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
-                                                 Scope *scope)
-    {
-        switch (stmt->kind)
-        {
-            case AST_Statement_Kind::INVALID: assert(false);
-
-            case AST_Statement_Kind::BLOCK:
-            {
-                for (int64_t i = 0; i < stmt->block.statements.count; i++)
-                {
-                    queue_emit_bytecode_jobs_from_statement(resolver, stmt->block.statements[i],
-                                                           stmt->block.scope);
-                }
-                break;
-            }
-
-            case AST_Statement_Kind::ASSIGNMENT:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         stmt->assignment.identifier_expression,
-                                                         scope);
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         stmt->assignment.rhs_expression, scope);
-                break;
-            }
-
-            case AST_Statement_Kind::RETURN:
-            {
-                if (stmt->expression)
-                {
-                    queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
-                }
-                break;
-            }
-
-            case AST_Statement_Kind::BREAK:
-            {
-                break;
-            }
-
-            case AST_Statement_Kind::DECLARATION:
-            {
-                queue_emit_bytecode_jobs_from_declaration(resolver, stmt->declaration, scope);
-                break;
-            }
-
-            case AST_Statement_Kind::EXPRESSION:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, stmt->expression, scope);
-                break;
-            }
-
-            case AST_Statement_Kind::WHILE:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, stmt->while_stmt.cond_expr,
-                                                         scope);
-                queue_emit_bytecode_jobs_from_statement(resolver, stmt->while_stmt.body, scope);
-                break;
-            }
-
-            
-            case AST_Statement_Kind::FOR:
-            {
-                auto for_scope = stmt->for_stmt.scope;
-
-                for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++)
-                {
-                    auto init_stmt = stmt->for_stmt.init_statements[i];
-                    queue_emit_bytecode_jobs_from_statement(resolver, init_stmt,
-                                                            for_scope);
-                }
-
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         stmt->for_stmt.cond_expr,
-                                                         for_scope);
-
-                if (stmt->for_stmt.it_decl)
-                {
-                    queue_emit_bytecode_jobs_from_declaration(resolver,
-                                                              stmt->for_stmt.it_decl,
-                                                              for_scope);
-                }
-
-                for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++)
-                {
-                    auto step_stmt = stmt->for_stmt.step_statements[i];
-                    queue_emit_bytecode_jobs_from_statement(resolver,
-                                                            step_stmt,
-                                                            for_scope);
-                }
-
-                queue_emit_bytecode_jobs_from_statement(resolver,
-                                                        stmt->for_stmt.body_stmt,
-                                                        for_scope);
-                break;
-            }
-
-            case AST_Statement_Kind::IF:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, stmt->if_stmt.cond_expr,
-                                                         scope);
-                queue_emit_bytecode_jobs_from_statement(resolver, stmt->if_stmt.then_stmt,
-                                                        stmt->if_stmt.then_scope);
-
-                if (stmt->if_stmt.else_stmt)
-                {
-                    queue_emit_bytecode_jobs_from_statement(resolver, stmt->if_stmt.else_stmt,
-                                                            stmt->if_stmt.else_scope);
-                }
-                break;
-            }
-
-            case AST_Statement_Kind::SWITCH:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         stmt->switch_stmt.expression,
-                                                         scope);
-
-                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
-                {
-                    auto switch_case = stmt->switch_stmt.cases[i];
-
-                    if (!switch_case->is_default)
-                    {
-                        for (int64_t expr_i = 0; expr_i < switch_case->expressions.count;
-                             expr_i++)
-                        {
-                            auto case_expr = switch_case->expressions[expr_i];
-                            queue_emit_bytecode_jobs_from_expression(resolver, case_expr,
-                                                                     scope);
-                        }
-                    }
-
-                    queue_emit_bytecode_jobs_from_statement(resolver, switch_case->body,
-                                                            scope);
-                }
-                break;
-            }
-        }
-    }
-
-    void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
-                                                  Scope *scope)
-    {
-        assert(resolver);
-        assert(scope);
-
-        switch (expr->kind)
-        {
-            case AST_Expression_Kind::INVALID: assert(false);
-
-            case AST_Expression_Kind::IDENTIFIER:
-            {
-                auto ident = expr->identifier;
-                assert(ident->declaration);
-                
-                auto decl_kind = ident->declaration->kind;
-
-                if (decl_kind != AST_Declaration_Kind::VARIABLE &&
-                    decl_kind != AST_Declaration_Kind::PARAMETER &&
-                    decl_kind != AST_Declaration_Kind::CONSTANT &&
-                    decl_kind != AST_Declaration_Kind::ENUM &&
-                    decl_kind != AST_Declaration_Kind::TYPE &&
-                    decl_kind != AST_Declaration_Kind::STRUCTURE &&
-                    decl_kind != AST_Declaration_Kind::IMPORT)
-                {
-                    assert(false); 
-                }
-
-                break;
-            }
-
-            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-
-            case AST_Expression_Kind::DOT:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->dot.parent_expression,
-                                                         scope); 
-                break;
-            }
-
-            case AST_Expression_Kind::BINARY:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->binary.lhs, scope);
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->binary.rhs, scope);
-                break;
-            }
-
-            case AST_Expression_Kind::UNARY:
-            {
-                auto op_expr = expr->unary.operand_expression;
-                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
-                break;
-            }
-
-            case AST_Expression_Kind::POST_FIX:
-            {
-                auto op_expr = expr->post_fix.operand_expression;
-                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
-                break;
-            }
-
-            case AST_Expression_Kind::PRE_FIX:
-            {
-                auto op_expr = expr->pre_fix.operand_expression;
-                queue_emit_bytecode_jobs_from_expression(resolver, op_expr, scope);
-                break;
-            }
-
-            case AST_Expression_Kind::CALL:
-            {
-                for (int64_t i = 0; i < expr->call.arg_expressions.count; i++)
-                {
-                    auto arg_expr = expr->call.arg_expressions[i];
-                    queue_emit_bytecode_jobs_from_expression(resolver, arg_expr, scope);
-                }
-
-                auto callee_decl = expr->call.callee_declaration;
-                assert(callee_decl);
-                assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
-                if (!(callee_decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
-                {
-                    auto func_parent_scope = callee_decl->function.parameter_scope->parent;
-                    assert(func_parent_scope);
-                    queue_emit_bytecode_jobs_from_declaration(resolver, callee_decl,
-                                                              func_parent_scope);
-                    queue_emit_bytecode_job(resolver, callee_decl, scope);
-                }
-                break;
-            }
-
-            case AST_Expression_Kind::BUILTIN_CALL: 
-            {
-                auto &args = expr->builtin_call.arg_expressions;
-                for (int64_t i = 0; i < args.count; i++)
-                {
-                    auto arg_expr = args[i];
-                    queue_emit_bytecode_jobs_from_expression(resolver, arg_expr, scope);
-                }
-
-                auto atom = expr->builtin_call.identifier->atom;
-
-                if (atom == Builtin::atom_exit)
-                {
-// #ifdef WIN32
-//                     assert(false); // Queue ExitProcess foreign function.
-// #endif
-                }
-                else if (atom == Builtin::atom_syscall ||
-                         atom == Builtin::atom_sizeof ||
-                         atom == Builtin::atom_cast ||
-                         atom == Builtin::atom_offsetof)
-                { /* Nothing needs to be queued */ }
-                else 
-                {
-                    assert(false);
-                }
-                break;
-
-                break;
-            }
-
-            case AST_Expression_Kind::ADDROF:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->addrof.operand_expr,
-                                                         scope);
-                break;
-            }
-
-            case AST_Expression_Kind::COMPOUND: assert(false);
-
-            case AST_Expression_Kind::SUBSCRIPT:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         expr->subscript.pointer_expression,
-                                                         scope);
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         expr->subscript.index_expression,
-                                                         scope);
-            }
-
-            case AST_Expression_Kind::CAST:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver,
-                                                         expr->cast.operand_expression,
-                                                         scope);
-                break;
-            }
-
-            case AST_Expression_Kind::INTEGER_LITERAL:
-            case AST_Expression_Kind::FLOAT_LITERAL:
-            case AST_Expression_Kind::STRING_LITERAL:
-            case AST_Expression_Kind::CHAR_LITERAL:
-            case AST_Expression_Kind::BOOL_LITERAL:
-            case AST_Expression_Kind::NULL_LITERAL:
-            {
-                break;
-            }
-
-
-            case AST_Expression_Kind::RANGE:
-            {
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->range.begin,
-                                                         scope);
-                queue_emit_bytecode_jobs_from_expression(resolver, expr->range.end,
-                                                         scope);
-                break;
-            }
-        }
-    }
-
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind)
     {
         auto result = alloc_type<Resolve_Job>(allocator);
@@ -5077,14 +4751,12 @@ namespace Zodiac
                     assert(!resolver->entry_decl);
                     decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
                     resolver->entry_decl = decl;
-                    queue_emit_bytecode_jobs_from_declaration(resolver, decl, scope);
                 }
                 else if (is_bc_entry_decl(resolver, decl))
                 {
                     assert(!resolver->bc_entry_decl);
                     decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
                     resolver->bc_entry_decl = decl;
-                    queue_emit_bytecode_jobs_from_declaration(resolver, decl, scope);
                 }
             }
         }

@@ -71,6 +71,16 @@ namespace Zodiac
         assert(builder);
         assert(output_file_name);
 
+        // @TODO: @CLEANUP: This could be done by comparing a count I think?
+        for (int64_t i = 0; i < builder->functions.count; i++)
+        {
+            auto &func = builder->functions[i];
+            if (!func.emitted) 
+            {
+                return false;
+            }
+        }
+
         bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
         
         if (verify_error)
@@ -213,26 +223,35 @@ namespace Zodiac
 
     }
 
-    void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func,
+                                AST_Type *func_type)
     {
-        assert(builder);
-        assert(bc_func);
-
         auto func_decl = bc_func->ast_decl;
 
-        builder->temps.count = 0;
-        builder->allocas.count = 0;
-        builder->params.count = 0;
-
-        auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder,
-                                                                     func_decl->type);
+        auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, func_type);
 
         llvm::Function *llvm_func_val =
             llvm::Function::Create(llvm_func_type, llvm::GlobalValue::ExternalLinkage,
                                    func_decl->identifier->atom.data,
                                    builder->llvm_module);
         assert(llvm_func_val);
-        array_append(&builder->functions, { llvm_func_val, bc_func });
+        array_append(&builder->functions, { false, llvm_func_val, bc_func });
+    }
+
+    void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    {
+        assert(builder);
+        assert(bc_func);
+
+        builder->temps.count = 0;
+        builder->allocas.count = 0;
+        builder->params.count = 0;
+
+        auto &_func = builder->functions[bc_func->index];
+        auto llvm_func_val = _func.llvm_func;
+
+
+        assert(!_func.emitted);
 
         if (bc_func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
         {
@@ -298,6 +317,8 @@ namespace Zodiac
 
             array_free(&llvm_blocks);
         }
+
+        _func.emitted = true;
 
         //printf("Emitted function: %s\n", bc_func->ast_decl->identifier->atom.data);
         //printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
@@ -408,7 +429,7 @@ namespace Zodiac
                                                        { args.data, (size_t)args.count });
 
 
-                if (!(func.bc_func->ast_decl->type->function.return_type == Builtin::type_void))
+                if (!ret_val->getType()->isVoidTy())
                 {
                     llvm_push_temporary(builder, ret_val);
                 }
@@ -1691,7 +1712,9 @@ namespace Zodiac
 
         assert(ast_type->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(ast_type->flags & AST_NODE_FLAG_TYPED);
-        assert(ast_type->flags & AST_NODE_FLAG_SIZED);
+
+        assert(ast_type->flags & AST_NODE_FLAG_SIZED ||
+               ast_type->kind == AST_Type_Kind::FUNCTION);
 
         auto &c = builder->llvm_context;
 

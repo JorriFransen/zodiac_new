@@ -90,17 +90,14 @@ namespace Zodiac
         }
     }
 
-    Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
-                                                          AST_Declaration *decl)
+    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl)
     {
-        assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        // printf("[Bytecode] Emitting function: %s\n", decl->identifier->atom.data);
-
-        for (int64_t i = 0; i < builder->program.functions.count; i++)
+        if (bytecode_find_function_for_decl(builder, decl))
         {
-            if (builder->program.functions[i]->ast_decl == decl) assert(false);
+            assert(false);
+            return nullptr;
         }
 
         Bytecode_Function *func = bytecode_new_function(builder, decl);        
@@ -121,6 +118,18 @@ namespace Zodiac
         auto func_index = builder->program.functions.count;
         array_append(&builder->program.functions, func);
         func->index = func_index;
+
+        return func;
+    }
+
+    Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
+                                                          AST_Declaration *decl)
+    {
+        assert(builder);
+        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        auto func = bytecode_find_function_for_decl(builder, decl);
+        assert(func);
 
         if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
         {
@@ -956,7 +965,7 @@ namespace Zodiac
         bytecode_emit_32(builder, func->index);
         bytecode_emit_32(builder, expression->call.arg_expressions.count);
 
-        auto ret_type = func->ast_decl->type->function.return_type;
+        auto ret_type = expression->type; 
         if (ret_type != Builtin::type_void)
         {
             return_value = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
@@ -2546,7 +2555,6 @@ namespace Zodiac
             }
         }
 
-        assert(false);
         return nullptr;
     }
 

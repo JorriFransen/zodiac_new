@@ -209,12 +209,12 @@ namespace Zodiac
     void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob);
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name);
 
-    void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
-                                                   Scope *scope);
-    void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
-                                                 Scope *scope);
-    void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
-                                                  Scope *scope);
+    // void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
+    //                                                Scope *scope);
+    // void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
+    //                                              Scope *scope);
+    // void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
+    //                                               Scope *scope);
 
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind);
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,

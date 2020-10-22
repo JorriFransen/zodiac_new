@@ -9,6 +9,7 @@ namespace Zodiac
 {
     struct LLVM_Function
     {
+        bool emitted = false;
         llvm::Function *llvm_func = nullptr;
         Bytecode_Function *bc_func = nullptr;
     };
@@ -63,6 +64,8 @@ namespace Zodiac
     bool llvm_emit_binary(LLVM_Builder *builder, const char *output_file_name);
     bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name);
 
+    void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func,
+                                AST_Type *func_type);
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob);
     void llvm_emit_block(LLVM_Builder *builder, LLVM_Function_Context *func_context);

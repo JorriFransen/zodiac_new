@@ -256,6 +256,7 @@ namespace Zodiac
                                                       is_naked, is_noreturn, is_foreign,
                                                       param_scope,
                                                       begin_fp, end_fp);
+                ast_type->function.from_declaration = result;
                 break;
             }
 
@@ -1260,7 +1261,7 @@ namespace Zodiac
                 }
 
                 return ast_function_type_spec_new(ast_builder->allocator, ast_param_types,
-                                                  ast_return_type, begin_fp, end_fp);
+                                                  ast_return_type, nullptr, begin_fp, end_fp);
                 break;
             }
 
@@ -2198,6 +2199,7 @@ namespace Zodiac
     AST_Type_Spec *ast_function_type_spec_new(Allocator *allocator,
                                               Array<AST_Type_Spec*> param_type_specs,
                                               AST_Type_Spec *return_type_spec,
+                                              AST_Declaration *from_declaration,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         assert(allocator);
@@ -2206,6 +2208,7 @@ namespace Zodiac
 
         result->function.parameter_type_specs = param_type_specs;
         result->function.return_type_spec = return_type_spec;
+        result->function.from_declaration = from_declaration;
 
         return result;
     }

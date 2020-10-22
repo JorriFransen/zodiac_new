@@ -131,6 +131,7 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
     scope_add_declaration(global_scope, decl_PLATFORM_LINUX);
     array_append(&decls_to_resolve, decl_PLATFORM_LINUX);
 
+    fp.file_name = string_ref("<builtin PLATFORM_WINDOWS>");
     auto ident_PLATFORM_WINDOWS = ast_identifier_new(allocator, Builtin::atom_PLATFORM_WINDOWS,
                                                      fp, fp);
     auto expr_PLATFORM_WINDOWS = ast_boolean_literal_expression_new(allocator, platform_windows,

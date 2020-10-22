@@ -471,6 +471,7 @@ namespace Zodiac
             {
                 Array<AST_Type_Spec*> parameter_type_specs;
                 AST_Type_Spec *return_type_spec;
+                AST_Declaration *from_declaration;
             } function;
 
             struct
@@ -893,6 +894,7 @@ namespace Zodiac
     AST_Type_Spec *ast_function_type_spec_new(Allocator *allocator,
                                               Array<AST_Type_Spec*> param_type_specs,
                                               AST_Type_Spec *return_type_spec,
+                                              AST_Declaration *from_declaration,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
