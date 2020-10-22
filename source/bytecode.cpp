@@ -161,17 +161,18 @@ namespace Zodiac
 
             assert(decl->function.body);
             bytecode_emit_statement(builder, decl->function.body);
+
+            bytecode_fix_jump_records(builder, func);
+
+            int64_t temp_count = 0;
+            for (int64_t i = 0; i < func->blocks.count; i++)
+            {
+                auto block = func->blocks[i];
+                block->preceding_temp_count = temp_count;
+                temp_count += block->local_temp_count;
+            }
         }
 
-        bytecode_fix_jump_records(builder, func);
-
-        int64_t temp_count = 0;
-        for (int64_t i = 0; i < func->blocks.count; i++)
-        {
-            auto block = func->blocks[i];
-            block->preceding_temp_count = temp_count;
-            temp_count += block->local_temp_count;
-        }
 
         return func;
     }

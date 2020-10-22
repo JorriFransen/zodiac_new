@@ -71,12 +71,21 @@ namespace Zodiac
         assert(builder);
         assert(output_file_name);
 
+        auto options = builder->build_data->options;
+
         // @TODO: @CLEANUP: This could be done by comparing a count I think?
         for (int64_t i = 0; i < builder->functions.count; i++)
         {
             auto &func = builder->functions[i];
+
             if (!func.emitted) 
             {
+                if ((func.bc_func->flags & BYTECODE_FUNC_FLAG_CRT_ENTRY) &&
+                    options->link_c)
+                {
+                    continue; 
+                }
+
                 return false;
             }
         }
