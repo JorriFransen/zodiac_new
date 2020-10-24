@@ -1,3 +1,4 @@
+Warn on non void functions not having returns (in all control paths)
 
 Each import statement will uniquely import a module!!! This is not wat we want...
 implement execute_process on linux (used in the linker)

@@ -31,6 +31,7 @@ strlen :: func (cstr: *u8) -> s64 {
         _c := c;
         written : windows.DWORD;
         windows.WriteFile(stdout, *_c, 1, *written, null);
+        return;
     }
 
 } #elseif (PLATFORM_LINUX) {
@@ -47,7 +48,8 @@ strlen :: func (cstr: *u8) -> s64 {
 
     print_char :: func (c: u8)
     {
-        @syscall(1, 1, *c, 1);
+        _c := c;
+        @syscall(1, 1, *_c, 1);
     }
 }
 #else {

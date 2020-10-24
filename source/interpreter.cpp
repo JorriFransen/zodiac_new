@@ -241,6 +241,11 @@ namespace Zodiac
                 frame_p->jumped = false;
                 frame_p->pushed_local_count = next_block->preceding_temp_count;
             }
+            if (current_block == next_block)
+            {
+                frame_p->returned = true;
+                break;
+            }
             current_block = next_block;
         }
 
