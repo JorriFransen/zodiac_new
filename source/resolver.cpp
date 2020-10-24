@@ -326,9 +326,10 @@ namespace Zodiac
 
                 if (!job_done)
                 {
-                    // resolver->llvm_error = true;
-                    // done = true;
-                    queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
+                    if (!resolver->build_data->link_error)
+                    {
+                        queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
+                    }
                 }
                 else
                 {

@@ -1,4 +1,5 @@
 
+implement execute_process on linux (used in the linker)
 locally scoped functions
 
 Calls shouln't wait for the function body of the callee to be typed, just the function header. This should save a lot of cycles where we are just waiting for the body to be resolved, but we only need to know the arguments and return type. If we do this right, recursive functions should be fairly easy to implement later. (This is harder than it looks, because we start queueing bytecode jobs when a function is done resolving, but that doesn't mean all it's dependencies are resolved, which we also want to queue)

@@ -20,6 +20,8 @@ namespace Zodiac
         Allocator *err_allocator = nullptr;
 
         Array<Zodiac_Error> errors = {};
+
+        bool link_error = false;
     };
 
     void build_data_init(Allocator *allocator, Build_Data *build_data,

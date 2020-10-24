@@ -24,6 +24,8 @@ namespace Zodiac
 
         build_data->err_allocator = err_allocator;
         array_init(err_allocator, &build_data->errors);
+
+        build_data->link_error = false;
     }
 
     AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator,

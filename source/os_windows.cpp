@@ -152,17 +152,23 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
 
         fprintf(stderr, "%.*s", (int)size, message_buf);
         LocalFree(message_buf);
-        assert(false);
+
+        result.success = false;
     }
     else
     {
         WaitForSingleObject(process_info.hProcess, INFINITE);
+        
         DWORD exit_code;
         GetExitCodeProcess(process_info.hProcess, &exit_code);
 
-        result.success = true;
+        CloseHandle(process_info.hProcess);
+        CloseHandle(process_info.hThread);
+
         result.exit_code = exit_code;
+        result.success = true;
     }
+
 
     return result;
 }

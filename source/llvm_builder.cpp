@@ -204,6 +204,7 @@ namespace Zodiac
         {
             result = false;
             fprintf(stderr, "Link command failed with exit code: %d\n", close_ret);
+            builder->build_data->link_error = true;
         }
 
         string_builder_free(sb);
@@ -227,6 +228,11 @@ namespace Zodiac
 
         string_builder_free(sb);
         
+        if (!result.success)
+        {
+            builder->build_data->link_error = true;
+        }
+
         return result.success;
 #endif
 

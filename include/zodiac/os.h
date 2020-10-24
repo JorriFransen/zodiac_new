@@ -22,6 +22,8 @@ struct Process_Info
 {
     int64_t exit_code = 0;
     bool success = false; 
+
+    String error_sring = {};
 };
 
 Process_Info execute_process(Allocator *allocator, const String &command, const String &args);
