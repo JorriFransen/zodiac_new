@@ -100,7 +100,27 @@ namespace Zodiac
             return nullptr;
         }
 
+        assert(!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE));
+
         Bytecode_Function *func = bytecode_new_function(builder, decl);        
+
+        auto func_index = builder->program.functions.count;
+        array_append(&builder->program.functions, func);
+        func->index = func_index;
+
+        decl->decl_flags |= AST_DECL_FLAG_REGISTERED_BYTECODE;
+
+        return func;
+    }
+
+    Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
+                                                          AST_Declaration *decl)
+    {
+        assert(builder);
+        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        auto func = bytecode_find_function_for_decl(builder, decl);
+        assert(func);
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
         {
@@ -115,21 +135,6 @@ namespace Zodiac
             builder->program.bytecode_entry_function = func;
         }
 
-        auto func_index = builder->program.functions.count;
-        array_append(&builder->program.functions, func);
-        func->index = func_index;
-
-        return func;
-    }
-
-    Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
-                                                          AST_Declaration *decl)
-    {
-        assert(builder);
-        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-
-        auto func = bytecode_find_function_for_decl(builder, decl);
-        assert(func);
 
         if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
         {

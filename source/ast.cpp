@@ -1471,7 +1471,6 @@ namespace Zodiac
 
         result->import.ident_expression = ident_expr;
         result->import.ast_module = nullptr;
-        result->import.parse_queued = false;
 
         return result;
     }
@@ -2310,6 +2309,7 @@ namespace Zodiac
     AST_Type *ast_function_type_new(Allocator *allocator, Array<AST_Type*> param_types,
                                     AST_Type *return_type)
     {
+        // assert(false); // Copy param types
         auto result = ast_type_new(allocator, AST_Type_Kind::FUNCTION, Builtin::pointer_size);
 
         result->function.param_types = param_types;

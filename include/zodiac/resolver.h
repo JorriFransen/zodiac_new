@@ -99,6 +99,8 @@ namespace Zodiac
         Resolve_Job_Kind kind = Resolve_Job_Kind::INVALID;
         Scope *node_scope = nullptr;
 
+        bool active_static_branch = true;
+
         union
         {
             AST_Node *ast_node = nullptr;
@@ -109,11 +111,11 @@ namespace Zodiac
             Bytecode_Function *bc_func;
             Bytecode_Global bc_glob;
 
+
             struct
             {
                 String module_name;
                 String module_path;
-                AST_Declaration *import_decl;
             } parse;
 
             struct
@@ -200,32 +202,29 @@ namespace Zodiac
                                        Scope *current_scope);
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
-                         AST_Declaration *import_decl);
-    void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
-    void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+                         bool active_static_branch);
+    void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch);
+    void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func);
     void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob);
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name);
 
-    // void queue_emit_bytecode_jobs_from_declaration(Resolver *resolver, AST_Declaration *entry_decl,
-    //                                                Scope *scope);
-    // void queue_emit_bytecode_jobs_from_statement(Resolver *resolver, AST_Statement *stmt,
-    //                                              Scope *scope);
-    // void queue_emit_bytecode_jobs_from_expression(Resolver *resolver, AST_Expression *expr,
-    //                                               Scope *scope);
-
-    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind);
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, bool active_branch);
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
-                                 Scope *scope);
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob);
-    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
-    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path,
-                                 AST_Declaration *import_decl);
-    Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
-    Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
+                                 Scope *scope, bool active_branch);
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func,
+                                 bool active_branch);
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob, bool active_branch);
+    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name,
+                                 bool active_branch);
+    Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path, 
+                                 bool active_static_branch);
+    Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
+                                       bool active_static_branch);
+    Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
+                                      bool active_static_branch);
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope);
