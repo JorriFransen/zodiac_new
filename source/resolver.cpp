@@ -5112,7 +5112,7 @@ namespace Zodiac
     bool is_bc_entry_decl(Resolver *resolver, AST_Declaration *decl)
     {
         if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-            decl->identifier->atom == Builtin::atom_main)
+            decl->identifier->atom == Builtin::atom_call_main_and_exit)
         {
             return true;
         }

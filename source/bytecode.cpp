@@ -3021,7 +3021,13 @@ namespace Zodiac
 
             case AST_Type_Kind::FLOAT: assert(false);
             case AST_Type_Kind::BOOL: assert(false);
-            case AST_Type_Kind::POINTER: assert(false);
+
+            case AST_Type_Kind::POINTER: 
+            {
+                string_builder_appendf(sb, "0x%p", val->value.pointer);
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
@@ -3405,7 +3411,7 @@ namespace Zodiac
                 auto block_idx = bytecode_iterator_fetch_32(bci);
                 auto func = bci->builder->program.functions[bci->function_index];
                 auto block = func->blocks[block_idx];
-                string_builder_appendf(sb, "JUMP %s", block->name);
+                string_builder_appendf(sb, "JUMP %s", block->name.data);
                 break;
             }
 
@@ -3416,7 +3422,7 @@ namespace Zodiac
                 auto func = bci->builder->program.functions[bci->function_index];
                 auto block = func->blocks[block_idx];
                 string_builder_appendf(sb, "JUMP_IF %%% " PRIu32 ", %s",
-                                       tmp_idx, block->name);
+                                       tmp_idx, block->name.data);
                 break;
             }
 
