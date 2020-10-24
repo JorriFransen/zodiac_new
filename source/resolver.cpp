@@ -532,8 +532,11 @@ namespace Zodiac
                 {
                     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
                     auto decl = static_cast<AST_Declaration*>(job->ast_node);
+
                     if (decl->kind == AST_Declaration_Kind::FUNCTION)
                     {
+                        assert(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE);
+
                         auto bc_func =
                             bytecode_emit_function_declaration(&resolver->bytecode_builder, decl);
                         job->result.bc_func = bc_func;
@@ -2199,7 +2202,16 @@ namespace Zodiac
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
 
                     if (resolver_is_active_static_branch(resolver))
+                    {
+                        if (!(ast_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
+                        {
+                            auto bc_func =
+                                bytecode_register_function(&resolver->bytecode_builder, ast_decl);
+
+                            llvm_register_function(&resolver->llvm_builder, bc_func, ast_decl->type);
+                        }
                         queue_emit_bytecode_job(resolver, ast_decl, scope);
+                    }
                 }
 
                 break;
@@ -3163,11 +3175,18 @@ namespace Zodiac
 
                 assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                if (resolver_is_active_static_branch(resolver) && 
-                    !(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
+                if (resolver_is_active_static_branch(resolver))
                 {
-                    auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                    llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
+                    if (!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
+                    {
+                        auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
+                        llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
+                    }
+
+                    if (!(decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
+                    {
+                        queue_emit_bytecode_job(resolver, decl, scope);
+                    }
                 }
 
                 bool arg_res = true;
@@ -4436,6 +4455,16 @@ namespace Zodiac
 
         if (ast_node->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION)
             return;
+
+#ifndef NDEBUG
+        if (ast_node->kind == AST_Node_Kind::DECLARATION)
+        {
+            auto decl = static_cast<AST_Declaration*>(ast_node);
+
+            if (decl->kind == AST_Declaration_Kind::FUNCTION)
+                assert(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE);
+        }
+#endif
 
         auto job = resolve_job_emit_bytecode_new(resolver->allocator, ast_node, scope);
         assert(job);

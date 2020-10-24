@@ -94,6 +94,8 @@ namespace Zodiac
     {
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
+        // printf("[BYTECODE] Registering function: '%s'\n", decl->identifier->atom.data);
+
         if (bytecode_find_function_for_decl(builder, decl))
         {
             assert(false);
@@ -118,6 +120,8 @@ namespace Zodiac
     {
         assert(builder);
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        // printf("[BYTECODE] Emitting function: '%s'\n", decl->identifier->atom.data);
 
         auto func = bytecode_find_function_for_decl(builder, decl);
         assert(func);

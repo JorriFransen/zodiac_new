@@ -54,7 +54,9 @@ main :: func() -> s64
         call_main_and_exit();
     }
 
-    _open_default_io_handles :: func() { }
+    _open_default_io_handles :: func() { 
+        return;
+    }
 }
 #else
 {
