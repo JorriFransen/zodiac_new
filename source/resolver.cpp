@@ -721,7 +721,6 @@ namespace Zodiac
 
                 if (!(ast_decl->flags & AST_NODE_FLAG_QUEUED_PARSING))
                 {
-
                     //@TODO: Report error
                     assert(is_regular_file(file_path));
 
