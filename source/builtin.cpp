@@ -117,7 +117,7 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
 #if linux
     platform_linux = true;
 #elif _WIN32
-    platform_windows = true
+    platform_windows = true;
 #else
         assert(false);
 #endif
