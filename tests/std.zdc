@@ -1,83 +1,109 @@
 
-strlen :: func (cstr: *u8) -> s64
-{
+strlen :: func (cstr: *u8) -> s64 {
     i := 0;
-    while (cstr[i] != 0)
-    {
+    while (cstr[i] != 0) {
         i = i + 1;
     }
     return i;
 }
 
-// print :: func (cstr: *u8)
-// {
-//     @syscall(1, 1, cstr, strlen(cstr));
-//     return;
-// }
+#if (PLATFORM_WINDOWS) {
 
-// println :: func (cstr: *u8)
-// {
-//     print(cstr);
-//     nl : u8 = '\n';
-//     @syscall(1, 1, *nl, 1);
-//     return;
-// }
+    windows :: import windows;
 
-// print_num :: func (n: s64)
-// {
-//     buf : [32]u8;
-//     i := 0;
+    stdout : windows.HANDLE;
 
-//     if (n < 0)
-//     {
-//         n = -n;
-//         c := '-';
-//         @syscall(1, 1, *c, 1);
-//     }
-//     else if (n == 0)
-//     {
-//         c := '0';
-//         @syscall(1, 1, *c, 1);
-//         return;
-//     }
+    _open_default_io_handles :: func() {
+        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+        return;
+    }
 
-//     while (n > 0)
-//     {
-//         nc := @cast(u8, n % 10);
-//         buf[i] = nc + 48;
-//         i = i + 1;
-//         n = n / 10;
-//     }
+    print :: func(str: *u8) {
+        written : windows.DWORD;
+        len := @cast(windows.DWORD, strlen(str));
+        windows.WriteFile(stdout, str, len, *written, null);
 
-//     while (i > 0)
-//     {
-//         @syscall(1, 1, *buf[i - 1], 1);
-//         i = i - 1;
-//     }
-//     return;
-// }
+        return;
+    }
 
-// print_float :: func (f: float)
-// {
-//     int_part := @cast(s32, f);
-//     print_num(int_part);
-//     print(".");
+} #elseif (PLATFORM_LINUX) {
 
-//     it := 6;
+    _open_default_io_handles :: func() { 
+        return;
+    }
+    
+    print :: func (cstr: *u8)
+    {
+        @syscall(1, 1, cstr, strlen(cstr));
+        return;
+    }
+}
+#else {
+    @static_assert(false);
+}
 
-//     rem := f - int_part;
-//     rem = rem * 10;
+println :: func (cstr: *u8) {
+    print(cstr);
+    nl : u8 = '\n';
+    @syscall(1, 1, *nl, 1);
+    return;
+}
 
-//     while (rem > 0.001)
-//     {
-//         if (it <= 0) break;
+print_num :: func (n: s64) {
 
-//         int_part = @cast(s32, rem);
-//         print_num(int_part);
+    buf : [32]u8;
+    i := 0;
 
-//         rem = rem - int_part;
-//         rem = rem * 10;
-//         it = it - 1;
-//     }
-//     return;
-// }
+    if (n < 0)
+    {
+        n = -n;
+        c := '-';
+        @syscall(1, 1, *c, 1);
+    }
+    else if (n == 0)
+    {
+        c := '0';
+        @syscall(1, 1, *c, 1);
+        return;
+    }
+
+    while (n > 0)
+    {
+        nc := @cast(u8, n % 10);
+        buf[i] = nc + 48;
+        i = i + 1;
+        n = n / 10;
+    }
+
+    while (i > 0)
+    {
+        @syscall(1, 1, *buf[i - 1], 1);
+        i = i - 1;
+    }
+    return;
+}
+
+print_float :: func (f: float)
+{
+    int_part := @cast(s32, f);
+    print_num(int_part);
+    print(".");
+
+    it := 6;
+
+    rem := f - int_part;
+    rem = rem * 10;
+
+    while (rem > 0.001)
+    {
+        if (it <= 0) break;
+
+        int_part = @cast(s32, rem);
+        print_num(int_part);
+
+        rem = rem - int_part;
+        rem = rem * 10;
+        it = it - 1;
+    }
+    return;
+}

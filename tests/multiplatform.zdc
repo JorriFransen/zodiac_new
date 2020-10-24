@@ -1,65 +1,32 @@
 
 std :: import std;
 
-main :: func() -> s64
-{
-    print("Hello, World! from multiple platforms...\n");
+main :: func() -> s64 {
+    std.print("Hello, World! from multiple platforms...\n");
     return 42;
 }
 
-#noreturn call_main_and_exit :: func() 
-{
-    _open_default_io_handles();
+#noreturn call_main_and_exit :: func() {
+    std._open_default_io_handles();
 
     exit_code := main();
     @exit(exit_code);
 }
 
-#if (PLATFORM_WINDOWS)
-{
+#if (PLATFORM_WINDOWS) {
     windows :: import windows;
 
-    stdout : windows.HANDLE;
-
-    print :: func(str: *u8)
-    {
-        written : windows.DWORD;
-        len := @cast(windows.DWORD, std.strlen(str));
-        windows.WriteFile(stdout, str, len, *written, null);
-
-        return;
-    }
-
-    mainCRTStartup :: func () 
-    {
+    mainCRTStartup :: func () {
         call_main_and_exit();
     }
 
-    _open_default_io_handles :: func()
-    {
-        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
-        return;
-    }
-}
-#elseif (PLATFORM_LINUX)
-{
-    print :: func(str: *u8)
-    {
-        @syscall(1, 1, str, std.strlen(str));
-        return;
-    }
+} #elseif (PLATFORM_LINUX) {
 
-    #naked #noreturn _start :: func ()
-    {
+    #naked #noreturn _start :: func () {
         call_main_and_exit();
     }
 
-    _open_default_io_handles :: func() { 
-        return;
-    }
-}
-#else
-{
+} #else {
     @static_assert(false);
 }
  
