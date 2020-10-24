@@ -201,24 +201,11 @@ namespace Zodiac
                 {
                     queue_enqueue(&resolver->type_job_queue, job);
                 }
-                else if (job->ast_node->kind == AST_Node_Kind::DECLARATION)
-                {
-                    auto decl = job->declaration;
-                    assert(decl);
-
-                    if (decl->kind == AST_Declaration_Kind::VARIABLE &&
-                        (decl->decl_flags & AST_DECL_FLAG_GLOBAL))
-                    {
-                        queue_emit_bytecode_job(resolver, decl, job->node_scope);
-                    }
-
-                    // Size jobs are queued when types are first created
-                    free_job(resolver, job);
-                    resolver->progression.type_job_finish_count += 1;
-                }
                 else
                 {
-                    assert(job->ast_node->kind == AST_Node_Kind::EXPRESSION);
+                    assert(job->ast_node->kind == AST_Node_Kind::EXPRESSION ||
+                           job->ast_node->kind == AST_Node_Kind::DECLARATION);
+
                     free_job(resolver, job);
                     resolver->progression.type_job_finish_count += 1;
                 }
@@ -2045,6 +2032,11 @@ namespace Zodiac
                         }
 
                         assert(var_type);
+
+                        if (ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL)
+                        {
+                            queue_emit_bytecode_job(resolver, ast_decl, scope);
+                        }
 
                         if (init_expr && (ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
                         {
@@ -4776,20 +4768,29 @@ namespace Zodiac
             scope_add_declaration(scope, decl);
             decl->decl_flags |= AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF;
             
-            if (scope->kind == Scope_Kind::MODULE &&
-                decl->kind == AST_Declaration_Kind::FUNCTION)
+            if (scope->kind == Scope_Kind::MODULE)
             {
-                if (is_entry_decl(resolver, decl))
+                assert(!(decl->decl_flags & AST_DECL_FLAG_GLOBAL));
+                decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
+
+                assert(decl->flags & AST_NODE_FLAG_TYPED);
+
+                queue_emit_bytecode_job(resolver, decl, scope);
+
+                if (decl->kind == AST_Declaration_Kind::FUNCTION)
                 {
-                    assert(!resolver->entry_decl);
-                    decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
-                    resolver->entry_decl = decl;
-                }
-                else if (is_bc_entry_decl(resolver, decl))
-                {
-                    assert(!resolver->bc_entry_decl);
-                    decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
-                    resolver->bc_entry_decl = decl;
+                    if (is_entry_decl(resolver, decl))
+                    {
+                        assert(!resolver->entry_decl);
+                        decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                        resolver->entry_decl = decl;
+                    }
+                    else if (is_bc_entry_decl(resolver, decl))
+                    {
+                        assert(!resolver->bc_entry_decl);
+                        decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
+                        resolver->bc_entry_decl = decl;
+                    }
                 }
             }
         }
