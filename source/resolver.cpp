@@ -344,6 +344,8 @@ namespace Zodiac
                 done = true;
             }
 
+            assert(stack_count(&resolver->active_static_branch_stack) == 0);
+
 
             if (resolver_has_progressed(resolver) && !resolver->parse_error)
             {
