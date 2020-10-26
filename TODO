@@ -1,16 +1,15 @@
 Warn on non void functions not having returns (in all control paths)
 
-Each import statement will uniquely import a module!!! This is not wat we want...
 implement execute_process on linux (used in the linker)
 locally scoped functions
-
-Calls shouln't wait for the function body of the callee to be typed, just the function header. This should save a lot of cycles where we are just waiting for the body to be resolved, but we only need to know the arguments and return type. If we do this right, recursive functions should be fairly easy to implement later. (This is harder than it looks, because we start queueing bytecode jobs when a function is done resolving, but that doesn't mean all it's dependencies are resolved, which we also want to queue)
 
 Passing arguments to main
 
 When linking with the c runtime the entry point should be main instead of _start/MainCRTStartup
 
 unions
+nested structs/unions
+anonymous structs/unions
 
 When looking up struct members we use the regular scope_find_declaration, but I think this is wrong, since this will search parent scopes. We should extend this so that the search behaviour is dependend on the type of scope. Eg. struct/aggregate scopes will search their own scopes (and maybe child scopes in case of anon nested aggregates) and not their parent scopes.
     EDIT: I think we do find the wrong declaration, but we check it agains the struct after, so all we need to do is report an error. We probably want to do the scope stuff anyways for correctness(/efficiency)
