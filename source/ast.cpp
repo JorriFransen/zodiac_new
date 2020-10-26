@@ -204,9 +204,24 @@ namespace Zodiac
                 assert(ptn->function.prototype->parameters.count ==
                        ast_type->function.parameter_type_specs.count);
 
+                auto func_parent_scope = parent_scope;
+                if (func_parent_scope->kind != Scope_Kind::MODULE)
+                {
+                    while (func_parent_scope->kind != Scope_Kind::MODULE &&
+                           func_parent_scope->kind != Scope_Kind::STATIC_IF)
+                    {
+                        auto fps = func_parent_scope->parent;
+                        assert(fps);
+                        assert(fps->kind == Scope_Kind::MODULE ||
+                               fps->kind == Scope_Kind::PARAMETER ||
+                               fps->kind == Scope_Kind::STATIC_IF);
+                        func_parent_scope = fps;
+                    }
+                }
 
                 Scope *param_scope =
-                    scope_new(ast_builder->allocator, Scope_Kind::PARAMETER, parent_scope,
+                    scope_new(ast_builder->allocator, Scope_Kind::PARAMETER,
+                              func_parent_scope,
                               ast_type->function.parameter_type_specs.count);
 
                 Array<AST_Declaration*> ast_param_decls = {};

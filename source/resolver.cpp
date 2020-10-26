@@ -1872,14 +1872,16 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::ARRAY:
             {
+                result = true;
+
                 if (!try_resolve_identifiers(resolver, ast_ts->array.length_expression, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
 
                 if (!try_resolve_identifiers(resolver, ast_ts->array.element_type_spec, scope))
                 {
-                    assert(false);
+                    result = false;
                 }
                 break;
             }

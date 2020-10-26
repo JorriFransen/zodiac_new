@@ -5,8 +5,17 @@ main :: func() -> s64
 {
     std.println("Nested function test");
 
+    n := 8;
+    n2 := 23;
+
     print_n_times :: func (n: s64, str: *u8) -> void
     {
+        n2 := 4;
+
+        std.print("n2 = ");
+        std.print_num(n2);
+        std.print("\n");
+
         while (n >= 0)
         {
             std.println(str);
@@ -17,5 +26,14 @@ main :: func() -> s64
 
     print_n_times(4, "test");
 
+    test_scope();
+
     return 0;
+}
+
+test_scope :: func()
+{
+    // Illegal
+    // print_n_times(3, "Calling from another function...");
+    return;
 }

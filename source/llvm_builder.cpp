@@ -351,7 +351,7 @@ namespace Zodiac
 
         //printf("Emitted function: %s\n", bc_func->ast_decl->identifier->atom.data);
         // printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
-        llvm_func_val->dump();
+        // llvm_func_val->dump();
     }
 
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob)
