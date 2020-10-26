@@ -1,0 +1,25 @@
+
+#noreturn call_main_and_exit :: func() {
+    exit_code := main();
+    @exit(exit_code);
+}
+
+#if (PLATFORM_WINDOWS) {
+
+    _std_ :: import std;
+
+    mainCRTStartup :: func () {
+        _std_._open_default_io_handles();
+        call_main_and_exit();
+    }
+
+} #elseif (PLATFORM_LINUX) {
+
+    #naked #noreturn _start :: func () {
+        call_main_and_exit();
+    }
+
+} #else {
+    @static_assert(false);
+}
+ 

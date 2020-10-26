@@ -43,6 +43,8 @@ namespace Zodiac
         String first_file_name = {}; // File name without extension
         String first_file_dir = {};; // Full absolute path without file name
 
+        String entry_module_path = {}; // Full absolute path to the entry module
+
         Build_Data *build_data = nullptr;
         Lexer lexer = {};
         Parser parser = {};
@@ -116,6 +118,7 @@ namespace Zodiac
             {
                 String module_name;
                 String module_path;
+                bool insert_entry_module;
             } parse;
 
             struct
@@ -202,7 +205,7 @@ namespace Zodiac
                                        Scope *current_scope);
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
-                         bool active_static_branch);
+                         bool active_static_branch, bool insert_entry_module);
     void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch);
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
@@ -220,7 +223,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name,
                                  bool active_branch);
     Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path, 
-                                 bool active_static_branch);
+                                 bool active_static_branch, bool insert_entry_module);
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
                                        bool active_static_branch);
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,

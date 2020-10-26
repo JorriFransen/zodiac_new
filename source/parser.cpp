@@ -26,12 +26,24 @@ void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data)
     parser->build_data = build_data;
 }
 
+void parsed_file_init(Parser *parser, Parsed_File *pf)
+{
+    array_init(parser->allocator, &pf->declarations);
+}
+
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
 {
-    ZoneScoped
-
     Parsed_File result = {};
-    array_init(parser->allocator, &result.declarations);
+    
+    parsed_file_init(parser, &result);
+    parser_parse_file(parser, ts, &result);
+
+    return result;
+}
+
+void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf)
+{
+    ZoneScoped
 
     while (ts->current_token().kind != TOK_EOF)
     {
@@ -39,7 +51,7 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
 
         if (!ptn)
         {
-            result.valid = false;
+            pf->valid = false;
             break;
         }
 
@@ -50,7 +62,7 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
         {
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
             {
-                result.valid = false;
+                pf->valid = false;
                 break;
             }
             else
@@ -58,10 +70,8 @@ Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
                 ptn->self.flags |= PTN_FLAG_SEMICOLON;
             }
         }
-        array_append(&result.declarations, ptn);
+        array_append(&pf->declarations, ptn);
     }
-
-    return result;
 }
 
 void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file)

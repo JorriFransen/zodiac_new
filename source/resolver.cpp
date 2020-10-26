@@ -38,6 +38,10 @@ namespace Zodiac
 
         resolver->first_file_dir = get_file_dir(allocator, first_file_path);
 
+        auto entry_file_path = string_append(allocator, resolver->first_file_dir, "entry.zdc");
+        assert(is_regular_file(entry_file_path));
+        resolver->entry_module_path = entry_file_path;
+
         resolver->build_data = build_data;
         assert(build_data);
         resolver->lexer = lexer_create(allocator, build_data);
@@ -77,7 +81,11 @@ namespace Zodiac
 
         array_free(&decls_to_resolve);
 
-        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, true);
+        // auto entry_module_path = string_append(allocator, resolver->first_file_dir, "entry.zdc");
+        // queue_parse_job(resolver, string_ref("entry"), entry_module_path, true);
+
+        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, true,
+                        true);
 
     }
 
@@ -418,6 +426,51 @@ namespace Zodiac
             {
                 ZoneScopedNC("try_resolve_job (PARSE)", 0x0000ff)
 
+                bool done = false;
+
+                for (int64_t i = 0; i < resolver->parsed_modules.count; i++)
+                {
+                    auto &pm = resolver->parsed_modules[i];
+                    if (string_equal(pm.full_path, job->parse.module_path))
+                    {
+                        job->result.ast_module = pm.ast;
+                        result = true;
+                        done = true;
+                        break;
+                    }
+                }
+
+                if (done) break;
+
+                Parsed_File epf = {};
+                bool append = false;
+
+                if (job->parse.insert_entry_module)
+                {
+                    append = true;
+
+                    Lexed_File lf_entry = lexer_lex_file(&resolver->lexer,
+                                                         resolver->entry_module_path);
+                    if (!lf_entry.valid)
+                    {
+                        assert(false);
+                        break;
+                    }
+
+                    Token_Stream *ets = lexer_new_token_stream(resolver->allocator, &lf_entry); 
+
+                    epf = parser_parse_file(&resolver->parser, ets);
+                    if (!epf.valid)
+                    {
+                        result = false;
+                        break;
+                    }
+
+                    lexer_free_lexed_file(&resolver->lexer, &lf_entry);
+                    ets->free();
+                    
+                }
+
                 Lexed_File lexed_file = lexer_lex_file(&resolver->lexer, job->parse.module_path);
                 if (!lexed_file.valid) 
                 {
@@ -427,7 +480,18 @@ namespace Zodiac
 
                 Token_Stream *token_stream = lexer_new_token_stream(resolver->allocator,
                                                                     &lexed_file);
-                Parsed_File parsed_file = parser_parse_file(&resolver->parser, token_stream);
+                Parsed_File parsed_file = {};
+
+                if (append)
+                {
+                    parsed_file = epf;
+                }
+                else
+                {
+                    parsed_file_init(&resolver->parser, &parsed_file);
+                }
+
+                parser_parse_file(&resolver->parser, token_stream, &parsed_file);
                 if (!parsed_file.valid) 
                 {
                     result = false;
@@ -727,7 +791,7 @@ namespace Zodiac
                     bool active_static_branch = resolver_is_active_static_branch(resolver);
                     queue_parse_job(resolver, module_name,
                                     string_copy(resolver->allocator, file_path),
-                                    active_static_branch);
+                                    active_static_branch, false);
                     ast_decl->flags |= AST_NODE_FLAG_QUEUED_PARSING;
                     result = true;
                     apply_flag = false;
@@ -4393,10 +4457,10 @@ namespace Zodiac
     }
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
-                         bool active_static_branch)
+                         bool active_static_branch, bool insert_entry_module)
     {
         auto job = resolve_job_new(resolver->allocator, module_name, module_path,
-                                   active_static_branch);
+                                   active_static_branch, insert_entry_module);
         assert(job);
         queue_enqueue(&resolver->parse_job_queue, job);
     }
@@ -4406,12 +4470,16 @@ namespace Zodiac
         assert(resolver);
         assert(ast_node);
 
+        if (ast_node->flags & AST_NODE_FLAG_QUEUED_ID) return;
+
         auto allocator = resolver->allocator;
         assert(allocator);
 
         auto job = resolve_job_ident_new(allocator, ast_node, scope, active_branch);
         assert(job);
         queue_enqueue(&resolver->ident_job_queue, job);
+
+        ast_node->flags |= AST_NODE_FLAG_QUEUED_ID;
     }
 
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch)
@@ -4539,25 +4607,29 @@ namespace Zodiac
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name,
                                  bool active_branch)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY, active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY,
+                                      active_branch);
         result->llvm_bin.output_file_name = output_file_name;
         return result;
     }
 
     Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path, 
-                                 bool active_static_branch)
+                                 bool active_static_branch, bool insert_entry_module)
     {
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::PARSE, active_static_branch);
         result->parse.module_name = module_name;
         result->parse.module_path = module_path;
+        result->parse.insert_entry_module = insert_entry_module;
         return result;
     }
 
     Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope, 
                                        bool active_branch)
     {
-        return resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER, ast_node, scope,
-                               active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER, ast_node, scope,
+                                      active_branch);
+
+        return result;
     }
 
     Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
@@ -4803,6 +4875,13 @@ namespace Zodiac
 
                 assert(decl->flags & AST_NODE_FLAG_TYPED);
 
+                if (decl->kind == AST_Declaration_Kind::FUNCTION && 
+                    !(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
+                {
+                    assert(decl->type && decl->type->kind == AST_Type_Kind::FUNCTION);
+                    auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
+                    llvm_register_function(&resolver->llvm_builder, bc_func, decl->type);
+                }
                 queue_emit_bytecode_job(resolver, decl, scope);
 
                 if (decl->kind == AST_Declaration_Kind::FUNCTION)

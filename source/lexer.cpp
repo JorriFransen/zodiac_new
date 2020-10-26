@@ -42,6 +42,8 @@ Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
         file_path = get_absolute_path(temp_allocator_get(), file_path);
     }
 
+    // printf("[LEX] Lexing file: '%s'\n", file_path.data);
+
     auto file_data = read_file_string(lexer->allocator, file_path);
     auto file_size = string_length(file_data);
     Lexer_Data ld = lexer_data_create(lexer, file_path, file_data, file_size);
