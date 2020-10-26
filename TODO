@@ -1,7 +1,6 @@
 Warn on non void functions not having returns (in all control paths)
 
 implement execute_process on linux (used in the linker)
-locally scoped functions
 
 Passing arguments to main
 

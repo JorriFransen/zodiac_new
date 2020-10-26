@@ -233,6 +233,9 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
                                                   function_body,
                                                   identifier->self.begin_file_pos,
                                                   end_fp);
+
+            parser_match_token(ts, TOK_SEMICOLON);
+            result->self.flags |= PTN_FLAG_SEMICOLON;
         }
         else if (parser_is_token(ts, TOK_KW_TYPEDEF))
         {
@@ -689,10 +692,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
             while (!parser_match_token(ts, TOK_RBRACE))
             {
                 auto statement = parser_parse_statement(parser, ts);
-                if (!statement)
-                {
-                    return nullptr;
-                }
+                if (!statement) return nullptr;
 
                 array_append(&block_statements, statement);
 

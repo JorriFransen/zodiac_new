@@ -2668,8 +2668,21 @@ namespace Zodiac
             case AST_Statement_Kind::WHILE:
             {
                 result = true;
-                if (!try_resolve_types(resolver, ast_stmt->while_stmt.cond_expr, scope))
+
+                auto cond_expr = ast_stmt->while_stmt.cond_expr;
+
+                if (!try_resolve_types(resolver, cond_expr, scope))
                 {
+                    result = false;
+                }
+
+                if (cond_expr->type->kind != AST_Type_Kind::BOOL)
+                {
+                    resolver_report_mismatching_types(resolver, cond_expr,
+                                                      Builtin::type_bool,
+                                                      cond_expr->type);
+                    zodiac_report_info(resolver->build_data, cond_expr,
+                            "Condition expression of an if statement should have boolean type");
                     result = false;
                 }
 

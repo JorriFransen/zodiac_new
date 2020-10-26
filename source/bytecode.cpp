@@ -72,7 +72,7 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION:
             {
-                bytecode_emit_function_declaration(builder, decl);
+                assert(false);
                 break;
             }
 
@@ -324,7 +324,6 @@ namespace Zodiac
 
             uint32_t *ptr = (uint32_t*)&jr.from_block->instructions[jr.index_offset];
 
-            assert(index);
             *ptr = index;
         }
 
@@ -341,7 +340,12 @@ namespace Zodiac
             {
                 for (int64_t i = 0; i < statement->block.statements.count; i++)
                 {
-                    bytecode_emit_statement(builder, statement->block.statements[i]);
+                    auto stmt = statement->block.statements[i];
+                    if (!(stmt->kind == AST_Statement_Kind::DECLARATION &&
+                          stmt->declaration->kind == AST_Declaration_Kind::FUNCTION))
+                    {
+                        bytecode_emit_statement(builder, stmt);
+                    }
                 }
                 break;
             }
@@ -405,6 +409,7 @@ namespace Zodiac
 
             case AST_Statement_Kind::DECLARATION:
             {
+                assert(statement->declaration->kind != AST_Declaration_Kind::FUNCTION);
                 bytecode_emit_declaration(builder, statement->declaration);
                 break;
             }

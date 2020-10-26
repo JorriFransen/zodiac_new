@@ -1,0 +1,21 @@
+
+std :: import std;
+
+main :: func() -> s64
+{
+    std.println("Nested function test");
+
+    print_n_times :: func (n: s64, str: *u8) -> void
+    {
+        while (n >= 0)
+        {
+            std.println(str);
+            n -= 1;
+        }
+        return;
+    }
+
+    print_n_times(4, "test");
+
+    return 0;
+}

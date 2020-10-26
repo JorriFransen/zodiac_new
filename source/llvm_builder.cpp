@@ -277,6 +277,11 @@ namespace Zodiac
             Array<llvm::BasicBlock *> llvm_blocks = {};
             array_init(builder->allocator, &llvm_blocks, bc_func->blocks.count);
 
+            auto entry_block = llvm::BasicBlock::Create(builder->llvm_context,
+                                                        "llvm_entry", llvm_func_val);
+
+            llvm::BasicBlock *first_real_block = nullptr;
+
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 auto bc_block = bc_func->blocks[i];
@@ -284,9 +289,13 @@ namespace Zodiac
                                                            bc_block->name.data,
                                                            llvm_func_val);
                 array_append(&llvm_blocks, llvm_block);
+
+                if (i == 0) first_real_block = llvm_block;
             }
 
-            builder->llvm_builder->SetInsertPoint(&llvm_func_val->front());
+            assert(first_real_block);
+
+            builder->llvm_builder->SetInsertPoint(entry_block);
 
             for (int64_t i = 0; i < bc_func->parameters.count; i++)
             {
@@ -320,7 +329,12 @@ namespace Zodiac
                 array_append(&builder->allocas, alloca_val);
             }
 
+            builder->llvm_builder->CreateBr(first_real_block);
+            builder->llvm_builder->SetInsertPoint(first_real_block);
+
             auto block_it = llvm_func_val->begin();
+            // Skip the llvm_entry block
+            block_it++;
             for (int64_t i = 0; i < bc_func->blocks.count; i++)
             {
                 LLVM_Function_Context func_context =
@@ -336,7 +350,8 @@ namespace Zodiac
         _func.emitted = true;
 
         //printf("Emitted function: %s\n", bc_func->ast_decl->identifier->atom.data);
-        //printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
+        // printf("%s\n\n", LLVMPrintValueToString(llvm_func_val));
+        llvm_func_val->dump();
     }
 
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global bc_glob)
