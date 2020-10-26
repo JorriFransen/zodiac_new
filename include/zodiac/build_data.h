@@ -21,6 +21,7 @@ namespace Zodiac
 
         Array<Zodiac_Error> errors = {};
 
+        bool redeclaration_error = true;
         bool link_error = false;
     };
 

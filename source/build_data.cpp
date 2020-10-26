@@ -25,6 +25,7 @@ namespace Zodiac
         build_data->err_allocator = err_allocator;
         array_init(err_allocator, &build_data->errors);
 
+        build_data->redeclaration_error = false;
         build_data->link_error = false;
     }
 

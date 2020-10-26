@@ -1,18 +1,4 @@
 
-// std :: import std;
-
-#naked #noreturn _start :: func ()
-{
-    posix_call_main_and_exit();
-}
-
-#noreturn posix_call_main_and_exit :: func ()
-{
-    exit_code := main();
-    @exit(exit_code);
-}
-
-
 std :: import std;
 math :: import math;
 
@@ -128,13 +114,5 @@ main :: func () -> s64
     }
 
     return 0;
-}
-
-// #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
-
-mainCRTStartup :: func ()
-{
-    exit_code := main();
-    @exit(exit_code);
 }
 

@@ -119,14 +119,3 @@ print_day :: func(day: Day)
     return;
 }
 
-#naked #noreturn _start :: func ()
-{
-    posix_call_main_and_exit();
-}
-
-#noreturn posix_call_main_and_exit :: func ()
-{
-    exit_code := main();
-    @exit(exit_code);
-}
-

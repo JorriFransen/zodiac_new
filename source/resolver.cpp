@@ -241,6 +241,8 @@ namespace Zodiac
 
             { ZoneScopedNC("bytecode_jobs", 0x00ff00) 
 
+            if (resolver->build_data->redeclaration_error) break;
+
             auto bytecode_job_count = queue_count(&resolver->emit_bytecode_job_queue);
             while (bytecode_job_count--)
             {
@@ -353,7 +355,6 @@ namespace Zodiac
             } 
             else if (resolver->build_data->errors.count)
             {
-                zodiac_report_errors(resolver->build_data);
                 done = true;
             }
 
@@ -363,6 +364,8 @@ namespace Zodiac
 
             cycle_count += 1;
         }
+
+        zodiac_report_errors(resolver->build_data);
 
         if (options->verbose) printf("Resolving finished in %d cycles\n", cycle_count);
     }
@@ -4861,8 +4864,15 @@ namespace Zodiac
             if (decl->identifier)
             {
                 auto redecl = scope_find_declaration(scope, decl->identifier);
-                assert(!redecl);
-                if (redecl) return false;
+                if (redecl)
+                {
+                    zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::REDECLARATION,
+                                        decl->identifier, "Redelaration of identifier: '%s'",
+                                        decl->identifier->atom.data);
+                    zodiac_report_info(resolver->build_data, redecl->identifier,
+                                       "Previous declaration was here");
+                    return false;
+                }
             }
 
             resolver->progression.scope_imports_done = true;

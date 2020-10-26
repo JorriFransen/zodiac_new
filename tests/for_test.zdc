@@ -142,13 +142,3 @@ print_array_value :: func(name: *u8, it: s64, idx: s64)
     return;
 }
 
-#naked #noreturn _start :: func ()
-{
-    posix_call_main_and_exit();
-}
-
-#noreturn posix_call_main_and_exit :: func ()
-{
-    exit_code := main();
-    @exit(exit_code);
-}

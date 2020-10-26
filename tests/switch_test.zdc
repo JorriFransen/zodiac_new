@@ -105,17 +105,6 @@ print_n :: func(n: s64)
     return;
 }
 
-#naked #noreturn _start :: func ()
-{
-    posix_call_main_and_exit();
-}
-
-#noreturn posix_call_main_and_exit :: func ()
-{
-    exit_code := main();
-    @exit(exit_code);
-}
-
 print_day :: func(day: Day)
 {
 

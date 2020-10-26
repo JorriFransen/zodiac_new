@@ -69,6 +69,11 @@ namespace Zodiac
 
         if (!duplicate)
         {
+            if (kind == Zodiac_Error_Kind::REDECLARATION)
+            {
+                build_data->redeclaration_error = true;
+            }
+
             String message = string_print_format(build_data->err_allocator, fmt, args);
             Zodiac_Error err = zodiac_make_error(build_data, kind, message, site);
             array_append(&build_data->errors, err);
@@ -98,6 +103,8 @@ namespace Zodiac
 
     void zodiac_report_errors(Build_Data *build_data)
     {
+        if (!build_data->errors.count) return;
+
         fprintf(stderr, "\n");
         for (int64_t i = 0; i < build_data->errors.count; i++)
         {
