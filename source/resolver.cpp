@@ -2207,6 +2207,16 @@ namespace Zodiac
                     result = false;
                     break;
                 }
+                else if (!ast_decl->function.inferred_return_type)
+                {
+                    ast_decl->function.inferred_return_type = inferred_return_type;
+                }
+
+                if (!inferred_return_type && ast_decl->function.inferred_return_type)
+                {
+                    inferred_return_type = ast_decl->function.inferred_return_type;
+                }
+
                 if (!inferred_return_type) inferred_return_type = Builtin::type_void;
                 
                 if (!ast_decl->function.type_spec->type) 
@@ -2678,7 +2688,7 @@ namespace Zodiac
                     result = false;
                 }
 
-                if (cond_expr->type->kind != AST_Type_Kind::BOOL)
+                if (cond_expr->type && cond_expr->type->kind != AST_Type_Kind::BOOL)
                 {
                     resolver_report_mismatching_types(resolver, cond_expr,
                                                       Builtin::type_bool,
@@ -3109,6 +3119,22 @@ namespace Zodiac
                                                                        rhs, result_type,
                                                                        rhs->begin_file_pos,
                                                                        rhs->end_file_pos);
+                        ast_expr->binary.rhs->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                        if (!try_resolve_types(resolver, ast_expr->binary.rhs, scope))
+                        {
+                            assert(false);
+                        }
+                    }
+                    else if (lhs->type->kind == AST_Type_Kind::FLOAT &&
+                             lhs->type->bit_size >= rhs->type->bit_size &&
+                             rhs->type->kind == AST_Type_Kind::FLOAT)
+                    {
+                        result_type = lhs->type;
+                        ast_expr->binary.rhs =
+                            ast_cast_expression_new(resolver->allocator, rhs,
+                                                    result_type,
+                                                    rhs->begin_file_pos,
+                                                    rhs->end_file_pos);
                         ast_expr->binary.rhs->flags |= AST_NODE_FLAG_RESOLVED_ID;
                         if (!try_resolve_types(resolver, ast_expr->binary.rhs, scope))
                         {
@@ -3704,7 +3730,8 @@ namespace Zodiac
             {
                 ts->flags |= AST_NODE_FLAG_TYPED;
             }
-            assert(ts->flags & AST_NODE_FLAG_TYPED);
+            assert(ts->flags & AST_NODE_FLAG_TYPED ||
+                    ts->kind == AST_Type_Spec_Kind::FUNCTION);
             return true;
         }
 
@@ -3865,12 +3892,18 @@ namespace Zodiac
 
                     assert(ts->function.from_declaration);
 
-                    if (resolver_is_active_static_branch(resolver))
+                    if (!(func_type->flags & AST_NODE_FLAG_SIZED))
                     {
-                        auto bc_func = bytecode_register_function(&resolver->bytecode_builder,
-                                                                  ts->function.from_declaration);
+                        result = false;
+                    }
+                    else if (resolver_is_active_static_branch(resolver))
+                    {
+                        auto bc_func =
+                            bytecode_register_function(&resolver->bytecode_builder,
+                                                       ts->function.from_declaration);
 
-                        llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
+                        llvm_register_function(&resolver->llvm_builder, bc_func,
+                                               func_type);
                     }
                 }
                 break;
@@ -4026,8 +4059,8 @@ namespace Zodiac
 
         if (ast_type->flags & AST_NODE_FLAG_SIZED)
         {
-            assert(ast_type->flags & AST_NODE_FLAG_SIZED);
-            assert(ast_type->bit_size > 0);
+            assert(ast_type->bit_size > 0 ||
+                   ast_type->kind == AST_Type_Kind::VOID);
             return true;
         }
 
@@ -4053,8 +4086,28 @@ namespace Zodiac
             case AST_Type_Kind::FUNCTION:
             {
                 assert(ast_type->bit_size == Builtin::pointer_size);
-                ast_type->flags |= AST_NODE_FLAG_SIZED;
+
                 result = true;
+
+                for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
+                {
+                    auto param_type = ast_type->function.param_types[i];
+                    if (!try_resolve_sizes(resolver, param_type, scope))
+                    {
+                        result = false;
+                    }
+                }
+
+                if (!try_resolve_sizes(resolver, ast_type->function.return_type, scope))
+                {
+                    result = false;
+                }
+
+                if (result)
+                {
+                    ast_type->flags |= AST_NODE_FLAG_SIZED;
+                }
+
                 break;
             }
             
@@ -5123,7 +5176,11 @@ namespace Zodiac
 
             case AST_Type_Kind::FLOAT:
             {
-                if (target_type->kind == AST_Type_Kind::INTEGER) 
+                if (target_type->kind == AST_Type_Kind::FLOAT) 
+                {
+                    return target_type->bit_size > type->bit_size;
+                }
+                else if (target_type->kind == AST_Type_Kind::INTEGER) 
                 {
                     return false;
                 }
@@ -5203,7 +5260,7 @@ namespace Zodiac
                     return val >= (-FLOAT_INT_MAX) && val <= FLOAT_INT_MAX; 
                 }
 
-                case 64: assert(false);
+                case 64:
                 {
                     return val >= (-DOUBLE_INT_MAX) && val <= DOUBLE_INT_MAX; 
                 }

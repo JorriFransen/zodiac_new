@@ -241,6 +241,8 @@ namespace Zodiac
     void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func,
                                 AST_Type *func_type)
     {
+        if (builder->build_data->options->dont_emit_llvm) return;
+
         auto func_decl = bc_func->ast_decl;
 
         auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, func_type);
@@ -1378,7 +1380,18 @@ namespace Zodiac
                     }
                                                        
                     case Bytecode_Size_Specifier::R32: assert(false);
-                    case Bytecode_Size_Specifier::R64: assert(false);
+                    case Bytecode_Size_Specifier::R64:
+                    {
+                        auto dest_ty = bytecode_type_from_size_spec(size_spec);
+                        llvm::Type *llvm_dest_ty = llvm_type_from_ast(builder, dest_ty);
+
+                        auto result =
+                            builder->llvm_builder->CreateFPCast(val, llvm_dest_ty, "");
+
+                        llvm_push_temporary(builder, result);
+
+                        break;
+                    }
 
                 }
 

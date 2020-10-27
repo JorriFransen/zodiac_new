@@ -253,6 +253,11 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
             assert(!specified_type);
             result = parser_parse_struct_declaration(parser, ts, identifier);
         }
+        else if (parser_is_token(ts, TOK_KW_UNION))
+        {
+            assert(!specified_type);
+            result = parser_parse_union_declaration(parser, ts, identifier);
+        }
         else if (parser_is_token(ts, TOK_KW_ENUM))
         {
             result = parser_parse_enum_declaration(parser, ts, identifier,
@@ -333,7 +338,7 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
         if (!parser_expect_token(parser, ts, TOK_RPAREN)) assert(false);
     }
 
-    if (!parser_expect_token(parser, ts, TOK_LBRACE)) assert(false);
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
 
     Array<Declaration_PTN*> member_decls = {};
     array_init(parser->allocator, &member_decls);
@@ -407,6 +412,96 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
     return new_struct_declaration_ptn(parser->allocator, identifier, member_decls,
                                       parameters, identifier->self.begin_file_pos,
                                       end_fp);
+}
+
+Declaration_PTN *parser_parse_union_declaration(Parser *parser, Token_Stream *ts,
+                                                 Identifier_PTN *identifier)
+{
+    if (!parser_expect_token(parser, ts, TOK_KW_UNION)) assert(false);
+
+    Array<Parameter_PTN *> parameters = {};
+    if (parser_match_token(ts, TOK_LPAREN))
+    {
+        parameters = parser_parse_parameter_list(parser, ts);
+        assert(parameters.count);
+
+        if (!parser_expect_token(parser, ts, TOK_RPAREN)) return nullptr;
+    }
+
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
+
+    Array<Declaration_PTN *>member_decls = {};
+    array_init(parser->allocator, &member_decls);
+
+    File_Pos end_fp = {};
+
+    while (!parser_match_token(ts, TOK_RBRACE))
+    {
+        assert(parser_is_token(ts, TOK_IDENTIFIER));
+        if (ts->peek_token(1).kind == TOK_COMMA)
+        {
+            auto ta = temp_allocator_get();
+            Array<Identifier_PTN*> identifiers = {};
+            array_init(ta, &identifiers, 4);
+
+            while (true)
+            {
+                auto identifier = parser_parse_identifier(parser, ts);
+                assert(identifier);
+                array_append(&identifiers, identifier);
+
+                if (!parser_match_token(ts, TOK_COMMA))
+                {
+                    break;
+                }
+            }
+
+            assert(identifiers.count);
+
+            auto first_mem_decl = parser_parse_declaration(parser, ts, identifiers[0]);
+            assert(first_mem_decl);
+            assert(first_mem_decl->kind == Declaration_PTN_Kind::VARIABLE ||
+                   first_mem_decl->kind == Declaration_PTN_Kind::CONSTANT);
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
+            array_append(&member_decls, first_mem_decl);
+
+            for (int64_t i = 1; i < identifiers.count; i++)
+            {
+                auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl); 
+                assert(mem_decl);
+                assert(mem_decl->kind == Declaration_PTN_Kind::VARIABLE ||
+                       mem_decl->kind == Declaration_PTN_Kind::CONSTANT);
+                mem_decl->identifier = identifiers[i];
+                array_append(&member_decls, mem_decl);
+
+                end_fp = ts->current_token().end_file_pos;
+            }
+
+            array_free(&identifiers);
+        }
+        else
+        {
+            auto decl = parser_parse_declaration(parser, ts);
+            array_append(&member_decls, decl);
+
+            if (decl->kind != Declaration_PTN_Kind::FUNCTION &&
+                !(decl->self.flags  & PTN_FLAG_SEMICOLON))
+            {
+                if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
+            }
+
+            end_fp = ts->current_token().end_file_pos;
+        }
+    }
+
+    if (!member_decls.count)
+    {
+        array_free(&member_decls);
+    }
+
+    return new_union_declaration_ptn(parser->allocator, identifier, member_decls,
+                                     parameters,
+                                     identifier->self.begin_file_pos, end_fp);
 }
 
 Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,
@@ -704,7 +799,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     }
                     else
                     {
-                        assert(false);
+                        return nullptr;
                     }
                 }
 

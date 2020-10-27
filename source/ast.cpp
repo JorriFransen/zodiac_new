@@ -1572,6 +1572,7 @@ namespace Zodiac
         result->function.parameter_declarations = parameter_declarations;
         result->function.variable_declarations = variable_declarations;
         result->function.body = body;
+        result->function.inferred_return_type = nullptr;
         result->function.parameter_scope = param_scope;
 
         if (is_naked)

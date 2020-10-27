@@ -1,0 +1,52 @@
+
+std :: import std;
+
+String :: struct
+{
+    data   : *u8;
+    length : s64;
+}
+
+Value :: union
+{
+    integer : s64;
+    real32  : float;
+    real64  : double;
+    string  : String;
+}
+
+main :: func() -> s64
+{
+    std.println("union test");
+
+    int_val : Value;
+    int_val.integer = 41;
+    print_value(*int_val);
+
+    ip := *int_val.integer;
+    <ip *= 2;
+    print_value(*int_val);
+
+    fp := *int_val.real32;
+    <fp = 12.34;
+    print_value(*int_val);
+
+    dp := *int_val.real64;
+    <dp = @cast(double, 567.891);
+    print_value(*int_val);
+
+    return 0;
+}
+
+print_value :: func(value: *Value)
+{
+    std.print_num(value.integer);
+    std.print(", ");
+    std.print_float(value.real32);
+    std.print(", ");
+    std.print_double(value.real64);
+
+    std.print("\n");
+
+    return;
+}

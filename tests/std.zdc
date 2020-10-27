@@ -118,3 +118,28 @@ print_float :: func (f: float)
     }
     return;
 }
+
+print_double :: func (d: double)
+{
+    int_part := @cast(s64, d);
+    print_num(int_part);
+    print(".");
+
+    it := 6;
+
+    rem := d - int_part;
+    rem = rem * 10;
+
+    while (rem > 0.001)
+    {
+        if (it <= 0) break;
+
+        int_part = @cast(s64, rem);
+        print_num(int_part);
+
+        rem = rem - int_part;
+        rem = rem * 10;
+        it = it - 1;
+    }
+    return;
+}

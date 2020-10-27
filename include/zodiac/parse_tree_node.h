@@ -192,6 +192,7 @@ enum class Declaration_PTN_Kind
 
     FUNCTION,
     STRUCT,
+    // UNION,
     ENUM,
     TYPEDEF,
 
@@ -235,7 +236,7 @@ struct Declaration_PTN
         {
             Array<Declaration_PTN*> member_declarations;
             Array<Parameter_PTN*> parameters;
-        } structure;
+        } structure, union_decl;
 
         struct
         {
@@ -507,6 +508,11 @@ Declaration_PTN *new_variable_declaration_ptn(Allocator *allocator, Identifier_P
                                               const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                            Array<Declaration_PTN*> members,
+                                            Array<Parameter_PTN*> parameters,
+                                            const File_Pos &begin_fp, const File_Pos &end_fp);
+
+Declaration_PTN *new_union_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                             Array<Declaration_PTN*> members,
                                             Array<Parameter_PTN*> parameters,
                                             const File_Pos &begin_fp, const File_Pos &end_fp);

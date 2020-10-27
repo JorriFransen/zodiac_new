@@ -744,11 +744,13 @@ namespace Zodiac
                     Bytecode_Value *index_val = bytecode_emit_integer_literal(builder,
                                                                              Builtin::type_u32,
                                                                              index);
+                    assert(index_val->is_const);
 
                     if (lvalue->type->kind == AST_Type_Kind::STRUCTURE)
                     {
                         ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue,
-                                                                     index_val);
+                                                                     index_val,
+                                                                     expression->type);
                     }
                     else
                     {
@@ -758,7 +760,8 @@ namespace Zodiac
 
                         lvalue = bytecode_emit_load(builder, lvalue);
                         ptr = bytecode_emit_aggregate_offset_pointer(builder, lvalue,
-                                                                     index_val);
+                                                                     index_val,
+                                                                     expression->type);
                     }
 
                     assert(ptr);
@@ -1389,9 +1392,9 @@ namespace Zodiac
                 Bytecode_Value *index_val =
                     bytecode_emit_integer_literal(builder, Builtin::type_u32,
                                                  lvalue_expr->dot.child_index);
-                auto pointer_val = bytecode_emit_aggregate_offset_pointer(builder,
-                                                                          parent_lvalue,
-                                                                          index_val);
+                auto pointer_val =
+                    bytecode_emit_aggregate_offset_pointer(builder, parent_lvalue,
+                                                           index_val, lvalue_expr->type);
                 return pointer_val;
                 break;
             }
@@ -1634,7 +1637,11 @@ namespace Zodiac
                 return bytecode_emit_cast_float_int(builder, operand_val, target_type);
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT:
+            {
+                return bytecode_emit_cast_float_float(builder, operand_val, target_type);
+            }
+
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
@@ -2064,6 +2071,28 @@ namespace Zodiac
 
     }
 
+    Bytecode_Value *bytecode_emit_cast_float_float(Bytecode_Builder *builder,
+                                                 Bytecode_Value *operand_val,
+                                                 AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::FLOAT);
+        assert(operand_val->kind == Bytecode_Value_Kind::TEMPORARY);
+
+#ifndef NDEBUG
+        auto op_type = operand_val->type;
+        assert(op_type->kind == AST_Type_Kind::FLOAT);
+#endif
+
+        bytecode_emit_instruction(builder, Bytecode_Instruction::CAST_FLOAT);
+        bytecode_emit_size_spec(builder, target_type);
+        bytecode_emit_32(builder, operand_val->local_index);
+
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         target_type);
+        bytecode_push_local_temporary(builder, result);
+        return result;
+    }
+
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type)
@@ -2080,14 +2109,16 @@ namespace Zodiac
         bytecode_emit_size_spec(builder, target_type);
         bytecode_emit_32(builder, operand_val->local_index);
 
-        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY, target_type);
+        auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                         target_type);
         bytecode_push_local_temporary(builder, result);
         return result;
     }
 
     Bytecode_Value *bytecode_emit_aggregate_offset_pointer(Bytecode_Builder *builder,
                                                            Bytecode_Value *lvalue,
-                                                           Bytecode_Value *offset_val)
+                                                           Bytecode_Value *offset_val,
+                                                           AST_Type *result_type)
     {
         assert(builder);
         assert(lvalue);
@@ -2099,8 +2130,6 @@ namespace Zodiac
 
         assert(offset_val->kind == Bytecode_Value_Kind::TEMPORARY);
         assert(offset_val->type == Builtin::type_u32);
-
-        auto index = offset_val->value.integer.u32;
 
         auto lval_type = lvalue->type;
         AST_Type *struct_type = nullptr;
@@ -2116,8 +2145,15 @@ namespace Zodiac
 
         assert(struct_type);
 
-        assert(struct_type->structure.member_types.count > index);
-        auto mem_type = struct_type->structure.member_types[index];
+        auto mem_type = result_type;
+        if (offset_val->is_const)
+        {
+            assert(offset_val->type == Builtin::type_u32);
+            auto index = offset_val->value.integer.s32;
+            assert(struct_type->structure.member_types.count > index);
+            auto _mem_type = struct_type->structure.member_types[index];
+            assert(mem_type == _mem_type);
+        }
 
         bytecode_emit_instruction(builder, Bytecode_Instruction::AGG_OFFSET_PTR);
         switch (lvalue->kind)
@@ -2240,13 +2276,16 @@ namespace Zodiac
             {
                 case 8: assert(false);
                 case 16: assert(false);
+
                 case 32: 
+                case 64:
                 {
-                    float val = expr->integer_literal.s64;
-                    result = bytecode_emit_float_literal(builder, expr->type, val, (double)val);
+                    double val = expr->integer_literal.s64;
+                    result = bytecode_emit_float_literal(builder, expr->type, val,
+                                                         (double)val);
                     break;
                 }
-                case 64: assert(false);
+
                 default: assert(false);
             }
         }
@@ -2379,23 +2418,46 @@ namespace Zodiac
             bytecode_emit_size_spec(builder, type->integer.sign, false, type->bit_size);
         }
 
+        Bytecode_Value *result = nullptr;
+        if (!noload)
+        {
+            result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
+                                        value_type);
+            result->is_const = true;
+        }
+
         switch (type->bit_size)
         {
             case 8:
             {
                 bytecode_emit_byte(builder, val);
+                if (result)
+                {
+                    if (type->integer.sign) result->value.integer.s8 = (int8_t)val;
+                    else result->value.integer.s8 = (uint8_t)val;
+                }
                 break; 
             }
 
             case 32:
             {
                 bytecode_emit_32(builder, val);
+                if (result)
+                {
+                    if (type->integer.sign) result->value.integer.s32 = (int32_t)val;
+                    else result->value.integer.s32 = (uint32_t)val;
+                }
                 break; 
             }
 
             case 64:
             {
                 bytecode_emit_64(builder, val);
+                if (result)
+                {
+                    if (type->integer.sign) result->value.integer.s64 = (int64_t)val;
+                    else result->value.integer.s64 = (uint64_t)val;
+                }
                 break;
             }
 
@@ -2404,8 +2466,6 @@ namespace Zodiac
 
         if (!noload)
         {
-            auto result = bytecode_new_value(builder, Bytecode_Value_Kind::TEMPORARY,
-                                             value_type);
             bytecode_push_local_temporary(builder, result);
             return result;
         }

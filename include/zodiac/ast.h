@@ -148,6 +148,8 @@ namespace Zodiac
                 Array<AST_Declaration*> variable_declarations;
                 AST_Statement *body;
 
+                AST_Type *inferred_return_type;
+
                 Scope *parameter_scope;
             } function;
 

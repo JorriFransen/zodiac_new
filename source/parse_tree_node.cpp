@@ -600,6 +600,22 @@ Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator,
     return result;
 }
 
+Declaration_PTN *new_union_declaration_ptn(Allocator *allocator,
+                                            Identifier_PTN *identifier,
+                                            Array<Declaration_PTN*> members,
+                                            Array<Parameter_PTN*> parameters,
+                                            const File_Pos &begin_fp,
+                                            const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::STRUCT;
+    result->identifier = identifier;
+    result->union_decl.member_declarations = members;
+    result->union_decl.parameters = parameters;
+    return result;
+   
+}
+
 Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
                                           Identifier_PTN *identifier,
                                           Expression_PTN *type_spec_expr,

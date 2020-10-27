@@ -1,3 +1,6 @@
+
+Warn when main is missing
+Warn on empty files
 Warn on non void functions not having returns (in all control paths)
 
 implement execute_process on linux (used in the linker)

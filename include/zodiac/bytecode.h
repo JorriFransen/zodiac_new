@@ -341,13 +341,18 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast_int_bool(Bytecode_Builder *builder,
                                                 Bytecode_Value *operand_val,
                                                 AST_Type *target_type);
+    Bytecode_Value *bytecode_emit_cast_float_float(Bytecode_Builder *builder,
+                                                 Bytecode_Value *operand_val,
+                                                 AST_Type *target_type);
     Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
                                                  Bytecode_Value *operand_val,
                                                  AST_Type *target_type);
 
     Bytecode_Value *bytecode_emit_aggregate_offset_pointer(Bytecode_Builder *builder,
                                                            Bytecode_Value *lvalue,
-                                                           Bytecode_Value *offset_val);
+                                                           Bytecode_Value *offset_val,
+                                                           AST_Type *result_type);
+
     Bytecode_Value *bytecode_emit_array_offset_pointer(Bytecode_Builder *builder,
                                                            Bytecode_Value *lvalue,
                                                            Bytecode_Value *offset_val);

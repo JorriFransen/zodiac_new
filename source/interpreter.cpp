@@ -945,7 +945,14 @@ namespace Zodiac
                             break;
                         }
 
-                        case Bytecode_Size_Specifier::R64: assert(false);
+                        case Bytecode_Size_Specifier::R64:
+                        {
+                            result_val->value.boolean = 
+                                lhs_val->value.float_literal.r64 >
+                                rhs_val->value.float_literal.r64;
+                            break;
+
+                        }
                         default: assert(false);
 
                     }
@@ -1150,7 +1157,13 @@ namespace Zodiac
                             break;
                        }
 
-                       case Bytecode_Size_Specifier::R64: assert(false);
+                       case Bytecode_Size_Specifier::R64:
+                       {
+                            result_val->value.float_literal.r64 = 
+                                lhs_val->value.float_literal.r64 -
+                                rhs_val->value.float_literal.r64;
+                           break;
+                       }
                        default: assert(false);
 
                    }
@@ -1234,7 +1247,13 @@ namespace Zodiac
                             break;
                         }
 
-                        case Bytecode_Size_Specifier::R64: assert(false);
+                        case Bytecode_Size_Specifier::R64:
+                        {
+                            result_val->value.float_literal.r64 =
+                                lhs_val->value.float_literal.r64 *
+                                rhs_val->value.float_literal.r64;
+                            break;
+                        }
                         default: assert(false);
 
                     }
@@ -1457,7 +1476,11 @@ namespace Zodiac
                            break;
                        }
 
-                       case Bytecode_Size_Specifier::R64: assert(false);
+                       case Bytecode_Size_Specifier::R64:
+                       {
+                           result->value.float_literal.r64 = new_val;
+                           break;
+                       }
 
                        default: assert(false);
 
@@ -1476,12 +1499,21 @@ namespace Zodiac
 
                    auto target_type = bytecode_type_from_size_spec(size_spec);
                    int64_t new_val;
+                   double new_double_val;
                    switch (val->type->bit_size)
                    {
                        case 8: assert(false);
                        case 16: assert(false);
-                       case 32: new_val = val->value.float_literal.r32; break;
-                       case 64: new_val = val->value.float_literal.r64; break;
+
+                       case 32:
+                           new_val = val->value.float_literal.r32;
+                           new_double_val = val->value.float_literal.r32;
+                           break;
+
+                       case 64:
+                           new_val = val->value.float_literal.r64;
+                           new_double_val = val->value.float_literal.r64;
+                           break;
                        default: assert(false);
                    }
 
@@ -1510,6 +1542,12 @@ namespace Zodiac
                        case Bytecode_Size_Specifier::S64:
                        {
                            result->value.integer.s64 = new_val;
+                           break;
+                       }
+
+                       case Bytecode_Size_Specifier::R64:
+                       {
+                           result->value.float_literal.r64 = new_double_val;
                            break;
                        }
 
