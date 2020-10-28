@@ -48,7 +48,6 @@ namespace Zodiac
         resolver->parser = parser_create(allocator, build_data);
 
         stack_init(allocator, &resolver->break_node_stack);
-        stack_init(allocator, &resolver->active_static_branch_stack);
 
         bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
         llvm_builder_init(allocator, &resolver->llvm_builder,
@@ -75,7 +74,7 @@ namespace Zodiac
 
         for (int64_t i = 0; i < decls_to_resolve.count; i++)
         {
-            queue_ident_job(resolver, decls_to_resolve[i], resolver->global_scope, true);
+            queue_ident_job(resolver, decls_to_resolve[i], resolver->global_scope);
         }
 
         array_free(&decls_to_resolve);
@@ -83,8 +82,7 @@ namespace Zodiac
         // auto entry_module_path = string_append(allocator, resolver->first_file_dir, "entry.zdc");
         // queue_parse_job(resolver, string_ref("entry"), entry_module_path, true);
 
-        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, true,
-                        true);
+        queue_parse_job(resolver, resolver->first_file_name, resolver->first_file_path, true);
 
     }
 
@@ -122,7 +120,6 @@ namespace Zodiac
             assert(queue_count(&resolver->emit_llvm_func_job_queue) == 0);
             assert(queue_count(&resolver->emit_llvm_binary_job_queue) == 0);
 
-            assert(stack_count(&resolver->active_static_branch_stack) == 0);
             assert(stack_count(&resolver->break_node_stack) == 0);
         }
 
@@ -165,8 +162,7 @@ namespace Zodiac
                     assert(job_done);
                     auto ast_module = job->result.ast_module;
                     assert(ast_module);
-                    queue_ident_job(resolver, ast_module, ast_module->module_scope,
-                                    job->active_static_branch);
+                    queue_ident_job(resolver, ast_module, ast_module->module_scope);
                 }
             } }
 
@@ -186,8 +182,7 @@ namespace Zodiac
                 {
                     if (job->ast_node->kind != AST_Node_Kind::MODULE)
                     {
-                        queue_type_job(resolver, job->declaration, job->node_scope,
-                                       job->active_static_branch);
+                        queue_type_job(resolver, job->declaration, job->node_scope);
                     }
 
                     free_job(resolver, job);
@@ -345,9 +340,6 @@ namespace Zodiac
                 done = true;
             }
 
-            assert(stack_count(&resolver->active_static_branch_stack) == 0);
-
-
             if (resolver_has_progressed(resolver) && !resolver->parse_error)
             {
                 zodiac_clear_errors(resolver->build_data);
@@ -412,11 +404,6 @@ namespace Zodiac
     {
         assert(resolver);
         assert(job);
-
-        if (!job->active_static_branch)
-        {
-            resolver_push_active_static_branch(resolver, false);
-        }
 
         auto options = resolver->build_data->options;
 
@@ -646,11 +633,6 @@ namespace Zodiac
             }
         }
 
-        if (!job->active_static_branch)
-        {
-            resolver_pop_active_static_branch(resolver);
-        }
-
         return result;
     }
 
@@ -670,7 +652,6 @@ namespace Zodiac
 
             case AST_Node_Kind::MODULE:
             {
-                bool active_branch = resolver_is_active_static_branch(resolver);
                 auto module = static_cast<AST_Module*>(ast_node);
                 for (int64_t i = 0; i < module->declarations.count; i++)
                 {
@@ -678,11 +659,11 @@ namespace Zodiac
 
                     if (!try_resolve_identifiers(resolver, decl, module->module_scope))
                     {
-                        queue_ident_job(resolver, decl, module->module_scope, active_branch);
+                        queue_ident_job(resolver, decl, module->module_scope);
                     }
                     else if ((decl->flags & AST_NODE_FLAG_RESOLVED_ID))
                     {
-                        queue_type_job(resolver, decl, module->module_scope, active_branch);
+                        queue_type_job(resolver, decl, module->module_scope);
                     }
                 }
 
@@ -791,14 +772,13 @@ namespace Zodiac
                     //@TODO: Report error
                     assert(is_regular_file(file_path));
 
-                    bool active_static_branch = resolver_is_active_static_branch(resolver);
                     queue_parse_job(resolver, module_name,
                                     string_copy(resolver->allocator, file_path),
-                                    active_static_branch, false);
+                                    false);
                     ast_decl->flags |= AST_NODE_FLAG_QUEUED_PARSING;
                     result = true;
                     apply_flag = false;
-                    queue_ident_job(resolver, ast_decl, scope, active_static_branch);
+                    queue_ident_job(resolver, ast_decl, scope);
                 }
                 else
                 {
@@ -883,8 +863,7 @@ namespace Zodiac
                 if (result &&
                     !(ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
                 {
-                    queue_type_job(resolver, ast_decl, scope,
-                                   resolver_is_active_static_branch(resolver));
+                    queue_type_job(resolver, ast_decl, scope);
                 }
 
                 break;
@@ -910,8 +889,7 @@ namespace Zodiac
                     !(ast_decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER) &&
                     !(ast_decl->decl_flags & AST_DECL_FLAG_GLOBAL))
                 {
-                    queue_type_job(resolver, ast_decl, scope,
-                                   resolver_is_active_static_branch(resolver));
+                    queue_type_job(resolver, ast_decl, scope);
                 }
 
                 break;
@@ -922,8 +900,7 @@ namespace Zodiac
                 result = try_resolve_identifiers(resolver, ast_decl->parameter.type_spec, scope);
 
                 if (result)
-                    queue_type_job(resolver, ast_decl, scope,
-                                   resolver_is_active_static_branch(resolver));
+                    queue_type_job(resolver, ast_decl, scope);
                 break;
             }
 
@@ -1049,8 +1026,7 @@ namespace Zodiac
                 }
                 else
                 {
-                    queue_type_job(resolver, cond_expr, scope,
-                                   resolver_is_active_static_branch(resolver));
+                    queue_type_job(resolver, cond_expr, scope);
                 }
 
                 if (!(cond_expr->flags & AST_NODE_FLAG_TYPED))
@@ -1061,32 +1037,30 @@ namespace Zodiac
 
                 Const_Value cond_val = const_interpret_expression(cond_expr);
 
-                resolver_push_active_static_branch(resolver, cond_val.boolean);
-
-                auto then_decls = ast_decl->static_if.then_declarations;
-                for (int64_t i = 0; i < then_decls.count; i++)
+                if (cond_val.boolean)
                 {
-                    if (!try_resolve_identifiers(resolver, then_decls[i],
-                                                 ast_decl->static_if.then_scope))
+                    auto then_decls = ast_decl->static_if.then_declarations;
+                    for (int64_t i = 0; i < then_decls.count; i++)
                     {
-                        result = false;
+                        if (!try_resolve_identifiers(resolver, then_decls[i],
+                                                     ast_decl->static_if.then_scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
-
-                resolver_pop_active_static_branch(resolver);
-                resolver_push_active_static_branch(resolver, !cond_val.boolean);
-
-                auto else_decls = ast_decl->static_if.else_declarations;
-                for (int64_t i = 0; i < else_decls.count; i++)
+                else
                 {
-                    if (!try_resolve_identifiers(resolver, else_decls[i],
-                                                 ast_decl->static_if.else_scope))
+                    auto else_decls = ast_decl->static_if.else_declarations;
+                    for (int64_t i = 0; i < else_decls.count; i++)
                     {
-                        result = false;
+                        if (!try_resolve_identifiers(resolver, else_decls[i],
+                                                     ast_decl->static_if.else_scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
-
-                resolver_pop_active_static_branch(resolver);
 
                 break;
             }
@@ -1103,8 +1077,8 @@ namespace Zodiac
                 // We need to queue a type job, because otherwise the condition will not be checked,
                 // and no error will be shown if there is other errors.
 
-                if (result && resolver_is_active_static_branch(resolver))
-                    queue_type_job(resolver, ast_decl, scope, true);
+                if (result)
+                    queue_type_job(resolver, ast_decl, scope);
 
                 break;
             }
@@ -2279,17 +2253,14 @@ namespace Zodiac
                     if (body) assert(body->flags & AST_NODE_FLAG_TYPED);
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
 
-                    if (resolver_is_active_static_branch(resolver))
+                    if (!(ast_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
                     {
-                        if (!(ast_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
-                        {
-                            auto bc_func =
-                                bytecode_register_function(&resolver->bytecode_builder, ast_decl);
+                        auto bc_func =
+                            bytecode_register_function(&resolver->bytecode_builder, ast_decl);
 
-                            llvm_register_function(&resolver->llvm_builder, bc_func, ast_decl->type);
-                        }
-                        queue_emit_bytecode_job(resolver, ast_decl, scope);
+                        llvm_register_function(&resolver->llvm_builder, bc_func, ast_decl->type);
                     }
+                    queue_emit_bytecode_job(resolver, ast_decl, scope);
                 }
 
                 break;
@@ -2435,45 +2406,42 @@ namespace Zodiac
                 assert(cond_expr->expr_flags & AST_EXPR_FLAG_CONST);
 
                 Const_Value cond_val = const_interpret_expression(cond_expr);
-                bool import_then = cond_val.boolean;
 
                 auto then_scope = ast_decl->static_if.then_scope;
                 auto else_scope = ast_decl->static_if.else_scope;
 
-                resolver_push_active_static_branch(resolver, import_then);
-
-                for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
+                if (cond_val.boolean)
                 {
-                    auto decl = ast_decl->static_if.then_declarations[i];
+                    for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
+                    {
+                        auto decl = ast_decl->static_if.then_declarations[i];
 
-                    if (!try_resolve_types(resolver, decl, then_scope))
-                    {
-                        result = false;
-                    }
-                    else if (import_then && !resolver_import_from_static_if(resolver, decl, scope))
-                    {
-                        result = false;
+                        if (!try_resolve_types(resolver, decl, then_scope))
+                        {
+                            result = false;
+                        }
+                        else if (!resolver_import_from_static_if(resolver, decl, scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
-
-                resolver_pop_active_static_branch(resolver);
-                resolver_push_active_static_branch(resolver, !import_then);
-
-                for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
+                else
                 {
-                    auto decl = ast_decl->static_if.else_declarations[i];
+                    for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
+                    {
+                        auto decl = ast_decl->static_if.else_declarations[i];
 
-                    if (!try_resolve_types(resolver, decl, else_scope))
-                    {
-                        result = false;
-                    }
-                    else if (!import_then && !resolver_import_from_static_if(resolver, decl, scope))
-                    {
-                        result = false;
+                        if (!try_resolve_types(resolver, decl, else_scope))
+                        {
+                            result = false;
+                        }
+                        else if (!resolver_import_from_static_if(resolver, decl, scope))
+                        {
+                            result = false;
+                        }
                     }
                 }
-
-                resolver_pop_active_static_branch(resolver);
 
                 if (result)
                 {
@@ -2497,7 +2465,7 @@ namespace Zodiac
 
                     auto c_res = const_interpret_expression(cond_expr);
 
-                    if (!c_res.boolean && resolver_is_active_static_branch(resolver))
+                    if (!c_res.boolean)
                     {
                         result = false;
                         zodiac_report_error(resolver->build_data,
@@ -3282,18 +3250,15 @@ namespace Zodiac
 
                 assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
-                if (resolver_is_active_static_branch(resolver))
+                if (!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
                 {
-                    if (!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
-                    {
-                        auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                        llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
-                    }
+                    auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
+                    llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
+                }
 
-                    if (!(decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
-                    {
-                        queue_emit_bytecode_job(resolver, decl, scope);
-                    }
+                if (!(decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
+                {
+                    queue_emit_bytecode_job(resolver, decl, scope);
                 }
 
                 bool arg_res = true;
@@ -3894,7 +3859,7 @@ namespace Zodiac
                     {
                         result = false;
                     }
-                    else if (resolver_is_active_static_branch(resolver))
+                    else
                     {
                         auto bc_func =
                             bytecode_register_function(&resolver->bytecode_builder,
@@ -4247,8 +4212,7 @@ namespace Zodiac
 
                     }
 
-                    queue_ident_job(resolver, new_expr, switch_scope,
-                                    resolver_is_active_static_branch(resolver));
+                    queue_ident_job(resolver, new_expr, switch_scope);
                     array_append(&temp_case_exprs, new_expr);
 
                     val += 1;
@@ -4411,29 +4375,6 @@ namespace Zodiac
         stack_pop(&resolver->break_node_stack);
     }
 
-    void resolver_push_active_static_branch(Resolver *resolver, bool active)
-    {
-        bool current_state = resolver_is_active_static_branch(resolver);
-
-        bool new_state = current_state ? active : false;
-
-        stack_push(&resolver->active_static_branch_stack, new_state);
-
-    }
-
-    void resolver_pop_active_static_branch(Resolver *resolver)
-    {
-        stack_pop(&resolver->active_static_branch_stack);
-    }
-
-    bool resolver_is_active_static_branch(Resolver *resolver)
-    {
-        if (!stack_count(&resolver->active_static_branch_stack))
-            return true;
-
-        return stack_top(&resolver->active_static_branch_stack);
-    }
-
     AST_Type *find_or_create_function_type(Resolver *resolver, Array<AST_Type*> param_types,
                                            AST_Type *return_type, Scope *scope)
     {
@@ -4528,15 +4469,15 @@ namespace Zodiac
     }
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
-                         bool active_static_branch, bool insert_entry_module)
+                          bool insert_entry_module)
     {
         auto job = resolve_job_new(resolver->allocator, module_name, module_path,
-                                   active_static_branch, insert_entry_module);
+                                   insert_entry_module);
         assert(job);
         queue_enqueue(&resolver->parse_job_queue, job);
     }
 
-    void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch)
+    void queue_ident_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
     {
         assert(resolver);
         assert(ast_node);
@@ -4546,14 +4487,14 @@ namespace Zodiac
         auto allocator = resolver->allocator;
         assert(allocator);
 
-        auto job = resolve_job_ident_new(allocator, ast_node, scope, active_branch);
+        auto job = resolve_job_ident_new(allocator, ast_node, scope);
         assert(job);
         queue_enqueue(&resolver->ident_job_queue, job);
 
         ast_node->flags |= AST_NODE_FLAG_QUEUED_ID;
     }
 
-    void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope, bool active_branch)
+    void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
     {
         assert(resolver);
         assert(ast_node);
@@ -4565,7 +4506,7 @@ namespace Zodiac
         auto allocator = resolver->allocator;
         assert(allocator);
 
-        auto job = resolve_job_type_new(allocator, ast_node, scope, active_branch);
+        auto job = resolve_job_type_new(allocator, ast_node, scope);
         assert(job);
         queue_enqueue(&resolver->type_job_queue, job);
 
@@ -4640,100 +4581,92 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind,
-                                 bool active_static_branch)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind)
     {
         auto result = alloc_type<Resolve_Job>(allocator);
         assert(result);
         result->kind = kind;
         result->result = {};
-        result->active_static_branch = active_static_branch;
         return result;
     }
 
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
-                                 Scope *scope, bool active_branch)
+                                 Scope *scope)
     {
-        auto result = resolve_job_new(allocator, kind, active_branch);
+        auto result = resolve_job_new(allocator, kind);
         result->ast_node = ast_node;
         result->node_scope = scope;
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func,
-                                 bool active_branch)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_FUNC, active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_FUNC);
         result->bc_func = bc_func;
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob, bool active_branch)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_GLOB, active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_GLOB);
         result->bc_glob = bc_glob;
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name,
-                                 bool active_branch)
+    Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY,
-                                      active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_BINARY);
         result->llvm_bin.output_file_name = output_file_name;
         return result;
     }
 
     Resolve_Job *resolve_job_new(Allocator *allocator, String module_name, String module_path,
-                                 bool active_static_branch, bool insert_entry_module)
+                                 bool insert_entry_module)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::PARSE, active_static_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::PARSE);
         result->parse.module_name = module_name;
         result->parse.module_path = module_path;
         result->parse.insert_entry_module = insert_entry_module;
         return result;
     }
 
-    Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
-                                       bool active_branch)
+    Resolve_Job *resolve_job_ident_new(Allocator *allocator, AST_Node *ast_node, Scope *scope)
     {
-        auto result = resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER, ast_node, scope,
-                                      active_branch);
+        auto result = resolve_job_new(allocator, Resolve_Job_Kind::IDENTIFIER, ast_node, scope);
 
         return result;
     }
 
-    Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope,
-                                      bool active_branch)
+    Resolve_Job *resolve_job_type_new(Allocator *allocator, AST_Node *ast_node, Scope *scope)
     {
-        return resolve_job_new(allocator, Resolve_Job_Kind::TYPE, ast_node, scope, active_branch);
+        return resolve_job_new(allocator, Resolve_Job_Kind::TYPE, ast_node, scope);
     }
 
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope)
     {
-        return resolve_job_new(allocator, Resolve_Job_Kind::SIZE, ast_node, scope, true);
+        return resolve_job_new(allocator, Resolve_Job_Kind::SIZE, ast_node, scope);
     }
 
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope)
     {
-        return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope, true);
+        return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope);
     }
 
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func)
     {
-        return resolve_job_new(allocator, bc_func, true);
+        return resolve_job_new(allocator, bc_func);
     }
 
     Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Global bc_glob)
     {
-        return resolve_job_new(allocator, bc_glob, true);
+        return resolve_job_new(allocator, bc_glob);
     }
 
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
                                                   const char *output_file_name)
     {
-        return resolve_job_new(allocator,  output_file_name, true);
+        return resolve_job_new(allocator,  output_file_name);
     }
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr)
