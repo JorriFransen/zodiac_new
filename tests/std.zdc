@@ -36,10 +36,11 @@ strlen :: func (cstr: *u8) -> s64 {
 
 } #elseif (PLATFORM_LINUX) {
 
-    _open_default_io_handles :: func() { 
+    _open_default_io_handles :: func()
+    {
         return;
     }
-    
+
     print :: func (cstr: *u8)
     {
         @syscall(1, 1, cstr, strlen(cstr));
