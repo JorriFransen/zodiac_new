@@ -1,9 +1,9 @@
 
-_std_ :: import std;
+// _std_ :: import std;
 
 #noreturn call_main_and_exit :: func()
 {
-    _std_._open_default_io_handles();
+    // _std_._open_default_io_handles();
 
     exit_code := main();
     @exit(exit_code);

@@ -1,13 +1,13 @@
 
-std :: import std;
+// std :: import std;
 
 main :: func() -> s64 {
-    std.print("Hello, World! from multiple platforms...\n");
+    // std.print("Hello, World! from multiple platforms...\n");
 
-    std.print("Returning: ");
-    std.print_num(42);
-    std.print("\n");
-    
+    // std.print("Returning: ");
+    // std.print_num(42);
+    // std.print("\n");
+
     return 42;
 }
 

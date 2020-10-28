@@ -1,222 +1,78 @@
 #pragma once
 
+#include "allocator.h"
 #include "build_data.h"
-#include "const_interpreter.h"
-#include "common.h"
-#include "stack.h"
-#include "string_builder.h"
+
+#include <inttypes.h>
 
 namespace Zodiac
 {
-    enum class Bytecode_Instruction : uint8_t
+    enum Bytecode_Opcode : uint8_t
     {
-        NOP             = 0x00,
-
-        EXIT            = 0x01,
-        CALL            = 0x02,
-        RET             = 0x03,
-        RET_VOID        = 0x04,
-        ALLOCL          = 0x05,
-        LOAD_FLOAT      = 0x06,
-        LOAD_INT        = 0x07,
-        LOADG           = 0x08,
-        LOADL           = 0x09,
-        LOADP           = 0x0A,
-        LOAD_PARAM      = 0x0B,
-        LOAD_BOOL       = 0x0C,
-        LOAD_STR        = 0x0D,
-        LOAD_NULL       = 0x0E,
-        STOREG          = 0x0F,
-        STOREL          = 0x10,
-        STOREP          = 0x11,
-        STORE_PARAM     = 0x12,
-
-        ADDROF          = 0x13,
-        DEREF           = 0x14,
-
-        PUSH_ARG        = 0x15,
-
-        EQ              = 0x16,
-        NEQ             = 0x17,
-        GT              = 0x18,
-        GTEQ            = 0x19,
-        LT              = 0x1A,
-        LTEQ            = 0x1B,
-        ADD             = 0x1C,
-        SUB             = 0x1D,
-        REM             = 0x1E,
-        MUL             = 0x1F,
-        DIV             = 0x20,
-
-        NEG             = 0x21,
-
-        JUMP            = 0x22,
-        JUMP_IF         = 0x23,
-        SWITCH          = 0x24,
-        CAST_INT        = 0x25,
-        CAST_ENUM       = 0x26,
-        CAST_FLOAT      = 0x27,
-        CAST_POINTER    = 0x28,
-        SYSCALL         = 0x29,
-        AGG_OFFSET_PTR  = 0x2A,
-        ARR_OFFSET_PTR  = 0x2B,
+        NOP    = 0x0000,
+        RETURN = 0x0001,
     };
 
-    enum class Bytecode_Size_Specifier : uint16_t
-    {
-        INVALID       = 0,
-        SIGN_FLAG     = 0x080, // 0 10000000
-        FLOAT_FLAG    = 0x100, // 1 00000000
-        BIT_SIZE_MASK = 0x07F, // 0 01111111
-
-        U8            = 0x008, // 0 00001000
-        S8            = 0x088, // 0 10001000
-
-        U16           = 0x010, // 0 00010000
-        S16           = 0x090, // 0 10010000
-
-        U32           = 0x020, // 0 00100000
-        S32           = 0x0A0, // 0 10100000
-        R32           = 0x1A0, // 1 10100000
-
-        U64           = 0x040, // 0 01000000
-        S64           = 0x0C0, // 0 11000000
-        R64           = 0x1C0, // 1 11000000
-
-    };
-
-    enum class Bytecode_Value_Type_Specifier : uint8_t 
-    {
-        INVALID    = 0x00,
-        ALLOCL     = 0x01,
-        PARAMETER  = 0x02,
-        TEMPORARY  = 0x03,
-    };
-
-    enum class Bytecode_Value_Kind : uint32_t
+    enum class Bytecode_Value_Kind
     {
         INVALID,
 
-        GLOBAL,
-        TEMPORARY,
-        ALLOCL,
-        PARAMETER,
+        INTEGER_LITERAL,
     };
 
     struct Bytecode_Value
     {
-        Bytecode_Value_Kind kind = Bytecode_Value_Kind::INVALID; 
-
-        bool is_const = false;
-
-        Atom name = {};
+        Bytecode_Value_Kind kind = Bytecode_Value_Kind::INVALID;
+        AST_Type *type = nullptr;
 
         union
         {
-            uint32_t local_index = 0;
-            uint32_t alloc_index;
-            uint32_t param_index;
-            uint32_t glob_index;
-        };
-
-        AST_Type *type = nullptr;
-
-        union 
-        {
-            void *struct_pointer = nullptr;
-            void *pointer;
-
-            Integer_Literal integer;
-
-            union
-            {
-                float r32;
-                double r64; 
-            } float_literal;
-
-            bool boolean;
-
+            Integer_Literal integer_literal = {};
         } value;
-
     };
 
+    struct Bytecode_Instruction
+    {
+        Bytecode_Opcode op = NOP;
+
+        Bytecode_Value *a = nullptr;
+        Bytecode_Value *b = nullptr;
+        Bytecode_Value *result = nullptr;
+    };
+
+    typedef uint64_t Bytecode_Function_Flags;
+
+    enum Bytecode_Function_Flags_ : Bytecode_Function_Flags
+    {
+        BC_FUNC_FLAG_NONE      = 0,
+        BC_FUNC_FLAG_CRT_ENTRY = 1,
+    };
+
+    struct Bytecode_Function;
     struct Bytecode_Block
     {
-        Atom name = {};
+        const char *name = nullptr;
+        Bytecode_Function *function = nullptr;
 
-        int64_t index = -1;
-        int64_t local_temp_count = 0;
-        int64_t preceding_temp_count = 0;
-        Array<uint8_t> instructions = {};
-
-        Bytecode_Instruction last_instruction = Bytecode_Instruction::NOP;
-    };
-
-    struct Bytecode_Parameter
-    {
-        Bytecode_Value *value = nullptr;
-        AST_Declaration *ast_decl = nullptr;
-    };
-
-    struct Bytecode_Local_Alloc
-    {
-        Bytecode_Value *value = nullptr;
-        AST_Declaration *ast_decl = nullptr;
-    };
-
-    typedef uint64_t Bytecode_Function_Flag;
-
-    enum Bytecode_Function_Flag__ : Bytecode_Function_Flag
-    {
-        BYTECODE_FUNC_FLAG_INVALID     = 0x00,
-        BYTECODE_FUNC_FLAG_NAKED       = 0x01,
-        BYTECODE_FUNC_FLAG_NORETURN    = 0x02,
-        BYTECODE_FUNC_FLAG_FOREIGN     = 0x04,
-        BYTECODE_FUNC_FLAG_CRT_ENTRY   = 0x08,
+        //@@TODO: @@CLEANUP: These might not need to be pointers
+        Array<Bytecode_Instruction *> instructions = {};
     };
 
     struct Bytecode_Function
     {
-        Bytecode_Function_Flag flags = BYTECODE_FUNC_FLAG_INVALID;
-
-        uint32_t index = 0;
-
-        Array<Bytecode_Parameter> parameters = {};
-        Array<Bytecode_Value*> local_temps = {};
-        Array<Bytecode_Local_Alloc> local_allocs = {};
-
-        Array<Bytecode_Block*> blocks = {};
-        Bytecode_Block *last_block = nullptr;
-
-        AST_Declaration *ast_decl = nullptr;
-        
-        // Used for dyncall pointers in the interpreter, might use for function pointers/
-        //  dyncall callbacks later.
-        void *pointer = nullptr;  
-    };
-
-    struct Bytecode_Global
-    {
-        AST_Declaration *decl = nullptr;
+        Bytecode_Function_Flags flags = BC_FUNC_FLAG_NONE;
         AST_Type *type = nullptr;
-        Bytecode_Value *value = nullptr;
+        Atom name = {};
+
+        Array<Bytecode_Block  *> blocks = {};
     };
 
-    struct Bytecode_Program
+    struct Bytecode_Function_Info
     {
-        Array<Bytecode_Function*> functions = {};
-        Array<Bytecode_Global> globals = {};
-        Array<Atom> strings = {};
-        Array<AST_Type*> *types = nullptr;
-        Bytecode_Function *entry_function = nullptr;
-        Bytecode_Function *bytecode_entry_function = nullptr;
-    };
+        AST_Declaration *declaration = nullptr;
+        Bytecode_Function *bc_func = nullptr;
 
-    struct Bytecode_Jump_Record
-    {
-        Bytecode_Block *from_block = nullptr;
-        Bytecode_Block *target_block = nullptr;
-        int64_t index_offset = 0;
+        int64_t index = -1;
     };
 
     struct Bytecode_Builder
@@ -224,219 +80,36 @@ namespace Zodiac
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
 
-        Bytecode_Program program = {};
-
-        Array<AST_Type*> emitted_types = {};
-
         Bytecode_Block *insert_block = nullptr;
-        Bytecode_Function *current_function = nullptr;
-
-        Stack<Bytecode_Block *> break_block_stack = {};
-
-        Array<Bytecode_Jump_Record> jump_records = {};
+        Array<Bytecode_Function_Info> functions = {};
     };
 
-    struct Bytecode_Iterator
-    {
-        Bytecode_Builder *builder = nullptr;
-        Stack<Bytecode_Value*> arg_stack = {};
+    Bytecode_Builder bytecode_builder_create(Allocator *allocator, Build_Data *build_data);
 
-        int64_t function_index    = -1;
-        int64_t block_index       = -1;
-        int64_t instruction_index = -1;
-
-        int32_t local_temp_index = -1;
-        int32_t local_alloc_index = -1;
-    };
-
-    void bytecode_builder_init(Allocator *allocator, Bytecode_Builder *builder, Build_Data *bd);
-
-    void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
                                                           AST_Declaration *decl);
-    Bytecode_Global bytecode_emit_global_variable(Bytecode_Builder *builder,
+    Bytecode_Value *bytecode_emit_global_variable(Bytecode_Builder *builder,
                                                   AST_Declaration *decl);
-    void bytecode_fix_jump_records(Bytecode_Builder *builder, Bytecode_Function *func);
-    void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *statement);
-    void bytecode_emit_return_statement(Bytecode_Builder *builder, Bytecode_Value *ret_val);
-    void bytecode_emit_while_statement(Bytecode_Builder *builder, AST_Statement *stmt);
-    void bytecode_emit_for_statement(Bytecode_Builder *builder, AST_Statement *stmt);
-    void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt);
-    void bytecode_emit_switch_statement(Bytecode_Builder *builder, AST_Statement *stmt);
-    Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expression);
-    Bytecode_Value *bytecode_emit_call_expression(Bytecode_Builder *builder,
-                                                  AST_Expression *expression);
-    Bytecode_Value *bytecode_emit_builtin_call_expression(Bytecode_Builder *builder,
-                                                          AST_Expression *expression);
-    Bytecode_Value *bytecode_emit_binary_expression(Bytecode_Builder *builder,
-                                                    AST_Expression *expr);
-    Bytecode_Value *bytecode_emit_unary_expression(Bytecode_Builder *builder,
-                                                   AST_Expression *expr);
-    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *ident);
-    Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *lvalue_expr);
-    Bytecode_Value *bytecode_emit_addrof(Bytecode_Builder *builder, Bytecode_Value *lvalue);
-    Bytecode_Value *bytecode_emit_allocl(Bytecode_Builder *builder, AST_Declaration *decl,
-                                         Atom name);
 
-    Bytecode_Value *bytecode_emit_constant(Bytecode_Builder *builder, AST_Declaration *decl);
+    Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name);
+    void bytecode_append_block(Bytecode_Function *function, Bytecode_Block *block);
 
-    Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand_expr,
-                                       AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_int(Bytecode_Builder *builder, AST_Expression *operand_expr,
-                                           AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_enum(Bytecode_Builder *builder,
-                                            AST_Expression *operand_expr,
-                                            AST_Type *target_type);
+    void bytecode_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block);
 
-    Bytecode_Value *bytecode_emit_cast_float(Bytecode_Builder *builder,
-                                             AST_Expression *operand_expr,
-                                             AST_Type *target_type);
+    Bytecode_Function *bytecode_find_function(Bytecode_Builder *builder, AST_Declaration *decl);
+    Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Type *type, Atom name);
 
-    Bytecode_Value *bytecode_emit_cast_pointer(Bytecode_Builder *builder,
-                                               AST_Expression *operand_expr,
-                                               AST_Type *target_type);
-    
-    void bytecode_emit_call_arg(Bytecode_Builder *builder, AST_Expression *arg_expr);
+    void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *stmt);
+    Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr);
 
-    void bytecode_push_local_temporary(Bytecode_Builder *builder, Bytecode_Value *value);
-    void bytecode_push_local_alloc(Bytecode_Builder *builder, Bytecode_Value *value,
-                                   AST_Declaration *decl);
+    Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
+                                                    Bytecode_Value *a, Bytecode_Value *b,
+                                                    Bytecode_Value *result);
 
-    void bytecode_emit_size_spec(Bytecode_Builder *builder, AST_Type *type);
-    void bytecode_emit_size_spec(Bytecode_Builder *builder, bool sign, bool real,
-                                 uint8_t size);
-
-    Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *lvalue);
-    void bytecode_emit_load_float(Bytecode_Builder *builder, uint8_t size);
-    void bytecode_emit_load_int(Bytecode_Builder *builder, bool sign, uint8_t size);
-    Bytecode_Value *bytecode_emit_loadg(Bytecode_Builder *builder, Bytecode_Value *glob);
-    Bytecode_Value *bytecode_emit_loadl(Bytecode_Builder *builder, Bytecode_Value *allocl);
-    Bytecode_Value *bytecode_emit_loadp(Bytecode_Builder *builder, Bytecode_Value *ptr);
-    Bytecode_Value *bytecode_emit_load_param(Bytecode_Builder *builder,
-                                             Bytecode_Value *param);
-    Bytecode_Value *bytecode_emit_load_str(Bytecode_Builder *builder, const Atom &atom);
-    Bytecode_Value *bytecode_emit_load_null(Bytecode_Builder *builder, AST_Type *type);
-    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest,
-                             Bytecode_Value *value);
-    void bytecode_emit_storeg(Bytecode_Builder *builder, Bytecode_Value *dest,
-                              Bytecode_Value *value);
-    void bytecode_emit_storel(Bytecode_Builder *builder, Bytecode_Value *dest,
-                              Bytecode_Value *value);
-    void bytecode_emit_storep(Bytecode_Builder *builder, Bytecode_Value *dest,
-                              Bytecode_Value *value);
-    void bytecode_emit_store_param(Bytecode_Builder *builder, Bytecode_Value *dest,
-                                   Bytecode_Value *value);
-
-    void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *block);
-    void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Block *block,
-                               Bytecode_Value *cond);
-
-    Bytecode_Value *bytecode_emit_cast_int_int(Bytecode_Builder *builder,
-                                               Bytecode_Value *operand_val,
-                                               AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_int_float(Bytecode_Builder *builder,
-                                                 Bytecode_Value *operand_val,
-                                                 AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_int_bool(Bytecode_Builder *builder,
-                                                Bytecode_Value *operand_val,
-                                                AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_float_float(Bytecode_Builder *builder,
-                                                 Bytecode_Value *operand_val,
-                                                 AST_Type *target_type);
-    Bytecode_Value *bytecode_emit_cast_float_int(Bytecode_Builder *builder,
-                                                 Bytecode_Value *operand_val,
-                                                 AST_Type *target_type);
-
-    Bytecode_Value *bytecode_emit_aggregate_offset_pointer(Bytecode_Builder *builder,
-                                                           Bytecode_Value *lvalue,
-                                                           Bytecode_Value *offset_val,
-                                                           AST_Type *result_type);
-
-    Bytecode_Value *bytecode_emit_array_offset_pointer(Bytecode_Builder *builder,
-                                                           Bytecode_Value *lvalue,
-                                                           Bytecode_Value *offset_val);
-
-    Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Expression *expr);
-    Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder, AST_Type *type,
-                                                float f, double d);
-
-    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder,
-                                                  AST_Expression *expr,
-                                                  bool noload = false);
-
-    Bytecode_Value *bytecode_emit_integer_literal(Bytecode_Builder *builder, AST_Type *type,
-                                                 int64_t val, bool noload = false);
-
-    Bytecode_Value *bytecode_emit_bool_literal(Bytecode_Builder *builder, AST_Expression *expr);
-    void bytecode_emit_type_index(Bytecode_Builder *builder, AST_Type *type);
-    void bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Instruction op);
-    uint64_t bytecode_emit_16(Bytecode_Builder *builder, uint16_t val);
-    uint64_t bytecode_emit_32(Bytecode_Builder *builder, uint32_t val);
-    uint64_t bytecode_emit_64(Bytecode_Builder *builder, uint64_t val);
-    uint64_t bytecode_emit_byte(Bytecode_Builder *builder, uint8_t byte);
-
-    void bytecode_builder_set_insert_point(Bytecode_Builder *builder, Bytecode_Function *func);
-    void bytecode_builder_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block);
-
-    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
-                                                  Bytecode_Function *func,
-                                                  Bytecode_Block *block);
-    Bytecode_Block *bytecode_builder_append_block(Bytecode_Builder *builder,
-                                                  Bytecode_Function *func, const char *name);
-    Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Bytecode_Function *func,
-                                        Bytecode_Block *block); 
-
-    Bytecode_Function *bytecode_find_function_for_decl(Bytecode_Builder *builder,
-                                                       AST_Declaration *decl);
-    Bytecode_Value *bytecode_find_value_for_parameter(Bytecode_Builder *builder,
-                                                      AST_Declaration *decl);
-    Bytecode_Value *bytecode_find_value_for_variable(Bytecode_Builder *builder,
-                                                     AST_Declaration *decl);
-
-    void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *break_block); 
-    void bytecode_pop_break_block(Bytecode_Builder *builder); 
-
-    void bytecode_record_jump(Bytecode_Builder *builder, Bytecode_Block *from_block,
-                              int64_t offset);
-
-    bool bytecode_block_ends_with_terminator(Bytecode_Block *block);
-
-    Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Declaration* decl);
-    Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char* name);
-
-    Bytecode_Value *bytecode_new_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
+    Bytecode_Value *bytecode_value_new(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
                                        AST_Type *type);
-    Bytecode_Value *bytecode_new_zero_value(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
-                                            AST_Type *type);
-    Bytecode_Value *bytecode_new_value_from_const_value(Bytecode_Builder *builder,
-                                                        const Const_Value &const_val);
+    Bytecode_Value *bytecode_integer_literal_new(Bytecode_Builder *builder, AST_Type *type,
+                                                 Integer_Literal integer_literal);
 
-    AST_Type *bytecode_type_from_size_spec(Bytecode_Size_Specifier sp);
-
-    Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder);
-    Bytecode_Iterator bytecode_iterator_create(Bytecode_Builder *builder, Bytecode_Function *func);
-    void bytecode_iterator_free(Bytecode_Iterator *bci);
-    void bytecode_iterator_advance_function(Bytecode_Iterator *bci);
-    Bytecode_Function *bytecode_iterator_get_function(Bytecode_Iterator *bci);
-    void bytecode_iterator_advance_block(Bytecode_Iterator *bci);
-    Bytecode_Block *bytecode_iterator_get_block(Bytecode_Iterator *bci);
-    void bytecode_iterator_advance_ip(Bytecode_Iterator *bci, int64_t adv = 1);
-    uint8_t bytecode_iterator_fetch_byte(Bytecode_Iterator *bci);
-    uint16_t bytecode_iterator_fetch_16(Bytecode_Iterator *bci);
-    uint32_t bytecode_iterator_fetch_32(Bytecode_Iterator *bci);
-    uint64_t bytecode_iterator_fetch_64(Bytecode_Iterator *bci);
-
-    void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
-    void bytecode_print(String_Builder *sb, Bytecode_Builder *builder);
-    void bytecode_print_const_val(String_Builder *sb, Bytecode_Value *val);
-    void bytecode_print_function(String_Builder *sb, Bytecode_Iterator *bci);
-    void bytecode_print_block(String_Builder *sb, Bytecode_Iterator *bci);
-    void bytecode_print_instruction(String_Builder *sb, Bytecode_Iterator *bci);
-    void bytecode_print_size_spec(String_Builder *sb, Bytecode_Size_Specifier size_spec);
-    void bytecode_print_im_int(String_Builder *sb, Bytecode_Iterator *bci);
-    void bytecode_print_im_enum(String_Builder *sb, Bytecode_Iterator *bci,
-                                AST_Type *type);
-    void bytecode_print_im_float(String_Builder *sb, Bytecode_Iterator *bci);
-    
 }

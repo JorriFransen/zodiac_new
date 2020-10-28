@@ -49,22 +49,23 @@ int main(int argc, char **argv)
         }
     }
 
-    if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
-    assert(resolver.bytecode_builder.program.entry_function);
+    // if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
+    // assert(resolver.bytecode_builder.program.entry_function);
 
     if (options.run_bytecode)
     {
-        Interpreter interp;
-        interpreter_init(ca, &interp, &build_data);
+        assert(false);
+        // Interpreter interp;
+        // interpreter_init(ca, &interp, &build_data);
 
-        interpreter_execute_program(&interp, &resolver.bytecode_builder.program);
-        printf("Interpreter exited with code: %" PRId64 "\n",
-               interp.exit_code_value.value.integer.s64);
+        // interpreter_execute_program(&interp, &resolver.bytecode_builder.program);
+        // printf("Interpreter exited with code: %" PRId64 "\n",
+        //        interp.exit_code_value.value.integer.s64);
 
-        interpreter_free(&interp);
+        // interpreter_free(&interp);
     }
 
-    if (options.print_llvm) llvm_print(ca, &resolver.llvm_builder);
+    // if (options.print_llvm) llvm_print(ca, &resolver.llvm_builder);
 
     if (build_data.errors.count != 0)
     {

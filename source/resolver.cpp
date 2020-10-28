@@ -44,14 +44,14 @@ namespace Zodiac
 
         resolver->build_data = build_data;
         assert(build_data);
+
         resolver->lexer = lexer_create(allocator, build_data);
         resolver->parser = parser_create(allocator, build_data);
+        resolver->bytecode_builder = bytecode_builder_create(allocator, build_data);
+        resolver->llvm_builder = llvm_builder_create(allocator, build_data);
+
 
         stack_init(allocator, &resolver->break_node_stack);
-
-        bytecode_builder_init(allocator, &resolver->bytecode_builder, build_data);
-        llvm_builder_init(allocator, &resolver->llvm_builder,
-                          build_data, &resolver->bytecode_builder.program);
 
         queue_init(allocator, &resolver->parse_job_queue);
         queue_init(allocator, &resolver->ident_job_queue);
@@ -271,7 +271,7 @@ namespace Zodiac
                             if (!options->dont_emit_llvm)
                             {
                                 auto bc_func = job->result.bc_func;
-                                bool is_entry = (bc_func->flags & BYTECODE_FUNC_FLAG_CRT_ENTRY);
+                                bool is_entry = (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY);
 
                                 if (!(options->link_c && is_entry))
                                 {
@@ -2258,7 +2258,8 @@ namespace Zodiac
                         auto bc_func =
                             bytecode_register_function(&resolver->bytecode_builder, ast_decl);
 
-                        llvm_register_function(&resolver->llvm_builder, bc_func, ast_decl->type);
+                        if (!resolver->build_data->options->dont_emit_llvm)
+                            llvm_register_function(&resolver->llvm_builder, bc_func);
                     }
                     queue_emit_bytecode_job(resolver, ast_decl, scope);
                 }
@@ -3253,7 +3254,7 @@ namespace Zodiac
                 if (!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE))
                 {
                     auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                    llvm_register_function(&resolver->llvm_builder, bc_func, func_type);
+                    llvm_register_function(&resolver->llvm_builder, bc_func);
                 }
 
                 if (!(decl->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION))
@@ -3865,8 +3866,7 @@ namespace Zodiac
                             bytecode_register_function(&resolver->bytecode_builder,
                                                        ts->function.from_declaration);
 
-                        llvm_register_function(&resolver->llvm_builder, bc_func,
-                                               func_type);
+                        llvm_register_function(&resolver->llvm_builder, bc_func);
                     }
                 }
                 break;
@@ -4561,10 +4561,9 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
     }
 
-    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global bc_glob)
+    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Value *bc_glob)
     {
-        assert(bc_glob.decl);
-        assert(bc_glob.type);
+        assert(bc_glob->type);
 
         auto job = resolve_job_emit_llvm_global_new(resolver->allocator, bc_glob);
         assert(job);
@@ -4606,10 +4605,10 @@ namespace Zodiac
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global bc_glob)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Value *bc_val)
     {
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_GLOB);
-        result->bc_glob = bc_glob;
+        result->bc_glob = bc_val;
         return result;
     }
 
@@ -4658,9 +4657,9 @@ namespace Zodiac
         return resolve_job_new(allocator, bc_func);
     }
 
-    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Global bc_glob)
+    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Value *bc_val)
     {
-        return resolve_job_new(allocator, bc_glob);
+        return resolve_job_new(allocator, bc_val);
     }
 
     Resolve_Job *resolve_job_emit_llvm_binary_new(Allocator *allocator,
@@ -4891,7 +4890,9 @@ namespace Zodiac
                 {
                     assert(decl->type && decl->type->kind == AST_Type_Kind::FUNCTION);
                     auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                    llvm_register_function(&resolver->llvm_builder, bc_func, decl->type);
+                    
+                    if (!resolver->build_data->options->dont_emit_llvm)
+                        llvm_register_function(&resolver->llvm_builder, bc_func);
                 }
                 queue_emit_bytecode_job(resolver, decl, scope);
 
