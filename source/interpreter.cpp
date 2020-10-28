@@ -83,7 +83,7 @@ namespace Zodiac
 #endif
                         };
         auto lib_count = sizeof(libs) / sizeof(DLLib *);
-    
+
         Array<Bytecode_Function *> not_found_funcs = {};
         array_init(temp_allocator_get(), &not_found_funcs);
 
@@ -93,7 +93,7 @@ namespace Zodiac
             if (func->flags & BYTECODE_FUNC_FLAG_FOREIGN)
             {
                 assert(func->pointer == nullptr);
-                    
+
                 auto sym_name = func->ast_decl->identifier->atom;
                 void *sym = nullptr;
 
@@ -107,7 +107,7 @@ namespace Zodiac
                     }
                 }
 
-                if (!sym) 
+                if (!sym)
                 {
                     array_append(&not_found_funcs, func);
                 }
@@ -122,7 +122,7 @@ namespace Zodiac
             zodiac_report_error(interp->build_data,
                                 Zodiac_Error_Kind::FOREIGN_FUNCTION_NOT_FOUND,
                                 func->ast_decl,
-                                "Foreign function not found: '%s'", 
+                                "Foreign function not found: '%s'",
                                 func->ast_decl->identifier->atom.data);
         }
 
@@ -233,7 +233,7 @@ namespace Zodiac
         Bytecode_Block *current_block = interpreter_current_block(interp, frame_p);
         while (!frame_p->returned && interp->running && current_block)
         {
-            interpreter_execute_block(interp, current_block); 
+            interpreter_execute_block(interp, current_block);
             frame_p = interpreter_current_frame(interp);
             auto next_block = interpreter_current_block(interp, frame_p);
             if (frame_p->jumped)
@@ -297,7 +297,7 @@ namespace Zodiac
 
         while (!frame->jumped &&
                !frame->returned &&
-               interp->running && 
+               interp->running &&
                frame->instruction_index < block->instructions.count)
         {
             Bytecode_Instruction inst = interpreter_fetch_instruction(interp);
@@ -313,7 +313,7 @@ namespace Zodiac
                     Bytecode_Value *exit_code = interpreter_load_temporary(interp,
                                                                            temp_index);
                     assert(exit_code);
-                    
+
                     interp->running = false;
                     interp->exited = true;
                     interp->exit_code_value = *exit_code;
@@ -378,7 +378,7 @@ namespace Zodiac
                 case Bytecode_Instruction::RET_VOID:
                 {
                     frame->returned = true;
-                    break; 
+                    break;
                 }
 
                 case Bytecode_Instruction::ALLOCL:
@@ -514,7 +514,7 @@ namespace Zodiac
                     auto result_val =
                         interpreter_push_temporary(interp, ptr_val->type->pointer.base);
                     assert(result_val->type->bit_size % 8 == 0);
-                    
+
                     switch (result_val->type->bit_size)
                     {
                         case 8:
@@ -538,7 +538,7 @@ namespace Zodiac
                             break;
                         }
 
-                        case 64: 
+                        case 64:
                         {
                             result_val->value.integer.s64 =
                                 *((int64_t*)ptr_val->value.pointer);
@@ -547,7 +547,7 @@ namespace Zodiac
 
                         default: assert(false);
                     }
-                    
+
                     break;
                 }
 
@@ -597,7 +597,7 @@ namespace Zodiac
                     result_value->value.pointer = nullptr;
                     break;
                 }
-                
+
                 case Bytecode_Instruction::STOREG:
                 {
                     auto glob_index = interpreter_fetch<uint32_t>(interp);
@@ -637,7 +637,7 @@ namespace Zodiac
 
                     assert(source_val);
                     assert(dest_allocl);
-                    
+
                     assert(source_val->type == dest_allocl->type);
 
                     switch (source_val->type->kind)
@@ -709,7 +709,7 @@ namespace Zodiac
                             break;
                         }
 
-                        case 64: 
+                        case 64:
                         {
                             auto ptr = (int64_t*)ptr_val->value.pointer;
                             *ptr = new_val->value.integer.s64;
@@ -801,7 +801,7 @@ namespace Zodiac
                                     break;
                                 }
 
-                                case 64: 
+                                case 64:
                                 {
                                     result_val->value.integer.s64 =
                                         *((int64_t*)arg_val->value.pointer);
@@ -939,7 +939,7 @@ namespace Zodiac
 
                         case Bytecode_Size_Specifier::R32:
                         {
-                            result_val->value.boolean = 
+                            result_val->value.boolean =
                                 lhs_val->value.float_literal.r32 >
                                 rhs_val->value.float_literal.r32;
                             break;
@@ -947,7 +947,7 @@ namespace Zodiac
 
                         case Bytecode_Size_Specifier::R64:
                         {
-                            result_val->value.boolean = 
+                            result_val->value.boolean =
                                 lhs_val->value.float_literal.r64 >
                                 rhs_val->value.float_literal.r64;
                             break;
@@ -996,7 +996,7 @@ namespace Zodiac
 
                         case Bytecode_Size_Specifier::R32:
                         {
-                            result_val->value.boolean = 
+                            result_val->value.boolean =
                                 lhs_val->value.float_literal.r32 <
                                 rhs_val->value.float_literal.r32;
                             break;
@@ -1051,7 +1051,7 @@ namespace Zodiac
 
                         case Bytecode_Size_Specifier::R32:
                         {
-                            result_val->value.boolean = 
+                            result_val->value.boolean =
                                 lhs_val->value.float_literal.r32 <=
                                 rhs_val->value.float_literal.r32;
                             break;
@@ -1083,7 +1083,7 @@ namespace Zodiac
                         case Bytecode_Size_Specifier::INVALID: assert(false);
                         case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
-                        case Bytecode_Size_Specifier::U8: 
+                        case Bytecode_Size_Specifier::U8:
                         {
                             result_val->value.integer.u8 =
                                 lhs_val->value.integer.u8 + rhs_val->value.integer.u8;
@@ -1151,7 +1151,7 @@ namespace Zodiac
 
                        case Bytecode_Size_Specifier::R32:
                        {
-                            result_val->value.float_literal.r32 = 
+                            result_val->value.float_literal.r32 =
                                 lhs_val->value.float_literal.r32 -
                                 rhs_val->value.float_literal.r32;
                             break;
@@ -1159,7 +1159,7 @@ namespace Zodiac
 
                        case Bytecode_Size_Specifier::R64:
                        {
-                            result_val->value.float_literal.r64 = 
+                            result_val->value.float_literal.r64 =
                                 lhs_val->value.float_literal.r64 -
                                 rhs_val->value.float_literal.r64;
                            break;
@@ -1297,7 +1297,7 @@ namespace Zodiac
                    break;
                }
 
-                
+
                 case Bytecode_Instruction::NEG:
                 {
                     auto size_spec = interpreter_fetch<Bytecode_Size_Specifier>(interp);
@@ -1346,7 +1346,7 @@ namespace Zodiac
                     break;
                 }
 
-               case Bytecode_Instruction::JUMP: 
+               case Bytecode_Instruction::JUMP:
                {
                    auto block_idx = interpreter_fetch<uint32_t>(interp);
                    assert(block_idx < frame->func->blocks.count);
@@ -1437,7 +1437,7 @@ namespace Zodiac
 
                    switch (size_spec)
                    {
-                        
+
                        case Bytecode_Size_Specifier::INVALID: assert(false);
                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
@@ -1521,7 +1521,7 @@ namespace Zodiac
 
                    switch (size_spec)
                    {
-                        
+
                        case Bytecode_Size_Specifier::INVALID: assert(false);
                        case Bytecode_Size_Specifier::SIGN_FLAG: assert(false);
 
@@ -1659,7 +1659,7 @@ namespace Zodiac
                        byte_offset += (mem_types[i]->bit_size / 8);
                    }
                    //@TODO: When we do padding/alignment this byte_offset will need to change
-                   //       accordingly 
+                   //       accordingly
 
                    assert(store_val->value.struct_pointer);
 
@@ -1881,7 +1881,7 @@ namespace Zodiac
 
         return (Bytecode_Instruction)interpreter_fetch<uint8_t>(interp);
     }
-    
+
     void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
                                               int64_t arg_count)
     {
@@ -1916,7 +1916,7 @@ namespace Zodiac
                 int result = dcCallInt(interp->dc_vm, dc_func_ptr);
 
                 //@TODO: @FIXME: @CLEANUP: Generalize this "Assigning to int" since we are
-                //                          doing a very similar thing in a couple of 
+                //                          doing a very similar thing in a couple of
                 //                          places by now
                 if (return_type->integer.sign)
                 {
@@ -1946,7 +1946,7 @@ namespace Zodiac
             default: assert(false);
         }
 
-        for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack); 
+        for (int64_t i = 0; i < arg_count; i++) stack_pop(&interp->arg_stack);
     }
 
     void interpreter_push_foreign_arg(Interpreter *interp, Bytecode_Value *arg_val)
