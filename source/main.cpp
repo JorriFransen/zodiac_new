@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     auto options = parse_command_line(argc, argv);
 
     if (!options.valid) return 1;
-    
+
     auto ca = c_allocator_get();
 
     Build_Data build_data = {};
