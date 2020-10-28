@@ -128,6 +128,8 @@ namespace Zodiac
 #ifndef NDEBUG
         auto rem = sbb->capacity - sbb->used;
         assert(rem >= length);
+
+        assert(strlen(cstr) >= length);
 #endif
 
         memcpy(sbb->buf + sbb->used, cstr, length);

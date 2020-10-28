@@ -3884,7 +3884,7 @@ namespace Zodiac
             uint64_t raw_val = bytecode_iterator_fetch_64(bci);
             double *val_ptr = (double *)&raw_val;
             double val = *val_ptr;
-            string_builder_append(sb, "double %f", val);
+            string_builder_appendf(sb, "double %f", val);
         }
         else assert(false);
     }

@@ -60,7 +60,6 @@ strlen :: func (cstr: *u8) -> s64 {
 println :: func (cstr: *u8) {
     print(cstr);
     print("\n");
-    return;
 }
 
 print_num :: func (n: s64) {
