@@ -1,4 +1,6 @@
 
+On windows (havn't checked linux) when --print_bytecode is passed, the end of the bytecode is cut off.
+
 Warn when main is missing
 Warn on empty files
 Warn on non void functions not having returns (in all control paths)

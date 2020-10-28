@@ -19,7 +19,7 @@
 #include <tracy/Tracy.hpp>
 
 namespace Zodiac
-{ 
+{
     void llvm_builder_init(Allocator *allocator, LLVM_Builder *llvm_builder,
                            Build_Data *build_data, Bytecode_Program *bc_program)
     {
@@ -32,7 +32,7 @@ namespace Zodiac
 
         llvm_builder->llvm_module = new llvm::Module("root_module",
                                                       llvm_builder->llvm_context);
-        llvm_builder->llvm_builder = new llvm::IRBuilder<>(llvm_builder->llvm_context); 
+        llvm_builder->llvm_builder = new llvm::IRBuilder<>(llvm_builder->llvm_context);
 
         array_init(allocator, &llvm_builder->functions);
         array_init(allocator, &llvm_builder->temps);
@@ -78,12 +78,12 @@ namespace Zodiac
         {
             auto &func = builder->functions[i];
 
-            if (!func.emitted) 
+            if (!func.emitted)
             {
                 if ((func.bc_func->flags & BYTECODE_FUNC_FLAG_CRT_ENTRY) &&
                     options->link_c)
                 {
-                    continue; 
+                    continue;
                 }
 
                 return false;
@@ -91,7 +91,7 @@ namespace Zodiac
         }
 
         bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
-        
+
         if (verify_error)
         {
             assert(false);
@@ -102,7 +102,7 @@ namespace Zodiac
         const llvm::Target *llvm_target =
             llvm::TargetRegistry::lookupTarget(builder->target_triple.data, error);
         assert(llvm_target);
-        
+
         auto cpu = "generic";
         auto features = "";
         llvm::TargetOptions opt;
@@ -130,7 +130,7 @@ namespace Zodiac
             fprintf(stderr, "Could not open file: %s\n", obj_file_name.data);
             assert(false);
         }
-       
+
         llvm::legacy::PassManager pass;
         auto filetype = llvm::CGFT_ObjectFile;
         if (llvm_target_machine->addPassesToEmitFile(pass, dest, nullptr, filetype))
@@ -140,7 +140,7 @@ namespace Zodiac
         }
 
         pass.run(*builder->llvm_module);
-        
+
 
         }
 
@@ -227,7 +227,7 @@ namespace Zodiac
         free(builder->allocator, arg_str.data);
 
         string_builder_free(sb);
-        
+
         if (!result.success)
         {
             builder->build_data->link_error = true;
@@ -559,7 +559,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOADL: 
+            case Bytecode_Instruction::LOADL:
             {
                 auto allocl_index = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                        &func_context->ip);
@@ -569,14 +569,14 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::LOADP: 
+            case Bytecode_Instruction::LOADP:
             {
                 auto ptr_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
                 llvm::Value *result =
                     builder->llvm_builder->CreateLoad(builder->temps[ptr_idx]);
                 llvm_push_temporary(builder, result);
-                break; 
+                break;
             }
 
             case Bytecode_Instruction::LOAD_PARAM:
@@ -605,12 +605,12 @@ namespace Zodiac
                                                                   &func_context->ip);
                 auto str = builder->bc_program->strings[str_idx];
                 llvm::Constant *llvm_str =
-                    llvm::ConstantDataArray::getString(builder->llvm_context, 
+                    llvm::ConstantDataArray::getString(builder->llvm_context,
                                                        { str.data, str.length },
                                                        true);
 
                 llvm::GlobalValue *llvm_str_glob =
-                    new llvm::GlobalVariable(*builder->llvm_module, llvm_str->getType(), 
+                    new llvm::GlobalVariable(*builder->llvm_module, llvm_str->getType(),
                                              true, // Constant
                                              llvm::GlobalVariable::PrivateLinkage,
                                              llvm_str, // Initializer,
@@ -642,7 +642,7 @@ namespace Zodiac
                 llvm_push_temporary(builder, llvm_null_val);
                 break;
             }
-            
+
             case Bytecode_Instruction::STOREG:
             {
 
@@ -669,7 +669,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Instruction::STOREP: 
+            case Bytecode_Instruction::STOREP:
             {
                 auto ptr_idx = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                   &func_context->ip);
@@ -813,7 +813,7 @@ namespace Zodiac
                 auto lhs_val = builder->temps[lhs_idx];
                 auto rhs_val = builder->temps[rhs_idx];
 
-                bool sign = (uint16_t)size_spec & 
+                bool sign = (uint16_t)size_spec &
                             (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
 
                 switch (size_spec)
@@ -871,7 +871,7 @@ namespace Zodiac
                 auto lhs_val = builder->temps[lhs_idx];
                 auto rhs_val = builder->temps[rhs_idx];
 
-                bool sign = (uint16_t)size_spec & 
+                bool sign = (uint16_t)size_spec &
                             (uint16_t)Bytecode_Size_Specifier::SIGN_FLAG;
 
 
@@ -893,7 +893,7 @@ namespace Zodiac
 
                         if (sign) result =
                             builder->llvm_builder->CreateICmpSLT(lhs_val, rhs_val, "");
-                        else result = 
+                        else result =
                             builder->llvm_builder->CreateICmpULT(lhs_val, rhs_val, "");
 
                         llvm_push_temporary(builder, result);
@@ -947,9 +947,9 @@ namespace Zodiac
                     {
                         llvm::Value *result = nullptr;
 
-                        if (sign) result = 
+                        if (sign) result =
                             builder->llvm_builder->CreateICmpSLE(lhs_val, rhs_val, "");
-                        else result = 
+                        else result =
                             builder->llvm_builder->CreateICmpULE(lhs_val, rhs_val, "");
 
                         llvm_push_temporary(builder, result);
@@ -1064,7 +1064,7 @@ namespace Zodiac
                 }
                 break;
             }
-                                            
+
             case Bytecode_Instruction::REM:
             {
                 auto size_spec =
@@ -1271,7 +1271,7 @@ namespace Zodiac
 
 
                 auto switch_inst_val =
-                    builder->llvm_builder->CreateSwitch(switch_val, default_block, 
+                    builder->llvm_builder->CreateSwitch(switch_val, default_block,
                                                          case_count);
 
                 for (int64_t i = 0; i < case_count; i++)
@@ -1378,7 +1378,7 @@ namespace Zodiac
                         llvm_push_temporary(builder, result);
                         break;
                     }
-                                                       
+
                     case Bytecode_Size_Specifier::R32: assert(false);
                     case Bytecode_Size_Specifier::R64:
                     {
@@ -1427,7 +1427,7 @@ namespace Zodiac
             {
                 auto arg_count = llvm_fetch_from_bytecode<uint32_t>(func_context->bc_block,
                                                                     &func_context->ip);
-                llvm_emit_syscall(builder, arg_count);                
+                llvm_emit_syscall(builder, arg_count);
                 break;
             }
 
@@ -1507,7 +1507,7 @@ namespace Zodiac
                 llvm::Value *store_val = nullptr;
                 switch (store_kind)
                 {
-                    case Bytecode_Value_Type_Specifier::INVALID: assert(false); 
+                    case Bytecode_Value_Type_Specifier::INVALID: assert(false);
 
                     case Bytecode_Value_Type_Specifier::ALLOCL:
                     {
@@ -1537,7 +1537,7 @@ namespace Zodiac
                     static_cast<llvm::PointerType*>(store_type)->getElementType();
                 if (store_type->isArrayTy())
                 {
-                    is_array = true; 
+                    is_array = true;
                 }
 
                 auto llvm_offset_val = builder->temps[offset_val_idx];
@@ -1678,7 +1678,7 @@ namespace Zodiac
         string_builder_init(builder->allocator, &sb);
 
         string_builder_append(&sb, "=r,{rax}");
-    
+
         if (arg_count >= 2) string_builder_append(&sb, ",{rdi}");
         if (arg_count >= 3) string_builder_append(&sb, ",{rsi}");
         if (arg_count >= 4) string_builder_append(&sb, ",{rdx}");
@@ -1729,7 +1729,7 @@ namespace Zodiac
             builder->llvm_builder->CreateCall(asm_fn_type, asm_val,
                                                { llvm_args.data,
                                                  (size_t)llvm_args.count });
-        
+
         assert(result);
 
         free(builder->allocator, constraint_str.data);
@@ -1813,7 +1813,7 @@ namespace Zodiac
                 Array<llvm::Type *> llvm_arg_types = {};
                 if (ast_type->function.param_types.count)
                 {
-                    array_init(builder->allocator, &llvm_arg_types, 
+                    array_init(builder->allocator, &llvm_arg_types,
                                ast_type->function.param_types.count);
                     for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
                     {
@@ -1862,7 +1862,7 @@ namespace Zodiac
                     {
                         array_append(&mem_types, llvm_type_from_ast(builder, ast_mem_types[i]));
                     }
-                    
+
                     result->setBody({ mem_types.data, (size_t)mem_types.count }, false);
                 }
 
@@ -1908,7 +1908,7 @@ namespace Zodiac
         assert(llvm_block);
 
         if (llvm_block->getTerminator() == nullptr) return false;
-        
+
         return true;
     }
 

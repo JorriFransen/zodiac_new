@@ -206,10 +206,6 @@ namespace Zodiac
             auto const_val = const_interpret_expression(init_expr);
             Bytecode_Value *value = bytecode_new_value_from_const_value(builder, const_val);
             value->kind = Bytecode_Value_Kind::GLOBAL;
-            value->name = decl->identifier->atom;
-
-            auto index = builder->program.globals.count;
-            value->glob_index = index;
 
             bg.value = value;
         }
@@ -217,6 +213,13 @@ namespace Zodiac
         {
             bg.value = bytecode_new_zero_value(builder, Bytecode_Value_Kind::GLOBAL, decl->type);
         }
+
+
+        auto index = builder->program.globals.count;
+        bg.value->glob_index = index;
+
+        bg.value->name = decl->identifier->atom;
+        assert(bg.value->name.data);
 
         array_append(&builder->program.globals, bg);
 
@@ -3354,6 +3357,7 @@ namespace Zodiac
                 uint32_t val_index = bytecode_iterator_fetch_32(bci);
 
                 auto name = bci->builder->program.globals[glob_index].value->name;
+                assert(name.data);
 
                 string_builder_appendf(sb, "STOREG %%%s %%%" PRIu32, name.data,
                                        val_index);

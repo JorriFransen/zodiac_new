@@ -1,7 +1,7 @@
 
 std :: import std;
 
-Day :: enum 
+Day :: enum
 {
     Monday,
     Tuesday,
@@ -9,7 +9,7 @@ Day :: enum
     Thursday,
     Friday,
     Saturday,
-    Sunday, 
+    Sunday,
 }
 
 main :: func() -> s64
@@ -27,7 +27,7 @@ main :: func() -> s64
     std.println("\n");
 
     day := Day.Monday;
-    while (day <= Day.Sunday) 
+    while (day <= Day.Sunday)
     {
         print_day(day);
         std.print(" is in the ");
@@ -44,7 +44,7 @@ main :: func() -> s64
     std.print("\n");
 
     day = Day.Monday;
-    while (day <= Day.Sunday) 
+    while (day <= Day.Sunday)
     {
         print_day(day);
         std.print(" is a ");
@@ -60,8 +60,8 @@ main :: func() -> s64
     std.print("\n");
 
     day = Day.Monday;
-    while (day <= Day.Sunday) 
-    { 
+    while (day <= Day.Sunday)
+    {
         switch (day)
             #allow_incomplete
         {
@@ -85,7 +85,7 @@ print_n :: func(n: s64)
         case 0:
             std.print("0\n");
             std.print("We don't need braces :) !!!\n");
-            // Break is inserted automatically here 
+            // Break is inserted automatically here
 
         case 1, 2, 4:
             std.print("1, 2 or 4\n");
@@ -97,7 +97,7 @@ print_n :: func(n: s64)
             std.print("But we can use braces...\n");
         }
 
-        default: 
+        default:
             std.print("Out of reach\n");
     }
 

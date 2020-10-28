@@ -86,7 +86,8 @@ main :: func () -> s64
         c : u8 = 65;
         while (count > 0)
         {
-            @syscall(1, 1, *c, 1);
+            std.print_char(c);
+            // @syscall(1, 1, *c, 1);
             c = c + 1;
             count = count - 1;
         }
