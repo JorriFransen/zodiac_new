@@ -56,18 +56,21 @@ namespace Zodiac
             assert(false);
         }
 
+        Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
+        bytecode_append_block(func, entry_block);
+
+        bytecode_set_insert_point(builder, entry_block);
+
         for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
         {
             auto var_decl = decl->function.variable_declarations[i];
             assert(var_decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            assert(false);
+            auto local_val = bytecode_local_alloc_new(builder, var_decl->type);
+            array_append(&func->locals, local_val);
+
+            bytecode_emit_instruction(builder, ALLOCL, nullptr, nullptr, local_val);
         }
-
-        Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
-        bytecode_append_block(func, entry_block);
-
-        bytecode_set_insert_point(builder, entry_block);
 
         bytecode_emit_statement(builder, decl->function.body);
 
@@ -121,9 +124,45 @@ namespace Zodiac
         result->type = type;
         result->name = name;
 
+        array_init(builder->allocator, &result->locals);
         array_init(builder->allocator, &result->blocks, 4);
 
         return result;
+    }
+
+    void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
+    {
+        switch (decl->kind)
+        {
+            case AST_Declaration_Kind::INVALID: assert(false);
+            case AST_Declaration_Kind::IMPORT: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::USING: assert(false); //@@TODO: Implement!
+
+            case AST_Declaration_Kind::VARIABLE:
+            {
+                auto allocl_val = bytecode_find_variable(builder, decl);
+                assert(allocl_val);
+
+                if (decl->variable.init_expression)
+                {
+                    auto init_val = bytecode_emit_expression(builder, decl->variable.init_expression);
+                    bytecode_emit_store(builder, allocl_val, init_val);
+                }
+
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::PARAMETER: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::FUNCTION: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::TYPE: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::TYPEDEF: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::STRUCTURE: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::ENUM: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::POLY_TYPE: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::STATIC_IF: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::STATIC_ASSERT: assert(false); //@@TODO: Implement!
+        }
     }
 
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *stmt)
@@ -160,7 +199,13 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::BREAK: assert(false); //@@TODO: Implement!
-            case AST_Statement_Kind::DECLARATION: assert(false); //@@TODO: Implement!
+
+            case AST_Statement_Kind::DECLARATION:
+            {
+                bytecode_emit_declaration(builder, stmt->declaration);
+                break;
+            }
+
             case AST_Statement_Kind::EXPRESSION: assert(false); //@@TODO: Implement!
             case AST_Statement_Kind::WHILE: assert(false); //@@TODO: Implement!
             case AST_Statement_Kind::FOR: assert(false); //@@TODO: Implement!
@@ -183,7 +228,13 @@ namespace Zodiac
             case AST_Expression_Kind::UNARY: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::POST_FIX: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::PRE_FIX: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::CALL: assert(false); //@TODO: Implement!
+
+            case AST_Expression_Kind::CALL:
+            {
+                result = bytecode_emit_call(builder, expr);
+                break;
+            }
+
             case AST_Expression_Kind::BUILTIN_CALL: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::ADDROF: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::COMPOUND: assert(false); //@TODO: Implement!
@@ -210,6 +261,50 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr)
+    {
+        assert(expr->kind == AST_Expression_Kind::CALL);
+
+        auto decl = expr->call.callee_declaration;
+        assert(decl);
+        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        auto func = bytecode_find_function(builder, decl);
+        assert(func);
+
+        Bytecode_Value *return_value = nullptr;
+        if (func->type->function.return_type->kind != AST_Type_Kind::VOID)
+        {
+            return_value = bytecode_temporary_new(builder, func->type->function.return_type);
+        }
+
+        auto func_val = bytecode_function_value_new(builder, func);
+
+        bytecode_emit_instruction(builder, CALL, func_val, nullptr, return_value);
+
+        return return_value;
+    }
+
+    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest, Bytecode_Value *source)
+    {
+        switch (dest->kind)
+        {
+            case Bytecode_Value_Kind::INVALID: assert(false);
+            case Bytecode_Value_Kind::TEMP: assert(false);
+            case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                assert(dest->type == source->type);
+
+                bytecode_emit_instruction(builder, STOREL, dest, source, nullptr);
+                break;
+            }
+
+            case Bytecode_Value_Kind::FUNCTION: assert(false);
+        }
+    }
+
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result)
@@ -223,6 +318,13 @@ namespace Zodiac
         assert(builder->insert_block);
         array_append(&builder->insert_block->instructions, inst);
         return inst;
+    }
+
+    Bytecode_Value *bytecode_find_variable(Bytecode_Builder *builder, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+
+        assert(false);
     }
 
     Bytecode_Value *bytecode_value_new(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
@@ -244,6 +346,25 @@ namespace Zodiac
 
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::INTEGER_LITERAL, type);
         result->value.integer_literal = integer_literal;
+        return result;
+    }
+
+    Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type)
+    {
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, type);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type)
+    {
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TEMP, type);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_function_value_new(Bytecode_Builder *builder, Bytecode_Function *func)
+    {
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::FUNCTION, func->type);
+        result->function = func;
         return result;
     }
 }

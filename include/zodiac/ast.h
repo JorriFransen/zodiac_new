@@ -119,15 +119,15 @@ namespace Zodiac
 
         union
         {
-            struct 
+            struct
             {
-                AST_Expression *ident_expression;                
+                AST_Expression *ident_expression;
                 AST_Module *ast_module;
             } import;
 
             struct
             {
-                AST_Expression *ident_expr; 
+                AST_Expression *ident_expr;
             } using_decl;
 
             struct
@@ -141,10 +141,10 @@ namespace Zodiac
                 AST_Type_Spec *type_spec;
             } parameter;
 
-            struct 
+            struct
             {
                 AST_Type_Spec *type_spec;
-                Array<AST_Declaration*> parameter_declarations; 
+                Array<AST_Declaration*> parameter_declarations;
                 Array<AST_Declaration*> variable_declarations;
                 AST_Statement *body;
 
@@ -166,7 +166,7 @@ namespace Zodiac
             {
                 AST_Type_Spec *type_spec;
                 Array<AST_Declaration*> member_declarations;
-                Scope *member_scope; 
+                Scope *member_scope;
             } enum_decl;
 
             struct
@@ -276,7 +276,7 @@ namespace Zodiac
                 Scope *else_scope;
             } if_stmt;
 
-            struct 
+            struct
             {
                 AST_Expression *expression;
                 AST_Switch_Case *default_case;
@@ -398,7 +398,7 @@ namespace Zodiac
                 AST_Type_Spec *type_spec;
             } compound;
 
-            struct 
+            struct
             {
                 AST_Expression *pointer_expression;
                 AST_Expression *index_expression;
@@ -557,7 +557,7 @@ namespace Zodiac
                 Scope *member_scope;
             } enum_type;
 
-            struct 
+            struct
             {
                 AST_Type *element_type;
                 int64_t element_count;
@@ -603,7 +603,7 @@ namespace Zodiac
 
     AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn);
 
-    AST_Statement *ast_create_statement_from_ptn(AST_Builder *ast_builder, Statement_PTN *ptn, 
+    AST_Statement *ast_create_statement_from_ptn(AST_Builder *ast_builder, Statement_PTN *ptn,
                                                  Array<AST_Declaration*> *var_decls,
                                                  Scope *parent_scope);
 
@@ -617,11 +617,11 @@ namespace Zodiac
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
-    AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls, 
+    AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 
-    AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind, 
+    AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind,
                                          AST_Identifier *identifier,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
@@ -656,7 +656,7 @@ namespace Zodiac
 
     AST_Declaration *ast_function_declaration_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
-                                                  AST_Type_Spec *type_spec, 
+                                                  AST_Type_Spec *type_spec,
                                                   Array<AST_Declaration*> param_decls,
                                                   Array<AST_Declaration*> var_decls,
                                                   AST_Statement *body,
@@ -710,7 +710,7 @@ namespace Zodiac
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Array<AST_Expression *> case_exprs,
-                                         bool is_default, AST_Statement *body, 
+                                         bool is_default, AST_Statement *body,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
@@ -752,12 +752,12 @@ namespace Zodiac
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
-    AST_Statement *ast_for_statement_new(Allocator *allocator, 
+    AST_Statement *ast_for_statement_new(Allocator *allocator,
                                          Array<AST_Statement *> init_statements,
                                          AST_Expression *cond_expr,
                                          AST_Declaration *it_decl,
                                          Array<AST_Statement *> step_statements,
-                                         AST_Statement *body_stmt, 
+                                         AST_Statement *body_stmt,
                                          Scope *for_scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
@@ -807,12 +807,12 @@ namespace Zodiac
                                              const File_Pos &end_fp);
 
     AST_Expression *ast_postfix_expression_new(Allocator *allocator, Binary_Operator op,
-                                               AST_Expression *operand_expr, 
+                                               AST_Expression *operand_expr,
                                                const File_Pos &begin_fp,
                                                const File_Pos &end_fp);
 
     AST_Expression *ast_prefix_expression_new(Allocator *allocator, Binary_Operator op,
-                                              AST_Expression *operand_expr, 
+                                              AST_Expression *operand_expr,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
@@ -873,7 +873,7 @@ namespace Zodiac
                                                     const File_Pos &begin_fp,
                                                     const File_Pos &end_fp);
 
-    AST_Expression *ast_range_expression_new(Allocator *allocator, 
+    AST_Expression *ast_range_expression_new(Allocator *allocator,
                                               AST_Expression *begin_expr,
                                               AST_Expression *end_expr);
 
