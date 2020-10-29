@@ -1,14 +1,25 @@
 #include "bytecode.h"
 
+#include "builtin.h"
+#include "string_builder.h"
+
+#include <stdio.h>
+
 namespace Zodiac
 {
     Bytecode_Builder bytecode_builder_create(Allocator *allocator, Build_Data *build_data)
     {
         Bytecode_Builder result = {};
+
         result.allocator = allocator;
         result.build_data = build_data;
         result.insert_block = nullptr;
+
         array_init(allocator, &result.functions);
+        array_init(allocator, &result.locals);
+
+        result.next_temp_index = 0;
+
         return result;
     }
 
@@ -61,15 +72,22 @@ namespace Zodiac
 
         bytecode_set_insert_point(builder, entry_block);
 
+        builder->locals.count = 0;
+        builder->next_temp_index = 0;
+
         for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
         {
             auto var_decl = decl->function.variable_declarations[i];
             assert(var_decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            auto local_val = bytecode_local_alloc_new(builder, var_decl->type);
+            auto name = var_decl->identifier->atom;
+
+            auto local_val = bytecode_local_alloc_new(builder, var_decl->type, name);
             array_append(&func->locals, local_val);
 
             bytecode_emit_instruction(builder, ALLOCL, nullptr, nullptr, local_val);
+
+            array_append(&builder->locals, { var_decl, local_val });
         }
 
         bytecode_emit_statement(builder, decl->function.body);
@@ -206,7 +224,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::EXPRESSION: assert(false); //@@TODO: Implement!
+            case AST_Statement_Kind::EXPRESSION:
+            {
+                bytecode_emit_expression(builder, stmt->expression);
+                break;
+            }
+
             case AST_Statement_Kind::WHILE: assert(false); //@@TODO: Implement!
             case AST_Statement_Kind::FOR: assert(false); //@@TODO: Implement!
             case AST_Statement_Kind::IF: assert(false); //@@TODO: Implement!
@@ -221,7 +244,24 @@ namespace Zodiac
         switch (expr->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
-            case AST_Expression_Kind::IDENTIFIER: assert(false); //@TODO: Implement!
+
+            case AST_Expression_Kind::IDENTIFIER:
+            {
+                auto decl = expr->identifier->declaration;
+                assert(decl);
+
+                if (decl->kind == AST_Declaration_Kind::VARIABLE)
+                {
+                    auto allocl_val = bytecode_find_variable(builder, decl);
+                    result = bytecode_emit_load(builder, allocl_val);
+                }
+                else
+                {
+                    assert(false);
+                }
+                break;
+            }
+
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::DOT: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::BINARY: assert(false); //@TODO: Implement!
@@ -235,7 +275,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::BUILTIN_CALL:
+            {
+                result = bytecode_emit_builtin_call(builder, expr);
+                break;
+            }
+
             case AST_Expression_Kind::ADDROF: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::COMPOUND: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::SUBSCRIPT: assert(false); //@TODO: Implement!
@@ -255,8 +300,8 @@ namespace Zodiac
             case AST_Expression_Kind::RANGE: assert(false); //@TODO: Implement!
         }
 
-        assert(result);
-        assert(result->type = expr->type);
+        assert(result || expr->type->kind == AST_Type_Kind::VOID);
+        if (result) assert(result->type = expr->type);
 
         return result;
     }
@@ -264,6 +309,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr)
     {
         assert(expr->kind == AST_Expression_Kind::CALL);
+
+        assert(expr->call.arg_expressions.count == 0);
 
         auto decl = expr->call.callee_declaration;
         assert(decl);
@@ -283,6 +330,33 @@ namespace Zodiac
         bytecode_emit_instruction(builder, CALL, func_val, nullptr, return_value);
 
         return return_value;
+    }
+
+    Bytecode_Value *bytecode_emit_builtin_call(Bytecode_Builder *builder, AST_Expression *expr)
+    {
+        assert(expr->kind == AST_Expression_Kind::BUILTIN_CALL);
+
+        auto args = expr->builtin_call.arg_expressions;
+
+        auto name = expr->builtin_call.identifier->atom;
+
+        if (name == Builtin::atom_static_assert) assert(false);
+        else if (name == Builtin::atom_exit)
+        {
+            assert(args.count == 1);
+
+            auto exit_code_val = bytecode_emit_expression(builder, args[0]);
+            bytecode_emit_instruction(builder, EXIT, exit_code_val, nullptr, nullptr);
+            return nullptr;
+
+        }
+        else if (name == Builtin::atom_syscall) assert(false);
+        else if (name == Builtin::atom_cast) assert(false);
+        else if (name == Builtin::atom_sizeof) assert(false);
+        else if (name == Builtin::atom_offsetof) assert(false);
+        else assert(false);
+
+        assert(false);
     }
 
     void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest, Bytecode_Value *source)
@@ -305,6 +379,27 @@ namespace Zodiac
         }
     }
 
+    Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *source)
+    {
+        switch (source->kind)
+        {
+            case Bytecode_Value_Kind::INVALID: assert(false);
+            case Bytecode_Value_Kind::TEMP: assert(false);
+            case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                Bytecode_Value *result = bytecode_temporary_new(builder, source->type);
+                bytecode_emit_instruction(builder, LOADL, source, nullptr, result);
+                return result;
+                break;
+            }
+
+            case Bytecode_Value_Kind::FUNCTION: assert(false);
+
+        }
+    }
+
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result)
@@ -324,7 +419,18 @@ namespace Zodiac
     {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
+        for (int64_t i = 0; i < builder->locals.count; i++)
+        {
+            auto info = builder->locals[i];
+            if (info.declaration == decl)
+            {
+                assert(info.allocl_value->kind == Bytecode_Value_Kind::ALLOCL);
+                return info.allocl_value;
+            }
+        }
+
         assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_value_new(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
@@ -349,15 +455,20 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type)
+    Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, type);
+        result->name = name;
         return result;
     }
 
     Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TEMP, type);
+
+        result->temp_index = builder->next_temp_index;
+        builder->next_temp_index += 1;
+
         return result;
     }
 
@@ -366,5 +477,156 @@ namespace Zodiac
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::FUNCTION, func->type);
         result->function = func;
         return result;
+    }
+
+    void bytecode_print(Allocator *allocator, Bytecode_Builder *builder)
+    {
+        String_Builder sb = {};
+        string_builder_init(allocator, &sb);
+
+        for (int64_t i = 0; i < builder->functions.count; i++)
+        {
+            bytecode_print_function(&sb, builder->functions[i].bc_func);
+        }
+
+        String str = string_builder_to_string(allocator, &sb);
+        printf("%s\n", str.data);
+
+        string_builder_free(&sb);
+    }
+
+    void bytecode_print_function(String_Builder *sb, Bytecode_Function *func)
+    {
+        string_builder_appendf(sb, "%s(", func->name.data);
+        string_builder_append(sb, ")\n");
+
+        for (int64_t i = 0; i < func->blocks.count; i++)
+        {
+            bytecode_print_block(sb, func->blocks[i]);
+        }
+
+        string_builder_append(sb, "\n");
+    }
+
+    void bytecode_print_block(String_Builder *sb, Bytecode_Block *block)
+    {
+        string_builder_appendf(sb, "  %s:\n", block->name);
+
+        for (int64_t i = 0; i < block->instructions.count; i++)
+        {
+            bytecode_print_instruction(sb, block->instructions[i]);
+        }
+    }
+
+    void bytecode_print_instruction(String_Builder *sb, Bytecode_Instruction *inst)
+    {
+        string_builder_append(sb, "    ");
+
+        if (inst->result)
+        {
+            bytecode_print_value(sb, inst->result);
+            string_builder_append(sb, " = ");
+        }
+
+        bool print_args = true;
+
+        switch (inst->op)
+        {
+            case NOP: assert(false);
+            case ALLOCL:
+            {
+                string_builder_append(sb, "ALLOCL ");
+                break;
+            }
+
+            case STOREL:
+            {
+                string_builder_append(sb, "STOREL ");
+                break;
+            }
+
+            case LOADL:
+            {
+                string_builder_append(sb, "LOADL ");
+                break;
+            }
+
+            case CALL:
+            {
+                print_args = false;
+                string_builder_append(sb, "CALL ");
+                bytecode_print_value(sb, inst->a);
+                string_builder_append(sb, "()");
+                break;
+            }
+
+            case RETURN:
+            {
+                string_builder_append(sb, "RETURN ");
+                break;
+            }
+
+            case EXIT:
+            {
+                string_builder_append(sb, "EXIT ");
+                break;
+            }
+        }
+
+        if (print_args && inst->a)
+        {
+            bytecode_print_value(sb, inst->a);
+
+            if (inst->b)
+            {
+                string_builder_append(sb, ", ");
+                bytecode_print_value(sb, inst->b);
+            }
+        }
+        else if (!inst->a)
+        {
+            assert(!inst->b);
+        }
+
+        string_builder_append(sb, "\n");
+    }
+
+    void bytecode_print_value(String_Builder *sb, Bytecode_Value *value)
+    {
+        switch (value->kind)
+        {
+            case Bytecode_Value_Kind::INVALID: assert(false);
+
+            case Bytecode_Value_Kind::TEMP:
+            {
+                string_builder_appendf(sb, "%%%" PRId64, value->temp_index);
+                break;
+            }
+
+            case Bytecode_Value_Kind::INTEGER_LITERAL:
+            {
+                if (value->type->integer.sign)
+                {
+                    string_builder_appendf(sb, "%" PRId64, value->value.integer_literal.s64);
+                }
+                else
+                {
+                    string_builder_appendf(sb, "%" PRIu64, value->value.integer_literal.u64);
+                }
+                break;
+            }
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                string_builder_appendf(sb, "%%%s", value->name.data);
+                break;
+            }
+
+            case Bytecode_Value_Kind::FUNCTION:
+            {
+                string_builder_appendf(sb, "%s", value->function->name.data);
+                break;
+            }
+        }
     }
 }

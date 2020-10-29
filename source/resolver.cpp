@@ -3866,7 +3866,8 @@ namespace Zodiac
                             bytecode_register_function(&resolver->bytecode_builder,
                                                        ts->function.from_declaration);
 
-                        llvm_register_function(&resolver->llvm_builder, bc_func);
+                        if (!resolver->build_data->options->dont_emit_llvm)
+                            llvm_register_function(&resolver->llvm_builder, bc_func);
                     }
                 }
                 break;
@@ -4890,7 +4891,7 @@ namespace Zodiac
                 {
                     assert(decl->type && decl->type->kind == AST_Type_Kind::FUNCTION);
                     auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                    
+
                     if (!resolver->build_data->options->dont_emit_llvm)
                         llvm_register_function(&resolver->llvm_builder, bc_func);
                 }

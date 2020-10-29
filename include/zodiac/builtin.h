@@ -33,7 +33,6 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(mainCRTStartup)     \
     DEFINE_BUILTIN_ATOM(call_main_and_exit) \
     DEFINE_BUILTIN_ATOM(main)               \
-    DEFINE_BUILTIN_ATOM(exit)               \
     DEFINE_BUILTIN_ATOM(count)              \
     DEFINE_BUILTIN_ATOM(it)                 \
     DEFINE_BUILTIN_ATOM(it_index)           \
@@ -44,6 +43,7 @@ enum Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(allow_incomplete)   \
     DEFINE_BUILTIN_ATOM(static_assert)      \
     DEFINE_BUILTIN_ATOM(syscall)            \
+    DEFINE_BUILTIN_ATOM(exit)               \
     DEFINE_BUILTIN_ATOM(cast)               \
     DEFINE_BUILTIN_ATOM(sizeof)             \
     DEFINE_BUILTIN_ATOM(offsetof)           \
