@@ -536,6 +536,7 @@ namespace Zodiac
             case ALLOCL:
             {
                 string_builder_append(sb, "ALLOCL ");
+                ast_print_type(sb, inst->result->type);
                 break;
             }
 
