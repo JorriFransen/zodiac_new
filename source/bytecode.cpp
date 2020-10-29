@@ -210,7 +210,7 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op, 
+    Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result)
     {
