@@ -8,6 +8,10 @@ main :: func() -> s64 {
     // std.print_num(42);
     // std.print("\n");
 
-    return 42;
+    return add(40, 2);
 }
 
+add :: func(a: s64, b: s64) -> s64
+{
+    return a + b;
+}

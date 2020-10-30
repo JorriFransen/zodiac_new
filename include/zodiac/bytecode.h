@@ -9,27 +9,33 @@ namespace Zodiac
 {
     enum Bytecode_Opcode : uint8_t
     {
-        NOP    = 0x0000,
+        NOP        = 0x0000,
 
-        ALLOCL = 0x0001,
+        ALLOCL     = 0x0001,
 
-        STOREL = 0x0002,
+        STOREL     = 0x0002,
 
-        LOADL  = 0x0003,
+        LOADL      = 0x0003,
+        LOAD_PARAM = 0x0004,
 
-        CALL   = 0x0004,
-        RETURN = 0x0005,
+        ADD_S      = 0x0005,
 
-        EXIT   = 0x0006,
+        PUSH_ARG   = 0x0006,
+        CALL       = 0x0007,
+        RETURN     = 0x0008,
+
+        EXIT       = 0x0009,
     };
 
     enum class Bytecode_Value_Kind
     {
         INVALID,
 
-        TEMP,
         INTEGER_LITERAL,
+
+        TEMP,
         ALLOCL,
+        PARAM,
         FUNCTION,
     };
 
@@ -87,6 +93,7 @@ namespace Zodiac
         AST_Type *type = nullptr;
         Atom name = {};
 
+        Array<Bytecode_Value *> parameters = {};
         Array<Bytecode_Value *> locals = {};
 
         Array<Bytecode_Block  *> blocks = {};
@@ -115,6 +122,8 @@ namespace Zodiac
 
         Array<Bytecode_Function_Info> functions = {};
 
+        // Holds parameters for the function currently being emitted
+        Array<Bytecode_Local_Variable_Info> parameters = {};
         // Holds local variables for the function currently being emitted
         Array<Bytecode_Local_Variable_Info> locals = {};
         int64_t next_temp_index = 0; // Reset for each function
@@ -143,13 +152,16 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_builtin_call(Bytecode_Builder *builder, AST_Expression *expr);
 
-    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest, Bytecode_Value *source);
+    void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest,
+                             Bytecode_Value *source);
+
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *source);
 
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result);
 
+    Bytecode_Value *bytecode_find_parameter(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Value *bytecode_find_variable(Bytecode_Builder *builder, AST_Declaration *decl);
 
     Bytecode_Value *bytecode_value_new(Bytecode_Builder *builder, Bytecode_Value_Kind kind,
@@ -157,6 +169,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_integer_literal_new(Bytecode_Builder *builder, AST_Type *type,
                                                  Integer_Literal integer_literal);
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
+    Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type);
     Bytecode_Value *bytecode_function_value_new(Bytecode_Builder *builder, Bytecode_Function *func);
 

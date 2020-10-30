@@ -9,6 +9,7 @@
 
 namespace Zodiac
 {
+    struct Bytecode_Function;
     struct Build_Data
     {
         Options *options = nullptr;
@@ -16,6 +17,9 @@ namespace Zodiac
         Array<Atom> kw_atoms = {};
 
         Array<AST_Type*> type_table = {};
+
+        Bytecode_Function *bc_entry_function = nullptr;
+        Bytecode_Function *bc_bytecode_entry_function = nullptr;
 
         Allocator *err_allocator = nullptr;
 
