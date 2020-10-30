@@ -15,6 +15,8 @@ namespace Zodiac
         result.build_data = build_data;
         result.insert_block = nullptr;
 
+        result.current_function = nullptr;
+
         array_init(allocator, &result.functions);
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
@@ -74,6 +76,7 @@ namespace Zodiac
             bd->bc_bytecode_entry_function = func;
         }
 
+        builder->current_function = func;
         builder->parameters.count = 0;
         builder->locals.count = 0;
         builder->next_temp_index = 0;
@@ -85,8 +88,6 @@ namespace Zodiac
 
             auto param_val = bytecode_parameter_new(builder, param_decl->type,
                                                     param_decl->identifier->atom);
-            array_append(&func->parameters, param_val);
-
             array_append(&builder->parameters, { param_decl, param_val });
         }
 
@@ -103,7 +104,6 @@ namespace Zodiac
             auto name = var_decl->identifier->atom;
 
             auto local_val = bytecode_local_alloc_new(builder, var_decl->type, name);
-            array_append(&func->locals, local_val);
 
             bytecode_emit_instruction(builder, ALLOCL, nullptr, nullptr, local_val);
 
@@ -163,7 +163,8 @@ namespace Zodiac
         result->name = name;
 
         array_init(builder->allocator, &result->parameters);
-        array_init(builder->allocator, &result->locals);
+        array_init(builder->allocator, &result->locals, 4);
+        array_init(builder->allocator, &result->temps);
         array_init(builder->allocator, &result->blocks, 4);
 
         return result;
@@ -416,8 +417,10 @@ namespace Zodiac
         }
 
         auto func_val = bytecode_function_value_new(builder, func);
+        auto arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_u64,
+                                                          { .u64 = (uint64_t)arg_exprs.count });
 
-        bytecode_emit_instruction(builder, CALL, func_val, nullptr, return_value);
+        bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, return_value);
 
         return return_value;
     }
@@ -570,21 +573,26 @@ namespace Zodiac
         assert(type->kind == AST_Type_Kind::INTEGER);
 
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::INTEGER_LITERAL, type);
-        result->value.integer_literal = integer_literal;
+        result->integer_literal = integer_literal;
         return result;
     }
 
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, type);
-        result->name = name;
+        result->allocl.name = name;
+
+        array_append(&builder->current_function->locals, result);
         return result;
     }
 
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, type);
-        result->name = name;
+        result->allocl.name = name;
+
+        array_append(&builder->current_function->parameters, result);
+
         return result;
     }
 
@@ -592,8 +600,10 @@ namespace Zodiac
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TEMP, type);
 
-        result->temp_index = builder->next_temp_index;
+        result->temp.index = builder->next_temp_index;
         builder->next_temp_index += 1;
+
+        array_append(&builder->current_function->temps, result);
 
         return result;
     }
@@ -712,6 +722,8 @@ namespace Zodiac
                 string_builder_append(sb, "CALL ");
                 bytecode_print_value(sb, inst->a);
                 string_builder_append(sb, "()");
+                string_builder_append(sb, ", ");
+                bytecode_print_value(sb, inst->b);
                 break;
             }
 
@@ -754,7 +766,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::TEMP:
             {
-                string_builder_appendf(sb, "%%%" PRId64, value->temp_index);
+                string_builder_appendf(sb, "%%%" PRId64, value->temp.index);
                 break;
             }
 
@@ -762,11 +774,11 @@ namespace Zodiac
             {
                 if (value->type->integer.sign)
                 {
-                    string_builder_appendf(sb, "%" PRId64, value->value.integer_literal.s64);
+                    string_builder_appendf(sb, "%" PRId64, value->integer_literal.s64);
                 }
                 else
                 {
-                    string_builder_appendf(sb, "%" PRIu64, value->value.integer_literal.u64);
+                    string_builder_appendf(sb, "%" PRIu64, value->integer_literal.u64);
                 }
                 break;
             }
@@ -774,7 +786,7 @@ namespace Zodiac
             case Bytecode_Value_Kind::ALLOCL:
             case Bytecode_Value_Kind::PARAM:
             {
-                string_builder_appendf(sb, "%%%s", value->name.data);
+                string_builder_appendf(sb, "%%%s", value->allocl.name.data);
                 break;
             }
 

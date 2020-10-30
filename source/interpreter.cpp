@@ -1,8 +1,11 @@
 
 #include "interpreter.h"
 
+#include <cstdio>
+
 namespace Zodiac
 {
+
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data)
     {
         Interpreter result = {};
@@ -10,16 +13,308 @@ namespace Zodiac
         result.allocator = allocator;
         result.build_data = build_data;
 
+        result.running = false;
+
+        result.stack_size = 4096;
+        result.stack = alloc_array<uint8_t>(allocator, 4096);
+        result.sp = 0;
+
+        result.frame_pointer = 0;
+        result.ip = {};
+
+        result.exit_code = 0;
+
         return result;
     }
 
     void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func)
     {
-        assert(false);
+        assert(entry_func->blocks.count);
+
+        interp->ip = {
+            .function = entry_func,
+            .block = entry_func->blocks[0],
+            .index = 0,
+        };
+
+        interp_stack_push(interp, 0); // fp
+        Instruction_Pointer empty_ip = {};
+        interp_stack_push(interp, empty_ip);
+
+        for (int64_t i = 0; i < entry_func->locals.count; i++)
+        {
+            auto allocl = entry_func->locals[i];
+
+            assert(allocl->type->bit_size % 8 == 0);
+            auto size = allocl->type->bit_size / 8;
+            assert(interp->sp + size <= interp->stack_size);
+
+            allocl->allocl.byte_offset_from_fp = interp->sp;
+
+            interp->sp += size;
+        }
+
+        for (int64_t i = 0; i < entry_func->temps.count; i++)
+        {
+            auto temp = entry_func->temps[i];
+
+            assert(temp->type->bit_size % 8 == 0);
+            auto size = temp->type->bit_size / 8;
+            assert(interp->sp + size <= interp->stack_size);
+
+            temp->temp.byte_offset_from_fp = interp->sp;
+
+            interp->sp += size;
+        }
+
+        interp->running = true;
+
+        while (interp->running)
+        {
+            Bytecode_Instruction *inst = interpreter_fetch_instruction(interp);
+
+            bool advance_ip = true;
+
+            switch (inst->op)
+            {
+                case NOP: assert(false);
+
+                case ALLOCL:
+                {
+                    break;
+                }
+
+                case STOREL:
+                {
+                    uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
+                    Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
+
+                    interp_store_value(dest_ptr, source_val);
+                    break;
+                }
+
+                case LOADL:
+                {
+                    Bytecode_Value result_value = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    interp_store_value(result_addr, result_value);
+
+                    break;
+                }
+
+                case LOAD_PARAM: assert(false);
+
+                case ADD_S:
+                {
+                    auto lhs = interpreter_load_value(interp, inst->a);
+                    auto rhs = interpreter_load_value(interp, inst->b);
+assert(lhs.type == rhs.type);
+                    assert(lhs.type->bit_size == 64);
+
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    int64_t result_value = lhs.integer_literal.s64 + rhs.integer_literal.s64;
+                    interp_store(result_addr, result_value);
+
+                    break;
+                }
+
+                case PUSH_ARG:
+                {
+                    assert(false);
+                    break;
+                }
+
+                case CALL:
+                {
+                    advance_ip = false;
+
+                    auto func_val = inst->a;
+                    assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
+                    auto func = func_val->function;
+
+                    auto new_fp = interp->sp;
+                    interp_stack_push(interp, interp->frame_pointer);
+                    interp_stack_push(interp, interp->ip);
+
+                    uint8_t *ret_val_ptr = nullptr;
+                    if (inst->result)
+                    {
+                        ret_val_ptr = interpreter_load_lvalue(interp, inst->result);
+                    }
+                    interp_stack_push(interp, ret_val_ptr);
+
+                    for (int64_t i = 0; i < func->locals.count; i++)
+                    {
+                        auto allocl = func->locals[i];
+
+                        assert(allocl->type->bit_size % 8 == 0);
+                        auto size = allocl->type->bit_size / 8;
+                        assert(interp->sp + size <= interp->stack_size);
+
+                        auto offset = interp->sp - new_fp;
+                        allocl->allocl.byte_offset_from_fp = offset;
+
+                        interp->sp += size;
+                    }
+
+                    for (int64_t i = 0; i < func->temps.count; i++)
+                    {
+                        auto temp = func->temps[i];
+
+                        assert(temp->type->bit_size % 8 == 0);
+                        auto size = temp->type->bit_size / 8;
+                        assert(interp->sp + size <= interp->stack_size);
+
+                        auto offset = interp->sp - new_fp;
+                        temp->temp.byte_offset_from_fp = offset;
+
+                        interp->sp += size;
+                    }
+
+                    assert(inst->a->kind == Bytecode_Value_Kind::FUNCTION);
+
+                    auto arg_count_val = inst->b;
+                    assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+
+                    assert(arg_count_val->integer_literal.s64 == 0);
+
+                    interp->frame_pointer = new_fp;
+                    interp->ip = {
+                        .function = inst->a->function,
+                        .block = inst->a->function->blocks[0],
+                        .index = 0,
+                    };
+
+                    break;
+                }
+
+                case RETURN:
+                {
+                    auto ret_val = interpreter_load_value(interp, inst->a);
+
+                    int64_t offset = 0;
+                    int64_t old_fp = *(int64_t*)(&interp->stack[interp->frame_pointer]);
+
+                    offset += sizeof(old_fp);
+                    interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer + offset]);
+
+                    offset += sizeof(Instruction_Pointer);
+                    uint8_t *ret_val_ptr = *(uint8_t**)(&interp->stack[interp->frame_pointer + offset]);
+
+                    interp_store_value(ret_val_ptr, ret_val);
+
+                    interp->sp = interp->frame_pointer;
+                    interp->frame_pointer = old_fp;
+                    break;
+                }
+
+                case EXIT:
+                {
+                    assert(inst->a);
+
+                    auto exit_code_val = interpreter_load_value(interp, inst->a);
+                    advance_ip = false;
+                    interp->running = false;
+
+                    interp->exit_code = exit_code_val.integer_literal.s64;
+                    break;
+                }
+            }
+
+            if (advance_ip) interpreter_advance_ip(interp);
+        }
+    }
+
+    Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)
+    {
+
+        uint8_t *source_ptr = interpreter_load_lvalue(interp, value);
+
+        Bytecode_Value result = {};
+        result.type = value->type;
+
+        switch (value->type->kind)
+        {
+            case AST_Type_Kind::INTEGER:
+            {
+                switch (value->type->bit_size)
+                {
+                    case 64: result.integer_literal.s64 = *((int64_t*)source_ptr); break;
+                    default: assert(false);
+                }
+                break;
+            }
+
+            default: assert(false);
+        }
+
+        return result;
+    }
+
+    uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value)
+    {
+        switch (value->kind)
+        {
+            case Bytecode_Value_Kind::TEMP:
+            {
+                return &interp->stack[interp->frame_pointer + value->temp.byte_offset_from_fp];
+                break;
+            }
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                return &interp->stack[interp->frame_pointer + value->allocl.byte_offset_from_fp];
+                break;
+            }
+
+            case Bytecode_Value_Kind::INTEGER_LITERAL:
+            {
+                return (uint8_t*)&value->integer_literal;
+                break;
+            }
+
+            default: assert(false);
+        }
+    }
+
+    Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp)
+    {
+        Bytecode_Instruction *result = interp->ip.block->instructions[interp->ip.index];
+        return result;
+    }
+
+    void interpreter_advance_ip(Interpreter *interp)
+    {
+        auto cb = interp->ip.block;
+        auto index = interp->ip.index;
+
+        assert(index + 1 < cb->instructions.count);
+
+        interp->ip.index += 1;
     }
 
     void interpreter_free(Interpreter *interp)
     {
-        assert(false);
+        free(interp->allocator, interp->stack);
+    }
+
+    void interp_store_value(uint8_t *dest, Bytecode_Value val)
+    {
+        switch (val.type->kind)
+        {
+            case AST_Type_Kind::INTEGER:
+            {
+                switch (val.type->bit_size)
+                {
+                    case 64: interp_store(dest, val.integer_literal.s64); break;
+                    default: assert(false);
+                }
+                break;
+            }
+
+            default: assert(false);
+        }
     }
 }

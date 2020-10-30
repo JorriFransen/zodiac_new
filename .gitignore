@@ -14,4 +14,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+.clangd/
+
+
 lib/dyncall-1.1/

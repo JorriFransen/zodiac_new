@@ -444,7 +444,7 @@ namespace Zodiac
                                                          resolver->entry_module_path);
                     if (!lf_entry.valid)
                     {
-                        assert(false);
+                        result = false;
                         break;
                     }
 

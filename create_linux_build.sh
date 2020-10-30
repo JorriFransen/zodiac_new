@@ -11,7 +11,7 @@ check_cmake_result () {
 }
 
 call_cmake () {
-    cmake .. -G Ninja ../.. -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}" $2
+    cmake .. -G Ninja ../.. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE="$1" -DCMAKE_PREFIX_PATH="${LLVM_PREFIX}" $2
     check_cmake_result
     echo
 }
@@ -70,3 +70,4 @@ popd
 
 
 ln -s build_clang/debug build
+ln -s build_clang/debug/compile_commands.json compile_commands.json

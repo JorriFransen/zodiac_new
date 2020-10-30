@@ -1196,7 +1196,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
 
             if (parser_match_token(ts, TOK_SEMICOLON))
             {
-                result->self.flags |= PTN_FLAG_SEMICOLON; 
+                result->self.flags |= PTN_FLAG_SEMICOLON;
             }
 
             assert(result);

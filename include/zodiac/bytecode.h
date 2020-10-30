@@ -47,13 +47,19 @@ namespace Zodiac
 
         union
         {
-            Atom name = {};
-            int64_t temp_index;
-
-            union
+            struct
             {
-                Integer_Literal integer_literal;
-            } value;
+                Atom name;
+                int64_t byte_offset_from_fp;
+            } allocl = {};
+
+            struct
+            {
+                int64_t index;
+                int64_t byte_offset_from_fp;
+            } temp;
+
+            Integer_Literal integer_literal;
 
             Bytecode_Function *function;
 
@@ -95,6 +101,7 @@ namespace Zodiac
 
         Array<Bytecode_Value *> parameters = {};
         Array<Bytecode_Value *> locals = {};
+        Array<Bytecode_Value *> temps = {};
 
         Array<Bytecode_Block  *> blocks = {};
     };
@@ -122,6 +129,7 @@ namespace Zodiac
 
         Array<Bytecode_Function_Info> functions = {};
 
+        Bytecode_Function *current_function = nullptr;
         // Holds parameters for the function currently being emitted
         Array<Bytecode_Local_Variable_Info> parameters = {};
         // Holds local variables for the function currently being emitted
