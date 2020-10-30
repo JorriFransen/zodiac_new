@@ -298,6 +298,31 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY:
             {
+
+#define _binop_arithmetic(int_sign_op) { \
+    auto lhs_expr = expr->binary.lhs; \
+    auto rhs_expr = expr->binary.rhs; \
+    assert(lhs_expr->type == rhs_expr->type); \
+    auto type = lhs_expr->type; \
+    if (type->kind == AST_Type_Kind::INTEGER) { \
+        assert(lhs_expr->type->integer.sign == rhs_expr->type->integer.sign); \
+    } else { \
+        assert(type->kind == AST_Type_Kind::FLOAT); \
+    } \
+    Bytecode_Value *lhs = bytecode_emit_expression(builder, lhs_expr); \
+    Bytecode_Value *rhs = bytecode_emit_expression(builder, rhs_expr); \
+    result = bytecode_temporary_new(builder, type); \
+    if (type->kind == AST_Type_Kind::INTEGER) { \
+        if (type->integer.sign) { \
+            bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+        } else { \
+            assert(false); \
+        } \
+    } else { \
+        assert(false); \
+    } \
+    break; \
+}
                 switch (expr->binary.op)
                 {
                     case BINOP_INVALID: assert(false);
@@ -308,44 +333,17 @@ namespace Zodiac
                     case BINOP_GT: assert(false); //@TODO: Implement!
                     case BINOP_GTEQ: assert(false); //@TODO: Implement!
 
-                    case BINOP_ADD:
-                    {
-                        auto lhs_expr = expr->binary.lhs;
-                        auto rhs_expr = expr->binary.rhs;
 
-                        assert(lhs_expr->type == rhs_expr->type);
+                    case BINOP_ADD: _binop_arithmetic(ADD_S);
+                    case BINOP_SUB: _binop_arithmetic(SUB_S);
 
-                        auto type = lhs_expr->type;
-                        if (type->kind == AST_Type_Kind::INTEGER)
-                        {
-                            assert(lhs_expr->type->integer.sign == rhs_expr->type->integer.sign);
-                        }
-                        else
-                        {
-                            assert(type->kind == AST_Type_Kind::FLOAT);
-                        }
-
-                        Bytecode_Value *lhs = bytecode_emit_expression(builder, lhs_expr);
-                        Bytecode_Value *rhs = bytecode_emit_expression(builder, rhs_expr);
-                        result = bytecode_temporary_new(builder, type);
-
-                        if (type->integer.sign)
-                        {
-                            bytecode_emit_instruction(builder, ADD_S, lhs, rhs, result);
-                        }
-                        else
-                        {
-                            assert(false);
-                        }
-
-                        break;
-                    }
-
-                    case BINOP_SUB: assert(false); //@TODO: Implement!
                     case BINOP_REMAINDER: assert(false); //@TODO: Implement!
                     case BINOP_MUL: assert(false); //@TODO: Implement!
                     case BINOP_DIV: assert(false); //@TODO: Implement!
+
                 }
+
+#undef _binop_arithmetic
                 break;
             }
 
@@ -707,6 +705,12 @@ namespace Zodiac
             case ADD_S:
             {
                 string_builder_append(sb, "ADD_S ");
+                break;
+            }
+
+            case SUB_S:
+            {
+                string_builder_append(sb, "SUB_S ");
                 break;
             }
 

@@ -10,7 +10,7 @@ main :: func() -> s64
     // std.print("\n");
 
     _48 := add(return_46(), 2);
-    return add(_48, 3);
+    return sub(add(_48, 3), 9);
 }
 
 return_46 :: func() -> s64
@@ -32,7 +32,7 @@ add :: func(a: s64, b: s64) -> s64
     return a + b;
 }
 
-// sub :: func (a: s64, b: s64) -> s64
-// {
-//     return a - b;
-// }
+sub :: func (a: s64, b: s64) -> s64
+{
+    return a - b;
+}

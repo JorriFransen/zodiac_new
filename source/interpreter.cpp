@@ -114,20 +114,19 @@ namespace Zodiac
                     break;
                 }
 
-                case ADD_S:
-                {
-                    auto lhs = interpreter_load_value(interp, inst->a);
-                    auto rhs = interpreter_load_value(interp, inst->b);
-                    assert(lhs.type == rhs.type);
-                    assert(lhs.type->bit_size == 64);
+#define _binop_arithmetic(op) { \
+    auto lhs = interpreter_load_value(interp, inst->a); \
+    auto rhs = interpreter_load_value(interp, inst->b); \
+    assert(lhs.type == rhs.type); \
+    assert(lhs.type->bit_size == 64); \
+    auto result_addr = interpreter_load_lvalue(interp, inst->result); \
+    int64_t result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
+    interp_store(result_addr, result_value); \
+    break; \
+}
 
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
-
-                    int64_t result_value = lhs.integer_literal.s64 + rhs.integer_literal.s64;
-                    interp_store(result_addr, result_value);
-
-                    break;
-                }
+                case ADD_S:_binop_arithmetic(+);
+                case SUB_S:_binop_arithmetic(-);
 
                 case PUSH_ARG:
                 {

@@ -19,12 +19,13 @@ namespace Zodiac
         LOAD_PARAM = 0x0004,
 
         ADD_S      = 0x0005,
+        SUB_S      = 0x0006,
 
-        PUSH_ARG   = 0x0006,
-        CALL       = 0x0007,
-        RETURN     = 0x0008,
+        PUSH_ARG   = 0x0007,
+        CALL       = 0x0008,
+        RETURN     = 0x0009,
 
-        EXIT       = 0x0009,
+        EXIT       = 0x000a,
     };
 
     enum class Bytecode_Value_Kind
