@@ -1,5 +1,9 @@
 
-On windows (havn't checked linux) when --print_bytecode is passed, the end of the bytecode is cut off.
+cstr[i] != 0 in strlen(), std.zdc
+Here the inferred type of cstr[i] is s64, but it should really be u8, and the zero literal should infer that.
+If we decide to actually do upcasting in cases like this, we should at least retain the sign if possible.
+
+Get rid of LOAD_PARAM bytecode
 
 Warn when main is missing
 Warn on empty files

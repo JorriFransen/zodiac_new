@@ -12,7 +12,12 @@ main :: func() -> s64
     @syscall(1, 1, "Hello, world!\n", 14);
 
     _48 := add(return_46(), 2);
-    return sub(add(_48, 3), 9);
+    return addone(sub(add(_48, 3), 9));
+}
+
+addone :: func (x: s64) -> s64
+{
+    return x + 1;
 }
 
 return_46 :: func() -> s64

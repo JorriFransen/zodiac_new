@@ -129,6 +129,8 @@ namespace Zodiac
                 case ADD_S:_binop_arithmetic(+);
                 case SUB_S:_binop_arithmetic(-);
 
+                case NEQ_S: assert(false);
+
                 case PUSH_ARG:
                 {
                     Bytecode_Value arg_val = interpreter_load_value(interp, inst->a);
@@ -246,6 +248,9 @@ namespace Zodiac
                     interp->sp -= total_arg_size;
                     break;
                 }
+
+                case JUMP:
+                case JUMP_IF: assert(false);
 
                 case EXIT:
                 {
