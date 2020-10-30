@@ -1,6 +1,9 @@
 
 #include "interpreter.h"
 
+#include "builtin.h"
+#include "os.h"
+
 #include <cstdio>
 
 namespace Zodiac
@@ -18,8 +21,6 @@ namespace Zodiac
         result.stack_size = 4096;
         result.stack = alloc_array<uint8_t>(allocator, 4096);
         result.sp = 0;
-
-        stack_init(allocator, &result.arg_stack);
 
         result.frame_pointer = 0;
         result.ip = {};
@@ -255,6 +256,38 @@ namespace Zodiac
                     interp->running = false;
 
                     interp->exit_code = exit_code_val.integer_literal.s64;
+
+                    break;
+                }
+
+                case SYSCALL:
+                {
+                    Bytecode_Value *arg_count_val = inst->a;
+                    assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                    assert(arg_count_val->type == Builtin::type_u64);
+                    auto arg_count = arg_count_val->integer_literal.s64;
+
+                    Bytecode_Value *arg_size_val = inst->b;
+                    assert(arg_size_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                    assert(arg_size_val->type == Builtin::type_s64);
+                    auto arg_size = arg_size_val->integer_literal.s64;
+                    assert(arg_size % 8 == 0); // Should all be 64 bit integers
+
+                    Array<int64_t> args = {};
+                    array_init(interp->allocator, &args, arg_count);
+
+                    for (int64_t i = 0; i < arg_count; i++)
+                    {
+                        auto offset = -((arg_count - i) * sizeof(int64_t));
+                        int64_t *param_ptr =
+                            (int64_t*)&interp->stack[interp->sp + offset];
+                        array_append(&args, *param_ptr);
+                    }
+
+                    os_syscall(args);
+                    array_free(&args);
+
+                    interp->sp -= arg_size;
                     break;
                 }
             }
@@ -283,6 +316,12 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::POINTER:
+            {
+                result.pointer = (void*)source_ptr;
+                break;
+            }
+
             default: assert(false);
         }
 
@@ -308,6 +347,12 @@ namespace Zodiac
             case Bytecode_Value_Kind::INTEGER_LITERAL:
             {
                 return (uint8_t*)&value->integer_literal;
+                break;
+            }
+
+            case Bytecode_Value_Kind::STRING_LITERAL:
+            {
+                return (uint8_t*)value->string_literal.data;
                 break;
             }
 
@@ -343,7 +388,6 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp)
     {
         free(interp->allocator, interp->stack);
-        stack_free(&interp->arg_stack);
     }
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val)
@@ -357,6 +401,12 @@ namespace Zodiac
                     case 64: interp_store(dest, val.integer_literal.s64); break;
                     default: assert(false);
                 }
+                break;
+            }
+
+            case AST_Type_Kind::POINTER:
+            {
+                interp_store(dest, val.pointer);
                 break;
             }
 

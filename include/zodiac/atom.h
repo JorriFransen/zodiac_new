@@ -8,8 +8,8 @@ namespace Zodiac
 
 struct Atom
 {
-    const char *data = nullptr;
-    uint64_t length = 0;
+    const char *data;
+    uint64_t length;
 };
 
 struct Atom_Table

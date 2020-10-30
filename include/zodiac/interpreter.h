@@ -26,8 +26,6 @@ namespace Zodiac
         int64_t stack_size = 0;
         int64_t sp = 0;
 
-        Stack<Bytecode_Value> arg_stack = {};
-
         int64_t frame_pointer = 0;
         Instruction_Pointer ip = {};
 

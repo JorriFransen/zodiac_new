@@ -1,6 +1,7 @@
 #include "bytecode.h"
 
 #include "builtin.h"
+#include "parser.h"
 #include "string_builder.h"
 
 #include <stdio.h>
@@ -375,7 +376,13 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::STRING_LITERAL: assert(false); //@TODO: Implement!
+
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                result = bytecode_string_literal_new(builder, expr->string_literal.atom);
+                break;
+            }
+
             case AST_Expression_Kind::CHAR_LITERAL: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::BOOL_LITERAL: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::NULL_LITERAL: assert(false); //@TODO: Implement!
@@ -441,7 +448,30 @@ namespace Zodiac
             return nullptr;
 
         }
-        else if (name == Builtin::atom_syscall) assert(false);
+        else if (name == Builtin::atom_syscall)
+        {
+            int64_t total_arg_size = 0;
+            for (int64_t i = 0; i < args.count; i++)
+            {
+                Bytecode_Value *arg_val = bytecode_emit_expression(builder, args[i]);
+                bytecode_emit_instruction(builder, PUSH_ARG, arg_val, nullptr, nullptr);
+
+                assert(arg_val->type->bit_size % 8 == 0);
+                total_arg_size += arg_val->type->bit_size / 8;
+            }
+
+            auto arg_count_val =
+                bytecode_integer_literal_new(builder, Builtin::type_u64,
+                                             { .u64 = (uint64_t)args.count });
+
+            auto result = bytecode_temporary_new(builder, expr->type);
+
+            auto arg_size_val = bytecode_integer_literal_new(builder, Builtin::type_s64, 
+                                                             { .s64 = total_arg_size });
+
+            bytecode_emit_instruction(builder, SYSCALL, arg_count_val, arg_size_val, result);
+            return result;
+        }
         else if (name == Builtin::atom_cast) assert(false);
         else if (name == Builtin::atom_sizeof) assert(false);
         else if (name == Builtin::atom_offsetof) assert(false);
@@ -457,6 +487,7 @@ namespace Zodiac
             case Bytecode_Value_Kind::INVALID: assert(false);
             case Bytecode_Value_Kind::TEMP: assert(false);
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
+            case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
 
             case Bytecode_Value_Kind::ALLOCL:
             {
@@ -481,6 +512,7 @@ namespace Zodiac
             case Bytecode_Value_Kind::INVALID: assert(false);
             case Bytecode_Value_Kind::TEMP: assert(false);
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
+            case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
 
             case Bytecode_Value_Kind::ALLOCL:
             {
@@ -572,6 +604,14 @@ namespace Zodiac
 
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::INTEGER_LITERAL, type);
         result->integer_literal = integer_literal;
+        return result;
+    }
+
+    Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal)
+    {
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::STRING_LITERAL, 
+                                         Builtin::type_ptr_u8);
+        result->string_literal = string_literal;
         return result;
     }
 
@@ -742,6 +782,12 @@ namespace Zodiac
                 string_builder_append(sb, "EXIT ");
                 break;
             }
+
+            case SYSCALL:
+            {
+                string_builder_append(sb, "SYSCALL ");
+                break;
+            }
         }
 
         if (print_args && inst->a)
@@ -784,6 +830,28 @@ namespace Zodiac
                 {
                     string_builder_appendf(sb, "%" PRIu64, value->integer_literal.u64);
                 }
+                break;
+            }
+
+            case Bytecode_Value_Kind::STRING_LITERAL:
+            {
+                string_builder_append(sb, "\"");
+
+                for (uint64_t i = 0; i < value->string_literal.length; i++)
+                {
+                    char c;
+                    if (parser_make_escape_char(value->string_literal.data[i], &c))
+                    {
+                        string_builder_appendf(sb, "\\%c", c);
+                    }
+                    else
+                    {
+                        string_builder_appendf(sb, "%c", c);
+                    }
+                }
+
+                string_builder_append(sb, "\"");
+
                 break;
             }
 

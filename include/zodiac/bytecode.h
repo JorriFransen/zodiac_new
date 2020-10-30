@@ -26,6 +26,7 @@ namespace Zodiac
         RETURN     = 0x0009,
 
         EXIT       = 0x000a,
+        SYSCALL    = 0x000b,
     };
 
     enum class Bytecode_Value_Kind
@@ -33,6 +34,7 @@ namespace Zodiac
         INVALID,
 
         INTEGER_LITERAL,
+        STRING_LITERAL,
 
         TEMP,
         ALLOCL,
@@ -65,7 +67,9 @@ namespace Zodiac
                 int64_t byte_offset_from_fp;
             } parameter;
 
+            void *pointer;
             Integer_Literal integer_literal;
+            Atom string_literal;
 
             Bytecode_Function *function;
 
@@ -182,6 +186,7 @@ namespace Zodiac
                                        AST_Type *type);
     Bytecode_Value *bytecode_integer_literal_new(Bytecode_Builder *builder, AST_Type *type,
                                                  Integer_Literal integer_literal);
+    Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal);
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type);
