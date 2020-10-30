@@ -3,6 +3,7 @@
 #include "allocator.h"
 #include "build_data.h"
 #include "bytecode.h"
+#include "stack.h"
 
 namespace Zodiac
 {
@@ -24,6 +25,8 @@ namespace Zodiac
         uint8_t *stack = nullptr;
         int64_t stack_size = 0;
         int64_t sp = 0;
+
+        Stack<Bytecode_Value> arg_stack = {};
 
         int64_t frame_pointer = 0;
         Instruction_Pointer ip = {};
@@ -66,5 +69,18 @@ namespace Zodiac
 
 
         return ptr;
+    }
+
+    template <typename T>
+    T interp_stack_pop(Interpreter *interp)
+    {
+        auto size = sizeof(T);
+
+        assert(interp->sp >= size);
+
+        interp->sp -= size;
+
+        uint8_t *ptr = &interp->stack[interp->sp];
+        return *(T *)ptr;
     }
 }

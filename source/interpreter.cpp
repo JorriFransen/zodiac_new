@@ -19,6 +19,8 @@ namespace Zodiac
         result.stack = alloc_array<uint8_t>(allocator, 4096);
         result.sp = 0;
 
+        stack_init(allocator, &result.arg_stack);
+
         result.frame_pointer = 0;
         result.ip = {};
 
@@ -103,13 +105,20 @@ namespace Zodiac
                     break;
                 }
 
-                case LOAD_PARAM: assert(false);
+                case LOAD_PARAM:
+                {
+                    Bytecode_Value arg_value = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    interp_store_value(result_addr, arg_value);
+                    break;
+                }
 
                 case ADD_S:
                 {
                     auto lhs = interpreter_load_value(interp, inst->a);
                     auto rhs = interpreter_load_value(interp, inst->b);
-assert(lhs.type == rhs.type);
+                    assert(lhs.type == rhs.type);
                     assert(lhs.type->bit_size == 64);
 
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
@@ -122,7 +131,17 @@ assert(lhs.type == rhs.type);
 
                 case PUSH_ARG:
                 {
-                    assert(false);
+                    Bytecode_Value arg_val = interpreter_load_value(interp, inst->a);
+
+                    assert(arg_val.type->bit_size % 8 == 0);
+                    auto size = arg_val.type->bit_size / 8;
+                    assert(interp->sp + size <= interp->stack_size);
+
+                    uint8_t *arg_ptr = &interp->stack[interp->sp];
+                    interp->sp += size;
+
+                    interp_store_value(arg_ptr, arg_val);
+
                     break;
                 }
 
@@ -133,6 +152,23 @@ assert(lhs.type == rhs.type);
                     auto func_val = inst->a;
                     assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
                     auto func = func_val->function;
+
+                    int64_t param_offset = -sizeof(int64_t);
+                    int64_t total_arg_size = 0;
+                    for (int64_t i = func->parameters.count - 1; i >= 0; i--)
+                    {
+                        auto param = func->parameters[i];
+
+                        assert(param->type->bit_size % 8 == 0);
+                        auto size = param->type->bit_size / 8;
+
+                        param_offset -= size;
+                        total_arg_size += size;
+
+                        param->parameter.byte_offset_from_fp = param_offset;
+                    }
+
+                    interp_stack_push(interp, (int64_t)total_arg_size);
 
                     auto new_fp = interp->sp;
                     interp_stack_push(interp, interp->frame_pointer);
@@ -178,8 +214,6 @@ assert(lhs.type == rhs.type);
                     auto arg_count_val = inst->b;
                     assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
 
-                    assert(arg_count_val->integer_literal.s64 == 0);
-
                     interp->frame_pointer = new_fp;
                     interp->ip = {
                         .function = inst->a->function,
@@ -207,6 +241,9 @@ assert(lhs.type == rhs.type);
 
                     interp->sp = interp->frame_pointer;
                     interp->frame_pointer = old_fp;
+
+                    int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
+                    interp->sp -= total_arg_size;
                     break;
                 }
 
@@ -275,6 +312,15 @@ assert(lhs.type == rhs.type);
                 break;
             }
 
+            case Bytecode_Value_Kind::PARAM:
+            {
+                assert(value->parameter.byte_offset_from_fp < 0);
+                auto result = &interp->stack[interp->frame_pointer +
+                                      value->parameter.byte_offset_from_fp];
+                return result;
+                break;
+            }
+
             default: assert(false);
         }
     }
@@ -298,6 +344,7 @@ assert(lhs.type == rhs.type);
     void interpreter_free(Interpreter *interp)
     {
         free(interp->allocator, interp->stack);
+        stack_free(&interp->arg_stack);
     }
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val)

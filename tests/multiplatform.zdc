@@ -9,8 +9,8 @@ main :: func() -> s64
     // std.print_num(42);
     // std.print("\n");
 
-    // return add(40, 2);
-    return return_46();
+    _48 := add(return_46(), 2);
+    return add(_48, 3);
 }
 
 return_46 :: func() -> s64
@@ -27,7 +27,12 @@ _impl_return_3 :: func() -> s64
 }
 
 
-// add :: func(a: s64, b: s64) -> s64
+add :: func(a: s64, b: s64) -> s64
+{
+    return a + b;
+}
+
+// sub :: func (a: s64, b: s64) -> s64
 // {
-//     return a + b;
+//     return a - b;
 // }

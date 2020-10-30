@@ -59,6 +59,11 @@ namespace Zodiac
                 int64_t byte_offset_from_fp;
             } temp;
 
+            struct
+            {
+                int64_t byte_offset_from_fp;
+            } parameter;
+
             Integer_Literal integer_literal;
 
             Bytecode_Function *function;
