@@ -726,7 +726,9 @@ namespace Zodiac
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, type);
         result->parameter.name = name;
 
+        auto index = builder->current_function->parameters.count;
         array_append(&builder->current_function->parameters, result);
+        result->parameter.index = index;
 
         return result;
     }

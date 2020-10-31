@@ -164,9 +164,9 @@ namespace Zodiac
 
             case ALLOCL:
             {
-                llvm::Type *type = llvm_type_from_ast(builder, inst->result->type);
-                builder->llvm_builder->CreateAlloca(type, nullptr,
-                                                    inst->result->allocl.name.data);
+                // llvm::Type *type = llvm_type_from_ast(builder, inst->result->type);
+                // builder->llvm_builder->CreateAlloca(type, nullptr,
+                //                                     inst->result->allocl.name.data);
                 break;
             }
 
@@ -185,10 +185,31 @@ namespace Zodiac
                 break;
             }
 
-            case LOAD_PARAM: assert(false);
+            case LOAD_PARAM:
+            {
+                auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                result = builder->llvm_builder->CreateLoad(param);
+                break;
+            }
 
-            case ADD_S: assert(false);
-            case SUB_S: assert(false);
+            case ADD_S:
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateAdd(lhs, rhs, "");
+                break;
+            }
+
+            case SUB_S:
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateSub(lhs, rhs, "");
+                break;
+            }
+
             case NEQ_S: assert(false);
 
             case PUSH_ARG:
@@ -203,10 +224,23 @@ namespace Zodiac
                 Bytecode_Function *bc_func = inst->a->function;
                 llvm::Function *callee = llvm_find_function(builder, bc_func);
 
-                int64_t arg_count = 0;
+                auto bc_arg_count = inst->b;
+                assert(bc_arg_count->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(bc_arg_count->type == Builtin::type_u64);
+
+                uint64_t arg_count = bc_arg_count->integer_literal.u64;
 
                 Array<llvm::Value *> _llvm_args = {};
                 array_init(builder->allocator, &_llvm_args, arg_count);
+
+                for (int64_t i = 0; i < arg_count; i++)
+                {
+                    int64_t offset = (arg_count - 1) - i;
+                    llvm::Value *arg = stack_peek(&builder->arg_stack, offset);
+                    array_append(&_llvm_args, arg);
+                }
+
+                for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
 
                 llvm::ArrayRef<llvm::Value *> llvm_args(_llvm_args.data, arg_count);
 
@@ -241,7 +275,19 @@ namespace Zodiac
                 break;
             }
 
-            case SYSCALL: assert(false);
+            case SYSCALL:
+            {
+                assert(inst->a->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(inst->a->type == Builtin::type_u64);
+
+                llvm::Value *syscall_ret = llvm_emit_syscall(builder, inst->a->integer_literal.u64);
+                if (inst->result)
+                {
+                    assert(syscall_ret);
+                    result = syscall_ret;
+                }
+                break;
+            }
         }
 
         if (inst->result &&
@@ -272,7 +318,32 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
+            case Bytecode_Value_Kind::STRING_LITERAL:
+            {
+                Atom str = bc_value->string_literal;
+
+                llvm::Constant *llvm_str = llvm::ConstantDataArray::getString(*builder->llvm_context,
+                                                                              { str.data, str.length },
+                                                                              true);
+
+                llvm::GlobalValue *llvm_str_glob =
+                    new llvm::GlobalVariable(*builder->llvm_module, llvm_str->getType(),
+                                             true, // Constant
+                                             llvm::GlobalVariable::PrivateLinkage,
+                                             llvm_str,
+                                             "_string_const");
+
+                llvm_str_glob->setUnnamedAddr(llvm::GlobalVariable::UnnamedAddr::Global);
+                auto alignment = llvm::MaybeAlign(1);
+                static_cast<llvm::GlobalObject*>(llvm_str_glob)->setAlignment(alignment);
+
+                llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
+                llvm::Value *llvm_str_ptr = llvm::ConstantExpr::getPointerCast(llvm_str_glob, dest_type);
+
+                return llvm_str_ptr;
+                break;
+            }
+
             case Bytecode_Value_Kind::TEMP:
             {
                 assert(bc_value->temp.index < builder->temps.count);
@@ -287,7 +358,13 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM: assert(false);
+            case Bytecode_Value_Kind::PARAM:
+            {
+                assert(bc_value->allocl.index < builder->parameters.count);
+                return builder->parameters[bc_value->parameter.index];
+                break;
+            }
+
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
         }
@@ -347,6 +424,78 @@ namespace Zodiac
                 break;
             }
         }
+    }
+
+    llvm::Value *llvm_emit_syscall(LLVM_Builder *builder, uint64_t arg_count)
+    {
+        assert(arg_count >= 1 && arg_count <= 7);
+
+        auto asm_string = string_ref("syscall");
+
+        String_Builder sb = {};
+        string_builder_init(builder->allocator, &sb);
+
+        string_builder_append(&sb, "=r,{rax}");
+
+        if (arg_count >= 2) string_builder_append(&sb, ",{rdi}");
+        if (arg_count >= 3) string_builder_append(&sb, ",{rsi}");
+        if (arg_count >= 4) string_builder_append(&sb, ",{rdx}");
+        if (arg_count >= 5) string_builder_append(&sb, ",{r10}");
+        if (arg_count >= 6) string_builder_append(&sb, ",{r9}");
+        if (arg_count >= 7) string_builder_append(&sb, ",{r8}");
+
+        llvm::FunctionType *asm_fn_type = llvm_asm_function_type(builder, arg_count);
+
+        Array<llvm::Value *> llvm_args = {};
+        array_init(builder->allocator, &llvm_args, arg_count);
+        for (int64_t i = 0 ; i < arg_count; i++)
+        {
+            llvm::Value *arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
+
+            llvm::Type *arg_type = arg_val->getType();
+            llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
+
+            if (arg_type != dest_type)
+            {
+                if (arg_type->isPointerTy())
+                {
+                    arg_val = builder->llvm_builder->CreatePtrToInt(arg_val, dest_type,
+                                                                     "");
+                }
+                else
+                {
+                    assert(false);
+                }
+
+            }
+            array_append(&llvm_args, arg_val);
+        }
+
+        for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
+
+        auto constraint_str = string_builder_to_string(builder->allocator, &sb);
+
+        llvm::Value *asm_val =
+            llvm::InlineAsm::get(asm_fn_type,
+                                 { asm_string.data, (size_t)asm_string.length },
+                                 { constraint_str.data, (size_t)constraint_str.length },
+                                 true, false, llvm::InlineAsm::AD_ATT);
+
+        llvm::Value *result =
+            builder->llvm_builder->CreateCall(asm_fn_type, asm_val,
+                                               { llvm_args.data,
+                                                 (size_t)llvm_args.count });
+
+        assert(result);
+
+        free(builder->allocator, constraint_str.data);
+
+        array_free(&llvm_args);
+
+
+        string_builder_free(&sb);
+
+        return result;
     }
 
     bool llvm_emit_binary(LLVM_Builder *builder, const char * output_file_name)

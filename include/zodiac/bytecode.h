@@ -74,6 +74,7 @@ namespace Zodiac
             struct
             {
                 Atom name;
+                int64_t index;               // Used in llvm generation
                 int64_t byte_offset_from_fp; // Used in interpreter
             } parameter;
 

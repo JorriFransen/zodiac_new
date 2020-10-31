@@ -53,6 +53,7 @@ namespace Zodiac
     llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value);
 
     void llvm_emit_exit(LLVM_Builder *builder, llvm::Value *exit_code_val);
+    llvm::Value *llvm_emit_syscall(LLVM_Builder *builder, uint64_t arg_count);
 
     template <typename T>
     T* llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value)
