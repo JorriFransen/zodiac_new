@@ -61,18 +61,20 @@ namespace Zodiac
             struct
             {
                 Atom name;
-                int64_t byte_offset_from_fp;
+                int64_t index;               // Used in llvm generation
+                int64_t byte_offset_from_fp; // Used in interpreter
             } allocl = {};
 
             struct
             {
                 int64_t index;
-                int64_t byte_offset_from_fp;
+                int64_t byte_offset_from_fp; // Used in interpreter
             } temp;
 
             struct
             {
-                int64_t byte_offset_from_fp;
+                Atom name;
+                int64_t byte_offset_from_fp; // Used in interpreter
             } parameter;
 
             void *pointer;
@@ -100,6 +102,9 @@ namespace Zodiac
     {
         BC_FUNC_FLAG_NONE      = 0,
         BC_FUNC_FLAG_CRT_ENTRY = 1,
+        BC_FUNC_FLAG_FOREIGN   = 2,
+        BC_FUNC_FLAG_EMITTED   = 4,
+        BC_FUNC_FLAG_NORETURN  = 8,
     };
 
     struct Bytecode_Function;

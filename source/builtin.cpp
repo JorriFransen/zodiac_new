@@ -102,7 +102,7 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
         auto decl = ast_type_declaration_new(allocator, Builtin::type_##name, ident); \
         decl->flags |= AST_NODE_FLAG_TYPED; \
         scope_add_declaration(global_scope, decl); \
-    } 
+    }
 
     BUILTIN_TYPE_LIST
 

@@ -46,6 +46,10 @@ namespace Zodiac
         auto name = decl->identifier->atom;
 
         Bytecode_Function *result = bytecode_new_function(builder, decl->type, name);
+        if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
+        {
+            result->flags |= BC_FUNC_FLAG_NORETURN;
+        }
 
         auto index = builder->functions.count;
         array_append(&builder->functions, { decl, result, index });
@@ -75,6 +79,10 @@ namespace Zodiac
         {
             assert(!bd->bc_bytecode_entry_function);
             bd->bc_bytecode_entry_function = func;
+        }
+        if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
+        {
+            func->flags |= BC_FUNC_FLAG_FOREIGN;
         }
 
         builder->current_function = func;
@@ -260,7 +268,7 @@ namespace Zodiac
                 auto body_block = bytecode_new_block(builder, "while_body");
                 auto post_while_block = bytecode_new_block(builder, "post_while");
 
-                bytecode_append_block(builder->current_function, cond_block); 
+                bytecode_append_block(builder->current_function, cond_block);
 
                 bytecode_emit_jump(builder, cond_block);
                 bytecode_set_insert_point(builder, cond_block);
@@ -519,7 +527,7 @@ namespace Zodiac
 
             auto result = bytecode_temporary_new(builder, expr->type);
 
-            auto arg_size_val = bytecode_integer_literal_new(builder, Builtin::type_s64, 
+            auto arg_size_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
                                                              { .s64 = total_arg_size });
 
             bytecode_emit_instruction(builder, SYSCALL, arg_count_val, arg_size_val, result);
@@ -696,7 +704,7 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal)
     {
-        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::STRING_LITERAL, 
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::STRING_LITERAL,
                                          Builtin::type_ptr_u8);
         result->string_literal = string_literal;
         return result;
@@ -707,14 +715,16 @@ namespace Zodiac
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, type);
         result->allocl.name = name;
 
+        auto index = builder->current_function->locals.count;
         array_append(&builder->current_function->locals, result);
+        result->allocl.index = index;
         return result;
     }
 
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, type);
-        result->allocl.name = name;
+        result->parameter.name = name;
 
         array_append(&builder->current_function->parameters, result);
 

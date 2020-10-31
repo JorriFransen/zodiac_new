@@ -1,19 +1,26 @@
+
 #include "llvm_builder.h"
 
-#include <llvm/IR/Module.h>
+#include "builtin.h"
+#include "bytecode.h"
+#include "string_builder.h"
+#include "temp_allocator.h"
+
+#include <llvm/IR/InlineAsm.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
-#include <llvm/IR/InlineAsm.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/TargetRegistry.h>
-#include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Support/Host.h>
+#include <llvm/Target/TargetOptions.h>
 #include <llvm/Support/FileSystem.h>
 
+#include <tracy/Tracy.hpp>
 
 namespace Zodiac
 {
+
     LLVM_Builder llvm_builder_create(Allocator *allocator, Build_Data *build_data)
     {
         auto _target_triple = llvm::sys::getDefaultTargetTriple();
@@ -30,23 +37,106 @@ namespace Zodiac
         {
             target_platform = Zodiac_Target_Platform::LINUX;
         }
-        else assert(false);   
+        else assert(false);
+
+        llvm::InitializeNativeTarget();
+        llvm::InitializeNativeTargetAsmPrinter();
+        llvm::InitializeNativeTargetAsmParser();
 
         LLVM_Builder result = {};
+        result.allocator = allocator;
         result.build_data = build_data;
+        result.target_triple = target_triple;
         result.target_platform = target_platform;
+
+        result.llvm_context = new llvm::LLVMContext();
+        result.llvm_module = new llvm::Module("root_module", *result.llvm_context);
+        result.llvm_builder = new llvm::IRBuilder<>(*result.llvm_context);
+
+        stack_init(allocator, &result.arg_stack);
+
+        array_init(allocator, &result.registered_functions);
+        array_init(allocator, &result.parameters);
+        array_init(allocator, &result.locals);
+        array_init(allocator, &result.temps);
 
         return result;
     }
 
     void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
     {
-        assert(false);
+        assert(!llvm_find_function(builder, bc_func));
+
+        auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, bc_func->type);
+
+        llvm::Function *llvm_func = llvm::Function::Create(
+                                        llvm_func_type,
+                                        llvm::GlobalValue::ExternalLinkage,
+                                        bc_func->name.data,
+                                        builder->llvm_module);
+
+        array_append(&builder->registered_functions, { bc_func, llvm_func });
     }
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
     {
-        assert(false);
+        auto llvm_func = llvm_find_function(builder, bc_func);
+        assert(llvm_func);
+
+        if (bc_func->flags & BC_FUNC_FLAG_FOREIGN) return;
+
+        for (int64_t i = 0; i < bc_func->blocks.count; i++)
+        {
+            auto block = bc_func->blocks[i];;
+            llvm::BasicBlock::Create(*builder->llvm_context, block->name, llvm_func);
+        }
+
+        auto llvm_block_it = llvm_func->begin();
+
+        builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
+
+        builder->parameters.count = 0;
+        builder->locals.count = 0;
+        builder->temps.count = 0;
+
+        for (int64_t i = 0; i < bc_func->parameters.count; i++)
+        {
+            auto param = bc_func->parameters[i];
+            auto llvm_param_type = llvm_type_from_ast(builder, param->type);
+            auto name = param->parameter.name;
+
+            auto param_alloca = builder->llvm_builder->CreateAlloca(llvm_param_type, nullptr,
+                                                                    name.data);
+            array_append(&builder->parameters, param_alloca);
+        }
+
+        for (int64_t i = 0; i < bc_func->locals.count; i++)
+        {
+            auto local = bc_func->locals[i];
+            auto name = local->allocl.name;
+            llvm::Type *ty = llvm_type_from_ast(builder, local->type);
+            llvm::AllocaInst *alloca = builder->llvm_builder->CreateAlloca(ty, nullptr, name.data);
+
+            array_append(&builder->locals, alloca);
+        }
+
+        for (int64_t i = 0; i < bc_func->parameters.count; i++)
+        {
+            auto param_val = llvm_func->getArg(i);
+            auto param_alloca = builder->parameters[i];
+            builder->llvm_builder->CreateStore(param_val, param_alloca);
+        }
+
+        for (int64_t i = 0; i < bc_func->blocks.count; i++)
+        {
+            builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
+
+            llvm_emit_block(builder, bc_func->blocks[i]);
+
+            llvm_block_it++;
+        }
+
+        bc_func->flags |= BC_FUNC_FLAG_EMITTED;
     }
 
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Value *bc_val)
@@ -54,8 +144,540 @@ namespace Zodiac
         assert(false);
     }
 
-    bool llvm_emit_binary(LLVM_Builder *builder, const char * out_file_name)
+    void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
     {
+        for (int64_t i = 0; i < bc_block->instructions.count; i++)
+        {
+            Bytecode_Instruction *inst = bc_block->instructions[i];
+
+            llvm_emit_instruction(builder, inst);
+        }
+    }
+
+    void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst)
+    {
+        llvm::Value *result = nullptr;
+
+        switch (inst->op)
+        {
+            case NOP: assert(false);
+
+            case ALLOCL:
+            {
+                llvm::Type *type = llvm_type_from_ast(builder, inst->result->type);
+                builder->llvm_builder->CreateAlloca(type, nullptr,
+                                                    inst->result->allocl.name.data);
+                break;
+            }
+
+            case STOREL:
+            {
+                auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                llvm::Value *new_val = llvm_emit_value(builder, inst->b);
+                builder->llvm_builder->CreateStore(new_val, alloca);
+                break;
+            }
+
+            case LOADL:
+            {
+                auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                result = builder->llvm_builder->CreateLoad(alloca);
+                break;
+            }
+
+            case LOAD_PARAM: assert(false);
+
+            case ADD_S: assert(false);
+            case SUB_S: assert(false);
+            case NEQ_S: assert(false);
+
+            case PUSH_ARG:
+            {
+                llvm::Value *arg_val = llvm_emit_value(builder, inst->a);
+                stack_push(&builder->arg_stack, arg_val);
+                break;
+            }
+
+            case CALL:
+            {
+                Bytecode_Function *bc_func = inst->a->function;
+                llvm::Function *callee = llvm_find_function(builder, bc_func);
+
+                int64_t arg_count = 0;
+
+                Array<llvm::Value *> _llvm_args = {};
+                array_init(builder->allocator, &_llvm_args, arg_count);
+
+                llvm::ArrayRef<llvm::Value *> llvm_args(_llvm_args.data, arg_count);
+
+                llvm::Value *return_val = builder->llvm_builder->CreateCall(callee, llvm_args, "");
+
+                if (inst->result)
+                {
+                    result = return_val;
+                }
+
+                if (bc_func->flags & BC_FUNC_FLAG_NORETURN)
+                {
+                    builder->llvm_builder->CreateUnreachable();
+                }
+                break;
+            }
+
+            case RETURN:
+            {
+                llvm::Value *ret_val = llvm_emit_value(builder, inst->a);
+                builder->llvm_builder->CreateRet(ret_val);
+                break;
+            }
+
+            case JUMP: assert(false);
+            case JUMP_IF: assert(false);
+
+            case EXIT:
+            {
+                llvm::Value *exit_code_val = llvm_emit_value(builder, inst->a);
+                llvm_emit_exit(builder, exit_code_val);
+                break;
+            }
+
+            case SYSCALL: assert(false);
+        }
+
+        if (inst->result &&
+            !(inst->result->kind == Bytecode_Value_Kind::ALLOCL))
+        {
+            assert(inst->result->kind == Bytecode_Value_Kind::TEMP);
+            assert(result);
+
+            assert(builder->temps.count == inst->result->temp.index);
+            array_append(&builder->temps, result);
+        }
+    }
+
+    llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value)
+    {
+        switch (bc_value->kind)
+        {
+            case Bytecode_Value_Kind::INVALID: assert(false);
+
+            case Bytecode_Value_Kind::INTEGER_LITERAL:
+            {
+                auto type = bc_value->type;
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
+                if (type->integer.sign)
+                    return llvm::ConstantInt::get(llvm_type, bc_value->integer_literal.s64, true);
+                else
+                    return llvm::ConstantInt::get(llvm_type, bc_value->integer_literal.s64, false);
+                break;
+            }
+
+            case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
+            case Bytecode_Value_Kind::TEMP:
+            {
+                assert(bc_value->temp.index < builder->temps.count);
+                return builder->temps[bc_value->temp.index];
+                break;
+            }
+
+            case Bytecode_Value_Kind::ALLOCL:
+            {
+                assert(bc_value->allocl.index < builder->locals.count);
+                return builder->locals[bc_value->allocl.index];
+                break;
+            }
+
+            case Bytecode_Value_Kind::PARAM: assert(false);
+            case Bytecode_Value_Kind::FUNCTION: assert(false);
+            case Bytecode_Value_Kind::BLOCK: assert(false);
+        }
+    }
+
+    void llvm_emit_exit(LLVM_Builder *builder, llvm::Value *exit_code_val)
+    {
+        switch (builder->target_platform)
+        {
+            case Zodiac_Target_Platform::INVALID: assert(false);
+
+            case Zodiac_Target_Platform::LINUX:
+            {
+                auto ta = temp_allocator_get();
+
+                auto asm_string = string_ref("syscall");
+
+                String_Builder sb = {};
+                string_builder_init(ta, &sb);
+
+                string_builder_append(&sb, "=r,{rax},{rdi}");
+
+                llvm::FunctionType *asm_fn_type = llvm_asm_function_type(builder, 2);
+
+                String constraint_string = string_builder_to_string(sb.allocator, &sb);
+
+                llvm::Value *asm_val =
+                    llvm::InlineAsm::get(asm_fn_type,
+                                         { asm_string.data, (size_t)asm_string.length },
+                                         { constraint_string.data, (size_t)constraint_string.length },
+                                         true, false, llvm::InlineAsm::AD_ATT);
+
+                llvm::Type *arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
+                auto syscall_num = llvm::ConstantInt::get(arg_type, 60, true);
+
+                llvm::Value *args[2] = { syscall_num, exit_code_val };
+
+                builder->llvm_builder->CreateCall(asm_fn_type, asm_val, { args, 2 });
+                builder->llvm_builder->CreateUnreachable();
+                break;
+            }
+
+            case Zodiac_Target_Platform::WINDOWS:
+            {
+                llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
+                assert(exitprocess_func);
+
+                auto fn_ptr_type = exitprocess_func->getType();
+                assert(fn_ptr_type->isPointerTy());
+                auto fn_type = static_cast<llvm::FunctionType *>(fn_ptr_type->getPointerElementType());
+
+                auto arg_type = llvm_type_from_ast(builder, Builtin::type_u32);
+                exit_code_val = builder->llvm_builder->CreateIntCast(exit_code_val, arg_type, false);
+                builder->llvm_builder->CreateCall(fn_type, exitprocess_func,
+                                                  { &exit_code_val, 1});
+                builder->llvm_builder->CreateUnreachable();
+                break;
+            }
+        }
+    }
+
+    bool llvm_emit_binary(LLVM_Builder *builder, const char * output_file_name)
+    {
+        ZoneScoped
+
+        assert(builder);
+        assert(output_file_name);
+
+        auto options = builder->build_data->options;
+
+        if (options->print_llvm) builder->llvm_module->dump();
+
+        // @TODO: @CLEANUP: This could be done by comparing a count I think?
+        for (int64_t i = 0; i < builder->registered_functions.count; i++)
+        {
+            auto &func = builder->registered_functions[i].bytecode_function;
+
+            if (!(func->flags & BC_FUNC_FLAG_EMITTED))
+            {
+                if ((func->flags & BC_FUNC_FLAG_CRT_ENTRY) &&
+                    options->link_c)
+                {
+                    continue;
+                }
+
+                return false;
+            }
+        }
+
+        bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
+
+        if (verify_error)
+        {
+            assert(false);
+        }
+
+        builder->llvm_module->setTargetTriple(builder->target_triple.data);
+        std::string error;
+        const llvm::Target *llvm_target =
+            llvm::TargetRegistry::lookupTarget(builder->target_triple.data, error);
+        assert(llvm_target);
+
+        auto cpu = "generic";
+        auto features = "";
+        llvm::TargetOptions opt;
+        auto rm = llvm::Optional<llvm::Reloc::Model>();
+
+        llvm::TargetMachine *llvm_target_machine =
+            llvm_target->createTargetMachine(builder->target_triple.data,
+                                             cpu, features, opt, rm);
+
+        builder->llvm_module->setDataLayout( llvm_target_machine->createDataLayout());
+
+        String_Builder sb = {};
+        string_builder_init(builder->allocator, &sb);
+        string_builder_appendf(&sb, "%s.o", output_file_name);
+        auto obj_file_name = string_builder_to_string(builder->allocator, &sb);
+        string_builder_free(&sb);
+
+
+        { ZoneScopedN("LLVMTargetMachineEmitToFile")
+
+        std::error_code err_code;
+        llvm::raw_fd_ostream dest(obj_file_name.data, err_code, llvm::sys::fs::OF_None);
+        if (err_code)
+        {
+            fprintf(stderr, "Could not open file: %s\n", obj_file_name.data);
+            assert(false);
+        }
+
+        llvm::legacy::PassManager pass;
+        auto filetype = llvm::CGFT_ObjectFile;
+        if (llvm_target_machine->addPassesToEmitFile(pass, dest, nullptr, filetype))
+        {
+            fprintf(stderr, "TargetMachine can't emit a file of this type");
+            assert(false);
+        }
+
+        pass.run(*builder->llvm_module);
+
+
+        }
+
+        free(builder->allocator, obj_file_name.data);
+
+        delete llvm_target_machine;
+
+        return llvm_run_linker(builder, output_file_name);
+    }
+
+    bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name)
+    {
+        ZoneScopedNCS("llvm_run_linker", 0x00ffff, 32);
+
+        assert(output_file_name);
+
+        String_Builder _sb = {};
+        auto sb = &_sb;
+        string_builder_init(builder->allocator, sb);
+
+        auto options = builder->build_data->options;
+        bool print_command = options->print_link_command || options->verbose;
+
+#if linux
+        if (options->link_c)
+        {
+            string_builder_append(sb, "ld ");
+            string_builder_append(sb, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
+            string_builder_append(sb, "/usr/lib64/Scrt1.o /usr/lib64/crti.o -lc ");
+        }
+        else
+        {
+            string_builder_appendf(sb, "ld -static -nostdlib ");
+        }
+
+        string_builder_appendf(sb, " %s.o -o %s", output_file_name, output_file_name);
+
+        if (options->link_c)
+        {
+            string_builder_appendf(sb, " /usr/lib64/crtn.o");
+        }
+
+        auto link_cmd = string_builder_to_string(builder->allocator, sb);
+        if (print_command) printf("Running linker: %s\n", link_cmd.data);
+
+        char out_buf[1024];
+        FILE *link_process_handle = popen(link_cmd.data, "r");
+        assert(link_process_handle);
+
+        bool result = true;
+        while (fgets(out_buf, sizeof(out_buf), link_process_handle) != nullptr)
+        {
+            fprintf(stderr, "%s", out_buf);
+        }
+        assert(feof(link_process_handle));
+
+        int close_ret = pclose(link_process_handle);
+        close_ret = WEXITSTATUS(close_ret);
+        assert(close_ret >= 0);
+
+        if (close_ret != 0)
+        {
+            result = false;
+            fprintf(stderr, "Link command failed with exit code: %d\n", close_ret);
+            builder->build_data->link_error = true;
+        }
+
+        string_builder_free(sb);
+        return result;
+
+#elif _WIN32
+
+        auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/bin/Hostx64/x64/link.exe");
+
+        string_builder_append(sb, linker_path.data);
+
+        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
+
+        string_builder_append(sb, " kernel32.lib");
+        string_builder_append(sb, " msvcrtd.lib");
+
+        string_builder_appendf(sb, " %s.o", output_file_name);
+
+        auto arg_str = string_builder_to_string(builder->allocator, sb);
+        if (print_command) printf("Running link command: %s\n", arg_str.data);
+
+        auto result = execute_process(builder->allocator, {}, arg_str);
+        free(builder->allocator, arg_str.data);
+        string_builder_free(sb);
+
+        if (!result.success)
+        {
+            builder->build_data->link_error = true;
+        }
+        return result.success;
+#endif
+    }
+
+    llvm::Function *llvm_find_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    {
+        for (int64_t i = 0; i < builder->registered_functions.count; i++)
+        {
+            auto fi = builder->registered_functions[i];
+            if (fi.bytecode_function == bc_func)
+                return fi.llvm_function;
+        }
+
+        return nullptr;
+    }
+
+    llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
+    {
+        assert(ast_type);
+        assert(ast_type->flags & AST_NODE_FLAG_RESOLVED_ID);
+        assert(ast_type->flags & AST_NODE_FLAG_TYPED);
+        assert(ast_type->flags & AST_NODE_FLAG_SIZED ||
+               ast_type->kind == AST_Type_Kind::FUNCTION);
+        auto &c = *builder->llvm_context;
+
+        switch (ast_type->kind)
+        {
+            case AST_Type_Kind::INVALID: assert(false);
+
+            case AST_Type_Kind::VOID:
+            {
+                return llvm::Type::getVoidTy(c);
+                break;
+            }
+
+            case AST_Type_Kind::INTEGER:
+            {
+                return llvm::Type::getIntNTy(c, ast_type->bit_size);
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT:
+            {
+                if (ast_type->bit_size == 32)
+                    return llvm::Type::getFloatTy(c);
+                else if (ast_type->bit_size == 64)
+                    return llvm::Type::getDoubleTy(c);
+                break;
+            }
+
+            case AST_Type_Kind::BOOL:
+            {
+                return llvm::Type::getIntNTy(c, 1);
+                break;
+            }
+
+            case AST_Type_Kind::POINTER:
+            {
+                if (ast_type->pointer.base == Builtin::type_void)
+                {
+                    return llvm_type_from_ast(builder, Builtin::type_ptr_u8);
+                }
+                else
+                {
+                    llvm::Type *base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
+                    return base_type->getPointerTo();
+                }
+                break;
+            }
+
+            case AST_Type_Kind::FUNCTION:
+            {
+                llvm::Type *llvm_ret_type = llvm_type_from_ast(builder,
+                                                               ast_type->function.return_type);
+                Array<llvm::Type *> llvm_arg_types = {};
+                if (ast_type->function.param_types.count)
+                {
+                    array_init(builder->allocator, &llvm_arg_types,
+                               ast_type->function.param_types.count);
+                    for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
+                    {
+                        llvm::Type *arg_type =
+                            llvm_type_from_ast(builder, ast_type->function.param_types[i]);
+                        array_append(&llvm_arg_types, arg_type);
+                    }
+                }
+
+                bool is_vararg = false;
+                llvm::Type *result =
+                    llvm::FunctionType::get(llvm_ret_type,
+                                            { llvm_arg_types.data,
+                                              (size_t)llvm_arg_types.count },
+                                            is_vararg);
+                if (llvm_arg_types.count)
+                {
+                    array_free(&llvm_arg_types);
+                }
+                return result;
+                break;
+            }
+
+            case AST_Type_Kind::STRUCTURE:
+            {
+                auto name = ast_type->structure.declaration->identifier->atom;
+                llvm::StructType *result =
+                    builder->llvm_module->getTypeByName(name.data);
+                if (result)
+                {
+                    assert(result->isStructTy());
+                }
+                else
+                {
+                    result = llvm::StructType::create(c, name.data);
+                    auto ast_mem_types = ast_type->structure.member_types;
+                    assert(ast_mem_types.count);
+                    Array<llvm::Type *> mem_types = {};
+                    array_init(builder->allocator, &mem_types, ast_mem_types.count);
+                    for (int64_t i = 0; i < ast_mem_types.count; i++)
+                    {
+                        array_append(&mem_types, llvm_type_from_ast(builder, ast_mem_types[i]));
+                    }
+                    result->setBody({ mem_types.data, (size_t)mem_types.count }, false);
+                }
+                return result;
+                break;
+            }
+
+            case AST_Type_Kind::ENUM:
+            {
+                return llvm_type_from_ast(builder, ast_type->enum_type.base_type);
+                break;
+            }
+
+            case AST_Type_Kind::ARRAY:
+            {
+                llvm::Type *llvm_elem_type = llvm_type_from_ast(builder,
+                                                                ast_type->array.element_type);
+                return llvm::ArrayType::get(llvm_elem_type,
+                                            ast_type->array.element_count);
+                break;
+            }
+        }
+
         assert(false);
+        return {};
+    }
+
+    llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)
+    {
+        assert(arg_count >= 0);
+        assert(arg_count < 7);
+
+        auto ret_type = llvm_type_from_ast(builder, Builtin::type_s64);
+        llvm::Type *param_types[7] = { ret_type, ret_type, ret_type, ret_type, ret_type, ret_type, ret_type };
+        return llvm::FunctionType::get(ret_type, { param_types, (size_t)arg_count },
+                                       false);;
     }
 }
