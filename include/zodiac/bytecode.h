@@ -2,6 +2,7 @@
 
 #include "allocator.h"
 #include "build_data.h"
+#include "stack.h"
 
 #include <inttypes.h>
 
@@ -9,29 +10,46 @@ namespace Zodiac
 {
     enum Bytecode_Opcode : uint8_t
     {
-        NOP        = 0x0000,
+        NOP         = 0x0000,
 
-        ALLOCL     = 0x0001,
+        ALLOCL      = 0x0001,
 
-        STOREL     = 0x0002,
+        STOREL      = 0x0002,
+        STORE_ARG   = 0x0003,
 
-        LOADL      = 0x0003,
-        LOAD_PARAM = 0x0004,
+        LOADL       = 0x0004,
+        LOAD_PARAM  = 0x0005,
+        LOAD_PTR    = 0x0006,
 
-        ADD_S      = 0x0005,
-        SUB_S      = 0x0006,
+        ADD_S       = 0x0007,
+        SUB_S       = 0x0008,
+        REM_S       = 0x0009,
+        MUL_S       = 0x000a,
+        DIV_S       = 0x000b,
 
-        NEQ_S      = 0x0007,
+        EQ_S        = 0x000c,
+        NEQ_S       = 0x000d,
+        LT_S        = 0x000e,
+        LTEQ_S      = 0x000f,
+        GT_S        = 0x0010,
+        GTEQ_S      = 0x0011,
 
-        PUSH_ARG   = 0x0008,
-        CALL       = 0x0009,
-        RETURN     = 0x000a,
+        PUSH_ARG    = 0x0012,
+        CALL        = 0x0013,
+        RETURN      = 0x0014,
+        RETURN_VOID = 0x0015,
 
-        JUMP       = 0x000b,
-        JUMP_IF    = 0x000c,
+        JUMP        = 0x0016,
+        JUMP_IF     = 0x0017,
 
-        EXIT       = 0x000d,
-        SYSCALL    = 0x000e,
+        PTR_OFFSET  = 0x0018,
+
+        ZEXT        = 0x0019,
+        SEXT        = 0x001a,
+        TRUNC       = 0x001b,
+
+        EXIT        = 0x001c,
+        SYSCALL     = 0x001d,
     };
 
     enum class Bytecode_Value_Kind
@@ -160,6 +178,8 @@ namespace Zodiac
         // Holds local variables for the function currently being emitted
         Array<Bytecode_Local_Variable_Info> locals = {};
         int64_t next_temp_index = 0; // Reset for each function
+
+        Stack<Bytecode_Block *> break_block_stack = {};
     };
 
     Bytecode_Builder bytecode_builder_create(Allocator *allocator, Build_Data *build_data);
@@ -180,12 +200,18 @@ namespace Zodiac
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *stmt);
+    void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr);
+    Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *expr);
 
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_builtin_call(Bytecode_Builder *builder, AST_Expression *expr);
 
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *expr);
+    Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand,
+                                       AST_Type *target_type);
+    Bytecode_Value *bytecode_emit_cast_to_int(Bytecode_Builder *builder,
+                                              AST_Expression *operand_expr, AST_Type *target_type);
 
     void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *dest);
     void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Value *cond_val,
@@ -196,12 +222,16 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *source);
 
+    Bytecode_Value *bytecode_emit_zero_value(Bytecode_Builder *builder, AST_Type *type);
+
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result);
 
     void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block);
     void bytecode_pop_break_block(Bytecode_Builder *builder);
+
+    bool bytecode_block_ends_with_terminator(Bytecode_Block *block);
 
     Bytecode_Value *bytecode_find_parameter(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Value *bytecode_find_variable(Bytecode_Builder *builder, AST_Declaration *decl);

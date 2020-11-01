@@ -164,9 +164,6 @@ namespace Zodiac
 
             case ALLOCL:
             {
-                // llvm::Type *type = llvm_type_from_ast(builder, inst->result->type);
-                // builder->llvm_builder->CreateAlloca(type, nullptr,
-                //                                     inst->result->allocl.name.data);
                 break;
             }
 
@@ -176,6 +173,15 @@ namespace Zodiac
                 llvm::Value *new_val = llvm_emit_value(builder, inst->b);
                 builder->llvm_builder->CreateStore(new_val, alloca);
                 break;
+            }
+
+            case STORE_ARG:
+            {
+                assert(false);
+                // auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                // llvm::Value *new_val = llvm_emit_value(builder, inst->b);
+                // builder->llvm_builder->CreateStore(new_val, alloca);
+                // break;
             }
 
             case LOADL:
@@ -189,6 +195,14 @@ namespace Zodiac
             {
                 auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 result = builder->llvm_builder->CreateLoad(param);
+                break;
+            }
+
+            case LOAD_PTR:
+            {
+                assert(false);
+                // auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                // result = builder->llvm_builder->CreateLoad(param);
                 break;
             }
 
@@ -210,7 +224,40 @@ namespace Zodiac
                 break;
             }
 
+            case REM_S:
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateSRem(lhs, rhs, "");
+                break;
+            }
+
+            case MUL_S:
+
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateMul(lhs, rhs, "");
+                break;
+            }
+
+            case DIV_S:
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateSDiv(lhs, rhs, "");
+                break;
+            }
+
+            case EQ_S: assert(false);
             case NEQ_S: assert(false);
+            case LT_S: assert(false);
+            case LTEQ_S: assert(false);
+            case GT_S: assert(false);
+            case GTEQ_S: assert(false);
 
             case PUSH_ARG:
             {
@@ -265,8 +312,14 @@ namespace Zodiac
                 break;
             }
 
+            case RETURN_VOID: assert(false);
             case JUMP: assert(false);
             case JUMP_IF: assert(false);
+
+            case PTR_OFFSET: assert(false);
+            case ZEXT: assert(false);
+            case SEXT: assert(false);
+            case TRUNC: assert(false);
 
             case EXIT:
             {
@@ -393,8 +446,8 @@ namespace Zodiac
 
                 llvm::Value *asm_val =
                     llvm::InlineAsm::get(asm_fn_type,
-                                         { asm_string.data, (size_t)asm_string.length },
-                                         { constraint_string.data, (size_t)constraint_string.length },
+                                         {asm_string.data, (size_t)asm_string.length},
+                                         {constraint_string.data, (size_t)constraint_string.length},
                                          true, false, llvm::InlineAsm::AD_ATT);
 
                 llvm::Type *arg_type = llvm_type_from_ast(builder, Builtin::type_s64);
@@ -414,10 +467,12 @@ namespace Zodiac
 
                 auto fn_ptr_type = exitprocess_func->getType();
                 assert(fn_ptr_type->isPointerTy());
-                auto fn_type = static_cast<llvm::FunctionType *>(fn_ptr_type->getPointerElementType());
+                auto fn_type =
+                    static_cast<llvm::FunctionType *>(fn_ptr_type->getPointerElementType());
 
                 auto arg_type = llvm_type_from_ast(builder, Builtin::type_u32);
-                exit_code_val = builder->llvm_builder->CreateIntCast(exit_code_val, arg_type, false);
+                exit_code_val = builder->llvm_builder->CreateIntCast(exit_code_val, arg_type,
+                                                                     false);
                 builder->llvm_builder->CreateCall(fn_type, exitprocess_func,
                                                   { &exit_code_val, 1});
                 builder->llvm_builder->CreateUnreachable();
@@ -776,8 +831,8 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE:
             {
                 auto name = ast_type->structure.declaration->identifier->atom;
-                llvm::StructType *result =
-                    builder->llvm_module->getTypeByName(name.data);
+                llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
+
                 if (result)
                 {
                     assert(result->isStructTy());

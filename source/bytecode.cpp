@@ -22,6 +22,8 @@ namespace Zodiac
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
 
+        stack_init(allocator, &result.break_block_stack);
+
         result.next_temp_index = 0;
 
         return result;
@@ -232,7 +234,17 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT: assert(false); //@@TODO: Implement!
+            case AST_Statement_Kind::ASSIGNMENT:
+            {
+                auto ident_expr = stmt->assignment.identifier_expression;
+                auto rhs_expr = stmt->assignment.rhs_expression;
+
+                Bytecode_Value *dest = bytecode_emit_lvalue(builder, ident_expr);
+                Bytecode_Value *source = bytecode_emit_expression(builder, rhs_expr);
+
+                bytecode_emit_store(builder, dest, source);
+                break;
+            }
 
             case AST_Statement_Kind::RETURN:
             {
@@ -243,7 +255,7 @@ namespace Zodiac
                 }
                 else
                 {
-                    assert(false); //@@TODO: Implement!
+                    bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
                 }
                 break;
             }
@@ -293,9 +305,62 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::FOR: assert(false); //@@TODO: Implement!
-            case AST_Statement_Kind::IF: assert(false); //@@TODO: Implement!
+
+            case AST_Statement_Kind::IF: {
+                bytecode_emit_if_statement(builder, stmt);
+                break;
+            }
+
             case AST_Statement_Kind::SWITCH: assert(false); //@@TODO: Implement!
         }
+    }
+
+    void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt) {
+
+        assert(stmt->kind == AST_Statement_Kind::IF);
+
+        auto cond_expr = stmt->if_stmt.cond_expr;
+        auto then_stmt = stmt->if_stmt.then_stmt;
+        auto else_stmt = stmt->if_stmt.else_stmt;
+
+        auto cond_val = bytecode_emit_expression(builder, cond_expr);
+        assert(cond_val->type->kind == AST_Type_Kind::BOOL);
+
+        Bytecode_Block *then_block = bytecode_new_block(builder, "then");
+        bytecode_append_block(builder->current_function, then_block);
+
+        Bytecode_Block *else_block = nullptr;
+        if (else_stmt) {
+            else_block = bytecode_new_block(builder, "else");
+        }
+        Bytecode_Block *post_if_block = bytecode_new_block(builder, "post_if");
+
+        bytecode_emit_jump_if(builder, cond_val, then_block,
+                              else_block ? else_block : post_if_block);
+
+        bytecode_set_insert_point(builder, then_block);
+        bytecode_emit_statement(builder, then_stmt);
+        then_block = builder->insert_block;
+
+        if (!bytecode_block_ends_with_terminator(then_block)) {
+            bytecode_emit_jump(builder, post_if_block);
+        }
+
+        if (else_stmt) {
+            bytecode_append_block(builder->current_function, else_block);
+            bytecode_set_insert_point(builder, else_block);
+
+            bytecode_emit_statement(builder, else_stmt);
+            else_block = builder->insert_block;
+
+            if (!bytecode_block_ends_with_terminator(else_block)) {
+                bytecode_emit_jump(builder, post_if_block);
+            }
+        }
+
+        bytecode_append_block(builder->current_function, post_if_block);
+        bytecode_set_insert_point(builder, post_if_block);
+
     }
 
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr)
@@ -306,27 +371,8 @@ namespace Zodiac
         {
             case AST_Expression_Kind::INVALID: assert(false);
 
-            case AST_Expression_Kind::IDENTIFIER:
-            {
-                auto decl = expr->identifier->declaration;
-                assert(decl);
-
-                Bytecode_Value *source_val = nullptr;
-
-                if (decl->kind == AST_Declaration_Kind::VARIABLE)
-                {
-                    source_val = bytecode_find_variable(builder, decl);
-                }
-                else if (decl->kind == AST_Declaration_Kind::PARAMETER)
-                {
-                    source_val = bytecode_find_parameter(builder, decl);
-                }
-                else
-                {
-                    assert(false);
-                }
-
-                assert(source_val);
+            case AST_Expression_Kind::IDENTIFIER: {
+                Bytecode_Value *source_val = bytecode_emit_lvalue(builder, expr);
                 result = bytecode_emit_load(builder, source_val);
                 break;
             }
@@ -334,8 +380,7 @@ namespace Zodiac
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::DOT: assert(false); //@TODO: Implement!
 
-            case AST_Expression_Kind::BINARY:
-            {
+            case AST_Expression_Kind::BINARY: {
 
 #define _binop_arithmetic(int_sign_op) { \
     auto lhs_expr = expr->binary.lhs; \
@@ -361,90 +406,121 @@ namespace Zodiac
     } \
     break; \
 }
-                switch (expr->binary.op)
-                {
+
+#define _binop_compare(int_sign_op) { \
+    auto lhs_expr = expr->binary.lhs; \
+    auto rhs_expr = expr->binary.rhs; \
+    assert(lhs_expr->type == rhs_expr->type); \
+    auto type = lhs_expr->type; \
+    assert(type->kind == AST_Type_Kind::INTEGER); \
+    assert(type->integer.sign); \
+    auto lhs = bytecode_emit_expression(builder, lhs_expr); \
+    auto rhs = bytecode_emit_expression(builder, rhs_expr); \
+    result = bytecode_temporary_new(builder, Builtin::type_bool); \
+    bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+    break; \
+}
+
+                switch (expr->binary.op) {
                     case BINOP_INVALID: assert(false);
-                    case BINOP_EQ: assert(false); //@TODO: Implement!
 
-                    case BINOP_NEQ:
-                    {
-                        auto lhs_expr = expr->binary.lhs;
-                        auto rhs_expr = expr->binary.rhs;
-
-                        assert(lhs_expr->type == rhs_expr->type);
-                        auto type = lhs_expr->type;
-                        assert(type->kind == AST_Type_Kind::INTEGER);
-                        assert(type->integer.sign);
-
-                        auto lhs = bytecode_emit_expression(builder, lhs_expr);
-                        auto rhs = bytecode_emit_expression(builder, rhs_expr);
-                        result = bytecode_temporary_new(builder, Builtin::type_bool);
-
-                        bytecode_emit_instruction(builder, NEQ_S, lhs, rhs, result);
-
-                        break;
-                    }
-
-                    case BINOP_LT: assert(false); //@TODO: Implement!
-                    case BINOP_LTEQ: assert(false); //@TODO: Implement!
-                    case BINOP_GT: assert(false); //@TODO: Implement!
-                    case BINOP_GTEQ: assert(false); //@TODO: Implement!
-
+                    case BINOP_EQ: _binop_compare(EQ_S);
+                    case BINOP_NEQ: _binop_compare(NEQ_S);
+                    case BINOP_LT: _binop_compare(LT_S);
+                    case BINOP_LTEQ: _binop_compare(LTEQ_S);
+                    case BINOP_GT: _binop_compare(GT_S);
+                    case BINOP_GTEQ: _binop_compare(GTEQ_S);
 
                     case BINOP_ADD: _binop_arithmetic(ADD_S);
                     case BINOP_SUB: _binop_arithmetic(SUB_S);
-
-                    case BINOP_REMAINDER: assert(false); //@TODO: Implement!
-                    case BINOP_MUL: assert(false); //@TODO: Implement!
-                    case BINOP_DIV: assert(false); //@TODO: Implement!
+                    case BINOP_REMAINDER: _binop_arithmetic(REM_S);
+                    case BINOP_MUL: _binop_arithmetic(MUL_S);
+                    case BINOP_DIV: _binop_arithmetic(DIV_S);
 
                 }
 
+#undef _binop_compare
 #undef _binop_arithmetic
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::UNARY: {
+
+                auto operand_expr = expr->unary.operand_expression;
+                auto operand_type = operand_expr->type;
+
+                switch (expr->unary.op)
+                {
+                    case UNOP_INVALID: assert(false);
+                    case UNOP_DEREF: assert(false);
+
+                    case UNOP_MINUS: {
+                        assert(operand_type->kind == AST_Type_Kind::INTEGER);
+                        assert(operand_type->integer.sign);
+
+                        Bytecode_Value *zero = bytecode_emit_zero_value(builder, operand_type);
+                        Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
+
+                        result = bytecode_temporary_new(builder, operand_type);
+                        bytecode_emit_instruction(builder, SUB_S, zero, operand_value, result);
+
+                        break;
+                    }
+
+                    case UNOP_PRE_INC: assert(false);
+                    case UNOP_PRE_DEC: assert(false);
+                }
+                break;
+            }
+
             case AST_Expression_Kind::POST_FIX: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::PRE_FIX: assert(false); //@TODO: Implement!
 
-            case AST_Expression_Kind::CALL:
-            {
+            case AST_Expression_Kind::CALL: {
                 result = bytecode_emit_call(builder, expr);
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL:
-            {
+            case AST_Expression_Kind::BUILTIN_CALL: {
                 result = bytecode_emit_builtin_call(builder, expr);
                 break;
             }
 
-            case AST_Expression_Kind::ADDROF: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::COMPOUND: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::SUBSCRIPT: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::ADDROF: {
+                result = bytecode_emit_lvalue(builder, expr->addrof.operand_expr);
+                break;
+            }
 
-            case AST_Expression_Kind::CAST:
-            {
+            case AST_Expression_Kind::COMPOUND: assert(false); //@TODO: Implement!
+
+            case AST_Expression_Kind::SUBSCRIPT: {
+                auto lvalue = bytecode_emit_lvalue(builder, expr);
+                result = bytecode_emit_load(builder, lvalue);
+                break;
+            }
+
+            case AST_Expression_Kind::CAST: {
                 result = bytecode_emit_cast(builder, expr);
                 break;
             }
 
-            case AST_Expression_Kind::INTEGER_LITERAL:
-            {
+            case AST_Expression_Kind::INTEGER_LITERAL: {
                 result = bytecode_integer_literal_new(builder, expr->type, expr->integer_literal);
                 break;
             }
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false); //@TODO: Implement!
 
-            case AST_Expression_Kind::STRING_LITERAL:
-            {
+            case AST_Expression_Kind::STRING_LITERAL: {
                 result = bytecode_string_literal_new(builder, expr->string_literal.atom);
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::CHAR_LITERAL: {
+                Integer_Literal il = { .u8 = (uint8_t)expr->char_literal.c };
+                result = bytecode_integer_literal_new(builder, Builtin::type_u8, il);
+                break;
+            }
             case AST_Expression_Kind::BOOL_LITERAL: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::NULL_LITERAL: assert(false); //@TODO: Implement!
             case AST_Expression_Kind::RANGE: assert(false); //@TODO: Implement!
@@ -453,6 +529,83 @@ namespace Zodiac
         assert(result || expr->type->kind == AST_Type_Kind::VOID);
         if (result) assert(result->type = expr->type);
 
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *expr) {
+
+        Bytecode_Value *result = nullptr;
+
+        switch (expr->kind) {
+            case AST_Expression_Kind::INVALID: assert(false);
+
+            case AST_Expression_Kind::IDENTIFIER: {
+                auto decl = expr->identifier->declaration;
+                assert(decl);
+
+                Bytecode_Value *source_val = nullptr;
+                if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+                    source_val = bytecode_find_variable(builder, decl);
+                }
+                else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
+                    source_val = bytecode_find_parameter(builder, decl);
+                }
+                else {
+                    assert(false);
+                }
+
+                assert(source_val);
+                result = source_val;
+                break;
+            }
+
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Expression_Kind::DOT: assert(false);
+            case AST_Expression_Kind::BINARY: assert(false);
+            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::POST_FIX: assert(false);
+            case AST_Expression_Kind::PRE_FIX: assert(false);
+            case AST_Expression_Kind::CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
+            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::COMPOUND: assert(false);
+
+            case AST_Expression_Kind::SUBSCRIPT: {
+                auto ptr_expr = expr->subscript.pointer_expression;
+                auto index_expr = expr->subscript.index_expression;
+
+                auto ptr_val = bytecode_emit_expression(builder, ptr_expr);
+                auto offset_val = bytecode_emit_expression(builder, index_expr);
+
+                AST_Type *result_type =
+                    build_data_find_or_create_pointer_type(builder->allocator,
+                                                           builder->build_data,
+                                                           expr->type); 
+
+                result = bytecode_temporary_new(builder, result_type);
+
+                if (ptr_expr->type->kind == AST_Type_Kind::POINTER) {
+                    bytecode_emit_instruction(builder, PTR_OFFSET, ptr_val, offset_val, result);
+                } else if (ptr_expr->type->kind == AST_Type_Kind::ARRAY) {
+                    assert(false);
+                    // bytecode_emit_instruction(builder, ARRAY_OFFSET, ptr_val, offset_val, result);
+                } else {
+                    assert(false);
+                }
+                break;
+            }
+
+            case AST_Expression_Kind::CAST: assert(false);
+            case AST_Expression_Kind::INTEGER_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
+            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::NULL_LITERAL: assert(false);
+            case AST_Expression_Kind::RANGE: assert(false);
+        }
+
+        assert(result);
         return result;
     }
 
@@ -499,18 +652,15 @@ namespace Zodiac
 
         auto name = expr->builtin_call.identifier->atom;
 
-        if (name == Builtin::atom_static_assert) assert(false);
-        else if (name == Builtin::atom_exit)
-        {
+        if (name == Builtin::atom_static_assert) { assert(false);
+        } else if (name == Builtin::atom_exit) {
             assert(args.count == 1);
 
             auto exit_code_val = bytecode_emit_expression(builder, args[0]);
             bytecode_emit_instruction(builder, EXIT, exit_code_val, nullptr, nullptr);
             return nullptr;
 
-        }
-        else if (name == Builtin::atom_syscall)
-        {
+        } else if (name == Builtin::atom_syscall) {
             int64_t total_arg_size = 0;
             for (int64_t i = 0; i < args.count; i++)
             {
@@ -533,8 +683,12 @@ namespace Zodiac
             bytecode_emit_instruction(builder, SYSCALL, arg_count_val, arg_size_val, result);
             return result;
         }
-        else if (name == Builtin::atom_cast) assert(false);
-        else if (name == Builtin::atom_sizeof) assert(false);
+        else if (name == Builtin::atom_cast) {
+            assert(args.count == 2);
+            auto target_type = args[0]->type;
+            auto operand_expr = args[1];
+            return bytecode_emit_cast(builder, operand_expr, target_type);
+        } else if (name == Builtin::atom_sizeof) assert(false);
         else if (name == Builtin::atom_offsetof) assert(false);
         else assert(false);
 
@@ -544,8 +698,94 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *expr)
     {
         assert(expr->kind == AST_Expression_Kind::CAST);
+        return bytecode_emit_cast(builder, expr->cast.operand_expression, expr->cast.target_type);
+    }
 
-        assert(false);
+    Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *operand,
+                                       AST_Type *target_type)
+    {
+        switch (target_type->kind)
+        {
+            case  AST_Type_Kind::INVALID: assert(false);
+            case  AST_Type_Kind::VOID: assert(false);
+
+            case  AST_Type_Kind::INTEGER:
+            {
+                return bytecode_emit_cast_to_int(builder, operand, target_type);
+                break;
+            }
+
+            case  AST_Type_Kind::FLOAT: assert(false);
+            case  AST_Type_Kind::BOOL: assert(false);
+            case  AST_Type_Kind::POINTER: assert(false);
+            case  AST_Type_Kind::FUNCTION: assert(false);
+            case  AST_Type_Kind::STRUCTURE: assert(false);
+            case  AST_Type_Kind::ENUM: assert(false);
+            case  AST_Type_Kind::ARRAY: assert(false);
+        }
+
+    }
+
+    Bytecode_Value *bytecode_emit_cast_to_int(Bytecode_Builder *builder,
+                                              AST_Expression *operand_expr, AST_Type *target_type)
+    {
+        assert(target_type->kind == AST_Type_Kind::INTEGER);
+
+        auto operand_type = operand_expr->type;
+
+        Bytecode_Value *result = nullptr;
+
+        Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
+
+        switch (operand_type->kind)
+        {
+            case  AST_Type_Kind::INVALID: assert(false);
+            case  AST_Type_Kind::VOID: assert(false);
+
+            case  AST_Type_Kind::INTEGER:
+            {
+                result = bytecode_temporary_new(builder, target_type);
+
+                bool extend = target_type->bit_size > operand_type->bit_size;
+
+                if (operand_type->integer.sign == target_type->integer.sign)
+                {
+                    assert(false);
+                }
+                else if (operand_type->integer.sign)
+                {
+                    // Signed --> Unsigned
+                    if (extend) {
+                        bytecode_emit_instruction(builder, SEXT, operand_value, nullptr, result);
+                    } else {
+                        bytecode_emit_instruction(builder, TRUNC, operand_value, nullptr, result);
+                    }
+                }
+                else
+                {
+                    // Unsigned --> signed
+                    assert(target_type->integer.sign);
+                    if (extend) {
+                        bytecode_emit_instruction(builder, ZEXT, operand_value, nullptr, result);
+                    } else {
+                        assert(false);
+                    }
+                }
+                break;
+            }
+
+            case  AST_Type_Kind::FLOAT: assert(false);
+            case  AST_Type_Kind::BOOL: assert(false);
+            case  AST_Type_Kind::POINTER: assert(false);
+            case  AST_Type_Kind::FUNCTION: assert(false);
+            case  AST_Type_Kind::STRUCTURE: assert(false);
+            case  AST_Type_Kind::ENUM: assert(false);
+            case  AST_Type_Kind::ARRAY: assert(false);
+        }
+
+        assert(result);
+
+        return result;
     }
 
     void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *dest)
@@ -565,22 +805,24 @@ namespace Zodiac
     void bytecode_emit_store(Bytecode_Builder *builder, Bytecode_Value *dest,
                              Bytecode_Value *source)
     {
-        switch (dest->kind)
-        {
+        assert(dest->type == source->type);
+
+        switch (dest->kind) {
             case Bytecode_Value_Kind::INVALID: assert(false);
             case Bytecode_Value_Kind::TEMP: assert(false);
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
             case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
 
-            case Bytecode_Value_Kind::ALLOCL:
-            {
-                assert(dest->type == source->type);
-
+            case Bytecode_Value_Kind::ALLOCL: {
                 bytecode_emit_instruction(builder, STOREL, dest, source, nullptr);
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM: assert(false);
+            case Bytecode_Value_Kind::PARAM: {
+                bytecode_emit_instruction(builder, STORE_ARG, dest, source, nullptr);
+                break;
+            }
+
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
         }
@@ -594,7 +836,13 @@ namespace Zodiac
         switch (source->kind)
         {
             case Bytecode_Value_Kind::INVALID: assert(false);
-            case Bytecode_Value_Kind::TEMP: assert(false);
+
+            case Bytecode_Value_Kind::TEMP: {
+                assert(source->type->kind == AST_Type_Kind::POINTER);
+                bytecode_emit_instruction(builder, LOAD_PTR, source, nullptr, result);
+                break;
+            }
+
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
             case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
 
@@ -618,6 +866,27 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_emit_zero_value(Bytecode_Builder *builder, AST_Type *type) {
+
+        switch (type->kind) {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER: {
+                return bytecode_integer_literal_new(builder, type, { });
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+    }
+
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result)
@@ -634,25 +903,35 @@ namespace Zodiac
         return inst;
     }
 
-    void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block)
-    {
-
+    void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block) {
+        stack_push(&builder->break_block_stack, block);
     }
 
-    void bytecode_pop_break_block(Bytecode_Builder *builder)
-    {
-
+    void bytecode_pop_break_block(Bytecode_Builder *builder) {
+        stack_pop(&builder->break_block_stack);
     }
 
-    Bytecode_Value *bytecode_find_parameter(Bytecode_Builder *builder, AST_Declaration *decl)
-    {
+    bool bytecode_block_ends_with_terminator(Bytecode_Block *block) {
+
+        if (!block->instructions.count) return false;
+
+        Bytecode_Instruction *last_instruction = array_last(&block->instructions);
+
+        return last_instruction->op == RETURN ||
+               last_instruction->op == RETURN_VOID ||
+               last_instruction->op == JUMP ||
+               last_instruction->op == JUMP_IF ||
+               last_instruction->op == EXIT;
+    }
+
+    Bytecode_Value *bytecode_find_parameter(Bytecode_Builder *builder, AST_Declaration *decl) {
+
         assert(decl->kind == AST_Declaration_Kind::PARAMETER);
 
-        for (int64_t i = 0; i < builder->parameters.count; i++)
-        {
+        for (int64_t i = 0; i < builder->parameters.count; i++) {
             auto info = builder->parameters[i];
-            if (info.declaration == decl)
-            {
+
+            if (info.declaration == decl) {
                 assert(info.allocl_value->kind == Bytecode_Value_Kind::PARAM);
                 return info.allocl_value;
             }
@@ -830,41 +1109,24 @@ namespace Zodiac
                 break;
             }
 
-            case STOREL:
-            {
-                string_builder_append(sb, "STOREL ");
-                break;
-            }
+            case STOREL: string_builder_append(sb, "STOREL "); break;
+            case STORE_ARG: string_builder_append(sb, "STOREL "); break;
+            case LOADL: string_builder_append(sb, "LOADL "); break;
+            case LOAD_PARAM: string_builder_append(sb, "LOAD_PARAM "); break;
+            case LOAD_PTR: string_builder_append(sb, "LOAD_PTR "); break;
 
-            case LOADL:
-            {
-                string_builder_append(sb, "LOADL ");
-                break;
-            }
+            case ADD_S: string_builder_append(sb, "ADD_S "); break;
+            case SUB_S: string_builder_append(sb, "SUB_S "); break;
+            case REM_S: string_builder_append(sb, "REM_S "); break;
+            case MUL_S: string_builder_append(sb, "MUL_S "); break;
+            case DIV_S: string_builder_append(sb, "SUB_S "); break;
 
-            case LOAD_PARAM:
-            {
-                string_builder_append(sb, "LOAD_PARAM ");
-                break;
-            }
-
-            case ADD_S:
-            {
-                string_builder_append(sb, "ADD_S ");
-                break;
-            }
-
-            case SUB_S:
-            {
-                string_builder_append(sb, "SUB_S ");
-                break;
-            }
-
-            case NEQ_S:
-            {
-                string_builder_append(sb, "NEQ_S ");
-                break;
-            }
+            case EQ_S: string_builder_append(sb, "EQ_S "); break;
+            case NEQ_S: string_builder_append(sb, "NEQ_S "); break;
+            case LT_S: string_builder_append(sb, "LT_S "); break;
+            case LTEQ_S: string_builder_append(sb, "LTEQ_S "); break;
+            case GT_S: string_builder_append(sb, "GT_S "); break;
+            case GTEQ_S: string_builder_append(sb, "GTEQ_S "); break;
 
             case PUSH_ARG:
             {
@@ -889,6 +1151,12 @@ namespace Zodiac
                 break;
             }
 
+            case RETURN_VOID:
+            {
+                string_builder_append(sb, "RETURN_VOID ");
+                break;
+            }
+
             case JUMP:
             {
                 string_builder_append(sb, "JUMP ");
@@ -900,6 +1168,11 @@ namespace Zodiac
                 string_builder_append(sb, "JUMP_IF");
                 break;
             }
+
+            case PTR_OFFSET: assert(false);
+            case ZEXT: assert(false);
+            case SEXT: assert(false);
+            case TRUNC: assert(false);
 
             case EXIT:
             {

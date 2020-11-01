@@ -41,7 +41,7 @@ namespace Zodiac
 
         assert(parsed_file);
 
-        Array<AST_Declaration*> global_decls = {};
+        Array<AST_Declaration *> global_decls = {};
         array_init(ast_builder->allocator, &global_decls);
 
         Scope *module_scope = scope_new(ast_builder->allocator, Scope_Kind::MODULE,

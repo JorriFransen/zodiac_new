@@ -1,5 +1,5 @@
 
-// std :: import std;
+std :: import std;
 
 main :: func() -> s64
 {

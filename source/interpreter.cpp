@@ -88,6 +88,7 @@ namespace Zodiac
                 }
 
                 case STOREL:
+                case STORE_ARG:
                 {
                     uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
                     Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
@@ -115,6 +116,11 @@ namespace Zodiac
                     break;
                 }
 
+                case LOAD_PTR: {
+                    assert(false);
+                    break;
+                }
+
 #define _binop_arithmetic(op) { \
     auto lhs = interpreter_load_value(interp, inst->a); \
     auto rhs = interpreter_load_value(interp, inst->b); \
@@ -128,8 +134,16 @@ namespace Zodiac
 
                 case ADD_S:_binop_arithmetic(+);
                 case SUB_S:_binop_arithmetic(-);
+                case REM_S:_binop_arithmetic(%);
+                case MUL_S:_binop_arithmetic(*);
+                case DIV_S:_binop_arithmetic(/);
 
+                case EQ_S: assert(false);
                 case NEQ_S: assert(false);
+                case LT_S: assert(false);
+                case LTEQ_S: assert(false);
+                case GT_S: assert(false);
+                case GTEQ_S: assert(false);
 
                 case PUSH_ARG:
                 {
@@ -249,8 +263,14 @@ namespace Zodiac
                     break;
                 }
 
-                case JUMP:
+                case RETURN_VOID: assert(false);
+                case JUMP: assert(false);
                 case JUMP_IF: assert(false);
+
+                case PTR_OFFSET: assert(false);
+                case ZEXT: assert(false);
+                case SEXT: assert(false);
+                case TRUNC: assert(false);
 
                 case EXIT:
                 {
