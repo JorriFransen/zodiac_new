@@ -16,40 +16,55 @@ namespace Zodiac
 
         STOREL      = 0x0002,
         STORE_ARG   = 0x0003,
+        STORE_PTR   = 0x0004,
 
-        LOADL       = 0x0004,
-        LOAD_PARAM  = 0x0005,
-        LOAD_PTR    = 0x0006,
+        LOADL       = 0x0005,
+        LOAD_PARAM  = 0x0006,
+        LOAD_PTR    = 0x0007,
 
-        ADD_S       = 0x0007,
-        SUB_S       = 0x0008,
-        REM_S       = 0x0009,
-        MUL_S       = 0x000a,
-        DIV_S       = 0x000b,
+        ADD_S       = 0x0008,
+        SUB_S       = 0x0009,
+        REM_S       = 0x000a,
+        MUL_S       = 0x000b,
+        DIV_S       = 0x000c,
 
-        EQ_S        = 0x000c,
-        NEQ_S       = 0x000d,
-        LT_S        = 0x000e,
-        LTEQ_S      = 0x000f,
-        GT_S        = 0x0010,
-        GTEQ_S      = 0x0011,
+        EQ_S        = 0x000d,
+        NEQ_S       = 0x000e,
+        LT_S        = 0x000f,
+        LTEQ_S      = 0x0010,
+        GT_S        = 0x0011,
+        GTEQ_S      = 0x0012,
 
-        PUSH_ARG    = 0x0012,
-        CALL        = 0x0013,
-        RETURN      = 0x0014,
-        RETURN_VOID = 0x0015,
+        ADD_U       = 0x0013,
+        SUB_U       = 0x0014,
+        REM_U       = 0x0015,
+        MUL_U       = 0x0016,
+        DIV_U       = 0x0017,
 
-        JUMP        = 0x0016,
-        JUMP_IF     = 0x0017,
+        ADD_F       = 0x0018,
+        SUB_F       = 0x0019,
+        MUL_F       = 0x001a,
+        DIV_F       = 0x001b,
 
-        PTR_OFFSET  = 0x0018,
+        PUSH_ARG    = 0x001c,
+        CALL        = 0x001d,
+        RETURN      = 0x001e,
+        RETURN_VOID = 0x001f,
 
-        ZEXT        = 0x0019,
-        SEXT        = 0x001a,
-        TRUNC       = 0x001b,
+        JUMP        = 0x0020,
+        JUMP_IF     = 0x0021,
 
-        EXIT        = 0x001c,
-        SYSCALL     = 0x001d,
+        PTR_OFFSET  = 0x0022,
+
+        ZEXT        = 0x0023,
+        SEXT        = 0x0024,
+        TRUNC       = 0x0025,
+        F_TO_S      = 0x0026,
+        S_TO_F      = 0x0027,
+        U_TO_F      = 0x0028,
+
+        EXIT        = 0x0029,
+        SYSCALL     = 0x002a,
     };
 
     enum class Bytecode_Value_Kind
@@ -57,6 +72,7 @@ namespace Zodiac
         INVALID,
 
         INTEGER_LITERAL,
+        FLOAT_LITERAL,
         STRING_LITERAL,
 
         TEMP,
@@ -98,6 +114,8 @@ namespace Zodiac
 
             void *pointer;
             Integer_Literal integer_literal;
+            float r32;
+            double r64;
             Atom string_literal;
 
             Bytecode_Function *function;
@@ -212,6 +230,9 @@ namespace Zodiac
                                        AST_Type *target_type);
     Bytecode_Value *bytecode_emit_cast_to_int(Bytecode_Builder *builder,
                                               AST_Expression *operand_expr, AST_Type *target_type);
+    Bytecode_Value *bytecode_emit_cast_to_float(Bytecode_Builder *builder,
+                                                AST_Expression *operand_expr,
+                                                AST_Type *target_type);
 
     void bytecode_emit_jump(Bytecode_Builder *builder, Bytecode_Block *dest);
     void bytecode_emit_jump_if(Bytecode_Builder *builder, Bytecode_Value *cond_val,
@@ -221,6 +242,9 @@ namespace Zodiac
                              Bytecode_Value *source);
 
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *source);
+
+    Bytecode_Value *bytecode_emit_float_literal(Bytecode_Builder *builder,
+                                                AST_Expression *literal_expr);
 
     Bytecode_Value *bytecode_emit_zero_value(Bytecode_Builder *builder, AST_Type *type);
 
@@ -240,6 +264,8 @@ namespace Zodiac
                                        AST_Type *type);
     Bytecode_Value *bytecode_integer_literal_new(Bytecode_Builder *builder, AST_Type *type,
                                                  Integer_Literal integer_literal);
+    Bytecode_Value *bytecode_float_literal_new(Bytecode_Builder *builder, AST_Type *type,
+                                               float r32, double r64);
     Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal);
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name);

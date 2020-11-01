@@ -158,25 +158,21 @@ namespace Zodiac
     {
         llvm::Value *result = nullptr;
 
-        switch (inst->op)
-        {
+        switch (inst->op) {
             case NOP: assert(false);
 
-            case ALLOCL:
-            {
+            case ALLOCL: {
                 break;
             }
 
-            case STOREL:
-            {
+            case STOREL: {
                 auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 llvm::Value *new_val = llvm_emit_value(builder, inst->b);
                 builder->llvm_builder->CreateStore(new_val, alloca);
                 break;
             }
 
-            case STORE_ARG:
-            {
+            case STORE_ARG: {
                 assert(false);
                 // auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 // llvm::Value *new_val = llvm_emit_value(builder, inst->b);
@@ -184,22 +180,24 @@ namespace Zodiac
                 // break;
             }
 
-            case LOADL:
-            {
+            case STORE_PTR: {
+                assert(false);
+                break;
+            }
+
+            case LOADL: {
                 auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 result = builder->llvm_builder->CreateLoad(alloca);
                 break;
             }
 
-            case LOAD_PARAM:
-            {
+            case LOAD_PARAM: {
                 auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 result = builder->llvm_builder->CreateLoad(param);
                 break;
             }
 
-            case LOAD_PTR:
-            {
+            case LOAD_PTR: {
                 assert(false);
                 // auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 // result = builder->llvm_builder->CreateLoad(param);
@@ -207,7 +205,7 @@ namespace Zodiac
             }
 
             case ADD_S:
-            {
+            case ADD_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
@@ -215,8 +213,16 @@ namespace Zodiac
                 break;
             }
 
+            case ADD_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateFAdd(lhs, rhs, "");
+                break;
+            }
+
             case SUB_S:
-            {
+            case SUB_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
@@ -224,8 +230,15 @@ namespace Zodiac
                 break;
             }
 
-            case REM_S:
-            {
+            case SUB_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateFSub(lhs, rhs, "");
+                break;
+            }
+
+            case REM_S: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
@@ -233,9 +246,16 @@ namespace Zodiac
                 break;
             }
 
-            case MUL_S:
+            case REM_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
 
-            {
+                result = builder->llvm_builder->CreateURem(lhs, rhs, "");
+                break;
+            }
+
+            case MUL_S:
+            case MUL_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
@@ -243,12 +263,35 @@ namespace Zodiac
                 break;
             }
 
-            case DIV_S:
-            {
+            case MUL_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateFMul(lhs, rhs, "");
+                break;
+            }
+
+            case DIV_S: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
                 result = builder->llvm_builder->CreateSDiv(lhs, rhs, "");
+                break;
+            }
+
+            case DIV_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateUDiv(lhs, rhs, "");
+                break;
+            }
+
+            case DIV_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateFDiv(lhs, rhs, "");
                 break;
             }
 
@@ -259,15 +302,13 @@ namespace Zodiac
             case GT_S: assert(false);
             case GTEQ_S: assert(false);
 
-            case PUSH_ARG:
-            {
+            case PUSH_ARG: {
                 llvm::Value *arg_val = llvm_emit_value(builder, inst->a);
                 stack_push(&builder->arg_stack, arg_val);
                 break;
             }
 
-            case CALL:
-            {
+            case CALL: {
                 Bytecode_Function *bc_func = inst->a->function;
                 llvm::Function *callee = llvm_find_function(builder, bc_func);
 
@@ -280,8 +321,7 @@ namespace Zodiac
                 Array<llvm::Value *> _llvm_args = {};
                 array_init(builder->allocator, &_llvm_args, arg_count);
 
-                for (int64_t i = 0; i < arg_count; i++)
-                {
+                for (int64_t i = 0; i < arg_count; i++) {
                     int64_t offset = (arg_count - 1) - i;
                     llvm::Value *arg = stack_peek(&builder->arg_stack, offset);
                     array_append(&_llvm_args, arg);
@@ -293,20 +333,17 @@ namespace Zodiac
 
                 llvm::Value *return_val = builder->llvm_builder->CreateCall(callee, llvm_args, "");
 
-                if (inst->result)
-                {
+                if (inst->result) {
                     result = return_val;
                 }
 
-                if (bc_func->flags & BC_FUNC_FLAG_NORETURN)
-                {
+                if (bc_func->flags & BC_FUNC_FLAG_NORETURN) {
                     builder->llvm_builder->CreateUnreachable();
                 }
                 break;
             }
 
-            case RETURN:
-            {
+            case RETURN: {
                 llvm::Value *ret_val = llvm_emit_value(builder, inst->a);
                 builder->llvm_builder->CreateRet(ret_val);
                 break;
@@ -320,22 +357,23 @@ namespace Zodiac
             case ZEXT: assert(false);
             case SEXT: assert(false);
             case TRUNC: assert(false);
+            case F_TO_S: assert(false);
 
-            case EXIT:
-            {
+            case S_TO_F: assert(false);
+            case U_TO_F: assert(false);
+
+            case EXIT: {
                 llvm::Value *exit_code_val = llvm_emit_value(builder, inst->a);
                 llvm_emit_exit(builder, exit_code_val);
                 break;
             }
 
-            case SYSCALL:
-            {
+            case SYSCALL: {
                 assert(inst->a->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
                 assert(inst->a->type == Builtin::type_u64);
 
                 llvm::Value *syscall_ret = llvm_emit_syscall(builder, inst->a->integer_literal.u64);
-                if (inst->result)
-                {
+                if (inst->result) {
                     assert(syscall_ret);
                     result = syscall_ret;
                 }
@@ -344,8 +382,8 @@ namespace Zodiac
         }
 
         if (inst->result &&
-            !(inst->result->kind == Bytecode_Value_Kind::ALLOCL))
-        {
+            !(inst->result->kind == Bytecode_Value_Kind::ALLOCL)) {
+
             assert(inst->result->kind == Bytecode_Value_Kind::TEMP);
             assert(result);
 
@@ -371,13 +409,28 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Value_Kind::FLOAT_LITERAL: {
+                auto type = bc_value->type;
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
+                if (type == Builtin::type_float) {
+                    return llvm::ConstantFP::get(llvm_type, bc_value->r32);
+                } else if (type == Builtin::type_double) {
+                    return llvm::ConstantFP::get(llvm_type, bc_value->r64);
+                }
+                else {
+                    assert(false);
+                }
+                break;
+            }
+
             case Bytecode_Value_Kind::STRING_LITERAL:
             {
                 Atom str = bc_value->string_literal;
 
-                llvm::Constant *llvm_str = llvm::ConstantDataArray::getString(*builder->llvm_context,
-                                                                              { str.data, str.length },
-                                                                              true);
+                llvm::Constant *llvm_str =
+                    llvm::ConstantDataArray::getString(*builder->llvm_context,
+                                                       { str.data, str.length },
+                                                       true);
 
                 llvm::GlobalValue *llvm_str_glob =
                     new llvm::GlobalVariable(*builder->llvm_module, llvm_str->getType(),

@@ -97,6 +97,8 @@ namespace Zodiac
                     break;
                 }
 
+                case STORE_PTR: assert(false);
+
                 case LOADL:
                 {
                     Bytecode_Value result_value = interpreter_load_value(interp, inst->a);
@@ -121,22 +123,53 @@ namespace Zodiac
                     break;
                 }
 
-#define _binop_arithmetic(op) { \
+#define _binop_arithmetic_int(op, signed) { \
     auto lhs = interpreter_load_value(interp, inst->a); \
     auto rhs = interpreter_load_value(interp, inst->b); \
     assert(lhs.type == rhs.type); \
     assert(lhs.type->bit_size == 64); \
     auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    int64_t result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
+    if (signed) {  \
+        int64_t result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
+        interp_store(result_addr, result_value); \
+    } else {\
+        uint64_t result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; \
+        interp_store(result_addr, result_value); \
+    } \
+    break; \
+}
+
+                case ADD_S:_binop_arithmetic_int(+, true);
+                case SUB_S:_binop_arithmetic_int(-, true);
+                case REM_S:_binop_arithmetic_int(%, true);
+                case MUL_S:_binop_arithmetic_int(*, true);
+                case DIV_S:_binop_arithmetic_int(/, true);
+
+                case ADD_U:_binop_arithmetic_int(+, false);
+                case SUB_U:_binop_arithmetic_int(-, false);
+                case REM_U:_binop_arithmetic_int(%, false);
+                case MUL_U:_binop_arithmetic_int(*, false);
+                case DIV_U:_binop_arithmetic_int(/, false);
+
+#undef _binop_arithmetic_int
+
+#define _binop_arithmetic_float(op, signed) { \
+    auto lhs = interpreter_load_value(interp, inst->a); \
+    auto rhs = interpreter_load_value(interp, inst->b); \
+    assert(lhs.type == rhs.type); \
+    assert(lhs.type->bit_size == 64 && "float arithmetic only supports 64 bits right now"); \
+    auto result_addr = interpreter_load_lvalue(interp, inst->result); \
+    int64_t result_value = lhs.r64 op rhs.r64; \
     interp_store(result_addr, result_value); \
     break; \
 }
 
-                case ADD_S:_binop_arithmetic(+);
-                case SUB_S:_binop_arithmetic(-);
-                case REM_S:_binop_arithmetic(%);
-                case MUL_S:_binop_arithmetic(*);
-                case DIV_S:_binop_arithmetic(/);
+                case ADD_F:_binop_arithmetic_float(+, false);
+                case SUB_F:_binop_arithmetic_float(-, false);
+                case MUL_F:_binop_arithmetic_float(*, false);
+                case DIV_F:_binop_arithmetic_float(/, false);
+
+#undef _binop_arithmetic_float
 
                 case EQ_S: assert(false);
                 case NEQ_S: assert(false);
@@ -271,6 +304,11 @@ namespace Zodiac
                 case ZEXT: assert(false);
                 case SEXT: assert(false);
                 case TRUNC: assert(false);
+
+                case F_TO_S: assert(false);
+
+                case S_TO_F: assert(false);
+                case U_TO_F: assert(false);
 
                 case EXIT:
                 {
