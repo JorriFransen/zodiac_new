@@ -1,5 +1,6 @@
 #include "bytecode.h"
 
+#include "ast.h"
 #include "builtin.h"
 #include "parser.h"
 #include "string_builder.h"
@@ -32,7 +33,13 @@ namespace Zodiac
     Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl)
     {
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
-        assert(decl->type);
+
+        auto func_type = decl->type;
+        if (!func_type) {
+            assert(decl->function.type_spec && decl->function.type_spec->type);
+            func_type = decl->function.type_spec->type;
+        }
+        assert(func_type);
 
         auto ex_func = bytecode_find_function(builder, decl);
 
@@ -47,11 +54,20 @@ namespace Zodiac
         assert(decl->identifier);
         auto name = decl->identifier->atom;
 
-        Bytecode_Function *result = bytecode_new_function(builder, decl->type, name);
+        Bytecode_Function *result = bytecode_new_function(builder, func_type, name);
         if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
         {
             result->flags |= BC_FUNC_FLAG_NORETURN;
         }
+
+        for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
+        {
+            auto param_decl = decl->function.parameter_declarations[i];
+            assert(param_decl->kind == AST_Declaration_Kind::PARAMETER);
+
+            bytecode_parameter_new(builder, result, param_decl->type, param_decl->identifier->atom);
+        }
+
 
         auto index = builder->functions.count;
         array_append(&builder->functions, { decl, result, index });
@@ -95,12 +111,10 @@ namespace Zodiac
         for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
         {
             auto param_decl = decl->function.parameter_declarations[i];
-            assert(param_decl->kind == AST_Declaration_Kind::PARAMETER);
-
-            auto param_val = bytecode_parameter_new(builder, param_decl->type,
-                                                    param_decl->identifier->atom);
+            auto param_val = func->parameters[i];
             array_append(&builder->parameters, { param_decl, param_val });
         }
+
 
         Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
         bytecode_append_block(func, entry_block);
@@ -234,8 +248,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT:
-            {
+            case AST_Statement_Kind::ASSIGNMENT: {
                 auto ident_expr = stmt->assignment.identifier_expression;
                 auto rhs_expr = stmt->assignment.rhs_expression;
 
@@ -246,36 +259,34 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::RETURN:
-            {
-                if (stmt->expression)
-                {
+            case AST_Statement_Kind::RETURN: {
+                if (stmt->expression) {
                     auto ret_val = bytecode_emit_expression(builder, stmt->expression);
                     bytecode_emit_instruction(builder, RETURN, ret_val, nullptr, nullptr);
-                }
-                else
-                {
+                } else {
                     bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
                 }
                 break;
             }
 
-            case AST_Statement_Kind::BREAK: assert(false); //@@TODO: Implement!
+            case AST_Statement_Kind::BREAK: {
+                assert(stack_count(&builder->break_block_stack));
+                Bytecode_Block *break_block = stack_top(&builder->break_block_stack);
+                bytecode_emit_jump(builder, break_block);
+                break;
+            }
 
-            case AST_Statement_Kind::DECLARATION:
-            {
+            case AST_Statement_Kind::DECLARATION: {
                 bytecode_emit_declaration(builder, stmt->declaration);
                 break;
             }
 
-            case AST_Statement_Kind::EXPRESSION:
-            {
+            case AST_Statement_Kind::EXPRESSION: {
                 bytecode_emit_expression(builder, stmt->expression);
                 break;
             }
 
-            case AST_Statement_Kind::WHILE:
-            {
+            case AST_Statement_Kind::WHILE: {
                 auto cond_block = bytecode_new_block(builder, "while_cond");
                 auto body_block = bytecode_new_block(builder, "while_body");
                 auto post_while_block = bytecode_new_block(builder, "post_while");
@@ -287,7 +298,7 @@ namespace Zodiac
 
                 auto cond_val = bytecode_emit_expression(builder, stmt->while_stmt.cond_expr);
 
-                bytecode_emit_jump_if(builder, cond_val, cond_block, post_while_block);
+                bytecode_emit_jump_if(builder, cond_val, body_block, post_while_block);
 
                 bytecode_append_block(builder->current_function, body_block);
                 bytecode_set_insert_point(builder, body_block);
@@ -410,29 +421,34 @@ namespace Zodiac
     break; \
 }
 
-#define _binop_compare(int_sign_op) { \
+#define _binop_compare(int_sign_op, float_sign_op) { \
     auto lhs_expr = expr->binary.lhs; \
     auto rhs_expr = expr->binary.rhs; \
     assert(lhs_expr->type == rhs_expr->type); \
     auto type = lhs_expr->type; \
-    assert(type->kind == AST_Type_Kind::INTEGER); \
-    assert(type->integer.sign); \
     auto lhs = bytecode_emit_expression(builder, lhs_expr); \
     auto rhs = bytecode_emit_expression(builder, rhs_expr); \
     result = bytecode_temporary_new(builder, Builtin::type_bool); \
-    bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+    if (type->kind == AST_Type_Kind::INTEGER) { \
+        assert(type->integer.sign); \
+        bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+    } else if (type->kind == AST_Type_Kind::FLOAT) { \
+        bytecode_emit_instruction(builder, float_sign_op, lhs, rhs, result); \
+    } else {\
+        assert(false && "Unsupported binop compare"); \
+    } \
     break; \
 }
 
                 switch (expr->binary.op) {
                     case BINOP_INVALID: assert(false);
 
-                    case BINOP_EQ: _binop_compare(EQ_S);
-                    case BINOP_NEQ: _binop_compare(NEQ_S);
-                    case BINOP_LT: _binop_compare(LT_S);
-                    case BINOP_LTEQ: _binop_compare(LTEQ_S);
-                    case BINOP_GT: _binop_compare(GT_S);
-                    case BINOP_GTEQ: _binop_compare(GTEQ_S);
+                    case BINOP_EQ:  _binop_compare(EQ_S, EQ_F);
+                    case BINOP_NEQ:  _binop_compare(NEQ_S, NEQ_F);
+                    case BINOP_LT:   _binop_compare(LT_S, LT_F);
+                    case BINOP_LTEQ: _binop_compare(LTEQ_S, LTEQ_F);
+                    case BINOP_GT:   _binop_compare(GT_S, GT_F);
+                    case BINOP_GTEQ: _binop_compare(GTEQ_S, GTEQ_F);
 
                     case BINOP_ADD: _binop_arithmetic(ADD_S, ADD_U, ADD_F);
                     case BINOP_SUB: _binop_arithmetic(SUB_S, SUB_U, SUB_F);
@@ -517,7 +533,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::FLOAT_LITERAL: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::FLOAT_LITERAL: {
+                assert(expr->type->kind == AST_Type_Kind::FLOAT);
+                result = bytecode_emit_float_literal(builder, expr);
+                break;
+            }
 
             case AST_Expression_Kind::STRING_LITERAL: {
                 result = bytecode_string_literal_new(builder, expr->string_literal.atom);
@@ -823,8 +843,14 @@ namespace Zodiac
                 break;
             }
 
-            case  AST_Type_Kind::FLOAT: assert(false);
+            case  AST_Type_Kind::FLOAT:
+            {
+                assert(operand_expr->type != target_type);
+                bytecode_emit_instruction(builder, F_TO_F, operand_value, nullptr, result);
+                break;
+            }
             case  AST_Type_Kind::BOOL: assert(false);
+
             case  AST_Type_Kind::POINTER: assert(false);
             case  AST_Type_Kind::FUNCTION: assert(false);
             case  AST_Type_Kind::STRUCTURE: assert(false);
@@ -845,7 +871,7 @@ namespace Zodiac
                                Bytecode_Block *then_dest, Bytecode_Block *else_dest)
     {
         auto then_block_val = bytecode_block_value_new(builder, then_dest);
-        auto else_block_val = bytecode_block_value_new(builder, then_dest);
+        auto else_block_val = bytecode_block_value_new(builder, else_dest);
         bytecode_emit_instruction(builder, JUMP_IF, cond_val, then_block_val, else_block_val);
     }
 
@@ -928,11 +954,13 @@ namespace Zodiac
         auto type = literal_expr->type;
         assert(type->kind == AST_Type_Kind::FLOAT);
 
+        float f;
+        double d;
+
         if (literal_expr->kind == AST_Expression_Kind::FLOAT_LITERAL) {
-            assert(false);
+            f = literal_expr->float_literal.r32;
+            d = literal_expr->float_literal.r64;
         } else if (literal_expr->kind == AST_Expression_Kind::INTEGER_LITERAL) {
-            float f;
-            double d;
             if (type == Builtin::type_float) {
                 f = literal_expr->integer_literal.s32;
                 d = literal_expr->integer_literal.s32;
@@ -942,10 +970,11 @@ namespace Zodiac
             } else {
                 assert(false);
             }
-            return bytecode_float_literal_new(builder, literal_expr->type, f, d);
         } else {
             assert(false);
         }
+
+        return bytecode_float_literal_new(builder, literal_expr->type, f, d);
     }
 
     Bytecode_Value *bytecode_emit_zero_value(Bytecode_Builder *builder, AST_Type *type) {
@@ -1093,13 +1122,14 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
+    Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, Bytecode_Function *func,
+                                           AST_Type *type, Atom name)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, type);
         result->parameter.name = name;
 
-        auto index = builder->current_function->parameters.count;
-        array_append(&builder->current_function->parameters, result);
+        auto index = func->parameters.count;
+        array_append(&func->parameters, result);
         result->parameter.index = index;
 
         return result;
@@ -1184,7 +1214,8 @@ namespace Zodiac
     {
         string_builder_append(sb, "    ");
 
-        if (inst->result)
+        if (inst->result &&
+            inst->op != JUMP_IF)
         {
             bytecode_print_value(sb, inst->result);
             string_builder_append(sb, " = ");
@@ -1235,6 +1266,13 @@ namespace Zodiac
             case MUL_F: string_builder_append(sb, "MUL_F "); break;
             case DIV_F: string_builder_append(sb, "SUB_F "); break;
 
+            case EQ_F:   string_builder_append(sb, "EQ_F "); break;
+            case NEQ_F:  string_builder_append(sb, "NEQ_F "); break;
+            case LT_F:   string_builder_append(sb, "LT_F "); break;
+            case LTEQ_F: string_builder_append(sb, "LTEQ_F "); break;
+            case GT_F:   string_builder_append(sb, "GT_F "); break;
+            case GTEQ_F: string_builder_append(sb, "GTEQ_F "); break;
+
             case PUSH_ARG:
             {
                 string_builder_append(sb, "PUSH_ARG ");
@@ -1255,16 +1293,27 @@ namespace Zodiac
             case RETURN:      string_builder_append(sb, "RETURN "); break;
             case RETURN_VOID: string_builder_append(sb, "RETURN_VOID "); break;
             case JUMP:        string_builder_append(sb, "JUMP "); break;
-            case JUMP_IF:     string_builder_append(sb, "JUMP_IF"); break;
 
-            case PTR_OFFSET: assert(false);
-            case ZEXT: assert(false);
-            case SEXT: assert(false);
-            case TRUNC: assert(false);
-            case F_TO_S: assert(false);
+            case JUMP_IF: {
+                print_args = false;
+                string_builder_append(sb, "JUMP_IF ");
+                bytecode_print_value(sb, inst->a);
+                string_builder_append(sb, ", ");
+                bytecode_print_value(sb, inst->b);
+                string_builder_append(sb, ", ");
+                bytecode_print_value(sb, inst->result);
+                break;
+            }
 
-            case S_TO_F: assert(false);
-            case U_TO_F: assert(false);
+            case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
+
+            case ZEXT:   string_builder_append(sb, "ZEXT "); break;
+            case SEXT:   string_builder_append(sb, "SEXT "); break;
+            case TRUNC:  string_builder_append(sb, "TRUNC "); break;
+            case F_TO_S: string_builder_append(sb, "F_TO_S "); break;
+            case S_TO_F: string_builder_append(sb, "S_TO_F "); break;
+            case U_TO_F: string_builder_append(sb, "U_TO_F "); break;
+            case F_TO_F: string_builder_append(sb, "F_TO_F "); break;
 
             case EXIT:    string_builder_append(sb, "EXIT "); break;
             case SYSCALL: string_builder_append(sb, "SYSCALL "); break;

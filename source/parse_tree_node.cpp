@@ -804,11 +804,11 @@ Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom ato
         result->kind = Expression_PTN_Kind::INTEGER_LITERAL;
         if (atom.data[0] == '-')
         {
-            result->integer_literal.value.s64 = atom_to_s64(atom);
+            result->integer_literal.s64 = atom_to_s64(atom);
         }
         else
         {
-            result->integer_literal.value.u64 = atom_to_u64(atom);
+            result->integer_literal.u64 = atom_to_u64(atom);
         }
     }
 
@@ -1608,7 +1608,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         case Expression_PTN_Kind::INTEGER_LITERAL:
         {
             print_indent(indent);
-            printf("%" PRId64, expression->integer_literal.value.s64);
+            printf("%" PRId64, expression->integer_literal.s64);
             break;
         }
 

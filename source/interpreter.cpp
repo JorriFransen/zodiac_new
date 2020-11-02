@@ -99,8 +99,7 @@ namespace Zodiac
 
                 case STORE_PTR: assert(false);
 
-                case LOADL:
-                {
+                case LOADL: {
                     Bytecode_Value result_value = interpreter_load_value(interp, inst->a);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
 
@@ -109,8 +108,7 @@ namespace Zodiac
                     break;
                 }
 
-                case LOAD_PARAM:
-                {
+                case LOAD_PARAM: {
                     Bytecode_Value arg_value = interpreter_load_value(interp, inst->a);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
 
@@ -119,7 +117,16 @@ namespace Zodiac
                 }
 
                 case LOAD_PTR: {
-                    assert(false);
+                    Bytecode_Value ptr_val = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                    auto element_type = ptr_val.type->pointer.base;
+
+                    assert(element_type->bit_size % 8 == 0);
+                    auto byte_size = element_type->bit_size / 8;
+
+                    memcpy(result_addr, ptr_val.pointer, byte_size);
                     break;
                 }
 
@@ -172,11 +179,33 @@ namespace Zodiac
 #undef _binop_arithmetic_float
 
                 case EQ_S: assert(false);
-                case NEQ_S: assert(false);
+
+                case NEQ_S: {
+                    auto lhs = interpreter_load_value(interp, inst->a);
+                    auto rhs = interpreter_load_value(interp, inst->b);
+                    assert(lhs.type == rhs.type);
+                    assert(lhs.type->kind == AST_Type_Kind::INTEGER);
+                    assert(lhs.type->integer.sign);
+                    assert(lhs.type->bit_size == 64);
+
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+                    bool result_value = lhs.integer_literal.s64  != rhs.integer_literal.s64;
+                    assert(sizeof(result_value) == (inst->result->type->bit_size / 8));
+                    interp_store(result_addr, result_value);
+                    break;
+                }
+
                 case LT_S: assert(false);
                 case LTEQ_S: assert(false);
                 case GT_S: assert(false);
                 case GTEQ_S: assert(false);
+
+                case EQ_F: assert(false);
+                case NEQ_F: assert(false);
+                case LT_F: assert(false);
+                case LTEQ_F: assert(false);
+                case GT_F: assert(false);
+                case GTEQ_F: assert(false);
 
                 case PUSH_ARG:
                 {
@@ -297,11 +326,78 @@ namespace Zodiac
                 }
 
                 case RETURN_VOID: assert(false);
-                case JUMP: assert(false);
-                case JUMP_IF: assert(false);
 
-                case PTR_OFFSET: assert(false);
-                case ZEXT: assert(false);
+                case JUMP: {
+                    advance_ip = false;
+                    Bytecode_Block *target_block = inst->a->block;
+                    interp->ip.block = target_block;
+                    interp->ip.index = 0;
+                    break;
+                }
+
+                case JUMP_IF: {
+                    advance_ip = false;
+                    Bytecode_Value cond_val = interpreter_load_value(interp, inst->a);
+                    assert(cond_val.type->kind == AST_Type_Kind::BOOL);
+
+                    assert(inst->b->kind == Bytecode_Value_Kind::BLOCK);
+                    assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);
+
+                    Bytecode_Block *then_block = inst->b->block;
+                    Bytecode_Block *else_block = inst->result->block;
+
+                    if (cond_val.integer_literal.u8) interp->ip.block = then_block;
+                    else interp->ip.block = else_block;
+
+                    interp->ip.index = 0;
+                    break;
+                }
+
+                case PTR_OFFSET: {
+                    auto ptr_val = interpreter_load_value(interp, inst->a);
+                    auto offset_val = interpreter_load_value(interp, inst->b);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                    assert(offset_val.type->kind == AST_Type_Kind::INTEGER);
+
+                    AST_Type *element_type = ptr_val.type->pointer.base;
+                    assert(element_type->bit_size % 8 == 0);
+                    auto byte_size = element_type->bit_size / 8;
+
+                    void *result = ((uint8_t*)ptr_val.pointer) +
+                                   (offset_val.integer_literal.s64 * byte_size);
+                    interp_store(result_addr, result);
+                    break;
+                }
+
+                case ZEXT: {
+                    Bytecode_Value operand_val = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    auto result_type = inst->result->type;
+                    assert(result_type->bit_size > operand_val.type->bit_size);
+
+                    switch (result_type->bit_size) {
+                        default: assert(false);
+                        case 8: assert(false);
+                        case 16: assert(false);
+                        case 32: assert(false);
+
+                        case 64: {
+                            uint64_t new_val;
+                            switch (operand_val.type->bit_size) {
+                                default: assert(false);
+                                case 8: new_val = operand_val.integer_literal.u8; break;
+                            }
+                            interp_store(result_addr, new_val);
+                            break;
+                        }
+                    }
+
+                    break;
+                }
+
                 case SEXT: assert(false);
                 case TRUNC: assert(false);
 
@@ -309,9 +405,9 @@ namespace Zodiac
 
                 case S_TO_F: assert(false);
                 case U_TO_F: assert(false);
+                case F_TO_F: assert(false);
 
-                case EXIT:
-                {
+                case EXIT: {
                     assert(inst->a);
 
                     auto exit_code_val = interpreter_load_value(interp, inst->a);
@@ -323,8 +419,7 @@ namespace Zodiac
                     break;
                 }
 
-                case SYSCALL:
-                {
+                case SYSCALL: {
                     Bytecode_Value *arg_count_val = inst->a;
                     assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
                     assert(arg_count_val->type == Builtin::type_u64);
@@ -367,21 +462,20 @@ namespace Zodiac
         Bytecode_Value result = {};
         result.type = value->type;
 
-        switch (value->type->kind)
-        {
-            case AST_Type_Kind::INTEGER:
-            {
-                switch (value->type->bit_size)
-                {
+        switch (value->type->kind) {
+
+            case AST_Type_Kind::BOOL:
+            case AST_Type_Kind::INTEGER: {
+                switch (value->type->bit_size) {
+                    case 8: result.integer_literal.s8 = *((int8_t*)source_ptr); break;
                     case 64: result.integer_literal.s64 = *((int64_t*)source_ptr); break;
                     default: assert(false);
                 }
                 break;
             }
 
-            case AST_Type_Kind::POINTER:
-            {
-                result.pointer = (void*)source_ptr;
+            case AST_Type_Kind::POINTER: {
+                result.pointer = *(void**)source_ptr;
                 break;
             }
 
@@ -415,7 +509,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::STRING_LITERAL:
             {
-                return (uint8_t*)value->string_literal.data;
+                return (uint8_t*)&value->string_literal.data;
                 break;
             }
 

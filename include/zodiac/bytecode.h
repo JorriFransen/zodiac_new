@@ -46,25 +46,33 @@ namespace Zodiac
         MUL_F       = 0x001a,
         DIV_F       = 0x001b,
 
-        PUSH_ARG    = 0x001c,
-        CALL        = 0x001d,
-        RETURN      = 0x001e,
-        RETURN_VOID = 0x001f,
+        EQ_F        = 0x001c,
+        NEQ_F       = 0x001d,
+        LT_F        = 0x001e,
+        LTEQ_F      = 0x001f,
+        GT_F        = 0x0020,
+        GTEQ_F      = 0x0021,
 
-        JUMP        = 0x0020,
-        JUMP_IF     = 0x0021,
+        PUSH_ARG    = 0x0022,
+        CALL        = 0x0023,
+        RETURN      = 0x0024,
+        RETURN_VOID = 0x0025,
 
-        PTR_OFFSET  = 0x0022,
+        JUMP        = 0x0026,
+        JUMP_IF     = 0x0027,
 
-        ZEXT        = 0x0023,
-        SEXT        = 0x0024,
-        TRUNC       = 0x0025,
-        F_TO_S      = 0x0026,
-        S_TO_F      = 0x0027,
-        U_TO_F      = 0x0028,
+        PTR_OFFSET  = 0x0028,
 
-        EXIT        = 0x0029,
-        SYSCALL     = 0x002a,
+        ZEXT        = 0x0029,
+        SEXT        = 0x002a,
+        TRUNC       = 0x002b,
+        F_TO_S      = 0x002c,
+        S_TO_F      = 0x002d,
+        U_TO_F      = 0x002e,
+        F_TO_F      = 0x002f,
+
+        EXIT        = 0x0030,
+        SYSCALL     = 0x0031,
     };
 
     enum class Bytecode_Value_Kind
@@ -268,7 +276,8 @@ namespace Zodiac
                                                float r32, double r64);
     Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal);
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
-    Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
+    Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, Bytecode_Function *func,
+                                           AST_Type *type, Atom name);
     Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type);
     Bytecode_Value *bytecode_function_value_new(Bytecode_Builder *builder,
                                                 Bytecode_Function *func);

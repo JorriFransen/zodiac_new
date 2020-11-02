@@ -1149,10 +1149,10 @@ namespace Zodiac
 
             case Expression_PTN_Kind::INTEGER_LITERAL:
             {
-                assert(((int64_t)ptn->integer_literal.value.u64) ==
-                       ptn->integer_literal.value.s64);
+                assert(((int64_t)ptn->integer_literal.u64) ==
+                       ptn->integer_literal.s64);
                 return ast_integer_literal_expression_new(ast_builder->allocator,
-                                                          ptn->integer_literal.value.s64,
+                                                          ptn->integer_literal.s64,
                                                           begin_fp, end_fp);
                 break;
             }
@@ -1161,6 +1161,7 @@ namespace Zodiac
             {
                 return ast_float_literal_expression_new(ast_builder->allocator,
                                                         ptn->float_literal.r32,
+                                                        ptn->float_literal.r64,
                                                         begin_fp, end_fp);
                 break;
             }
@@ -2090,13 +2091,14 @@ namespace Zodiac
         return result;
     }
 
-    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float value,
+    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float f, double d,
                                                      const File_Pos & begin_fp,
                                                      const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::FLOAT_LITERAL,
                                          begin_fp, end_fp);
-        result->float_literal.r32 = value;
+        result->float_literal.r32 = f;
+        result->float_literal.r64 = d;
         result->expr_flags |= AST_EXPR_FLAG_CONST;
         return result;
     }

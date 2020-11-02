@@ -302,6 +302,13 @@ namespace Zodiac
             case GT_S: assert(false);
             case GTEQ_S: assert(false);
 
+            case EQ_F: assert(false);
+            case NEQ_F: assert(false);
+            case LT_F: assert(false);
+            case LTEQ_F: assert(false);
+            case GT_F: assert(false);
+            case GTEQ_F: assert(false);
+
             case PUSH_ARG: {
                 llvm::Value *arg_val = llvm_emit_value(builder, inst->a);
                 stack_push(&builder->arg_stack, arg_val);
@@ -361,6 +368,7 @@ namespace Zodiac
 
             case S_TO_F: assert(false);
             case U_TO_F: assert(false);
+            case F_TO_F: assert(false);
 
             case EXIT: {
                 llvm::Value *exit_code_val = llvm_emit_value(builder, inst->a);

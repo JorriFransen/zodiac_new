@@ -4,6 +4,7 @@
 #include "atom.h"
 #include "file_pos.h"
 #include "operator.h"
+#include "struct_predecls.h"
 
 #include <cstdio>
 
@@ -53,7 +54,7 @@ struct PT_Node
 };
 
 typedef PT_Node PTN;
- 
+
 struct Identifier_PTN
 {
     static PTN_Kind _kind;
@@ -153,8 +154,8 @@ struct Statement_PTN
 
         struct
         {
-            Identifier_PTN *it_identifier; 
-            Identifier_PTN *it_index_identifier; 
+            Identifier_PTN *it_identifier;
+            Identifier_PTN *it_index_identifier;
             Expression_PTN *array_expression;
             Statement_PTN *body_stmt;
             bool it_is_pointer;
@@ -244,7 +245,7 @@ struct Declaration_PTN
             Array<PTN*> members;
         } enum_decl;
 
-        struct 
+        struct
         {
             Expression_PTN *type_expression;
         } typedef_decl;
@@ -262,7 +263,7 @@ struct Declaration_PTN
             Array<Declaration_PTN *> else_declarations;
         } static_if;
 
-        struct 
+        struct
         {
             Expression_PTN *cond_expression;
         } static_assert_decl;
@@ -350,22 +351,9 @@ struct Expression_PTN
             Expression_PTN *operand_expression;
         } post_fix, pre_fix;
 
-        struct
-        {
-            union
-            {
-                int64_t s64;
-                uint64_t u64;
-            } value;
-        } integer_literal;
+        Integer_Literal integer_literal;
 
-        struct
-        {
-            union
-            {
-                float r32;
-            };
-        } float_literal;
+        Float_Literal float_literal;
 
         struct
         {
@@ -394,7 +382,7 @@ struct Expression_PTN
             Expression_PTN *type_expression;
         } compound;
 
-        struct 
+        struct
         {
             Expression_PTN *pointer_expression;
             Expression_PTN *index_expression;
@@ -447,9 +435,9 @@ Statement_PTN *new_statement(Allocator *allocator, Statement_PTN_Kind kind,
 Identifier_PTN *new_identifier_ptn(Allocator *allocator, const Atom& atom,
                                    const File_Pos &begin_fp, const File_Pos &end_fp);
 
-Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements, 
+Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
-Statement_PTN *new_expression_statement_ptn(Allocator *allocator, Expression_PTN *expr, 
+Statement_PTN *new_expression_statement_ptn(Allocator *allocator, Expression_PTN *expr,
                                             const File_Pos &begin_fp, const File_Pos &end_fp);
 Statement_PTN *new_declaration_statement_ptn(Allocator *allocator, Declaration_PTN *decl,
                                              const File_Pos &begin_fp, const File_Pos &end_fp);
@@ -524,8 +512,8 @@ Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator, Identifier_PTN *
 
 Declaration_PTN *new_typedef_declaration_ptn(Allocator *allocator,
                                              Identifier_PTN *identifier,
-                                             Expression_PTN *type_expr, 
-                                             const File_Pos &begin_fp, 
+                                             Expression_PTN *type_expr,
+                                             const File_Pos &begin_fp,
                                              const File_Pos &end_fp);
 
 Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
@@ -537,7 +525,7 @@ Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_P
 Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN *ident_expr,
                                            const File_Pos &begin_fp, const File_Pos &end_fp);
 
-Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator, 
+Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
                                                Expression_PTN *cond_expr,
                                                Array<Declaration_PTN *> then_decls,
                                                Array<Declaration_PTN *> else_decls,
@@ -592,7 +580,7 @@ Expression_PTN *new_char_literal_expression_ptn(Allocator *allocator, char c,
 Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool value,
                                                    const File_Pos &begin_file_pos,
                                                    const File_Pos &end_file_pos);
-Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator, 
+Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator,
                                                 const File_Pos &begin_file_pos,
                                                 const File_Pos &end_file_pos);
 Expression_PTN *new_dot_expression_ptn(Allocator *allocator, Expression_PTN *parent,
@@ -630,7 +618,7 @@ Parameter_PTN *new_parameter_ptn(Allocator *allocator, Identifier_PTN *identifie
 typedef uint64_t PTN_Copy_Flags;
 enum PTN_Copy_Flag__ : PTN_Copy_Flags
 {
-    PTNC_FLAG_NONE                  = 0x00, 
+    PTNC_FLAG_NONE                  = 0x00,
     PTNC_FLAG_DONT_COPY_IDENTIFIERS = 0x01,
     PTNC_FLAG_DONT_COPY_EXPRESSIONS = 0x02,
 };

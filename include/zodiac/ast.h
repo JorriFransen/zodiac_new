@@ -412,10 +412,7 @@ namespace Zodiac
 
             Integer_Literal integer_literal;
 
-            struct
-            {
-                float r32;
-            } float_literal;
+            Float_Literal float_literal;
 
             struct
             {
@@ -853,7 +850,7 @@ namespace Zodiac
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
 
-    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float value,
+    AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float f, double d,
                                                      const File_Pos &begin_fp,
                                                      const File_Pos &end_fp);
 

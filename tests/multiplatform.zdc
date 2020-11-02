@@ -9,7 +9,8 @@ main :: func() -> s64
     // std.print_num(42);
     // std.print("\n");
 
-    @syscall(1, 1, "Hello, world!\n", 14);
+    str := "Hello, World!\n";
+    @syscall(1, 1, str, std.strlen(str));
 
     _48 := add(return_46(), 2);
     return addone(sub(add(_48, 3), 9));

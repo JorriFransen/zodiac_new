@@ -7,139 +7,139 @@ strlen :: func (cstr: *u8) -> s64 {
     return i;
 }
 
-#if (PLATFORM_WINDOWS) {
+// #if (PLATFORM_WINDOWS) {
 
-    windows :: import windows;
+//     windows :: import windows;
 
-    stdout : windows.HANDLE;
+//     stdout : windows.HANDLE;
 
-    _open_default_io_handles :: func() {
-        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
-        return;
-    }
+//     _open_default_io_handles :: func() {
+//         stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+//         return;
+//     }
 
-    print :: func(str: *u8) {
-        written : windows.DWORD;
-        len := @cast(windows.DWORD, strlen(str));
-        windows.WriteFile(stdout, str, len, *written, null);
+//     print :: func(str: *u8) {
+//         written : windows.DWORD;
+//         len := @cast(windows.DWORD, strlen(str));
+//         windows.WriteFile(stdout, str, len, *written, null);
 
-        return;
-    }
+//         return;
+//     }
 
-    print_char :: func (c: u8)
-    {
-        _c := c;
-        written : windows.DWORD;
-        windows.WriteFile(stdout, *_c, 1, *written, null);
-        return;
-    }
+//     print_char :: func (c: u8)
+//     {
+//         _c := c;
+//         written : windows.DWORD;
+//         windows.WriteFile(stdout, *_c, 1, *written, null);
+//         return;
+//     }
 
-} #elseif (PLATFORM_LINUX) {
+// } #elseif (PLATFORM_LINUX) {
 
-    _open_default_io_handles :: func()
-    {
-        return;
-    }
+//     _open_default_io_handles :: func()
+//     {
+//         return;
+//     }
 
-    print :: func (cstr: *u8)
-    {
-        @syscall(1, 1, cstr, strlen(cstr));
-        return;
-    }
+//     print :: func (cstr: *u8)
+//     {
+//         @syscall(1, 1, cstr, strlen(cstr));
+//         return;
+//     }
 
-    print_char :: func (c: u8)
-    {
-        _c := c;
-        @syscall(1, 1, *_c, 1);
-    }
-}
-#else {
-    @static_assert(false);
-}
+//     print_char :: func (c: u8)
+//     {
+//         _c := c;
+//         @syscall(1, 1, *_c, 1);
+//     }
+// }
+// #else {
+//     @static_assert(false);
+// }
 
-println :: func (cstr: *u8) {
-    print(cstr);
-    print("\n");
-}
+// println :: func (cstr: *u8) {
+//     print(cstr);
+//     print("\n");
+// }
 
-print_num :: func (n: s64) {
+// print_num :: func (n: s64) {
 
-    buf : [32]u8;
-    i := 0;
+//     buf : [32]u8;
+//     i := 0;
 
-    if (n < 0)
-    {
-        n = -n;
-        print_char('-');
-    }
-    else if (n == 0)
-    {
-        print_char('0');
-        return;
-    }
+//     if (n < 0)
+//     {
+//         n = -n;
+//         print_char('-');
+//     }
+//     else if (n == 0)
+//     {
+//         print_char('0');
+//         return;
+//     }
 
-    while (n > 0)
-    {
-        nc := @cast(u8, n % 10);
-        buf[i] = nc + 48;
-        i = i + 1;
-        n = n / 10;
-    }
+//     while (n > 0)
+//     {
+//         nc := @cast(u8, n % 10);
+//         buf[i] = nc + 48;
+//         i = i + 1;
+//         n = n / 10;
+//     }
 
-    while (i > 0)
-    {
-        print_char(buf[i - 1]);
-        i = i - 1;
-    }
-    return;
-}
+//     while (i > 0)
+//     {
+//         print_char(buf[i - 1]);
+//         i = i - 1;
+//     }
+//     return;
+// }
 
-print_float :: func (f: float)
-{
-    int_part := @cast(s32, f);
-    print_num(int_part);
-    print(".");
+// print_float :: func (f: float)
+// {
+//     int_part := @cast(s32, f);
+//     print_num(int_part);
+//     print(".");
 
-    it := 6;
+//     it := 6;
 
-    rem := f - int_part;
-    rem = rem * 10;
+//     rem := f - int_part;
+//     rem = rem * 10;
 
-    while (rem > 0.001)
-    {
-        if (it <= 0) break;
+//     while (rem > 0.001)
+//     {
+//         if (it <= 0) break;
 
-        int_part = @cast(s32, rem);
-        print_num(int_part);
+//         int_part = @cast(s32, rem);
+//         print_num(int_part);
 
-        rem = rem - int_part;
-        rem = rem * 10;
-        it = it - 1;
-    }
-    return;
-}
+//         rem = rem - int_part;
+//         rem = rem * 10;
+//         it = it - 1;
+//     }
+//     return;
+// }
 
-print_double :: func (d: double)
-{
-    int_part := @cast(s64, d);
-    print_num(int_part);
-    print(".");
+// print_double :: func (d: double)
+// {
+//     int_part := @cast(s64, d);
+//     print_num(int_part);
+//     print(".");
 
-    it := 6;
+//     it := 6;
 
-    rem := d - int_part;
-    rem = rem * 10;
+//     rem := d - int_part;
+//     rem = rem * 10;
 
-    while (rem > 0.001)
-    {
-        if (it <= 0) break;
+//     while (rem > 0.001)
+//     {
+//         if (it <= 0) break;
 
-        int_part = @cast(s64, rem);
-        print_num(int_part);
+//         int_part = @cast(s64, rem);
+//         print_num(int_part);
 
-        rem = rem - int_part;
-        rem = rem * 10;
-        it = it - 1;
-    }
-    return;
-}
+//         rem = rem - int_part;
+//         rem = rem * 10;
+//         it = it - 1;
+//     }
+//     return;
+// }

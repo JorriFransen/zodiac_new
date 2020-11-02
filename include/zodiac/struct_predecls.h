@@ -50,6 +50,12 @@ namespace Zodiac
         int8_t s8;
     };
 
+    struct Float_Literal
+    {
+        float r32;
+        double r64;
+    };
+
     struct Const_Value
     {
         AST_Type *type = nullptr;
