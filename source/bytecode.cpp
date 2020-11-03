@@ -507,6 +507,11 @@ namespace Zodiac
 
             case AST_Expression_Kind::ADDROF: {
                 result = bytecode_emit_lvalue(builder, expr->addrof.operand_expr);
+                if (result->kind == Bytecode_Value_Kind::ALLOCL) {
+                    // assert(false);
+                } else {
+                    assert(result->kind == Bytecode_Value_Kind::TEMP);
+                }
                 break;
             }
 
@@ -605,19 +610,24 @@ namespace Zodiac
                 auto ptr_val = bytecode_emit_expression(builder, ptr_expr);
                 auto offset_val = bytecode_emit_expression(builder, index_expr);
 
-                AST_Type *result_type =
-                    build_data_find_or_create_pointer_type(builder->allocator,
-                                                           builder->build_data,
-                                                           expr->type);
-
-                result = bytecode_temporary_new(builder, result_type);
-
-                if (ptr_expr->type->kind == AST_Type_Kind::POINTER ||
-                    ptr_expr->type->kind == AST_Type_Kind::ARRAY) {
-                    bytecode_emit_instruction(builder, PTR_OFFSET, ptr_val, offset_val, result);
+                AST_Type *result_type = nullptr;
+                if (ptr_expr->type->kind == AST_Type_Kind::POINTER) {
+                    result_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                         builder->build_data,
+                                                                         expr->type);
+                } else if (ptr_expr->type->kind == AST_Type_Kind::ARRAY) {
+                    auto elem_type = ptr_expr->type->array.element_type;
+                    result_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                         builder->build_data,
+                                                                         elem_type);
                 } else {
                     assert(false);
                 }
+
+                assert(result_type);
+
+                result = bytecode_temporary_new(builder, result_type);
+                bytecode_emit_instruction(builder, PTR_OFFSET, ptr_val, offset_val, result);
                 break;
             }
 
@@ -1246,7 +1256,7 @@ namespace Zodiac
             case SUB_S: string_builder_append(sb, "SUB_S "); break;
             case REM_S: string_builder_append(sb, "REM_S "); break;
             case MUL_S: string_builder_append(sb, "MUL_S "); break;
-            case DIV_S: string_builder_append(sb, "SUB_S "); break;
+            case DIV_S: string_builder_append(sb, "DIV_S "); break;
 
             case EQ_S:   string_builder_append(sb, "EQ_S "); break;
             case NEQ_S:  string_builder_append(sb, "NEQ_S "); break;

@@ -3,14 +3,16 @@ std :: import std;
 
 main :: func() -> s64
 {
-    // std.print("Hello, World! from multiple platforms...\n");
+    std.print("Hello, World! from multiple platforms...\n");
 
-    // std.print("Returning: ");
-    // std.print_num(42);
-    // std.print("\n");
+    std.print_num(42);
+    std.print("\n");
 
-    str := "Hello, World!\n";
-    @syscall(1, 1, str, std.strlen(str));
+    std.print_float(4.2);
+    std.print("\n");
+
+    std.print_double(44.22);
+    std.print("\n");
 
     _48 := add(return_46(), 2);
     return addone(sub(add(_48, 3), 9));
