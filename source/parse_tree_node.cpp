@@ -798,6 +798,7 @@ Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom ato
     {
         result->kind = Expression_PTN_Kind::FLOAT_LITERAL;
         result->float_literal.r32 = atom_to_float(atom);
+        result->float_literal.r64 = atom_to_double(atom);
     }
     else
     {

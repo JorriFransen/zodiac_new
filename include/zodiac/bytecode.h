@@ -122,8 +122,7 @@ namespace Zodiac
 
             void *pointer;
             Integer_Literal integer_literal;
-            float r32;
-            double r64;
+            Float_Literal float_literal;
             Atom string_literal;
 
             Bytecode_Function *function;

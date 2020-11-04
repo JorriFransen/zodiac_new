@@ -121,6 +121,19 @@ float atom_to_float(const Atom &atom)
     return result;
 }
 
+double atom_to_double(const Atom &atom)
+{
+    char *end_ptr;
+    double result = strtod(atom.data, &end_ptr);
+    if (result == 0.0 && end_ptr != atom.data + atom.length)
+    {
+        assert(false);
+    }
+
+    return result;
+       
+}
+
 String string_ref(const Atom &atom)
 {
     return string_ref(atom.data, atom.length);

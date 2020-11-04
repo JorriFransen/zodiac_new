@@ -421,9 +421,9 @@ namespace Zodiac
                 auto type = bc_value->type;
                 llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
                 if (type == Builtin::type_float) {
-                    return llvm::ConstantFP::get(llvm_type, bc_value->r32);
+                    return llvm::ConstantFP::get(llvm_type, bc_value->float_literal.r32);
                 } else if (type == Builtin::type_double) {
-                    return llvm::ConstantFP::get(llvm_type, bc_value->r64);
+                    return llvm::ConstantFP::get(llvm_type, bc_value->float_literal.r64);
                 }
                 else {
                     assert(false);
@@ -564,22 +564,18 @@ namespace Zodiac
 
         Array<llvm::Value *> llvm_args = {};
         array_init(builder->allocator, &llvm_args, arg_count);
-        for (int64_t i = 0 ; i < arg_count; i++)
-        {
+
+        for (int64_t i = 0 ; i < arg_count; i++) {
             llvm::Value *arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
 
             llvm::Type *arg_type = arg_val->getType();
             llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_s64);
 
-            if (arg_type != dest_type)
-            {
-                if (arg_type->isPointerTy())
-                {
+            if (arg_type != dest_type) {
+                if (arg_type->isPointerTy()) {
                     arg_val = builder->llvm_builder->CreatePtrToInt(arg_val, dest_type,
                                                                      "");
-                }
-                else
-                {
+                } else {
                     assert(false);
                 }
 

@@ -1108,8 +1108,8 @@ namespace Zodiac
         assert(type->kind == AST_Type_Kind::FLOAT);
 
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::FLOAT_LITERAL, type);
-        result->r32 = r32;
-        result->r64 = r64;
+        result->float_literal.r32 = r32;
+        result->float_literal.r64 = r64;
         return result;
     }
 
@@ -1361,9 +1361,9 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FLOAT_LITERAL: {
                 if (value->type == Builtin::type_float) {
-                    string_builder_appendf(sb, "%f", value->r32);
+                    string_builder_appendf(sb, "%f", value->float_literal.r32);
                 } else if (value->type == Builtin::type_double) {
-                    string_builder_appendf(sb, "%f", value->r32);
+                    string_builder_appendf(sb, "%f", value->float_literal.r64);
                 } else {
                     assert(false);
                 }
