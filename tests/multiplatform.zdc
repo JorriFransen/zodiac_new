@@ -1,13 +1,6 @@
 
 std :: import std;
 
-lil_test :: func(c: u8) -> void
-{
-    _c := c;
-    _c_ptr := *_c;
-    return;
-}
-
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");

@@ -294,12 +294,6 @@ namespace Zodiac
                     assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
                     auto func = func_val->function;
 
-                    if (strcmp(func->name.data, "print_float") == 0)
-                    {
-                        int x;
-                        x = 4;
-                    }
-
                     int64_t param_offset = -sizeof(int64_t);
                     int64_t total_arg_size = 0;
                     for (int64_t i = func->parameters.count - 1; i >= 0; i--)

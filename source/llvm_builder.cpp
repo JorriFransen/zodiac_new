@@ -107,7 +107,7 @@ namespace Zodiac
         for (int64_t i = 0; i < bc_func->parameters.count; i++)
         {
             auto param = bc_func->parameters[i];
-            auto llvm_param_type = llvm_type_from_ast(builder, param->type);
+            auto llvm_param_type = llvm_type_from_ast(builder, param->type->pointer.base);
             auto name = param->parameter.name;
 
             auto param_alloca = builder->llvm_builder->CreateAlloca(llvm_param_type, nullptr,
@@ -119,7 +119,7 @@ namespace Zodiac
         {
             auto local = bc_func->locals[i];
             auto name = local->allocl.name;
-            llvm::Type *ty = llvm_type_from_ast(builder, local->type);
+            llvm::Type *ty = llvm_type_from_ast(builder, local->type->pointer.base);
             llvm::AllocaInst *alloca = builder->llvm_builder->CreateAlloca(ty, nullptr,
                                                                            name.data);
 
@@ -436,7 +436,8 @@ namespace Zodiac
                 size_t index_count = 1;
                 llvm::Value *indices[2] = {};
 
-                if (ptr_val->getType()->isArrayTy()) {
+                auto ptr_type = static_cast<llvm::PointerType*>(ptr_val->getType());
+                if (ptr_type->getElementType()->isArrayTy()) {
                     llvm::Value *zero_val = llvm::Constant::getNullValue(offset_val->getType());
                     indices[0] = zero_val;
                     indices[1] = offset_val;
