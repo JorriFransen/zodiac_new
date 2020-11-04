@@ -25,7 +25,7 @@ namespace Zodiac
     {
         auto _target_triple = llvm::sys::getDefaultTargetTriple();
         auto target_triple = string_copy(allocator,
-                                         _target_triple.data(), _target_triple.length());
+                _target_triple.data(), _target_triple.length());
 
         Zodiac_Target_Platform target_platform = Zodiac_Target_Platform::INVALID;
 
@@ -56,6 +56,7 @@ namespace Zodiac
         stack_init(allocator, &result.arg_stack);
 
         array_init(allocator, &result.registered_functions);
+        array_init(allocator, &result.blocks);
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
         array_init(allocator, &result.temps);
@@ -70,10 +71,10 @@ namespace Zodiac
         auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, bc_func->type);
 
         llvm::Function *llvm_func = llvm::Function::Create(
-                                        llvm_func_type,
-                                        llvm::GlobalValue::ExternalLinkage,
-                                        bc_func->name.data,
-                                        builder->llvm_module);
+                llvm_func_type,
+                llvm::GlobalValue::ExternalLinkage,
+                bc_func->name.data,
+                builder->llvm_module);
 
         array_append(&builder->registered_functions, { bc_func, llvm_func });
     }
@@ -85,19 +86,23 @@ namespace Zodiac
 
         if (bc_func->flags & BC_FUNC_FLAG_FOREIGN) return;
 
+        builder->blocks.count = 0;
+        builder->parameters.count = 0;
+        builder->locals.count = 0;
+        builder->temps.count = 0;
+
         for (int64_t i = 0; i < bc_func->blocks.count; i++)
         {
             auto block = bc_func->blocks[i];;
-            llvm::BasicBlock::Create(*builder->llvm_context, block->name, llvm_func);
+            auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context, block->name,
+                                                       llvm_func);
+
+            array_append(&builder->blocks, { block, llvm_block });
         }
 
         auto llvm_block_it = llvm_func->begin();
 
         builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
-
-        builder->parameters.count = 0;
-        builder->locals.count = 0;
-        builder->temps.count = 0;
 
         for (int64_t i = 0; i < bc_func->parameters.count; i++)
         {
@@ -106,7 +111,7 @@ namespace Zodiac
             auto name = param->parameter.name;
 
             auto param_alloca = builder->llvm_builder->CreateAlloca(llvm_param_type, nullptr,
-                                                                    name.data);
+                    name.data);
             array_append(&builder->parameters, param_alloca);
         }
 
@@ -115,7 +120,8 @@ namespace Zodiac
             auto local = bc_func->locals[i];
             auto name = local->allocl.name;
             llvm::Type *ty = llvm_type_from_ast(builder, local->type);
-            llvm::AllocaInst *alloca = builder->llvm_builder->CreateAlloca(ty, nullptr, name.data);
+            llvm::AllocaInst *alloca = builder->llvm_builder->CreateAlloca(ty, nullptr,
+                                                                           name.data);
 
             array_append(&builder->locals, alloca);
         }
@@ -173,15 +179,16 @@ namespace Zodiac
             }
 
             case STORE_ARG: {
-                assert(false);
-                // auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
-                // llvm::Value *new_val = llvm_emit_value(builder, inst->b);
-                // builder->llvm_builder->CreateStore(new_val, alloca);
-                // break;
+                auto alloca = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
+                llvm::Value *new_val = llvm_emit_value(builder, inst->b);
+                builder->llvm_builder->CreateStore(new_val, alloca);
+                break;
             }
 
             case STORE_PTR: {
-                assert(false);
+                llvm::Value *ptr_val = llvm_emit_value(builder, inst->a);
+                llvm::Value *new_val = llvm_emit_value(builder, inst->b);
+                builder->llvm_builder->CreateStore(new_val, ptr_val);
                 break;
             }
 
@@ -198,9 +205,8 @@ namespace Zodiac
             }
 
             case LOAD_PTR: {
-                assert(false);
-                // auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
-                // result = builder->llvm_builder->CreateLoad(param);
+                auto ptr = llvm_emit_value(builder, inst->a);
+                result = builder->llvm_builder->CreateLoad(ptr);
                 break;
             }
 
@@ -295,18 +301,55 @@ namespace Zodiac
                 break;
             }
 
-            case EQ_S: assert(false);
-            case NEQ_S: assert(false);
-            case LT_S: assert(false);
-            case LTEQ_S: assert(false);
-            case GT_S: assert(false);
+            case EQ_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpEQ(lhs, rhs, "");
+                break;
+            }
+
+            case NEQ_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpNE(lhs, rhs, "");
+                break;
+            }
+
+            case LT_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpSLT(lhs, rhs, "");
+                break;
+            }
+
+            case LTEQ_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpSLE(lhs, rhs, "");
+                break;
+            }
+
+            case GT_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpSGT(lhs, rhs, "");
+                break;
+            }
+
             case GTEQ_S: assert(false);
 
             case EQ_F: assert(false);
             case NEQ_F: assert(false);
             case LT_F: assert(false);
             case LTEQ_F: assert(false);
-            case GT_F: assert(false);
+
+            case GT_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateFCmpOGT(lhs, rhs, "");
+                break;
+            }
+
             case GTEQ_F: assert(false);
 
             case PUSH_ARG: {
@@ -356,19 +399,123 @@ namespace Zodiac
                 break;
             }
 
-            case RETURN_VOID: assert(false);
-            case JUMP: assert(false);
-            case JUMP_IF: assert(false);
+            case RETURN_VOID: {
+                builder->llvm_builder->CreateRetVoid();
+                break;
+            }
 
-            case PTR_OFFSET: assert(false);
-            case ZEXT: assert(false);
-            case SEXT: assert(false);
-            case TRUNC: assert(false);
-            case F_TO_S: assert(false);
+            case JUMP: {
+                auto block_val = inst->a;
+                assert(block_val->kind == Bytecode_Value_Kind::BLOCK);
 
-            case S_TO_F: assert(false);
-            case U_TO_F: assert(false);
-            case F_TO_F: assert(false);
+                auto block = block_val->block;
+                llvm::BasicBlock *llvm_block = llvm_find_block(builder, block);
+
+                builder->llvm_builder->CreateBr(llvm_block);
+                break;
+            }
+
+            case JUMP_IF:
+            {
+                llvm::Value *cond_val = llvm_emit_value(builder, inst->a);
+
+                assert(inst->b->kind == Bytecode_Value_Kind::BLOCK);
+                assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);
+
+                llvm::BasicBlock *then_block = llvm_find_block(builder, inst->b->block);
+                llvm::BasicBlock *else_block = llvm_find_block(builder, inst->result->block);
+
+                builder->llvm_builder->CreateCondBr(cond_val, then_block, else_block);
+                break;
+            }
+
+            case PTR_OFFSET: {
+                llvm::Value *ptr_val = llvm_emit_value(builder, inst->a);
+                llvm::Value *offset_val = llvm_emit_value(builder, inst->b);
+
+                size_t index_count = 1;
+                llvm::Value *indices[2] = {};
+
+                if (ptr_val->getType()->isArrayTy()) {
+                    llvm::Value *zero_val = llvm::Constant::getNullValue(offset_val->getType());
+                    indices[0] = zero_val;
+                    indices[1] = offset_val;
+                    index_count = 2;
+                } else {
+                    indices[0] = offset_val;
+                }
+
+                result = builder->llvm_builder->CreateGEP(ptr_val, { indices, index_count }, "");
+                break;
+            }
+
+            case ZEXT: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+                result = builder->llvm_builder->CreateCast(llvm::Instruction::CastOps::ZExt,
+                                                           operand_value, dest_type, "");
+                break;
+            }
+
+            case SEXT: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+                result = builder->llvm_builder->CreateCast(llvm::Instruction::CastOps::SExt,
+                                                           operand_value, dest_type, "");
+                break;
+            }
+
+            case TRUNC: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+                result = builder->llvm_builder->CreateCast(llvm::Instruction::CastOps::Trunc,
+                                                           operand_value, dest_type);
+                break;
+            }
+
+            case F_TO_S: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isFloatingPointTy());
+                assert(dest_type->isIntegerTy());
+
+                result = builder->llvm_builder->CreateFPToSI(operand_value, dest_type);
+                break;
+            }
+
+            case S_TO_F: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isIntegerTy());
+                assert(dest_type->isFloatingPointTy());
+
+                result = builder->llvm_builder->CreateSIToFP(operand_value, dest_type);
+                break;
+            }
+
+            case U_TO_F: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isIntegerTy());
+                assert(dest_type->isFloatingPointTy());
+
+                result = builder->llvm_builder->CreateUIToFP(operand_value, dest_type);
+                break;
+            }
+
+            case F_TO_F: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isFloatingPointTy());
+                assert(dest_type->isFloatingPointTy());
+
+                result = builder->llvm_builder->CreateFPCast(operand_value, dest_type, "");
+                break;
+            }
 
             case EXIT: {
                 llvm::Value *exit_code_val = llvm_emit_value(builder, inst->a);
@@ -380,7 +527,8 @@ namespace Zodiac
                 assert(inst->a->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
                 assert(inst->a->type == Builtin::type_u64);
 
-                llvm::Value *syscall_ret = llvm_emit_syscall(builder, inst->a->integer_literal.u64);
+                llvm::Value *syscall_ret = llvm_emit_syscall(builder,
+                                                             inst->a->integer_literal.u64);
                 if (inst->result) {
                     assert(syscall_ret);
                     result = syscall_ret;
@@ -389,14 +537,18 @@ namespace Zodiac
             }
         }
 
-        if (inst->result &&
-            !(inst->result->kind == Bytecode_Value_Kind::ALLOCL)) {
+        if (inst->result) {
+            if (inst->op == ALLOCL) {
+                assert(inst->result->kind == Bytecode_Value_Kind::ALLOCL);
+            } else if (inst->op == JUMP_IF) {
+                assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);
+            } else {
+                assert(inst->result->kind == Bytecode_Value_Kind::TEMP);
+                assert(result);
 
-            assert(inst->result->kind == Bytecode_Value_Kind::TEMP);
-            assert(result);
-
-            assert(builder->temps.count == inst->result->temp.index);
-            array_append(&builder->temps, result);
+                assert(builder->temps.count == inst->result->temp.index);
+                array_append(&builder->temps, result);
+            }
         }
     }
 
@@ -642,6 +794,8 @@ namespace Zodiac
 
         if (verify_error)
         {
+            // printf("\n\n========\n\n");
+            // builder->llvm_module->dump();
             assert(false);
         }
 
@@ -797,6 +951,17 @@ namespace Zodiac
                 return fi.llvm_function;
         }
 
+        return nullptr;
+    }
+
+    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
+    {
+        for (int64_t i = 0; i < builder->blocks.count; i++) {
+            auto bi = builder->blocks[i];
+            if (bi.bytecode_block == bc_block) return bi.llvm_block;
+        }
+
+        assert(false);
         return nullptr;
     }
 

@@ -21,6 +21,12 @@ namespace Zodiac
         llvm::Function *llvm_function = nullptr;
     };
 
+    struct LLVM_Block_Info
+    {
+        Bytecode_Block *bytecode_block = nullptr;
+        llvm::BasicBlock *llvm_block = nullptr;
+    };
+
     struct LLVM_Builder
     {
         Allocator *allocator = nullptr;
@@ -37,6 +43,7 @@ namespace Zodiac
         Stack<llvm::Value *> arg_stack = {};
 
         // For the function currently being emitted
+        Array<LLVM_Block_Info > blocks = {};
         Array<llvm::AllocaInst *> parameters = {};
         Array<llvm::AllocaInst *> locals = {};
         Array<llvm::Value *> temps = {};
@@ -65,6 +72,7 @@ namespace Zodiac
     bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name);
 
     llvm::Function *llvm_find_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
+    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, Bytecode_Block *bc_block);
 
     llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
 

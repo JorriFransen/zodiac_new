@@ -560,7 +560,7 @@ namespace Zodiac
         }
 
         assert(result || expr->type->kind == AST_Type_Kind::VOID);
-        if (result) assert(result->type = expr->type);
+        if (result) assert(result->type == expr->type);
 
         return result;
     }
@@ -607,7 +607,11 @@ namespace Zodiac
                 auto ptr_expr = expr->subscript.pointer_expression;
                 auto index_expr = expr->subscript.index_expression;
 
-                auto ptr_val = bytecode_emit_expression(builder, ptr_expr);
+                auto ptr_val = bytecode_emit_lvalue(builder, ptr_expr);
+                if (ptr_val->kind != Bytecode_Value_Kind::ALLOCL) {
+                    ptr_val = bytecode_emit_load(builder, ptr_val);
+                }
+
                 auto offset_val = bytecode_emit_expression(builder, index_expr);
 
                 AST_Type *result_type = nullptr;
@@ -903,13 +907,15 @@ namespace Zodiac
             case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
 
             case Bytecode_Value_Kind::ALLOCL: {
-                assert(dest->type == source->type);
+                assert(dest->type->kind == AST_Type_Kind::POINTER);
+                assert(dest->type->pointer.base == source->type);
                 bytecode_emit_instruction(builder, STOREL, dest, source, nullptr);
                 break;
             }
 
             case Bytecode_Value_Kind::PARAM: {
-                assert(dest->type == source->type);
+                assert(dest->type->kind == AST_Type_Kind::POINTER);
+                assert(dest->type->pointer.base == source->type);
                 bytecode_emit_instruction(builder, STORE_ARG, dest, source, nullptr);
                 break;
             }
@@ -922,7 +928,9 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_load(Bytecode_Builder *builder, Bytecode_Value *source)
     {
 
-        Bytecode_Value *result = bytecode_temporary_new(builder, source->type);
+        assert(source->type->kind == AST_Type_Kind::POINTER);
+
+        Bytecode_Value *result = bytecode_temporary_new(builder, source->type->pointer.base);
 
         switch (source->kind)
         {
@@ -1123,7 +1131,15 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
-        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, type);
+        auto pointer_type = type->pointer_to;
+        if (!pointer_type) {
+            pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                  builder->build_data,
+                                                                  type);
+        }
+        assert(pointer_type);
+
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::ALLOCL, pointer_type);
         result->allocl.name = name;
 
         auto index = builder->current_function->locals.count;
@@ -1135,7 +1151,15 @@ namespace Zodiac
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, Bytecode_Function *func,
                                            AST_Type *type, Atom name)
     {
-        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, type);
+        auto pointer_type = type->pointer_to;
+        if (!pointer_type) {
+            pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                  builder->build_data,
+                                                                  type);
+        }
+
+        assert(pointer_type);
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::PARAM, pointer_type);
         result->parameter.name = name;
 
         auto index = func->parameters.count;
@@ -1240,7 +1264,8 @@ namespace Zodiac
             case ALLOCL:
             {
                 string_builder_append(sb, "ALLOCL ");
-                ast_print_type(sb, inst->result->type);
+                assert(inst->result->type->kind == AST_Type_Kind::POINTER);
+                ast_print_type(sb, inst->result->type->pointer.base);
                 break;
             }
 
@@ -1374,11 +1399,49 @@ namespace Zodiac
             {
                 if (value->type->integer.sign)
                 {
-                    string_builder_appendf(sb, "%" PRId64, value->integer_literal.s64);
+                    switch (value->type->bit_size) {
+                        default: assert(false);
+                        case 8:
+                                 string_builder_appendf(sb, "%" PRId64 " ('%c')",
+                                                        value->integer_literal.s8,
+                                                        value->integer_literal.s8);
+                                 break;
+                        case 16:
+                                 string_builder_appendf(sb, "%" PRId64,
+                                                        value->integer_literal.s16);
+                                 break;
+                        case 32:
+                                 string_builder_appendf(sb, "%" PRId64,
+                                                        value->integer_literal.s32);
+                                 break;
+                        case 64:
+                                 string_builder_appendf(sb, "%" PRId64,
+                                                        value->integer_literal.s64);
+                                 break;
+                    }
                 }
                 else
                 {
-                    string_builder_appendf(sb, "%" PRIu64, value->integer_literal.u64);
+                    switch (value->type->bit_size) {
+                        default: assert(false);
+                        case 8:
+                                 string_builder_appendf(sb, "%" PRIu64 " ('%c')",
+                                                        value->integer_literal.u8,
+                                                        value->integer_literal.u8);
+                                 break;
+                        case 16:
+                                 string_builder_appendf(sb, "%" PRIu64,
+                                                        value->integer_literal.u16);
+                                 break;
+                        case 32:
+                                 string_builder_appendf(sb, "%" PRIu64,
+                                                        value->integer_literal.u32);
+                                 break;
+                        case 64:
+                                 string_builder_appendf(sb, "%" PRIu64,
+                                                        value->integer_literal.u64);
+                                 break;
+                    }
                 }
                 break;
             }

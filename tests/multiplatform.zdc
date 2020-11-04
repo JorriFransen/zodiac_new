@@ -1,9 +1,18 @@
 
 std :: import std;
 
+lil_test :: func(c: u8) -> void
+{
+    _c := c;
+    _c_ptr := *_c;
+    return;
+}
+
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
+
+    @syscall(1, 1, "Test!\n", 6);
 
     std.print_num(42);
     std.print("\n");
@@ -13,6 +22,9 @@ main :: func() -> s64
 
     std.print_double(44.22);
     std.print("\n");
+
+    std.print_char('x');
+    std.print_char('\n');
 
     _48 := add(return_46(), 2);
     return addone(sub(add(_48, 3), 9));

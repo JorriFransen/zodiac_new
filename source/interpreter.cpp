@@ -47,9 +47,11 @@ namespace Zodiac
         for (int64_t i = 0; i < entry_func->locals.count; i++)
         {
             auto allocl = entry_func->locals[i];
+            assert(allocl->type->kind == AST_Type_Kind::POINTER);
+            auto allocl_type = allocl->type->pointer.base;
 
-            assert(allocl->type->bit_size % 8 == 0);
-            auto size = allocl->type->bit_size / 8;
+            assert(allocl_type->bit_size % 8 == 0);
+            auto size = allocl_type->bit_size / 8;
             assert(interp->sp + size <= interp->stack_size);
 
             allocl->allocl.byte_offset_from_fp = interp->sp;
@@ -303,9 +305,12 @@ namespace Zodiac
                     for (int64_t i = func->parameters.count - 1; i >= 0; i--)
                     {
                         auto param = func->parameters[i];
+                        auto param_type = param->type;
+                        assert(param_type->kind == AST_Type_Kind::POINTER);
+                        param_type = param_type->pointer.base;
 
-                        assert(param->type->bit_size % 8 == 0);
-                        auto size = param->type->bit_size / 8;
+                        assert(param_type->bit_size % 8 == 0);
+                        auto size = param_type->bit_size / 8;
 
                         param_offset -= size;
                         total_arg_size += size;
@@ -329,9 +334,11 @@ namespace Zodiac
                     for (int64_t i = 0; i < func->locals.count; i++)
                     {
                         auto allocl = func->locals[i];
+                        assert(allocl->type->kind == AST_Type_Kind::POINTER);
+                        auto allocl_type = allocl->type->pointer.base;
 
-                        assert(allocl->type->bit_size % 8 == 0);
-                        auto size = allocl->type->bit_size / 8;
+                        assert(allocl_type->bit_size % 8 == 0);
+                        auto size = allocl_type->bit_size / 8;
                         assert(interp->sp + size <= interp->stack_size);
 
                         auto offset = interp->sp - new_fp;
@@ -672,13 +679,20 @@ namespace Zodiac
         uint8_t *source_ptr = interpreter_load_lvalue(interp, value);
 
         Bytecode_Value result = {};
-        result.type = value->type;
 
-        switch (value->type->kind) {
+        if (value->kind == Bytecode_Value_Kind::ALLOCL ||
+            value->kind == Bytecode_Value_Kind::PARAM) {
+            assert(value->type->kind == AST_Type_Kind::POINTER);
+            result.type = value->type->pointer.base;
+        } else {
+            result.type = value->type;
+        }
+
+        switch (result.type->kind) {
 
             case AST_Type_Kind::BOOL:
             case AST_Type_Kind::INTEGER: {
-                switch (value->type->bit_size) {
+                switch (result.type->bit_size) {
                     case 8: result.integer_literal.s8 = *((int8_t*)source_ptr); break;
                     case 16: result.integer_literal.s16 = *((int16_t*)source_ptr); break;
                     case 32: result.integer_literal.s32 = *((int32_t*)source_ptr); break;
@@ -689,8 +703,8 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FLOAT: {
-                if (value->type == Builtin::type_float)       result.float_literal.r32 = *((float *)source_ptr);
-                else if (value->type == Builtin::type_double) result.float_literal.r64 = *((double *)source_ptr);
+                if (result.type == Builtin::type_float)       result.float_literal.r32 = *((float *)source_ptr);
+                else if (result.type == Builtin::type_double) result.float_literal.r64 = *((double *)source_ptr);
                 else {
                     assert(false);
                 }
@@ -708,8 +722,8 @@ namespace Zodiac
                 } else if (value->kind == Bytecode_Value_Kind::TEMP) {
                     result.pointer = *(void**)source_ptr;
                 }
-                assert(value->type->array.element_type->pointer_to);
-                result.type = value->type->array.element_type->pointer_to;
+                assert(result.type->array.element_type->pointer_to);
+                result.type = result.type->array.element_type->pointer_to;
                 break;
             }
 
@@ -795,7 +809,16 @@ namespace Zodiac
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val)
     {
-        switch (val.type->kind) {
+        auto type = val.type;
+
+        if (val.kind == Bytecode_Value_Kind::ALLOCL ||
+            val.kind == Bytecode_Value_Kind::PARAM)
+        {
+            assert(type->kind == AST_Type_Kind::POINTER);
+            type = type->pointer.base;
+        }
+
+        switch (type->kind) {
 
             case AST_Type_Kind::INTEGER: {
                 switch (val.type->bit_size)
@@ -810,8 +833,10 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FLOAT: {
-                if (val.type == Builtin::type_float)       interp_store(dest, val.float_literal.r32);
-                else if (val.type == Builtin::type_double) interp_store(dest, val.float_literal.r64);
+                if (val.type == Builtin::type_float)
+                    interp_store(dest, val.float_literal.r32);
+                else if (val.type == Builtin::type_double)
+                    interp_store(dest, val.float_literal.r64);
                 else {
                     assert(false);
                 }
