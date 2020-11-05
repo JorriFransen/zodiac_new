@@ -450,6 +450,17 @@ namespace Zodiac
                 break;
             }
 
+            case AGG_OFFSET: {
+                llvm::Value *ptr_val = llvm_emit_value(builder, inst->a);
+                llvm::Value *index_val = llvm_emit_value(builder, inst->b);
+
+                llvm::Value *zero_val = llvm::Constant::getNullValue(index_val->getType());
+                llvm::Value *indices[2] = { zero_val, index_val };
+
+                result = builder->llvm_builder->CreateGEP(ptr_val, { indices, 2 }, "");
+                break;
+            }
+
             case ZEXT: {
                 llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
                 llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
@@ -772,8 +783,6 @@ namespace Zodiac
 
         auto options = builder->build_data->options;
 
-        if (options->print_llvm) builder->llvm_module->dump();
-
         // @TODO: @CLEANUP: This could be done by comparing a count I think?
         for (int64_t i = 0; i < builder->registered_functions.count; i++)
         {
@@ -791,12 +800,12 @@ namespace Zodiac
             }
         }
 
+        if (options->print_llvm) builder->llvm_module->dump();
+
         bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
 
         if (verify_error)
         {
-            // printf("\n\n========\n\n");
-            // builder->llvm_module->dump();
             assert(false);
         }
 

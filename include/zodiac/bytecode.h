@@ -62,17 +62,18 @@ namespace Zodiac
         JUMP_IF     = 0x0027,
 
         PTR_OFFSET  = 0x0028,
+        AGG_OFFSET  = 0x0029,
 
-        ZEXT        = 0x0029,
-        SEXT        = 0x002a,
-        TRUNC       = 0x002b,
-        F_TO_S      = 0x002c,
-        S_TO_F      = 0x002d,
-        U_TO_F      = 0x002e,
-        F_TO_F      = 0x002f,
+        ZEXT        = 0x002a,
+        SEXT        = 0x002b,
+        TRUNC       = 0x002c,
+        F_TO_S      = 0x002d,
+        S_TO_F      = 0x002e,
+        U_TO_F      = 0x002f,
+        F_TO_F      = 0x0030,
 
-        EXIT        = 0x0030,
-        SYSCALL     = 0x0031,
+        EXIT        = 0x0031,
+        SYSCALL     = 0x0032,
     };
 
     enum class Bytecode_Value_Kind

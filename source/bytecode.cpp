@@ -389,7 +389,12 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::DOT: assert(false); //@TODO: Implement!
+
+            case AST_Expression_Kind::DOT: {
+                Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
+                result = bytecode_emit_load(builder, lvalue);
+                break;
+            }
 
             case AST_Expression_Kind::BINARY: {
 
@@ -593,7 +598,40 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT: {
+                auto parent_expr = expr->dot.parent_expression;
+
+                Bytecode_Value *parent_lvalue = bytecode_emit_lvalue(builder, parent_expr);
+
+                AST_Type *struct_pointer_type = parent_lvalue->type;
+                assert(struct_pointer_type->kind == AST_Type_Kind::POINTER);
+
+                AST_Type *struct_type = struct_pointer_type->pointer.base;
+                if (struct_type->kind != AST_Type_Kind::STRUCTURE) {
+
+                    assert(struct_type->kind == AST_Type_Kind::POINTER);
+                    assert(struct_type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+
+                    struct_pointer_type = struct_type;
+                    struct_type = struct_type->pointer.base;
+
+                    parent_lvalue = bytecode_emit_load(builder, parent_lvalue);
+                }
+
+                Integer_Literal il = { .u32 = (uint32_t)expr->dot.child_index };
+                Bytecode_Value *index_value = bytecode_integer_literal_new(builder,
+                                                                           Builtin::type_u32,
+                                                                           il);
+
+                AST_Type *result_type = expr->type->pointer_to;
+                assert(result_type);
+
+                result = bytecode_temporary_new(builder, result_type);
+                bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue, index_value, result);
+                break;
+            }
+
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
             case AST_Expression_Kind::POST_FIX: assert(false);
@@ -1221,7 +1259,8 @@ namespace Zodiac
             auto param = func->parameters[i];
             bytecode_print_value(sb, param);
             string_builder_append(sb, " : ");
-            ast_print_type(sb, param->type);
+            assert(param->type->kind == AST_Type_Kind::POINTER);
+            ast_print_type(sb, param->type->pointer.base);
         }
 
         string_builder_append(sb, ")\n");
@@ -1341,6 +1380,7 @@ namespace Zodiac
             }
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
+            case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
 
             case ZEXT:   string_builder_append(sb, "ZEXT "); break;
             case SEXT:   string_builder_append(sb, "SEXT "); break;

@@ -84,14 +84,12 @@ namespace Zodiac
             {
                 case NOP: assert(false);
 
-                case ALLOCL:
-                {
+                case ALLOCL: {
                     break;
                 }
 
                 case STOREL:
-                case STORE_ARG:
-                {
+                case STORE_ARG: {
                     uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
                     Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
 
@@ -99,8 +97,7 @@ namespace Zodiac
                     break;
                 }
 
-                case STORE_PTR:
-                {
+                case STORE_PTR: {
                     Bytecode_Value ptr_val = interpreter_load_value(interp, inst->a);
                     Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
                     interp_store_value((uint8_t*)ptr_val.pointer, source_val);
@@ -452,6 +449,32 @@ namespace Zodiac
                     break;
                 }
 
+                case AGG_OFFSET: {
+                    auto ptr_val = interpreter_load_value(interp, inst->a);
+                    auto index_val = interpreter_load_value(interp, inst->b);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                    assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                    AST_Type *struct_type = ptr_val.type->pointer.base;
+
+                    assert(index_val.type == Builtin::type_u32);
+                    assert(index_val.kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+
+                    int64_t byte_offset = 0;
+                    for (int64_t i = 0; i < index_val.integer_literal.u32; i++) {
+                        auto mem_type = struct_type->structure.member_types[i];
+                        auto bit_size = mem_type->bit_size;
+                        assert(bit_size % 8 == 0);
+                        byte_offset += (bit_size / 8);
+                    }
+
+                    void *result = ((uint8_t*)ptr_val.pointer) + byte_offset;
+                    interp_store(result_addr, result);
+
+                    break;
+                }
+
                 case ZEXT: {
                     Bytecode_Value operand_val = interpreter_load_value(interp, inst->a);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
@@ -682,6 +705,9 @@ namespace Zodiac
             result.type = value->type;
         }
 
+        if (value->kind == Bytecode_Value_Kind::INTEGER_LITERAL)
+            result.kind = Bytecode_Value_Kind::INTEGER_LITERAL;
+
         switch (result.type->kind) {
 
             case AST_Type_Kind::BOOL:
@@ -721,6 +747,16 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::STRUCTURE: {
+                if (value->kind == Bytecode_Value_Kind::ALLOCL) {
+                    result.pointer = source_ptr;
+                } else {
+                    assert(false);
+                }
+                assert(result.type->pointer_to);
+                result.type = result.type->pointer_to;
+                break;
+            }
             default: assert(false);
         }
 
