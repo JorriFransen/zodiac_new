@@ -780,7 +780,44 @@ namespace Zodiac
             Integer_Literal il = { .s64 = (int64_t)(type->bit_size / 8) };
             return bytecode_integer_literal_new(builder, Builtin::type_s64, il);
 
-        } else if (name == Builtin::atom_offsetof) assert(false);
+        } else if (name == Builtin::atom_offsetof) {
+            assert(args.count == 2);
+
+            auto mem_name = args[0];
+            auto struct_name = args[1];
+
+            auto struct_decl = struct_name->identifier->declaration;
+            assert(struct_decl);
+
+            auto mem_decl = mem_name->identifier->declaration;
+            assert(mem_decl);
+
+            int64_t offset = 0;
+            bool found = false;
+
+            for (int64_t i = 0; i < struct_decl->structure.member_declarations.count; i++)
+            {
+                auto struct_mem = struct_decl->structure.member_declarations[i];
+                if (struct_mem == mem_decl)
+                {
+                    found = true;
+                    break;
+                }
+
+                auto mem_type = struct_mem->type;
+                assert(mem_type);
+
+                auto mem_size = mem_type->bit_size;
+                assert(mem_size % 8 == 0);
+
+                offset += mem_size / 8;
+            }
+
+            assert(found);
+
+            Integer_Literal il = { .s64 = offset };
+            return bytecode_integer_literal_new(builder, Builtin::type_s64, il);
+        }
         else assert(false);
 
         assert(false);
