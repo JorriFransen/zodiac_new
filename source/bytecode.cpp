@@ -764,14 +764,23 @@ namespace Zodiac
 
             bytecode_emit_instruction(builder, SYSCALL, arg_count_val, arg_size_val, result);
             return result;
-        }
-        else if (name == Builtin::atom_cast) {
+
+        } else if (name == Builtin::atom_cast) {
             assert(args.count == 2);
             auto target_type = args[0]->type;
             auto operand_expr = args[1];
             return bytecode_emit_cast(builder, operand_expr, target_type);
-        } else if (name == Builtin::atom_sizeof) assert(false);
-        else if (name == Builtin::atom_offsetof) assert(false);
+
+        } else if (name == Builtin::atom_sizeof) {
+            assert(args.count == 1);
+
+            auto type = args[0]->type;
+            assert(type->bit_size % 8 == 0);
+
+            Integer_Literal il = { .s64 = (int64_t)(type->bit_size / 8) };
+            return bytecode_integer_literal_new(builder, Builtin::type_s64, il);
+
+        } else if (name == Builtin::atom_offsetof) assert(false);
         else assert(false);
 
         assert(false);
