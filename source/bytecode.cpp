@@ -220,7 +220,9 @@ namespace Zodiac
 
             case AST_Declaration_Kind::CONSTANT: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::PARAMETER: assert(false); //@@TODO: Implement!
-            case AST_Declaration_Kind::FUNCTION: assert(false); //@@TODO: Implement!
+
+            case AST_Declaration_Kind::FUNCTION: assert(false);
+
             case AST_Declaration_Kind::TYPE: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::TYPEDEF: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::STRUCTURE: assert(false); //@@TODO: Implement!
@@ -277,7 +279,9 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::DECLARATION: {
-                bytecode_emit_declaration(builder, stmt->declaration);
+                if (stmt->declaration->kind != AST_Declaration_Kind::FUNCTION) {
+                    bytecode_emit_declaration(builder, stmt->declaration);
+                }
                 break;
             }
 
