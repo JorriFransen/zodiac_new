@@ -369,7 +369,7 @@ namespace Zodiac
                 Bytecode_Value *switch_data =
                     bytecode_value_new(builder, Bytecode_Value_Kind::SWITCH_DATA, nullptr);
                 switch_inst->b = switch_data;
-                array_init(builder->allocator, &switch_data->switch_data.cases, 
+                array_init(builder->allocator, &switch_data->switch_data.cases,
                            stmt->switch_stmt.cases.count);
 
                 auto ta = temp_allocator_get();
