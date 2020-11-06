@@ -468,6 +468,9 @@ namespace Zodiac
 
             case SWITCH: {
                 assert(false);
+                // llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
+
+                // builder->llvm_builder->CreateSwitch(switch_val, )
                 break;
             }
 
@@ -686,6 +689,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 

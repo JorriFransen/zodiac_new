@@ -451,8 +451,11 @@ namespace Zodiac
                     Bytecode_Block *default_block = nullptr;
                     Bytecode_Block *target_block = nullptr;
 
-                    for (int64_t i = 0; i < inst->switch_data.cases.count; i++) {
-                        auto case_info = inst->switch_data.cases[i];
+                    assert(inst->b->kind == Bytecode_Value_Kind::SWITCH_DATA);
+                    auto switch_data = inst->b->switch_data;
+
+                    for (int64_t i = 0; i < switch_data.cases.count; i++) {
+                        auto case_info = switch_data.cases[i];
 
                         if (case_info.case_value) {
                             assert(switch_val.type == case_info.case_value->type);

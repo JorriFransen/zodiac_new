@@ -98,10 +98,25 @@ namespace Zodiac
 
         FUNCTION,
         BLOCK,
+
+        SWITCH_DATA,
+    };
+
+    struct Bytecode_Value;
+    struct Bytecode_Block;
+    struct Bytecode_Switch_Case
+    {
+        Bytecode_Value *case_value = nullptr;
+        Bytecode_Block *target_block = nullptr;
+    };
+
+    struct Bytecode_Switch_Data
+    {
+        Array<Bytecode_Switch_Case> cases = {};
+        Bytecode_Block *default_block = nullptr;
     };
 
     struct Bytecode_Function;
-    struct Bytecode_Block;
     struct Bytecode_Value
     {
         Bytecode_Value_Kind kind = Bytecode_Value_Kind::INVALID;
@@ -114,7 +129,7 @@ namespace Zodiac
                 Atom name;
                 int64_t index;               // Used in llvm generation
                 int64_t byte_offset_from_fp; // Used in interpreter
-            } allocl = {};
+            } allocl;
 
             struct
             {
@@ -137,34 +152,18 @@ namespace Zodiac
             Bytecode_Function *function;
             Bytecode_Block *block;
 
-        };
-    };
+            Bytecode_Switch_Data switch_data = {};
 
-    struct Bytecode_Switch_Case
-    {
-        Bytecode_Value *case_value = nullptr;
-        Bytecode_Block *target_block = nullptr;
+        };
     };
 
     struct Bytecode_Instruction
     {
         Bytecode_Opcode op = NOP;
 
-        union
-        {
-            struct
-            {
-                Bytecode_Value *a;
-                Bytecode_Value *b;
-                Bytecode_Value *result;
-            };
-
-            struct
-            {
-                Bytecode_Value *a;
-                Array<Bytecode_Switch_Case> cases;
-            } switch_data = {};
-        };
+            Bytecode_Value *a = nullptr;
+            Bytecode_Value *b = nullptr;
+            Bytecode_Value *result = nullptr;
     };
 
     typedef uint64_t Bytecode_Function_Flags;
@@ -289,7 +288,7 @@ namespace Zodiac
                                                     Bytecode_Value *result);
 
     void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block);
-    void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value, 
+    void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value,
                                   Bytecode_Block *case_block);
 
     void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block);
