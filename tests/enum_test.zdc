@@ -1,7 +1,7 @@
 
 std :: import std;
 
-Day :: enum 
+Day :: enum
 {
     Monday,
     Tuesday,
@@ -9,7 +9,7 @@ Day :: enum
     Thursday,
     Friday,
     Saturday,
-    Sunday, 
+    Sunday,
 }
 
 Operator : u8 : enum

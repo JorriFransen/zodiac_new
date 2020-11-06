@@ -4,6 +4,7 @@
 #include "builtin.h"
 #include "parser.h"
 #include "string_builder.h"
+#include "temp_allocator.h"
 
 #include <stdio.h>
 
@@ -326,7 +327,80 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false); //@@TODO: Implement!
+            case AST_Statement_Kind::SWITCH:
+            {
+                auto switch_expr = stmt->switch_stmt.expression;
+                Bytecode_Value *switch_val = bytecode_emit_expression(builder, switch_expr);
+
+                Bytecode_Block *default_block = nullptr;
+                Bytecode_Block *post_switch_block = bytecode_new_block(builder, "post_switch");
+
+                auto func = builder->current_function;
+
+                Bytecode_Instruction *switch_inst = bytecode_emit_instruction(builder, SWITCH,
+                                                                              switch_val,
+                                                                              nullptr,
+                                                                              nullptr);
+
+                auto ta = temp_allocator_get();
+
+                Array<Bytecode_Block *> case_blocks = {};
+                array_init(ta, &case_blocks, stmt->switch_stmt.cases.count);
+
+                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++) {
+                    AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
+
+                    const char *block_name = (switch_case->is_default ? "default" : "case");
+                    Bytecode_Block *case_block = bytecode_new_block(builder, block_name);
+
+                    bytecode_append_block(func, case_block);
+                    if (switch_case->is_default) {
+                        assert(!default_block);
+                        default_block = case_block;
+                    }
+
+                    bytecode_set_insert_point(builder, case_block);
+                    bytecode_push_break_block(builder, post_switch_block);
+
+                    bytecode_emit_statement(builder, switch_case->body);
+                    case_block = builder->insert_block;
+
+                    bytecode_pop_break_block(builder);
+
+                    if (!bytecode_block_ends_with_terminator(case_block)) {
+                        bytecode_emit_jump(builder, post_switch_block);
+                    }
+                }
+
+                if (!default_block) {
+                    default_block = post_switch_block;
+                }
+
+                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
+                {
+                    AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
+                    Bytecode_Block *case_block = case_blocks[i];
+
+                    if (switch_case->is_default) {
+                        bytecode_add_default_switch_case(switch_inst, case_block);
+                        continue;
+                    }
+
+                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++)
+                    {
+                        AST_Expression *expr = switch_case->expressions[i];
+                        assert(expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+                        Bytecode_Value *expr_val = bytecode_emit_expression(builder, expr);
+                        bytecode_add_switch_case(switch_inst, expr_val, case_block);
+                    }
+                }
+
+                bytecode_append_block(func, post_switch_block);
+                bytecode_set_insert_point(builder, post_switch_block);
+
+                break;
+            }
         }
     }
 
@@ -1010,6 +1084,8 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+
+            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 
@@ -1020,8 +1096,7 @@ namespace Zodiac
 
         Bytecode_Value *result = bytecode_temporary_new(builder, source->type->pointer.base);
 
-        switch (source->kind)
-        {
+        switch (source->kind) {
             case Bytecode_Value_Kind::INVALID: assert(false);
 
             case Bytecode_Value_Kind::TEMP: {
@@ -1049,6 +1124,7 @@ namespace Zodiac
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
 
+            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
 
         return result;
@@ -1429,6 +1505,8 @@ namespace Zodiac
                 break;
             }
 
+            case SWITCH: string_builder_append(sb, "SWITCH "); break;
+
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
             case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
 
@@ -1464,12 +1542,10 @@ namespace Zodiac
 
     void bytecode_print_value(String_Builder *sb, Bytecode_Value *value)
     {
-        switch (value->kind)
-        {
+        switch (value->kind) {
             case Bytecode_Value_Kind::INVALID: assert(false);
 
-            case Bytecode_Value_Kind::TEMP:
-            {
+            case Bytecode_Value_Kind::TEMP: {
                 string_builder_appendf(sb, "%%%" PRId64, value->temp.index);
                 break;
             }
@@ -1576,6 +1652,8 @@ namespace Zodiac
                 string_builder_appendf(sb, "%s", value->block->name);
                 break;
             }
+
+            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 }

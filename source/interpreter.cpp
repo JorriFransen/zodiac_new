@@ -431,6 +431,10 @@ namespace Zodiac
                     break;
                 }
 
+                case SWITCH: {
+                    assert(false);
+                    break;
+                }
                 case PTR_OFFSET: {
                     auto ptr_val = interpreter_load_value(interp, inst->a);
                     auto offset_val = interpreter_load_value(interp, inst->b);

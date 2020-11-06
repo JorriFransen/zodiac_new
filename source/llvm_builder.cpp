@@ -429,6 +429,11 @@ namespace Zodiac
                 break;
             }
 
+            case SWITCH: {
+                assert(false);
+                break;
+            }
+
             case PTR_OFFSET: {
                 llvm::Value *ptr_val = llvm_emit_value(builder, inst->a);
                 llvm::Value *offset_val = llvm_emit_value(builder, inst->b);
@@ -566,8 +571,7 @@ namespace Zodiac
 
     llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value)
     {
-        switch (bc_value->kind)
-        {
+        switch (bc_value->kind) {
             case Bytecode_Value_Kind::INVALID: assert(false);
 
             case Bytecode_Value_Kind::INTEGER_LITERAL:
@@ -645,6 +649,8 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+
+            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 
