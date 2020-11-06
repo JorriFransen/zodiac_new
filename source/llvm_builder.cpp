@@ -185,6 +185,11 @@ namespace Zodiac
                 break;
             }
 
+            case STORE_GLOBAL: {
+                assert(false);
+                break;
+            }
+
             case STORE_PTR: {
                 llvm::Value *ptr_val = llvm_emit_value(builder, inst->a);
                 llvm::Value *new_val = llvm_emit_value(builder, inst->b);
@@ -201,6 +206,11 @@ namespace Zodiac
             case LOAD_PARAM: {
                 auto param = llvm_emit_value<llvm::AllocaInst>(builder, inst->a);
                 result = builder->llvm_builder->CreateLoad(param);
+                break;
+            }
+
+            case LOAD_GLOBAL: {
+                assert(false);
                 break;
             }
 
@@ -690,26 +700,34 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::TEMP:
+            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::NULL_LITERAL: 
             {
+                auto type = llvm_type_from_ast<llvm::PointerType>(builder, bc_value->type);
+                return llvm::ConstantPointerNull::get(type);
+                break;
+            }
+
+            case Bytecode_Value_Kind::TEMP: {
                 assert(bc_value->temp.index < builder->temps.count);
                 return builder->temps[bc_value->temp.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::ALLOCL:
-            {
+            case Bytecode_Value_Kind::ALLOCL: {
                 assert(bc_value->allocl.index < builder->locals.count);
                 return builder->locals[bc_value->allocl.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM:
-            {
+            case Bytecode_Value_Kind::PARAM: {
                 assert(bc_value->allocl.index < builder->parameters.count);
                 return builder->parameters[bc_value->parameter.index];
                 break;
             }
+
+            case Bytecode_Value_Kind::GLOBAL: assert(false);
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);

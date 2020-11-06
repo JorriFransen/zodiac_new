@@ -25,12 +25,15 @@ namespace Zodiac
         result.frame_pointer = 0;
         result.ip = {};
 
+        result.null_pointer = nullptr;
+
         result.exit_code = 0;
 
         return result;
     }
 
-    void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func)
+    void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func,
+                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info)
     {
         assert(entry_func->blocks.count);
 
@@ -39,6 +42,8 @@ namespace Zodiac
             .block = entry_func->blocks[0],
             .index = 0,
         };
+
+        interpreter_initialize_globals(interp, global_data_size, global_info);
 
         interp_stack_push(interp, 0); // fp
         Instruction_Pointer empty_ip = {};
@@ -89,6 +94,7 @@ namespace Zodiac
                 }
 
                 case STOREL:
+                case STORE_GLOBAL:
                 case STORE_ARG: {
                     uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
                     Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
@@ -118,6 +124,14 @@ namespace Zodiac
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
 
                     interp_store_value(result_addr, arg_value);
+                    break;
+                }
+
+                case LOAD_GLOBAL: {
+                    Bytecode_Value glob_value = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    interp_store_value(result_addr, glob_value);
                     break;
                 }
 
@@ -755,6 +769,27 @@ namespace Zodiac
         }
     }
 
+    void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
+                                        Array<Bytecode_Global_Info> global_info)
+    {
+        assert(global_data_size);
+
+        interp->global_data = alloc_array<uint8_t>(interp->allocator, global_data_size);
+
+        for (int64_t i = 0; i < global_info.count; i++) {
+            auto info = global_info[i];
+
+            auto ptr = interpreter_load_lvalue(interp, info.global_value);
+
+            if (info.has_initializer) {
+                interp_store_constant(ptr, info.init_const_val); 
+            } else {
+                assert(false);
+            }
+        }
+
+    }
+
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)
     {
 
@@ -772,6 +807,13 @@ namespace Zodiac
 
         if (value->kind == Bytecode_Value_Kind::INTEGER_LITERAL)
             result.kind = Bytecode_Value_Kind::INTEGER_LITERAL;
+        else if (value->kind == Bytecode_Value_Kind::NULL_LITERAL) {
+            result.kind = Bytecode_Value_Kind::NULL_LITERAL;
+            // result.pointer = &interp->null_pointer;
+            result.pointer = nullptr;
+            return result;
+        }
+
 
         switch (result.type->kind) {
 
@@ -798,7 +840,11 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::POINTER: {
-                result.pointer = *(void**)source_ptr;
+                if (value->kind == Bytecode_Value_Kind::ALLOCL) {
+                    result.pointer = source_ptr;
+                } else {
+                    result.pointer = *(void**)source_ptr;
+                }
                 break;
             }
 
@@ -831,28 +877,29 @@ namespace Zodiac
 
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value)
     {
-        switch (value->kind)
-        {
-            case Bytecode_Value_Kind::TEMP:
-            {
+        switch (value->kind) {
+
+            case Bytecode_Value_Kind::TEMP: {
                 return &interp->stack[interp->frame_pointer + value->temp.byte_offset_from_fp];
                 break;
             }
 
-            case Bytecode_Value_Kind::ALLOCL:
-            {
+            case Bytecode_Value_Kind::GLOBAL: {
+                return &interp->global_data[value->global.byte_offset];
+                break;
+            }
+
+            case Bytecode_Value_Kind::ALLOCL: {
                 return &interp->stack[interp->frame_pointer + value->allocl.byte_offset_from_fp];
                 break;
             }
 
-            case Bytecode_Value_Kind::INTEGER_LITERAL:
-            {
+            case Bytecode_Value_Kind::INTEGER_LITERAL: {
                 return (uint8_t*)&value->integer_literal;
                 break;
             }
 
-            case Bytecode_Value_Kind::FLOAT_LITERAL:
-            {
+            case Bytecode_Value_Kind::FLOAT_LITERAL: {
                 if (value->type == Builtin::type_float) {
                     return (uint8_t*)&value->float_literal.r32;
                 } else if (value->type == Builtin::type_double) {
@@ -863,14 +910,19 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::STRING_LITERAL:
-            {
+            case Bytecode_Value_Kind::STRING_LITERAL: {
                 return (uint8_t*)&value->string_literal.data;
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM:
-            {
+            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::NULL_LITERAL: {
+                return nullptr;
+                break;
+            }
+
+            case Bytecode_Value_Kind::PARAM: {
                 assert(value->parameter.byte_offset_from_fp < 0);
                 auto result = &interp->stack[interp->frame_pointer +
                                       value->parameter.byte_offset_from_fp];
@@ -878,7 +930,10 @@ namespace Zodiac
                 break;
             }
 
-            default: assert(false);
+            case Bytecode_Value_Kind::INVALID:
+            case Bytecode_Value_Kind::BLOCK:
+            case Bytecode_Value_Kind::SWITCH_DATA:
+            case Bytecode_Value_Kind::FUNCTION: assert(false);
         }
     }
 
@@ -949,5 +1004,22 @@ namespace Zodiac
 
             default: assert(false);
         }
+    }
+
+    void interp_store_constant(uint8_t *dest, Const_Value val)
+    {
+        auto type = val.type;
+
+        assert(type->kind == AST_Type_Kind::INTEGER);
+    
+        switch (val.type->bit_size)
+        {
+            case 8: interp_store(dest, val.integer.s8); break;
+            case 16: interp_store(dest, val.integer.s16); break;
+            case 32: interp_store(dest, val.integer.s32); break;
+            case 64: interp_store(dest, val.integer.s64); break;
+            default: assert(false);
+        }
+        
     }
 }

@@ -1,7 +1,12 @@
 
+/* @sizeof/@offsetof should use llvm types to get this information in the llvm
+ backend, right now it is emitted into bytecode as literals, so there is no way
+ to know in the llvm backend when sizeof/offsetof happened. */
+
 cstr[i] != 0 in strlen(), std.zdc
-Here the inferred type of cstr[i] is s64, but it should really be u8, and the zero literal should infer that.
-If we decide to actually do upcasting in cases like this, we should at least retain the sign if possible.
+Here the inferred type of cstr[i] is s64, but it should really be u8, and the
+ zero literal should infer that. If we decide to actually do upcasting in cases
+ like this, we should at least retain the sign if possible.
 
 Get rid of LOAD_PARAM bytecode
 
@@ -19,8 +24,14 @@ unions
 nested structs/unions
 anonymous structs/unions
 
-When looking up struct members we use the regular scope_find_declaration, but I think this is wrong, since this will search parent scopes. We should extend this so that the search behaviour is dependend on the type of scope. Eg. struct/aggregate scopes will search their own scopes (and maybe child scopes in case of anon nested aggregates) and not their parent scopes.
-    EDIT: I think we do find the wrong declaration, but we check it agains the struct after, so all we need to do is report an error. We probably want to do the scope stuff anyways for correctness(/efficiency)
+When looking up struct members we use the regular scope_find_declaration,
+ but I think this is wrong, since this will search parent scopes. We should
+ extend this so that the search behaviour is dependend on the type of scope.
+ Eg. struct/aggregate scopes will search their own scopes (and maybe child
+ scopes in case of anon nested aggregates) and not their parent scopes.
+ EDIT: I think we do find the wrong declaration, but we check it agains the
+ struct after, so all we need to do is report an error. We probably want to do
+ the scope stuff anyways for correctness(/efficiency)
 
 
 make jump if more like llvm's condbr

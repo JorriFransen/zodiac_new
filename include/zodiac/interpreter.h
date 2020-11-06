@@ -29,12 +29,20 @@ namespace Zodiac
         int64_t frame_pointer = 0;
         Instruction_Pointer ip = {};
 
+        uint8_t *global_data = 0;
+
+        void *null_pointer = nullptr;
+
         int64_t exit_code = 0;
     };
 
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data);
 
-    void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func);
+    void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func,
+                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info);
+
+    void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
+                                        Array<Bytecode_Global_Info> global_info);
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);
@@ -46,6 +54,7 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp);
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val);
+    void interp_store_constant(uint8_t *dest, Const_Value val);
 
     template <typename T>
     void interp_store(uint8_t *dest, T value)

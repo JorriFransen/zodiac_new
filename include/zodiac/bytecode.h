@@ -10,78 +10,80 @@ namespace Zodiac
 {
     enum Bytecode_Opcode : uint8_t
     {
-        NOP         = 0x00,
+        NOP          = 0x00,
 
-        ALLOCL      = 0x01,
+        ALLOCL       = 0x01,
 
-        STOREL      = 0x02,
-        STORE_ARG   = 0x03,
-        STORE_PTR   = 0x04,
+        STOREL       = 0x02,
+        STORE_ARG    = 0x03,
+        STORE_GLOBAL = 0x04,
+        STORE_PTR    = 0x05,
 
-        LOADL       = 0x05,
-        LOAD_PARAM  = 0x06,
-        LOAD_PTR    = 0x07,
+        LOADL        = 0x06,
+        LOAD_PARAM   = 0x07,
+        LOAD_GLOBAL  = 0x08,
+        LOAD_PTR     = 0x09,
 
-        ADD_S       = 0x08,
-        SUB_S       = 0x09,
-        REM_S       = 0x0a,
-        MUL_S       = 0x0b,
-        DIV_S       = 0x0c,
+        ADD_S        = 0x0a,
+        SUB_S        = 0x0b,
+        REM_S        = 0x0c,
+        MUL_S        = 0x0d,
+        DIV_S        = 0x0e,
 
-        EQ_S        = 0x0d,
-        NEQ_S       = 0x0e,
-        LT_S        = 0x0f,
-        LTEQ_S      = 0x10,
-        GT_S        = 0x11,
-        GTEQ_S      = 0x12,
+        EQ_S         = 0x0f,
+        NEQ_S        = 0x10,
+        LT_S         = 0x11,
+        LTEQ_S       = 0x12,
+        GT_S         = 0x13,
+        GTEQ_S       = 0x14,
 
-        ADD_U       = 0x13,
-        SUB_U       = 0x14,
-        REM_U       = 0x15,
-        MUL_U       = 0x16,
-        DIV_U       = 0x17,
+        ADD_U        = 0x15,
+        SUB_U        = 0x16,
+        REM_U        = 0x17,
+        MUL_U        = 0x18,
+        DIV_U        = 0x19,
 
-        EQ_U        = 0x18,
-        NEQ_U       = 0x19,
-        LT_U        = 0x1a,
-        LTEQ_U      = 0x1b,
-        GT_U        = 0x1c,
-        GTEQ_U      = 0x1d,
+        EQ_U         = 0x1a,
+        NEQ_U        = 0x1b,
+        LT_U         = 0x1c,
+        LTEQ_U       = 0x1d,
+        GT_U         = 0x1e,
+        GTEQ_U       = 0x1f,
 
-        ADD_F       = 0x1e,
-        SUB_F       = 0x1f,
-        MUL_F       = 0x20,
-        DIV_F       = 0x21,
+        ADD_F        = 0x20,
+        SUB_F        = 0x21,
+        MUL_F        = 0x22,
+        DIV_F        = 0x23,
 
-        EQ_F        = 0x22,
-        NEQ_F       = 0x23,
-        LT_F        = 0x24,
-        LTEQ_F      = 0x25,
-        GT_F        = 0x26,
-        GTEQ_F      = 0x27,
+        EQ_F         = 0x24,
+        NEQ_F        = 0x25,
+        LT_F         = 0x26,
+        LTEQ_F       = 0x27,
+        GT_F         = 0x28,
+        GTEQ_F       = 0x29,
 
-        PUSH_ARG    = 0x28,
-        CALL        = 0x29,
-        RETURN      = 0x2a,
-        RETURN_VOID = 0x2b,
+        PUSH_ARG     = 0x2a,
+        CALL         = 0x2b,
+        RETURN       = 0x2c,
+        RETURN_VOID  = 0x2d,
 
-        JUMP        = 0x2c,
-        JUMP_IF     = 0x2d,
-        SWITCH      = 0x2e,
+        JUMP         = 0x2e,
+        JUMP_IF      = 0x2f,
+        SWITCH       = 0x30,
 
-        PTR_OFFSET  = 0x2f,
-        AGG_OFFSET  = 0x30,
+        PTR_OFFSET   = 0x31,
+        AGG_OFFSET   = 0x32,
 
-        ZEXT        = 0x31,
-        SEXT        = 0x32,
-        TRUNC       = 0x33,
-        F_TO_S      = 0x34,
-        S_TO_F      = 0x35,
-        U_TO_F      = 0x36,
-        F_TO_F      = 0x37,
+        ZEXT         = 0x33,
+        SEXT         = 0x34,
+        TRUNC        = 0x35,
+        F_TO_S       = 0x36,
+        S_TO_F       = 0x37,
+        U_TO_F       = 0x38,
+        F_TO_F       = 0x39,
 
-        EXIT        = 0x38,
-        SYSCALL     = 0x39,
+        EXIT         = 0x3a,
+        SYSCALL      = 0x3b,
     };
 
     enum class Bytecode_Value_Kind
@@ -91,10 +93,13 @@ namespace Zodiac
         INTEGER_LITERAL,
         FLOAT_LITERAL,
         STRING_LITERAL,
+        BOOL_LITERAL,
+        NULL_LITERAL,
 
         TEMP,
         ALLOCL,
         PARAM,
+        GLOBAL,
 
         FUNCTION,
         BLOCK,
@@ -144,10 +149,17 @@ namespace Zodiac
                 int64_t byte_offset_from_fp; // Used in interpreter
             } parameter;
 
+            struct
+            {
+                Atom name; 
+                int64_t byte_offset; // Used in interpreter
+            } global;
+
             void *pointer;
             Integer_Literal integer_literal;
             Float_Literal float_literal;
             Atom string_literal;
+            bool bool_literal;
 
             Bytecode_Function *function;
             Bytecode_Block *block;
@@ -208,6 +220,14 @@ namespace Zodiac
         int64_t index = -1;
     };
 
+    struct Bytecode_Global_Info
+    {
+        AST_Declaration *declaration = nullptr;
+        Bytecode_Value *global_value = nullptr;
+        Const_Value init_const_val = {};
+        bool has_initializer = false;
+    };
+
     struct Bytecode_Local_Variable_Info
     {
         AST_Declaration *declaration = nullptr;
@@ -222,6 +242,9 @@ namespace Zodiac
         Bytecode_Block *insert_block = nullptr;
 
         Array<Bytecode_Function_Info> functions = {};
+        Array<Bytecode_Global_Info> globals = {};
+
+        int64_t global_data_size = 0;
 
         Bytecode_Function *current_function = nullptr;
         // Holds parameters for the function currently being emitted
@@ -306,9 +329,13 @@ namespace Zodiac
     Bytecode_Value *bytecode_float_literal_new(Bytecode_Builder *builder, AST_Type *type,
                                                float r32, double r64);
     Bytecode_Value *bytecode_string_literal_new(Bytecode_Builder *builder, Atom string_literal);
+    Bytecode_Value *bytecode_bool_literal_new(Bytecode_Builder *builder, AST_Type *type,
+                                              bool value);
+    Bytecode_Value *bytecode_null_literal_new(Bytecode_Builder *builder, AST_Type *type);
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_parameter_new(Bytecode_Builder *builder, Bytecode_Function *func,
                                            AST_Type *type, Atom name);
+    Bytecode_Value *bytecode_global_new(Bytecode_Builder *builder, AST_Type *type, Atom name);
     Bytecode_Value *bytecode_temporary_new(Bytecode_Builder *builder, AST_Type *type);
     Bytecode_Value *bytecode_function_value_new(Bytecode_Builder *builder,
                                                 Bytecode_Function *func);

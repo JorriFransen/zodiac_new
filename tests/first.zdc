@@ -1,119 +1,125 @@
 
-std :: import std;
-math :: import math;
+// std :: import std;
+// math :: import math;
 
-using math;
+// using math;
 
-print_vec2 :: func (v: *Vec2)
-{
-    std.print("x: ");
-    std.print_num(v.x);
-    std.print(", y: ");
-    std.print_num(v.y);
-    std.println(" ");
-    return;
-}
+// print_vec2 :: func (v: *Vec2)
+// {
+//     std.print("x: ");
+//     std.print_num(v.x);
+//     std.print(", y: ");
+//     std.print_num(v.y);
+//     std.println(" ");
+//     return;
+// }
 
-Vec2_Ptr :: typedef *Vec2;
+// Vec2_Ptr :: typedef *Vec2;
 
-add_vec2 :: func (v: Vec2_Ptr)
-{
-    return v.x + v.y;
-}
+// add_vec2 :: func (v: Vec2_Ptr)
+// {
+//     return v.x + v.y;
+// }
 
-glob_int_const : s64 : 5;
+// glob_int_const : s64 : 5;
 
-//global_int := 4 + 1;
-global_int : s64;
+global_int := 4 + 1;
+// global_int : s64;
 
 main :: func () -> s64
 {
-    int_ptr : *s64 = null;
-    x : s64 = 55;
-    int_ptr = *x;
+    // int_ptr : *s64 = null;
+    // x : s64 = 55;
+    // int_ptr = *x;
 
-    std.print("<int_ptr: ");
-    std.print_num(<int_ptr);
-    std.print("\n");
+    // return <int_ptr;
 
-    std.print("glob_int_const: ");
-    std.print_num(glob_int_const);
-    std.println(" ");
-    //glob_int_const = 4; // Illegal
+    // std.print("<int_ptr: ");
+    // std.print_num(<int_ptr);
+    // std.print("\n");
 
-    loc_int_const :: 14;
-    std.print("loc_int_const: ");
-    std.print_num(loc_int_const);
-    std.println(" ");
-    //loc_int_const = 1; // Illegal
+    // std.print("glob_int_const: ");
+    // std.print_num(glob_int_const);
+    // std.println(" ");
+    // //glob_int_const = 4; // Illegal
 
-    std.print("global_int: ");
-    std.print_num(global_int);
-    std.println(" ");
+    // loc_int_const :: 14;
+    // std.print("loc_int_const: ");
+    // std.print_num(loc_int_const);
+    // std.println(" ");
+    // //loc_int_const = 1; // Illegal
 
-    global_int = global_int * 3 + 1;
-    std.print("global_int: ");
-    std.print_num(global_int);
-    std.println(" ");
+    // std.print("global_int: ");
+    // std.print_num(global_int);
+    // std.println(" ");
+
+    // global_int = global_int * 3 + 1;
+    // std.print("global_int: ");
+    // std.print_num(global_int);
+    // std.println(" ");
+
+    global_int = global_int + 1;
+
+    return global_int;
 
 
-    count := 4;
-    while (count > 0)
-    {
-        if (count == 4)
-        {
-            std.println("Welcome!");
-        }
-        else if (count == 3)
-        {
-            std.println("Welcome 2");
-        }
-        else
-        {
-            std.println("Again...??");
-        }
+    // count := 4;
+    // while (count > 0)
+    // {
+    //     if (count == 4)
+    //     {
+    //         std.println("Welcome!");
+    //     }
+    //     else if (count == 3)
+    //     {
+    //         std.println("Welcome 2");
+    //     }
+    //     else
+    //     {
+    //         std.println("Again...??");
+    //     }
 
-        std.print("Hello World!\n");
-        count = count - 1;
-    }
+    //     std.print("Hello World!\n");
+    //     count = count - 1;
+    // }
 
-    print_alphabet := true;
-    print_vector : bool = true;
+    // print_alphabet := true;
+    // print_vector : bool = true;
 
-    if (print_alphabet)
-    {
-        count = 26;
-        c : u8 = 65;
-        while (count > 0)
-        {
-            std.print_char(c);
-            // @syscall(1, 1, *c, 1);
-            c = c + 1;
-            count = count - 1;
-        }
-        std.println(" ");
-    }
-    else
-    {
-        std.println("Not printing alphabet");
-    }
+    // if (print_alphabet)
+    // {
+    //     count = 26;
+    //     c : u8 = 65;
+    //     while (count > 0)
+    //     {
+    //         std.print_char(c);
+    //         // @syscall(1, 1, *c, 1);
+    //         c = c + 1;
+    //         count = count - 1;
+    //     }
+    //     std.println(" ");
+    // }
+    // else
+    // {
+    //     std.println("Not printing alphabet");
+    // }
 
-    if (print_vector)
-    {
-        p1 : Vec2;
-        p1.x = 33;
-        p1.y = 44;
+    // if (print_vector)
+    // {
+    //     p1 : Vec2;
+    //     p1.x = 33;
+    //     p1.y = 44;
 
-        print_vec2(*p1);
-        p1.y = 55;
-        print_vec2(*p1);
-        return add_vec2(*p1);
-    }
-    else
-    {
-        std.println("Not printing vector...");
-    }
+    //     print_vec2(*p1);
+    //     p1.y = 55;
+    //     print_vec2(*p1);
+    //     return add_vec2(*p1);
+    // }
+    // else
+    // {
+    //     std.println("Not printing vector...");
+    // }
 
-    return 0;
+    // return 0;
 }
 

@@ -1950,24 +1950,24 @@ namespace Zodiac
 
         auto ident = identifier;
         assert(ident->declaration);
-        if (ident->declaration->flags & AST_NODE_FLAG_TYPED)
-        {
-            if (!ident->declaration->type)
-            {
+
+        if (ident->declaration->kind == AST_Declaration_Kind::VARIABLE &&
+            ident->declaration->decl_flags & AST_DECL_FLAG_GLOBAL) {
+            queue_emit_bytecode_job(resolver, ident->declaration, scope);
+        }
+
+        if (ident->declaration->flags & AST_NODE_FLAG_TYPED) {
+            if (!ident->declaration->type) {
                 assert(ident->declaration->kind == AST_Declaration_Kind::IMPORT);
-            }
-            else
-            {
+
+            } else {
                 *type_dest = ident->declaration->type;
             }
-        }
-        else
-        {
+        } else {
             result = false;
         }
 
-        if (result)
-        {
+        if (result) {
             identifier->flags |= AST_NODE_FLAG_TYPED;
         }
 
@@ -3033,13 +3033,11 @@ namespace Zodiac
                 auto lhs = ast_expr->binary.lhs;
                 auto rhs = ast_expr->binary.rhs;
 
-                if (!try_resolve_types(resolver, lhs, suggested_type, scope))
-                {
-                    assert(false);
+                if (!try_resolve_types(resolver, lhs, suggested_type, scope)) {
+                    return false;
                 }
-                if (!try_resolve_types(resolver, rhs, suggested_type, scope))
-                {
-                    assert(false);
+                if (!try_resolve_types(resolver, rhs, suggested_type, scope)) {
+                    return false;
                 }
 
                 AST_Type *result_type = nullptr;

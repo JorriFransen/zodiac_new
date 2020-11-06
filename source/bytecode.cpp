@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "builtin.h"
+#include "const_interpreter.h"
 #include "parser.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -21,6 +22,10 @@ namespace Zodiac
         result.current_function = nullptr;
 
         array_init(allocator, &result.functions);
+        array_init(allocator, &result.globals);
+
+        result.global_data_size = 0;
+
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
 
@@ -144,7 +149,40 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_global_variable(Bytecode_Builder *builder,
                                                   AST_Declaration *decl)
     {
-        assert(false);
+        assert(decl->kind == AST_Declaration_Kind::VARIABLE);
+        assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
+        Bytecode_Value *global_value = bytecode_global_new(builder, decl->type,
+                                                           decl->identifier->atom);
+
+        Const_Value init_const_val = {};
+        bool has_initializer = false;
+
+        if (decl->variable.init_expression) {
+            auto init_expr = decl->variable.init_expression;
+            assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+
+            init_const_val = const_interpret_expression(init_expr);
+            has_initializer = true;
+        }
+
+        Bytecode_Global_Info global_info = {
+            .declaration = decl,
+            .global_value = global_value,
+            .init_const_val = init_const_val,
+            .has_initializer = has_initializer,
+        };
+
+        array_append(&builder->globals, global_info);
+
+        auto type = decl->type;
+        assert(type->bit_size % 8 == 0);
+        auto byte_size = type->bit_size / 8;
+
+        global_value->global.byte_offset = builder->global_data_size;
+        builder->global_data_size += byte_size;
+
+        return global_value;
     }
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)
@@ -244,7 +282,8 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::CONSTANT: break;
+
             case AST_Declaration_Kind::PARAMETER: assert(false); //@@TODO: Implement!
 
             case AST_Declaration_Kind::FUNCTION: assert(false);
@@ -615,7 +654,16 @@ namespace Zodiac
                 switch (expr->unary.op)
                 {
                     case UNOP_INVALID: assert(false);
-                    case UNOP_DEREF: assert(false);
+
+                    case UNOP_DEREF:
+                    {
+                        assert(operand_type->kind == AST_Type_Kind::POINTER);
+                        assert(expr->type == operand_type->pointer.base);
+
+                        Bytecode_Value *ptr_val = bytecode_emit_expression(builder, operand_expr);
+                        result = bytecode_emit_load(builder, ptr_val);
+                        break;
+                    }
 
                     case UNOP_MINUS: {
                         assert(operand_type->kind == AST_Type_Kind::INTEGER);
@@ -703,8 +751,17 @@ namespace Zodiac
                 result = bytecode_integer_literal_new(builder, Builtin::type_u8, il);
                 break;
             }
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::NULL_LITERAL: assert(false); //@TODO: Implement!
+            case AST_Expression_Kind::BOOL_LITERAL: {
+                result = bytecode_bool_literal_new(builder, expr->type, expr->bool_literal.value);
+                break;
+            }
+
+            case AST_Expression_Kind::NULL_LITERAL:
+            {
+                result = bytecode_null_literal_new(builder, expr->type);
+                break;
+            }
+
             case AST_Expression_Kind::RANGE: assert(false); //@TODO: Implement!
         }
 
@@ -1002,7 +1059,7 @@ namespace Zodiac
 
         auto operand_type = operand_expr->type;
         if (operand_type->kind == AST_Type_Kind::ENUM) {
-            operand_type = operand_type->enum_type.base_type; 
+            operand_type = operand_type->enum_type.base_type;
         }
 
         Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
@@ -1135,6 +1192,8 @@ namespace Zodiac
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
             case Bytecode_Value_Kind::FLOAT_LITERAL: assert(false);
             case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
+            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+            case Bytecode_Value_Kind::NULL_LITERAL: assert(false);
 
             case Bytecode_Value_Kind::ALLOCL: {
                 assert(dest->type->kind == AST_Type_Kind::POINTER);
@@ -1147,6 +1206,14 @@ namespace Zodiac
                 assert(dest->type->kind == AST_Type_Kind::POINTER);
                 assert(dest->type->pointer.base == source->type);
                 bytecode_emit_instruction(builder, STORE_ARG, dest, source, nullptr);
+                break;
+            }
+
+            case Bytecode_Value_Kind::GLOBAL:
+            {
+                assert(dest->type->kind == AST_Type_Kind::POINTER);
+                assert(dest->type->pointer.base == source->type);
+                bytecode_emit_instruction(builder, STORE_GLOBAL, dest, source, nullptr);
                 break;
             }
 
@@ -1175,16 +1242,21 @@ namespace Zodiac
             case Bytecode_Value_Kind::INTEGER_LITERAL: assert(false);
             case Bytecode_Value_Kind::FLOAT_LITERAL: assert(false);
             case Bytecode_Value_Kind::STRING_LITERAL: assert(false);
+            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+            case Bytecode_Value_Kind::NULL_LITERAL: assert(false);
 
-            case Bytecode_Value_Kind::ALLOCL:
-            {
+            case Bytecode_Value_Kind::ALLOCL: {
                 bytecode_emit_instruction(builder, LOADL, source, nullptr, result);
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM:
-            {
+            case Bytecode_Value_Kind::PARAM: {
                 bytecode_emit_instruction(builder, LOAD_PARAM, source, nullptr, result);
+                break;
+            }
+
+            case Bytecode_Value_Kind::GLOBAL: {
+                bytecode_emit_instruction(builder, LOAD_GLOBAL, source, nullptr, result);
                 break;
             }
 
@@ -1328,13 +1400,21 @@ namespace Zodiac
     {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
 
-        for (int64_t i = 0; i < builder->locals.count; i++)
-        {
-            auto info = builder->locals[i];
-            if (info.declaration == decl)
-            {
-                assert(info.allocl_value->kind == Bytecode_Value_Kind::ALLOCL);
-                return info.allocl_value;
+        if (decl->decl_flags & AST_DECL_FLAG_GLOBAL) {
+            for (int64_t i = 0; i < builder->globals.count; i++) {
+                auto info = builder->globals[i];
+                if (info.declaration == decl) {
+                    assert(info.global_value->kind == Bytecode_Value_Kind::GLOBAL);
+                    return info.global_value;
+                }
+            }
+        } else {
+            for (int64_t i = 0; i < builder->locals.count; i++) {
+                auto info = builder->locals[i];
+                if (info.declaration == decl) {
+                    assert(info.allocl_value->kind == Bytecode_Value_Kind::ALLOCL);
+                    return info.allocl_value;
+                }
             }
         }
 
@@ -1387,6 +1467,26 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_bool_literal_new(Bytecode_Builder *builder, AST_Type *type,
+                                              bool value)
+    {
+        assert(type == Builtin::type_bool);
+
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::BOOL_LITERAL,
+                                         Builtin::type_bool);
+        result->bool_literal = value;
+        return result;
+    }
+
+    Bytecode_Value *bytecode_null_literal_new(Bytecode_Builder *builder, AST_Type *type)
+    {
+        assert(type->kind == AST_Type_Kind::POINTER);
+
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::NULL_LITERAL,
+                                         type);
+        return result;
+    }
+
     Bytecode_Value *bytecode_local_alloc_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
     {
         auto pointer_type = type->pointer_to;
@@ -1423,6 +1523,22 @@ namespace Zodiac
         auto index = func->parameters.count;
         array_append(&func->parameters, result);
         result->parameter.index = index;
+
+        return result;
+    }
+
+    Bytecode_Value *bytecode_global_new(Bytecode_Builder *builder, AST_Type *type, Atom name)
+    {
+        auto pointer_type = type->pointer_to;
+        if (!pointer_type) {
+            pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                  builder->build_data,
+                                                                  type);
+        }
+
+        assert(pointer_type);
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::GLOBAL, pointer_type);
+        result->global.name = name;
 
         return result;
     }
@@ -1529,13 +1645,15 @@ namespace Zodiac
                 break;
             }
 
-            case STOREL:    string_builder_append(sb, "STOREL "); break;
-            case STORE_ARG: string_builder_append(sb, "STOREL "); break;
-            case STORE_PTR: string_builder_append(sb, "STORE_PTR "); break;
+            case STOREL:       string_builder_append(sb, "STOREL "); break;
+            case STORE_ARG:    string_builder_append(sb, "STOREL_ARG "); break;
+            case STORE_GLOBAL: string_builder_append(sb, "STORE_GLOBAL "); break;
+            case STORE_PTR:    string_builder_append(sb, "STORE_PTR "); break;
 
-            case LOADL:      string_builder_append(sb, "LOADL "); break;
-            case LOAD_PARAM: string_builder_append(sb, "LOAD_PARAM "); break;
-            case LOAD_PTR:   string_builder_append(sb, "LOAD_PTR "); break;
+            case LOADL:       string_builder_append(sb, "LOADL "); break;
+            case LOAD_PARAM:  string_builder_append(sb, "LOAD_PARAM "); break;
+            case LOAD_GLOBAL: string_builder_append(sb, "LOAD_GLOBAL "); break;
+            case LOAD_PTR:    string_builder_append(sb, "LOAD_PTR "); break;
 
             case ADD_S: string_builder_append(sb, "ADD_S "); break;
             case SUB_S: string_builder_append(sb, "SUB_S "); break;
@@ -1759,12 +1877,21 @@ namespace Zodiac
                 break;
             }
 
+            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+
+            case Bytecode_Value_Kind::NULL_LITERAL: {
+                string_builder_append(sb, "null");
+                break;
+            }
+
             case Bytecode_Value_Kind::ALLOCL:
             case Bytecode_Value_Kind::PARAM:
             {
                 string_builder_appendf(sb, "%%%s", value->allocl.name.data);
                 break;
             }
+
+            case Bytecode_Value_Kind::GLOBAL: assert(false);
 
             case Bytecode_Value_Kind::FUNCTION:
             {
