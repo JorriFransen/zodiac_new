@@ -500,8 +500,15 @@ namespace Zodiac
             case AST_Expression_Kind::INVALID: assert(false);
 
             case AST_Expression_Kind::IDENTIFIER: {
-                Bytecode_Value *source_val = bytecode_emit_lvalue(builder, expr);
-                result = bytecode_emit_load(builder, source_val);
+                auto decl = expr->identifier->declaration;
+
+                if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+                    assert(decl->constant.init_expression);
+                    result = bytecode_emit_expression(builder, decl->constant.init_expression);
+                } else {
+                    Bytecode_Value *source_val = bytecode_emit_lvalue(builder, expr);
+                    result = bytecode_emit_load(builder, source_val);
+                }
                 break;
             }
 
@@ -994,6 +1001,9 @@ namespace Zodiac
         assert(target_type->kind == AST_Type_Kind::INTEGER);
 
         auto operand_type = operand_expr->type;
+        if (operand_type->kind == AST_Type_Kind::ENUM) {
+            operand_type = operand_type->enum_type.base_type; 
+        }
 
         Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
         Bytecode_Value *result = bytecode_temporary_new(builder, target_type);

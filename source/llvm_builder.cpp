@@ -492,7 +492,7 @@ namespace Zodiac
 
                     llvm::BasicBlock *dest_block = llvm_find_block(builder,
                                                                    switch_case.target_block);
-                    
+
                     switch_inst->addCase(case_value, dest_block);
                 }
                 break;
