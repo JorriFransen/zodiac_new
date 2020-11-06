@@ -338,6 +338,43 @@ namespace Zodiac
 
             case GTEQ_S: assert(false);
 
+            case EQ_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpEQ(lhs, rhs, "");
+                break;
+            }
+
+            case NEQ_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpNE(lhs, rhs, "");
+                break;
+            }
+
+            case LT_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpULT(lhs, rhs, "");
+                break;
+            }
+
+            case LTEQ_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpULE(lhs, rhs, "");
+                break;
+            }
+
+            case GT_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateICmpUGT(lhs, rhs, "");
+                break;
+            }
+
+            case GTEQ_U: assert(false);
+
             case EQ_F: assert(false);
             case NEQ_F: assert(false);
             case LT_F: assert(false);
@@ -649,8 +686,6 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
-
-            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 

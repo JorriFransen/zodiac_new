@@ -41,40 +41,47 @@ namespace Zodiac
         MUL_U       = 0x16,
         DIV_U       = 0x17,
 
-        ADD_F       = 0x18,
-        SUB_F       = 0x19,
-        MUL_F       = 0x1a,
-        DIV_F       = 0x1b,
+        EQ_U        = 0x18,
+        NEQ_U       = 0x19,
+        LT_U        = 0x1a,
+        LTEQ_U      = 0x1b,
+        GT_U        = 0x1c,
+        GTEQ_U      = 0x1d,
 
-        EQ_F        = 0x1c,
-        NEQ_F       = 0x1d,
-        LT_F        = 0x1e,
-        LTEQ_F      = 0x1f,
-        GT_F        = 0x20,
-        GTEQ_F      = 0x21,
+        ADD_F       = 0x1e,
+        SUB_F       = 0x1f,
+        MUL_F       = 0x20,
+        DIV_F       = 0x21,
 
-        PUSH_ARG    = 0x22,
-        CALL        = 0x23,
-        RETURN      = 0x24,
-        RETURN_VOID = 0x25,
+        EQ_F        = 0x22,
+        NEQ_F       = 0x23,
+        LT_F        = 0x24,
+        LTEQ_F      = 0x25,
+        GT_F        = 0x26,
+        GTEQ_F      = 0x27,
 
-        JUMP        = 0x26,
-        JUMP_IF     = 0x27,
-        SWITCH      = 0x28,
+        PUSH_ARG    = 0x28,
+        CALL        = 0x29,
+        RETURN      = 0x2a,
+        RETURN_VOID = 0x2b,
 
-        PTR_OFFSET  = 0x29,
-        AGG_OFFSET  = 0x2a,
+        JUMP        = 0x2c,
+        JUMP_IF     = 0x2d,
+        SWITCH      = 0x2e,
 
-        ZEXT        = 0x2b,
-        SEXT        = 0x2c,
-        TRUNC       = 0x2d,
-        F_TO_S      = 0x2e,
-        S_TO_F      = 0x2f,
-        U_TO_F      = 0x30,
-        F_TO_F      = 0x31,
+        PTR_OFFSET  = 0x2f,
+        AGG_OFFSET  = 0x30,
 
-        EXIT        = 0x32,
-        SYSCALL     = 0x33,
+        ZEXT        = 0x31,
+        SEXT        = 0x32,
+        TRUNC       = 0x33,
+        F_TO_S      = 0x34,
+        S_TO_F      = 0x35,
+        U_TO_F      = 0x36,
+        F_TO_F      = 0x37,
+
+        EXIT        = 0x38,
+        SYSCALL     = 0x39,
     };
 
     enum class Bytecode_Value_Kind
@@ -91,7 +98,6 @@ namespace Zodiac
 
         FUNCTION,
         BLOCK,
-        SWITCH_DATA,
     };
 
     struct Bytecode_Function;
@@ -134,13 +140,31 @@ namespace Zodiac
         };
     };
 
+    struct Bytecode_Switch_Case
+    {
+        Bytecode_Value *case_value = nullptr;
+        Bytecode_Block *target_block = nullptr;
+    };
+
     struct Bytecode_Instruction
     {
         Bytecode_Opcode op = NOP;
 
-        Bytecode_Value *a = nullptr;
-        Bytecode_Value *b = nullptr;
-        Bytecode_Value *result = nullptr;
+        union
+        {
+            struct
+            {
+                Bytecode_Value *a;
+                Bytecode_Value *b;
+                Bytecode_Value *result;
+            };
+
+            struct
+            {
+                Bytecode_Value *a;
+                Array<Bytecode_Switch_Case> cases;
+            } switch_data = {};
+        };
     };
 
     typedef uint64_t Bytecode_Function_Flags;
@@ -261,6 +285,10 @@ namespace Zodiac
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result);
+
+    void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block);
+    void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value, 
+                                  Bytecode_Block *case_block);
 
     void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block);
     void bytecode_pop_break_block(Bytecode_Builder *builder);

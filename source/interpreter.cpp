@@ -225,6 +225,13 @@ namespace Zodiac
                 case GT_S: _binop_compare_int(>);
                 case GTEQ_S: _binop_compare_int(>=);
 
+                case EQ_U: _binop_compare_int(==);
+                case NEQ_U: _binop_compare_int(!=);
+                case LT_U: _binop_compare_int(<);
+                case LTEQ_U: _binop_compare_int(<=);
+                case GT_U: _binop_compare_int(>);
+                case GTEQ_U: _binop_compare_int(>=);
+
 #undef _binop_compare_int
 
 #define _binop_compare_float(op) { \

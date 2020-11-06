@@ -341,6 +341,8 @@ namespace Zodiac
                                                                               switch_val,
                                                                               nullptr,
                                                                               nullptr);
+                array_init(builder->allocator, &switch_inst->switch_data.cases,
+                           stmt->switch_stmt.cases.count);
 
                 auto ta = temp_allocator_get();
 
@@ -370,6 +372,8 @@ namespace Zodiac
                     if (!bytecode_block_ends_with_terminator(case_block)) {
                         bytecode_emit_jump(builder, post_switch_block);
                     }
+
+                    array_append(&case_blocks, case_block);
                 }
 
                 if (!default_block) {
@@ -388,7 +392,7 @@ namespace Zodiac
 
                     for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++)
                     {
-                        AST_Expression *expr = switch_case->expressions[i];
+                        AST_Expression *expr = switch_case->expressions[expr_i];
                         assert(expr->expr_flags & AST_EXPR_FLAG_CONST);
 
                         Bytecode_Value *expr_val = bytecode_emit_expression(builder, expr);
@@ -469,8 +473,18 @@ namespace Zodiac
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false); //@TODO: Implement!
 
             case AST_Expression_Kind::DOT: {
-                Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
-                result = bytecode_emit_load(builder, lvalue);
+
+                if (expr->dot.child_decl &&
+                    (expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT)) {
+                    auto decl = expr->dot.child_decl;
+                    auto init_expr = decl->constant.init_expression;
+                    result = bytecode_emit_expression(builder, init_expr);
+                } else {
+                    Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
+                    result = bytecode_emit_load(builder, lvalue);
+                }
+
+                assert(result);
                 break;
             }
 
@@ -484,12 +498,13 @@ namespace Zodiac
     if (type->kind == AST_Type_Kind::INTEGER) { \
         assert(lhs_expr->type->integer.sign == rhs_expr->type->integer.sign); \
     } else { \
-        assert(type->kind == AST_Type_Kind::FLOAT); \
+        assert(type->kind == AST_Type_Kind::FLOAT || type->kind == AST_Type_Kind::ENUM); \
     } \
     Bytecode_Value *lhs = bytecode_emit_expression(builder, lhs_expr); \
     Bytecode_Value *rhs = bytecode_emit_expression(builder, rhs_expr); \
     result = bytecode_temporary_new(builder, type); \
-    if (type->kind == AST_Type_Kind::INTEGER) { \
+    if (type->kind == AST_Type_Kind::INTEGER || type->kind == AST_Type_Kind::ENUM) { \
+        if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
         if (type->integer.sign) { \
             bytecode_emit_instruction(builder, int_signed_op, lhs, rhs, result); \
         } else { \
@@ -504,7 +519,7 @@ namespace Zodiac
     break; \
 }
 
-#define _binop_compare(int_sign_op, float_sign_op) { \
+#define _binop_compare(int_sign_op, int_unsigned_op, float_op) { \
     auto lhs_expr = expr->binary.lhs; \
     auto rhs_expr = expr->binary.rhs; \
     assert(lhs_expr->type == rhs_expr->type); \
@@ -512,11 +527,15 @@ namespace Zodiac
     auto lhs = bytecode_emit_expression(builder, lhs_expr); \
     auto rhs = bytecode_emit_expression(builder, rhs_expr); \
     result = bytecode_temporary_new(builder, Builtin::type_bool); \
-    if (type->kind == AST_Type_Kind::INTEGER) { \
-        assert(type->integer.sign); \
-        bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+    if (type->kind == AST_Type_Kind::INTEGER || type->kind == AST_Type_Kind::ENUM) { \
+        if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
+        if (type->integer.sign) { \
+            bytecode_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
+        } else { \
+            bytecode_emit_instruction(builder, int_unsigned_op, lhs, rhs, result); \
+        } \
     } else if (type->kind == AST_Type_Kind::FLOAT) { \
-        bytecode_emit_instruction(builder, float_sign_op, lhs, rhs, result); \
+        bytecode_emit_instruction(builder, float_op, lhs, rhs, result); \
     } else {\
         assert(false && "Unsupported binop compare"); \
     } \
@@ -526,12 +545,12 @@ namespace Zodiac
                 switch (expr->binary.op) {
                     case BINOP_INVALID: assert(false);
 
-                    case BINOP_EQ:  _binop_compare(EQ_S, EQ_F);
-                    case BINOP_NEQ:  _binop_compare(NEQ_S, NEQ_F);
-                    case BINOP_LT:   _binop_compare(LT_S, LT_F);
-                    case BINOP_LTEQ: _binop_compare(LTEQ_S, LTEQ_F);
-                    case BINOP_GT:   _binop_compare(GT_S, GT_F);
-                    case BINOP_GTEQ: _binop_compare(GTEQ_S, GTEQ_F);
+                    case BINOP_EQ:  _binop_compare(EQ_S, EQ_U, EQ_F);
+                    case BINOP_NEQ:  _binop_compare(NEQ_S, NEQ_U, NEQ_F);
+                    case BINOP_LT:   _binop_compare(LT_S, LT_U, LT_F);
+                    case BINOP_LTEQ: _binop_compare(LTEQ_S, LTEQ_U, LTEQ_F);
+                    case BINOP_GT:   _binop_compare(GT_S, GT_U, GT_F);
+                    case BINOP_GTEQ: _binop_compare(GTEQ_S, GTEQ_U, GTEQ_F);
 
                     case BINOP_ADD: _binop_arithmetic(ADD_S, ADD_U, ADD_F);
                     case BINOP_SUB: _binop_arithmetic(SUB_S, SUB_U, SUB_F);
@@ -615,8 +634,13 @@ namespace Zodiac
                 if (expr->type->kind == AST_Type_Kind::INTEGER) {
                     result = bytecode_integer_literal_new(builder, expr->type,
                                                           expr->integer_literal);
+                } else if (expr->type->kind == AST_Type_Kind::ENUM) {
+                    result = bytecode_integer_literal_new(builder, expr->type,
+                                                          expr->integer_literal);
                 } else if (expr->type->kind == AST_Type_Kind::FLOAT) {
                     result = bytecode_emit_float_literal(builder, expr);
+                } else {
+                    assert(false);
                 }
                 break;
             }
@@ -1084,8 +1108,6 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
-
-            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 
@@ -1123,8 +1145,6 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
-
-            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
 
         return result;
@@ -1194,6 +1214,28 @@ namespace Zodiac
         assert(builder->insert_block);
         array_append(&builder->insert_block->instructions, inst);
         return inst;
+    }
+
+    void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block)
+    {
+        assert(inst->op == SWITCH);
+
+        // Make sure we don't already have a default block/case
+        for (int64_t i = 0; i < inst->switch_data.cases.count; i++) {
+            if (inst->switch_data.cases[i].case_value == nullptr) assert(false);
+        }
+
+        Bytecode_Switch_Case case_data = { nullptr, block };
+        array_append(&inst->switch_data.cases, case_data);
+    }
+
+    void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value,
+                                  Bytecode_Block *case_block)
+    {
+        assert(inst->op == SWITCH);
+
+        Bytecode_Switch_Case case_data = { case_value, case_block };
+        array_append(&inst->switch_data.cases, case_data);
     }
 
     void bytecode_push_break_block(Bytecode_Builder *builder, Bytecode_Block *block) {
@@ -1267,7 +1309,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_integer_literal_new(Bytecode_Builder *builder, AST_Type *type,
                                                  Integer_Literal integer_literal)
     {
-        assert(type->kind == AST_Type_Kind::INTEGER);
+        assert(type->kind == AST_Type_Kind::INTEGER ||  type->kind == AST_Type_Kind::ENUM);
 
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::INTEGER_LITERAL, type);
         result->integer_literal = integer_literal;
@@ -1414,7 +1456,8 @@ namespace Zodiac
         string_builder_append(sb, "    ");
 
         if (inst->result &&
-            inst->op != JUMP_IF)
+            inst->op != JUMP_IF &&
+            inst->op != SWITCH)
         {
             bytecode_print_value(sb, inst->result);
             string_builder_append(sb, " = ");
@@ -1461,6 +1504,14 @@ namespace Zodiac
             case MUL_U: string_builder_append(sb, "MUL_U "); break;
             case DIV_U: string_builder_append(sb, "SUB_U "); break;
 
+            case EQ_U:   string_builder_append(sb, "EQ_U "); break;
+            case NEQ_U:  string_builder_append(sb, "NEQ_U "); break;
+            case LT_U:   string_builder_append(sb, "LT_U "); break;
+            case LTEQ_U: string_builder_append(sb, "LTEQ_U "); break;
+            case GT_U:   string_builder_append(sb, "GT_U "); break;
+            case GTEQ_U: string_builder_append(sb, "GTEQ_U "); break;
+
+
             case ADD_F: string_builder_append(sb, "ADD_F "); break;
             case SUB_F: string_builder_append(sb, "SUB_F "); break;
             case MUL_F: string_builder_append(sb, "MUL_F "); break;
@@ -1505,7 +1556,27 @@ namespace Zodiac
                 break;
             }
 
-            case SWITCH: string_builder_append(sb, "SWITCH "); break;
+            case SWITCH: {
+                print_args = false;
+                string_builder_append(sb, "SWITCH ");
+                bytecode_print_value(sb, inst->a);
+
+                for (int64_t i = 0; i < inst->switch_data.cases.count; i++) {
+                    auto case_info = inst->switch_data.cases[i];
+
+                    string_builder_append(sb, "\n      ");
+
+                    if (case_info.case_value) {
+                        bytecode_print_value(sb, case_info.case_value);
+                    } else {
+                        string_builder_append(sb, "default");
+                    }
+
+                    string_builder_appendf(sb, " -> %s", case_info.target_block->name);
+
+                }
+                break;
+            }
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
             case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
@@ -1652,8 +1723,6 @@ namespace Zodiac
                 string_builder_appendf(sb, "%s", value->block->name);
                 break;
             }
-
-            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
 }
