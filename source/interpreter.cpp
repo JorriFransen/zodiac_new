@@ -208,11 +208,17 @@ namespace Zodiac
     auto lhs = interpreter_load_value(interp, inst->a); \
     auto rhs = interpreter_load_value(interp, inst->b); \
     assert(lhs.type == rhs.type); \
-    assert(lhs.type->kind == AST_Type_Kind::INTEGER); \
-    assert(lhs.type->integer.sign); \
-    assert(lhs.type->bit_size == 64); \
+    assert(lhs.type->kind == AST_Type_Kind::INTEGER || lhs.type->kind == AST_Type_Kind::ENUM); \
+    auto type = lhs.type; \
+    if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
     auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    bool result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
+    bool result_value; \
+    assert(type->bit_size == 64); \
+    if (type->integer.sign) { \
+        result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
+    } else { \
+        result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; \
+    } \
     assert(sizeof(result_value) == (inst->result->type->bit_size / 8)); \
     interp_store(result_addr, result_value); \
     break; \
@@ -439,9 +445,54 @@ namespace Zodiac
                 }
 
                 case SWITCH: {
-                    assert(false);
+                    advance_ip = false;
+                    auto switch_val = interpreter_load_value(interp, inst->a);
+
+                    Bytecode_Block *default_block = nullptr;
+                    Bytecode_Block *target_block = nullptr;
+
+                    for (int64_t i = 0; i < inst->switch_data.cases.count; i++) {
+                        auto case_info = inst->switch_data.cases[i];
+
+                        if (case_info.case_value) {
+                            assert(switch_val.type == case_info.case_value->type);
+                            auto type = switch_val.type;
+
+                            if (type->kind == AST_Type_Kind::ENUM)
+                                type = type->enum_type.base_type;
+
+                            assert(type->kind == AST_Type_Kind::INTEGER);
+                            assert(type->bit_size == 64);
+
+                            bool match;
+                            if (type->integer.sign) {
+                                match = switch_val.integer_literal.s64 ==
+                                        case_info.case_value->integer_literal.s64;
+                            } else {
+                                match = switch_val.integer_literal.u64 ==
+                                        case_info.case_value->integer_literal.u64;
+                            }
+
+                            if (match) {
+                                target_block = case_info.target_block;
+                                break;
+                            }
+                        } else {
+                            assert(!default_block);
+                            default_block = case_info.target_block;
+                        }
+                    }
+
+                    assert(target_block || default_block);
+                    auto dest = target_block;
+                    if (!dest) dest = default_block;
+                    assert(dest);
+
+                    interp->ip.block = dest;
+                    interp->ip.index = 0;
                     break;
                 }
+
                 case PTR_OFFSET: {
                     auto ptr_val = interpreter_load_value(interp, inst->a);
                     auto offset_val = interpreter_load_value(interp, inst->b);
@@ -722,7 +773,8 @@ namespace Zodiac
         switch (result.type->kind) {
 
             case AST_Type_Kind::BOOL:
-            case AST_Type_Kind::INTEGER: {
+            case AST_Type_Kind::INTEGER:
+            case AST_Type_Kind::ENUM: {
                 switch (result.type->bit_size) {
                     case 8: result.integer_literal.s8 = *((int8_t*)source_ptr); break;
                     case 16: result.integer_literal.s16 = *((int16_t*)source_ptr); break;
@@ -861,7 +913,8 @@ namespace Zodiac
 
         switch (type->kind) {
 
-            case AST_Type_Kind::INTEGER: {
+            case AST_Type_Kind::INTEGER:
+            case AST_Type_Kind::ENUM: {
                 switch (val.type->bit_size)
                 {
                     case 8: interp_store(dest, val.integer_literal.s8); break;

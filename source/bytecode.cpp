@@ -405,6 +405,8 @@ namespace Zodiac
                     default_block = post_switch_block;
                 }
 
+                bool added_default = false;
+
                 for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
                 {
                     AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
@@ -412,6 +414,7 @@ namespace Zodiac
 
                     if (switch_case->is_default) {
                         bytecode_add_default_switch_case(switch_inst, case_block);
+                        added_default = true;
                         continue;
                     }
 
@@ -423,6 +426,10 @@ namespace Zodiac
                         Bytecode_Value *expr_val = bytecode_emit_expression(builder, expr);
                         bytecode_add_switch_case(switch_inst, expr_val, case_block);
                     }
+                }
+
+                if (!added_default) {
+                    bytecode_add_default_switch_case(switch_inst, post_switch_block);
                 }
 
                 bytecode_append_block(builder, func, post_switch_block);
