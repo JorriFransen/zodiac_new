@@ -146,7 +146,7 @@ namespace Zodiac
         return func;
     }
 
-    Bytecode_Value *bytecode_emit_global_variable(Bytecode_Builder *builder,
+    Bytecode_Global_Info bytecode_emit_global_variable(Bytecode_Builder *builder,
                                                   AST_Declaration *decl)
     {
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
@@ -182,7 +182,7 @@ namespace Zodiac
         global_value->global.byte_offset = builder->global_data_size;
         builder->global_data_size += byte_size;
 
-        return global_value;
+        return global_info;
     }
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)

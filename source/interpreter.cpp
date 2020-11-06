@@ -782,7 +782,7 @@ namespace Zodiac
             auto ptr = interpreter_load_lvalue(interp, info.global_value);
 
             if (info.has_initializer) {
-                interp_store_constant(ptr, info.init_const_val); 
+                interp_store_constant(ptr, info.init_const_val);
             } else {
                 assert(info.declaration->type->bit_size % 8 == 0);
                 auto size = info.declaration->type->bit_size / 8;
@@ -917,7 +917,10 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+            case Bytecode_Value_Kind::BOOL_LITERAL: {
+                return (uint8_t*)&value->bool_literal;
+                break;
+            }
 
             case Bytecode_Value_Kind::NULL_LITERAL: {
                 return nullptr;
@@ -986,6 +989,11 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::BOOL: {
+                interp_store(dest, val.bool_literal);
+                break;
+            }
+
             case AST_Type_Kind::FLOAT: {
                 if (val.type == Builtin::type_float)
                     interp_store(dest, val.float_literal.r32);
@@ -1013,7 +1021,7 @@ namespace Zodiac
         auto type = val.type;
 
         assert(type->kind == AST_Type_Kind::INTEGER);
-    
+
         switch (val.type->bit_size)
         {
             case 8: interp_store(dest, val.integer.s8); break;
@@ -1022,6 +1030,5 @@ namespace Zodiac
             case 64: interp_store(dest, val.integer.s64); break;
             default: assert(false);
         }
-        
     }
 }

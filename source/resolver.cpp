@@ -4560,9 +4560,9 @@ namespace Zodiac
         queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
     }
 
-    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Value *bc_glob)
+    void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global_Info bc_glob)
     {
-        assert(bc_glob->type);
+        assert(bc_glob.global_value->type);
 
         auto job = resolve_job_emit_llvm_global_new(resolver->allocator, bc_glob);
         assert(job);
@@ -4604,7 +4604,7 @@ namespace Zodiac
         return result;
     }
 
-    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Value *bc_val)
+    Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global_Info bc_val)
     {
         auto result = resolve_job_new(allocator, Resolve_Job_Kind::EMIT_LLVM_GLOB);
         result->bc_glob = bc_val;
@@ -4656,7 +4656,8 @@ namespace Zodiac
         return resolve_job_new(allocator, bc_func);
     }
 
-    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator, Bytecode_Value *bc_val)
+    Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator,
+                                                  Bytecode_Global_Info bc_val)
     {
         return resolve_job_new(allocator, bc_val);
     }

@@ -56,6 +56,7 @@ namespace Zodiac
         stack_init(allocator, &result.arg_stack);
 
         array_init(allocator, &result.registered_functions);
+        array_init(allocator, &result.globals);
         array_init(allocator, &result.blocks);
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
@@ -91,8 +92,7 @@ namespace Zodiac
         builder->locals.count = 0;
         builder->temps.count = 0;
 
-        for (int64_t i = 0; i < bc_func->blocks.count; i++)
-        {
+        for (int64_t i = 0; i < bc_func->blocks.count; i++) {
             auto block = bc_func->blocks[i];;
             auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context, block->name.data,
                                                        llvm_func);
@@ -104,8 +104,7 @@ namespace Zodiac
 
         builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
 
-        for (int64_t i = 0; i < bc_func->parameters.count; i++)
-        {
+        for (int64_t i = 0; i < bc_func->parameters.count; i++) {
             auto param = bc_func->parameters[i];
             auto llvm_param_type = llvm_type_from_ast(builder, param->type->pointer.base);
             auto name = param->parameter.name;
@@ -115,8 +114,7 @@ namespace Zodiac
             array_append(&builder->parameters, param_alloca);
         }
 
-        for (int64_t i = 0; i < bc_func->locals.count; i++)
-        {
+        for (int64_t i = 0; i < bc_func->locals.count; i++) {
             auto local = bc_func->locals[i];
             auto name = local->allocl.name;
             llvm::Type *ty = llvm_type_from_ast(builder, local->type->pointer.base);
@@ -126,34 +124,69 @@ namespace Zodiac
             array_append(&builder->locals, alloca);
         }
 
-        for (int64_t i = 0; i < bc_func->parameters.count; i++)
-        {
+        for (int64_t i = 0; i < bc_func->parameters.count; i++) {
             auto param_val = llvm_func->getArg(i);
             auto param_alloca = builder->parameters[i];
             builder->llvm_builder->CreateStore(param_val, param_alloca);
         }
 
-        for (int64_t i = 0; i < bc_func->blocks.count; i++)
-        {
+        for (int64_t i = 0; i < bc_func->blocks.count; i++) {
             builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
 
             llvm_emit_block(builder, bc_func->blocks[i]);
-
             llvm_block_it++;
         }
 
         bc_func->flags |= BC_FUNC_FLAG_EMITTED;
     }
 
-    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Value *bc_val)
+    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global_Info global_info)
     {
-        assert(false);
+
+        llvm::Type *llvm_type = llvm_type_from_ast(builder, global_info.declaration->type);
+
+        llvm::Constant *llvm_init_val = nullptr;
+        if (global_info.has_initializer) {
+            llvm_init_val = llvm_emit_constant(builder, global_info.init_const_val);
+        } else {
+            llvm_init_val = llvm::Constant::getNullValue(llvm_type);
+        }
+
+        auto name = global_info.global_value->global.name.data;
+
+        llvm::GlobalVariable *llvm_glob =
+            new llvm::GlobalVariable(*builder->llvm_module, llvm_type,
+                                     false, // Constant
+                                     llvm::GlobalVariable::PrivateLinkage,
+                                     llvm_init_val,
+                                     name);
+
+        global_info.global_value->global.index = builder->globals.count;
+        array_append(&builder->globals, llvm_glob);
+    }
+
+    llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Const_Value const_val)
+    {
+        auto type = const_val.type;
+
+        assert(type->kind == AST_Type_Kind::INTEGER);
+
+        llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
+
+        bool sign = type->integer.sign;
+
+        switch (type->bit_size) {
+            case 8:  return llvm::ConstantInt::get(llvm_type, const_val.integer.u8, sign);
+            case 16:  return llvm::ConstantInt::get(llvm_type, const_val.integer.u16, sign);
+            case 32:  return llvm::ConstantInt::get(llvm_type, const_val.integer.u32, sign);
+            case 64:  return llvm::ConstantInt::get(llvm_type, const_val.integer.u64, sign);
+            default: assert(false);
+        }
     }
 
     void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
     {
-        for (int64_t i = 0; i < bc_block->instructions.count; i++)
-        {
+        for (int64_t i = 0; i < bc_block->instructions.count; i++) {
             Bytecode_Instruction *inst = bc_block->instructions[i];
 
             llvm_emit_instruction(builder, inst);
@@ -186,7 +219,9 @@ namespace Zodiac
             }
 
             case STORE_GLOBAL: {
-                assert(false);
+                auto glob = llvm_emit_value<llvm::GlobalVariable>(builder, inst->a);
+                llvm::Value *new_val = llvm_emit_value(builder, inst->b);
+                builder->llvm_builder->CreateStore(new_val, glob);
                 break;
             }
 
@@ -210,7 +245,8 @@ namespace Zodiac
             }
 
             case LOAD_GLOBAL: {
-                assert(false);
+                auto glob = llvm_emit_value<llvm::GlobalVariable>(builder, inst->a);
+                result = builder->llvm_builder->CreateLoad(glob);
                 break;
             }
 
@@ -694,16 +730,20 @@ namespace Zodiac
                 static_cast<llvm::GlobalObject*>(llvm_str_glob)->setAlignment(alignment);
 
                 llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
-                llvm::Value *llvm_str_ptr = llvm::ConstantExpr::getPointerCast(llvm_str_glob, dest_type);
+                llvm::Value *llvm_str_ptr = llvm::ConstantExpr::getPointerCast(llvm_str_glob,
+                                                                               dest_type);
 
                 return llvm_str_ptr;
                 break;
             }
 
-            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+            case Bytecode_Value_Kind::BOOL_LITERAL: {
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, bc_value->type);
+                return llvm::ConstantInt::get(llvm_type, bc_value->bool_literal, false);
+                break;
+            }
 
-            case Bytecode_Value_Kind::NULL_LITERAL: 
-            {
+            case Bytecode_Value_Kind::NULL_LITERAL: {
                 auto type = llvm_type_from_ast<llvm::PointerType>(builder, bc_value->type);
                 return llvm::ConstantPointerNull::get(type);
                 break;
@@ -727,7 +767,11 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::GLOBAL: assert(false);
+            case Bytecode_Value_Kind::GLOBAL: {
+                assert(bc_value->global.index < builder->globals.count);
+                return builder->globals[bc_value->global.index];
+                break;
+            }
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);

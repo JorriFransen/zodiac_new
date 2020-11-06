@@ -39,6 +39,7 @@ namespace Zodiac
         llvm::IRBuilder<> *llvm_builder = nullptr;
 
         Array<LLVM_Function_Info> registered_functions = {};
+        Array<llvm::GlobalVariable *> globals = {};
 
         Stack<llvm::Value *> arg_stack = {};
 
@@ -53,7 +54,8 @@ namespace Zodiac
 
     void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
-    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Value *bc_val);
+    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global_Info global_info);
+    llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Const_Value const_val);
 
     void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block);
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst);

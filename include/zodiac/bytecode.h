@@ -152,6 +152,7 @@ namespace Zodiac
             struct
             {
                 Atom name; 
+                int64_t index;       // Used in llvm generation
                 int64_t byte_offset; // Used in interpreter
             } global;
 
@@ -258,10 +259,11 @@ namespace Zodiac
 
     Bytecode_Builder bytecode_builder_create(Allocator *allocator, Build_Data *build_data);
 
-    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl);
+    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder,
+                                                  AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_function_declaration(Bytecode_Builder *builder,
                                                           AST_Declaration *decl);
-    Bytecode_Value *bytecode_emit_global_variable(Bytecode_Builder *builder,
+    Bytecode_Global_Info bytecode_emit_global_variable(Bytecode_Builder *builder,
                                                   AST_Declaration *decl);
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name);
