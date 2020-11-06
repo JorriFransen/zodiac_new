@@ -181,7 +181,7 @@ namespace Zodiac
     struct Bytecode_Function;
     struct Bytecode_Block
     {
-        const char *name = nullptr;
+        Atom name = {};
         Bytecode_Function *function = nullptr;
 
         //@@TODO: @@CLEANUP: These might not need to be pointers
@@ -243,7 +243,9 @@ namespace Zodiac
                                                   AST_Declaration *decl);
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name);
-    void bytecode_append_block(Bytecode_Function *function, Bytecode_Block *block);
+    void bytecode_append_block(Bytecode_Builder *builder, Bytecode_Function *function,
+                               Bytecode_Block *block);
+    Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Atom name);
 
     void bytecode_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block);
 

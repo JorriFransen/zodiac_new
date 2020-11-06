@@ -94,7 +94,7 @@ namespace Zodiac
         for (int64_t i = 0; i < bc_func->blocks.count; i++)
         {
             auto block = bc_func->blocks[i];;
-            auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context, block->name,
+            auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context, block->name.data,
                                                        llvm_func);
 
             array_append(&builder->blocks, { block, llvm_block });

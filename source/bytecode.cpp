@@ -118,7 +118,7 @@ namespace Zodiac
 
 
         Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
-        bytecode_append_block(func, entry_block);
+        bytecode_append_block(builder, func, entry_block);
 
         bytecode_set_insert_point(builder, entry_block);
 
@@ -150,18 +150,43 @@ namespace Zodiac
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)
     {
         Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
-        result->name = name;
+        result->name = atom_get(&builder->build_data->atom_table, name);
         result->function = nullptr;
         array_init(builder->allocator, &result->instructions);
         return result;
     }
 
-    void bytecode_append_block(Bytecode_Function *function, Bytecode_Block *block)
+    void bytecode_append_block(Bytecode_Builder *builder, Bytecode_Function *function,
+                               Bytecode_Block *block)
     {
+        assert(builder->current_function == function);
         assert(!block->function);
+
+        block->name = bytecode_get_unique_block_name(builder, block->name);
 
         array_append(&function->blocks, block);
         block->function = function;
+    }
+
+    Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Atom name)
+    {
+        auto function = builder->current_function;
+        auto ta = temp_allocator_get();
+
+        auto result = name;
+
+        int name_count = 0;
+        for (int64_t i = 0; i < function->blocks.count; i++) {
+            if (function->blocks[i]->name == result) {
+                name_count++;
+                auto name_sr = string_ref(name.data, name.length);
+                auto num_str = string_from_int(ta, name_count);
+                auto str = string_append(ta, name_sr, num_str);
+                result = atom_get(&builder->build_data->atom_table, str.data, str.length);
+            }
+        }
+
+        return result;
     }
 
     void bytecode_set_insert_point(Bytecode_Builder *builder, Bytecode_Block *block)
@@ -296,7 +321,7 @@ namespace Zodiac
                 auto body_block = bytecode_new_block(builder, "while_body");
                 auto post_while_block = bytecode_new_block(builder, "post_while");
 
-                bytecode_append_block(builder->current_function, cond_block);
+                bytecode_append_block(builder, builder->current_function, cond_block);
 
                 bytecode_emit_jump(builder, cond_block);
                 bytecode_set_insert_point(builder, cond_block);
@@ -305,7 +330,7 @@ namespace Zodiac
 
                 bytecode_emit_jump_if(builder, cond_val, body_block, post_while_block);
 
-                bytecode_append_block(builder->current_function, body_block);
+                bytecode_append_block(builder, builder->current_function, body_block);
                 bytecode_set_insert_point(builder, body_block);
 
                 bytecode_push_break_block(builder, post_while_block);
@@ -314,7 +339,7 @@ namespace Zodiac
 
                 bytecode_emit_jump(builder, cond_block);
 
-                bytecode_append_block(builder->current_function, post_while_block);
+                bytecode_append_block(builder, builder->current_function, post_while_block);
                 bytecode_set_insert_point(builder, post_while_block);
 
                 break;
@@ -355,7 +380,7 @@ namespace Zodiac
                     const char *block_name = (switch_case->is_default ? "default" : "case");
                     Bytecode_Block *case_block = bytecode_new_block(builder, block_name);
 
-                    bytecode_append_block(func, case_block);
+                    bytecode_append_block(builder, func, case_block);
                     if (switch_case->is_default) {
                         assert(!default_block);
                         default_block = case_block;
@@ -400,7 +425,7 @@ namespace Zodiac
                     }
                 }
 
-                bytecode_append_block(func, post_switch_block);
+                bytecode_append_block(builder, func, post_switch_block);
                 bytecode_set_insert_point(builder, post_switch_block);
 
                 break;
@@ -420,7 +445,7 @@ namespace Zodiac
         assert(cond_val->type->kind == AST_Type_Kind::BOOL);
 
         Bytecode_Block *then_block = bytecode_new_block(builder, "then");
-        bytecode_append_block(builder->current_function, then_block);
+        bytecode_append_block(builder, builder->current_function, then_block);
 
         Bytecode_Block *else_block = nullptr;
         if (else_stmt) {
@@ -440,7 +465,7 @@ namespace Zodiac
         }
 
         if (else_stmt) {
-            bytecode_append_block(builder->current_function, else_block);
+            bytecode_append_block(builder, builder->current_function, else_block);
             bytecode_set_insert_point(builder, else_block);
 
             bytecode_emit_statement(builder, else_stmt);
@@ -451,7 +476,7 @@ namespace Zodiac
             }
         }
 
-        bytecode_append_block(builder->current_function, post_if_block);
+        bytecode_append_block(builder, builder->current_function, post_if_block);
         bytecode_set_insert_point(builder, post_if_block);
 
     }
@@ -1720,7 +1745,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::BLOCK:
             {
-                string_builder_appendf(sb, "%s", value->block->name);
+                string_builder_appendf(sb, "%s", value->block->name.data);
                 break;
             }
         }
