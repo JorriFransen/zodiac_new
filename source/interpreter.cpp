@@ -784,7 +784,9 @@ namespace Zodiac
             if (info.has_initializer) {
                 interp_store_constant(ptr, info.init_const_val); 
             } else {
-                assert(false);
+                assert(info.declaration->type->bit_size % 8 == 0);
+                auto size = info.declaration->type->bit_size / 8;
+                memset(ptr, 0, size);
             }
         }
 
