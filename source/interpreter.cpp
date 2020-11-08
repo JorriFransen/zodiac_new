@@ -772,7 +772,9 @@ namespace Zodiac
     void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
                                         Array<Bytecode_Global_Info> global_info)
     {
-        assert(global_data_size);
+        assert(global_data_size || global_info.count == 0);
+
+        if (!global_data_size) return;
 
         interp->global_data = alloc_array<uint8_t>(interp->allocator, global_data_size);
 

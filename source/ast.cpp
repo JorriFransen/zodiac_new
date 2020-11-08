@@ -1061,28 +1061,6 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::POST_FIX:
-            {
-                auto operand_expr =
-                    ast_create_expression_from_ptn(ast_builder,
-                                                   ptn->post_fix.operand_expression);
-                assert(operand_expr);
-                return ast_postfix_expression_new(ast_builder->allocator, ptn->post_fix.op,
-                                                  operand_expr, begin_fp, end_fp);
-                break;
-            }
-
-            case Expression_PTN_Kind::PRE_FIX:
-            {
-                auto operand_expr =
-                    ast_create_expression_from_ptn(ast_builder,
-                                                   ptn->post_fix.operand_expression);
-                assert(operand_expr);
-                return ast_prefix_expression_new(ast_builder->allocator, ptn->pre_fix.op,
-                                                 operand_expr, begin_fp, end_fp);
-                break;
-            }
-
             case Expression_PTN_Kind::DOT:
             {
                 auto ast_parent_expr = ast_create_expression_from_ptn(ast_builder,
@@ -1311,12 +1289,10 @@ namespace Zodiac
         auto begin_fp = ptn->self.begin_file_pos;
         auto end_fp = ptn->self.end_file_pos;
 
-        switch (ptn->kind)
-        {
+        switch (ptn->kind) {
             case Expression_PTN_Kind::INVALID: assert(false);
 
-            case Expression_PTN_Kind::CALL:
-            {
+            case Expression_PTN_Kind::CALL: {
                 assert(!ptn->call.is_builtin);
 
                 auto ast_ident_expr =
@@ -1326,8 +1302,7 @@ namespace Zodiac
                 Array<AST_Expression*> ast_arg_exprs = {};
                 array_init(ast_builder->allocator, &ast_arg_exprs);
 
-                for (int64_t i = 0; i < ptn->call.arg_list->expressions.count; i++)
-                {
+                for (int64_t i = 0; i < ptn->call.arg_list->expressions.count; i++) {
                     auto ast_arg_expr =
                         ast_create_expression_from_ptn(ast_builder,
                                                        ptn->call.arg_list->expressions[i]);
@@ -1342,8 +1317,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::IDENTIFIER:
-            {
+            case Expression_PTN_Kind::IDENTIFIER: {
                 auto ident = ast_create_identifier_from_ptn(ast_builder, ptn->identifier);
                 assert(ident);
 
@@ -1355,11 +1329,7 @@ namespace Zodiac
             case Expression_PTN_Kind::BINARY: assert(false);
             case Expression_PTN_Kind::UNARY: assert(false);
 
-            case Expression_PTN_Kind::POST_FIX: assert(false);
-            case Expression_PTN_Kind::PRE_FIX: assert(false);
-
-            case Expression_PTN_Kind::DOT:
-            {
+            case Expression_PTN_Kind::DOT: {
                 auto ast_dot_expr = ast_create_expression_from_ptn(ast_builder, ptn);
                 assert(ast_dot_expr);
 
@@ -1378,8 +1348,7 @@ namespace Zodiac
 
             case Expression_PTN_Kind::NULL_LITERAL: assert(false);
 
-            case Expression_PTN_Kind::ARRAY_TYPE:
-            {
+            case Expression_PTN_Kind::ARRAY_TYPE: {
                 auto length_ptn = ptn->array_type.length_expression;
                 auto elem_type_ptn = ptn->array_type.element_type_expression;
                 AST_Expression *length_expr = nullptr;
@@ -1964,38 +1933,6 @@ namespace Zodiac
 
         result->unary.op = op;
         result->unary.operand_expression = operand_expr;
-
-        return result;
-    }
-
-    AST_Expression *ast_postfix_expression_new(Allocator *allocator, Binary_Operator op,
-                                               AST_Expression *operand_expr, 
-                                               const File_Pos &begin_fp,
-                                               const File_Pos &end_fp)
-    {
-        assert(op == BINOP_ADD || op == BINOP_SUB);
-
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::POST_FIX,
-                                         begin_fp, end_fp);
-
-        result->post_fix.op = op;
-        result->post_fix.operand_expression = operand_expr;
-
-        return result;
-    }
-
-    AST_Expression *ast_prefix_expression_new(Allocator *allocator, Binary_Operator op,
-                                              AST_Expression *operand_expr, 
-                                              const File_Pos &begin_fp,
-                                              const File_Pos &end_fp)
-    {
-        assert(op == BINOP_ADD || op == BINOP_SUB);
-
-        auto result = ast_expression_new(allocator, AST_Expression_Kind::PRE_FIX,
-                                         begin_fp, end_fp);
-
-        result->pre_fix.op = op;
-        result->pre_fix.operand_expression = operand_expr;
 
         return result;
     }
@@ -2983,38 +2920,9 @@ namespace Zodiac
                     case UNOP_INVALID: assert(false); break;
                     case UNOP_DEREF: printf("<"); break;
                     case UNOP_MINUS: printf("-"); break;
-
-                    case UNOP_PRE_INC: assert(false);
-                    case UNOP_PRE_DEC: assert(false);
                 }
 
                 ast_print_expression(ast_expr->unary.operand_expression, 0);
-                break;
-            }
-
-            case AST_Expression_Kind::POST_FIX:
-            {
-                ast_print_expression(ast_expr->post_fix.operand_expression, 0);
-
-                if (ast_expr->post_fix.op == BINOP_ADD) printf("++");
-                else if (ast_expr->post_fix.op == BINOP_SUB) printf("--");
-                else
-                {
-                    assert(false);
-                }
-                break;
-            }
-
-            case AST_Expression_Kind::PRE_FIX:
-            {
-                if (ast_expr->pre_fix.op == BINOP_ADD) printf("++");
-                else if (ast_expr->pre_fix.op == BINOP_SUB) printf("--");
-                else
-                {
-                    assert(false);
-                }
-
-                ast_print_expression(ast_expr->pre_fix.operand_expression, 0);
                 break;
             }
 

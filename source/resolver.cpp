@@ -1388,8 +1388,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY:
-            {
+            case AST_Expression_Kind::UNARY: {
                 result = true;
                 if (!try_resolve_identifiers(resolver,
                                              ast_expr->unary.operand_expression,
@@ -1400,78 +1399,42 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::POST_FIX:
-            {
-                result = true;
-                if (!try_resolve_identifiers(resolver,
-                                             ast_expr->post_fix.operand_expression,
-                                             scope))
-                {
-                    result = false;
-                }
-
-                break;
-            }
-
-            case AST_Expression_Kind::PRE_FIX:
-            {
-                result = true;
-                if (!try_resolve_identifiers(resolver,
-                                             ast_expr->pre_fix.operand_expression,
-                                             scope))
-                {
-                    result = false;
-                }
-
-                break;
-            }
-
-            case AST_Expression_Kind::CALL:
-            {
+            case AST_Expression_Kind::CALL: {
                 result = true;
                 if (try_resolve_identifiers(resolver, ast_expr->call.ident_expression,
                                             scope))
                 {
                     auto ident_expr = ast_expr->call.ident_expression;
                     AST_Declaration *callee_decl = nullptr;
-                    if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER)
-                    {
+                    if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER) {
                         callee_decl = ident_expr->identifier->declaration;
-                    }
-                    else if (ident_expr->kind == AST_Expression_Kind::DOT)
-                    {
+                    } else if (ident_expr->kind == AST_Expression_Kind::DOT) {
                         callee_decl = ident_expr->dot.child_decl;
                     }
                     else assert(false);
                     assert(callee_decl);
                     assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
                     ast_expr->call.callee_declaration = callee_decl;
-                }
-                else
-                {
+                } else {
                     result = false;
                 }
 
                 bool arg_res = true;
-                for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
-                {
+                for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++) {
                     auto arg_expr = ast_expr->call.arg_expressions[i];
-                    if (!try_resolve_identifiers(resolver, arg_expr, scope))
-                    {
+                    if (!try_resolve_identifiers(resolver, arg_expr, scope)) {
                         arg_res = false;
                     }
                 }
 
-                if (result)
-                {
+                if (result) {
                     if (!arg_res) result = false;
                 }
 
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL:
-            {
+            case AST_Expression_Kind::BUILTIN_CALL: {
                 result = true;
 
                 auto atom = ast_expr->builtin_call.identifier->atom;
@@ -3170,44 +3133,6 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::POST_FIX:
-            {
-                result = true;
-
-                auto operand_expr = ast_expr->post_fix.operand_expression;
-
-                if (try_resolve_types(resolver, operand_expr, scope))
-                {
-                    assert(operand_expr->type);
-                    assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
-                    ast_expr->type = operand_expr->type;
-                }
-                else
-                {
-                    result = false;
-                }
-                break;
-            }
-
-            case AST_Expression_Kind::PRE_FIX:
-            {
-                result = true;
-
-                auto operand_expr = ast_expr->pre_fix.operand_expression;
-
-                if (try_resolve_types(resolver, operand_expr, scope))
-                {
-                    assert(operand_expr->type);
-                    assert(operand_expr->type->kind == AST_Type_Kind::INTEGER);
-                    ast_expr->type = operand_expr->type;
-                }
-                else
-                {
-                    result = false;
-                }
-                break;
-            }
-
             case AST_Expression_Kind::CALL:
             {
                 auto decl = resolver_get_declaration(ast_expr->call.ident_expression);
@@ -4691,8 +4616,6 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::POST_FIX: assert(false);
-            case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::BUILTIN_CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);
@@ -4974,20 +4897,6 @@ namespace Zodiac
             case AST_Expression_Kind::UNARY:
             {
                 auto op_expr = expr->unary.operand_expression;
-                is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
-                break;
-            }
-
-            case AST_Expression_Kind::POST_FIX:
-            {
-                auto op_expr = expr->post_fix.operand_expression;
-                is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
-                break;
-            }
-
-            case AST_Expression_Kind::PRE_FIX:
-            {
-                auto op_expr = expr->pre_fix.operand_expression;
                 is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
                 break;
             }

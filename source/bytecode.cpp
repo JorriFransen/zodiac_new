@@ -677,15 +677,9 @@ namespace Zodiac
 
                         break;
                     }
-
-                    case UNOP_PRE_INC: assert(false);
-                    case UNOP_PRE_DEC: assert(false);
                 }
                 break;
             }
-
-            case AST_Expression_Kind::POST_FIX: assert(false); //@TODO: Implement!
-            case AST_Expression_Kind::PRE_FIX: assert(false); //@TODO: Implement!
 
             case AST_Expression_Kind::CALL: {
                 result = bytecode_emit_call(builder, expr);
@@ -834,8 +828,6 @@ namespace Zodiac
 
             case AST_Expression_Kind::BINARY: assert(false);
             case AST_Expression_Kind::UNARY: assert(false);
-            case AST_Expression_Kind::POST_FIX: assert(false);
-            case AST_Expression_Kind::PRE_FIX: assert(false);
             case AST_Expression_Kind::CALL: assert(false);
             case AST_Expression_Kind::BUILTIN_CALL: assert(false);
             case AST_Expression_Kind::ADDROF: assert(false);

@@ -296,8 +296,6 @@ enum class Expression_PTN_Kind
     IDENTIFIER,
     BINARY,
     UNARY,
-    POST_FIX,
-    PRE_FIX,
     DOT,
     COMPOUND,
     SUBSCRIPT,
@@ -344,12 +342,6 @@ struct Expression_PTN
             Unary_Operator op = UNOP_INVALID;
             Expression_PTN *operand_expression;
         } unary;
-
-        struct
-        {
-            Binary_Operator op = BINOP_INVALID;
-            Expression_PTN *operand_expression;
-        } post_fix, pre_fix;
 
         Integer_Literal integer_literal;
 
@@ -557,16 +549,6 @@ Expression_PTN *new_unary_expression_ptn(Allocator *allocator, Unary_Operator op
                                          Expression_PTN *operand_expression,
                                          const File_Pos &begin_file_pos,
                                          const File_Pos &end_file_pos);
-
-Expression_PTN *new_postfix_expression_ptn(Allocator *allocator, Binary_Operator op,
-                                           Expression_PTN *operand_expression,
-                                           const File_Pos &begin_file_pos,
-                                           const File_Pos &end_file_pos);
-
-Expression_PTN *new_prefix_expression_ptn(Allocator *allocator, Binary_Operator op,
-                                          Expression_PTN *operand_expression,
-                                          const File_Pos &begin_file_pos,
-                                          const File_Pos &end_file_pos);
 
 Expression_PTN *new_number_literal_expression_ptn(Allocator *allocator, Atom atom,
                                                   const File_Pos &begin_file_pos,
