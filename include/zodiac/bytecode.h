@@ -278,6 +278,7 @@ namespace Zodiac
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *stmt);
+    void bytecode_emit_for_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     void bytecode_emit_if_statement(Bytecode_Builder *builder, AST_Statement *stmt);
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *expr);

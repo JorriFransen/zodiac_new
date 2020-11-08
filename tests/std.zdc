@@ -64,6 +64,12 @@ println :: func (cstr: *u8) {
     return;
 }
 
+print_numln :: func (n: s64) {
+    print_num(n);
+    print_char('\n');
+    return;
+}
+
 print_num :: func (n: s64) {
 
     buf : [32]u8;

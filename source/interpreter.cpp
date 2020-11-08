@@ -97,9 +97,15 @@ namespace Zodiac
                 case STORE_GLOBAL:
                 case STORE_ARG: {
                     uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
-                    Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
 
-                    interp_store_value(dest_ptr, source_val);
+                    if (inst->b->kind == Bytecode_Value_Kind::ALLOCL) {
+                        uint8_t *alloc_addr = interpreter_load_lvalue(interp, inst->b);
+                        interp_store(dest_ptr, alloc_addr);
+                    } else {
+                        Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
+
+                        interp_store_value(dest_ptr, source_val);
+                    }
                     break;
                 }
 
@@ -844,11 +850,7 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::POINTER: {
-                if (value->kind == Bytecode_Value_Kind::ALLOCL) {
-                    result.pointer = source_ptr;
-                } else {
-                    result.pointer = *(void**)source_ptr;
-                }
+                result.pointer = *(void**)source_ptr;
                 break;
             }
 
