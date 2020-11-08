@@ -4884,8 +4884,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
-            case AST_Expression_Kind::BINARY:
-            {
+            case AST_Expression_Kind::BINARY: {
                 auto lhs = expr->binary.lhs;
                 auto rhs = expr->binary.rhs;
 
@@ -4894,40 +4893,32 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY:
-            {
+            case AST_Expression_Kind::UNARY: {
                 auto op_expr = expr->unary.operand_expression;
                 is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL:
-            {
+            case AST_Expression_Kind::BUILTIN_CALL: {
                 auto atom = expr->builtin_call.identifier->atom;
 
-                if (atom == Builtin::atom_exit)
-                {
+                if (atom == Builtin::atom_exit) {
                     assert(expr->builtin_call.arg_expressions.count == 1);
                     auto op_expr = expr->builtin_call.arg_expressions[0];
                     is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
-                }
-                else if (atom == Builtin::atom_syscall)
-                {
+
+                } else if (atom == Builtin::atom_syscall) {
                     is_const = false;
-                }
-                else if (atom == Builtin::atom_cast)
-                {
+
+                } else if (atom == Builtin::atom_cast) {
                     assert(expr->builtin_call.arg_expressions.count == 2);
                     auto op_expr = expr->builtin_call.arg_expressions[1];
                     is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
-                }
-                else if (atom == Builtin::atom_sizeof ||
-                         atom == Builtin::atom_offsetof)
-                {
+
+                } else if (atom == Builtin::atom_sizeof ||
+                           atom == Builtin::atom_offsetof) {
                     is_const = true;
-                }
-                else
-                {
+                } else {
                     assert(false);
                 }
                 break;
@@ -4937,8 +4928,7 @@ namespace Zodiac
             case AST_Expression_Kind::ADDROF: break;
             case AST_Expression_Kind::COMPOUND: assert(false);
 
-            case AST_Expression_Kind::SUBSCRIPT:
-            {
+            case AST_Expression_Kind::SUBSCRIPT: {
                 auto pointer_expr = expr->subscript.pointer_expression;
                 auto index_expr = expr->subscript.index_expression;
 
@@ -4947,8 +4937,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CAST:
-            {
+            case AST_Expression_Kind::CAST: {
                 is_const =
                     (expr->cast.operand_expression->expr_flags & AST_EXPR_FLAG_CONST);
                 break;
@@ -4962,8 +4951,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
 
-            case AST_Expression_Kind::RANGE:
-            {
+            case AST_Expression_Kind::RANGE: {
                 auto begin = expr->range.begin;
                 auto end = expr->range.end;
                 is_const = ((begin->expr_flags & AST_EXPR_FLAG_CONST) &&
@@ -4972,8 +4960,7 @@ namespace Zodiac
             }
         }
 
-        if (is_const)
-        {
+        if (is_const) {
             expr->expr_flags |= AST_EXPR_FLAG_CONST;
         }
     }
@@ -4983,31 +4970,21 @@ namespace Zodiac
         assert(type);
         assert(target_type);
 
-        switch (type->kind)
-        {
+        switch (type->kind) {
             case AST_Type_Kind::INVALID: assert(false);
             case AST_Type_Kind::VOID: assert(false);
 
-            case AST_Type_Kind::INTEGER:
-            {
-                if (target_type->kind == AST_Type_Kind::INTEGER)
-                {
-                    if (type->integer.sign == target_type->integer.sign)
-                    {
+            case AST_Type_Kind::INTEGER: {
+                if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    if (type->integer.sign == target_type->integer.sign) {
                         return type->bit_size < target_type->bit_size;
-                    }
-                    else if (type->integer.sign)
-                    {
+                    } else if (type->integer.sign) {
                         return false;
-                    }
-                    else
-                    {
+                    } else {
                         assert(target_type->integer.sign);
                         return type->bit_size < target_type->bit_size;
                     }
-                }
-                else if (target_type->kind == AST_Type_Kind::BOOL)
-                {
+                } else if (target_type->kind == AST_Type_Kind::BOOL) {
                     return true;
                 }
                 else assert(false);
@@ -5015,17 +4992,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT:
-            {
-                if (target_type->kind == AST_Type_Kind::FLOAT)
-                {
+            case AST_Type_Kind::FLOAT: {
+                if (target_type->kind == AST_Type_Kind::FLOAT) {
                     return target_type->bit_size > type->bit_size;
-                }
-                else if (target_type->kind == AST_Type_Kind::INTEGER)
-                {
+                } else if (target_type->kind == AST_Type_Kind::INTEGER) {
                     return false;
-                }
-                else assert(false);
+                } else assert(false);
             }
 
             case AST_Type_Kind::BOOL: assert(false);
@@ -5033,10 +5005,8 @@ namespace Zodiac
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
 
-            case AST_Type_Kind::ENUM:
-            {
-                if (target_type->kind == AST_Type_Kind::INTEGER)
-                {
+            case AST_Type_Kind::ENUM: {
+                if (target_type->kind == AST_Type_Kind::INTEGER) {
                     assert(type->enum_type.base_type);
                     return resolver_valid_type_conversion(type->enum_type.base_type,
                                                           target_type);
@@ -5055,13 +5025,11 @@ namespace Zodiac
     bool resolver_literal_fits_in_type(const Integer_Literal &number_literal, AST_Type *type)
     {
 
-        if (type->kind == AST_Type_Kind::ENUM)
-        {
+        if (type->kind == AST_Type_Kind::ENUM) {
             type = type->enum_type.base_type;
         }
 
-        if (type->kind == AST_Type_Kind::INTEGER)
-        {
+        if (type->kind == AST_Type_Kind::INTEGER) {
             auto val = number_literal.s64;
 
 #define CHECK_BIT_WIDTH_CASE(bit_width) \
@@ -5074,8 +5042,7 @@ namespace Zodiac
                 } \
             }
 
-            switch (type->bit_size)
-            {
+            switch (type->bit_size) {
                 CHECK_BIT_WIDTH_CASE(8);
                 CHECK_BIT_WIDTH_CASE(16);
                 CHECK_BIT_WIDTH_CASE(32);
@@ -5085,24 +5052,19 @@ namespace Zodiac
             }
 
 #undef CHECK_BIT_WIDTH_CASE
-        }
-        else if (type->kind == AST_Type_Kind::FLOAT)
-        {
+        } else if (type->kind == AST_Type_Kind::FLOAT) {
 
             auto val = number_literal.s64;
 
 #define FLOAT_INT_MAX 0x1000000
 #define DOUBLE_INT_MAX 0x20000000000000
 
-            switch (type->bit_size)
-            {
-                case 32:
-                {
+            switch (type->bit_size) {
+                case 32: {
                     return val >= (-FLOAT_INT_MAX) && val <= FLOAT_INT_MAX;
                 }
 
-                case 64:
-                {
+                case 64: {
                     return val >= (-DOUBLE_INT_MAX) && val <= DOUBLE_INT_MAX;
                 }
 
@@ -5111,8 +5073,8 @@ namespace Zodiac
 
 #undef FLOAT_INT_MAX
 #undef DOUBLE_INT_MAX
-        }
-        else assert(false);
+
+        } else assert(false);
 
         assert(false);
         return false;
@@ -5120,20 +5082,15 @@ namespace Zodiac
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)
     {
-        if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::LINUX)
-        {
+        if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::LINUX) {
             if (decl->kind == AST_Declaration_Kind::FUNCTION &&
                 decl->identifier->atom == Builtin::atom__start &&
-                (decl->decl_flags & AST_DECL_FLAG_IS_NAKED))
-            {
+                (decl->decl_flags & AST_DECL_FLAG_IS_NAKED)) {
                 return true;
             }
-        }
-        else if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::WINDOWS)
-        {
+        } else if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::WINDOWS) {
             if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-                decl->identifier->atom == Builtin::atom_mainCRTStartup)
-            {
+                decl->identifier->atom == Builtin::atom_mainCRTStartup) {
                 return true;
             }
         }
@@ -5144,8 +5101,7 @@ namespace Zodiac
     bool is_bc_entry_decl(Resolver *resolver, AST_Declaration *decl)
     {
         if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-            decl->identifier->atom == Builtin::atom_call_main_and_exit)
-        {
+            decl->identifier->atom == Builtin::atom_call_main_and_exit) {
             return true;
         }
 
