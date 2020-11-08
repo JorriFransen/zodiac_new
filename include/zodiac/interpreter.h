@@ -3,6 +3,7 @@
 #include "allocator.h"
 #include "build_data.h"
 #include "bytecode.h"
+#include "ffi.h"
 #include "stack.h"
 
 namespace Zodiac
@@ -31,6 +32,8 @@ namespace Zodiac
 
         uint8_t *global_data = 0;
 
+        FFI_Context ffi = {};
+
         void *null_pointer = nullptr;
 
         int64_t exit_code = 0;
@@ -43,6 +46,10 @@ namespace Zodiac
 
     void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
                                         Array<Bytecode_Global_Info> global_info);
+
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count, Bytecode_Value *result_value);
+    void interpreter_push_foreign_arg(Interpreter *interp, uint8_t *arg_ptr, AST_Type *type);
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);

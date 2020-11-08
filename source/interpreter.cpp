@@ -316,18 +316,27 @@ namespace Zodiac
                     break;
                 }
 
-                case CALL:
-                {
-                    advance_ip = false;
-
+                case CALL: {
                     auto func_val = inst->a;
                     assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
                     auto func = func_val->function;
 
+                    auto arg_count_val = inst->b;
+                    assert(arg_count_val->type == Builtin::type_s64);
+                    assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                    auto arg_count = arg_count_val->integer_literal.s64;
+
+                    if (func->flags & BC_FUNC_FLAG_FOREIGN) {
+                        interpreter_execute_foreign_function(interp, func, arg_count, inst->result);
+                        break;
+                    }
+
+                    advance_ip = false;
+
                     int64_t param_offset = -sizeof(int64_t);
                     int64_t total_arg_size = 0;
-                    for (int64_t i = func->parameters.count - 1; i >= 0; i--)
-                    {
+
+                    for (int64_t i = arg_count - 1; i >= 0; i--) {
                         auto param = func->parameters[i];
                         auto param_type = param->type;
                         assert(param_type->kind == AST_Type_Kind::POINTER);
@@ -349,14 +358,12 @@ namespace Zodiac
                     interp_stack_push(interp, interp->ip);
 
                     uint8_t *ret_val_ptr = nullptr;
-                    if (inst->result)
-                    {
+                    if (inst->result) {
                         ret_val_ptr = interpreter_load_lvalue(interp, inst->result);
                     }
                     interp_stack_push(interp, ret_val_ptr);
 
-                    for (int64_t i = 0; i < func->locals.count; i++)
-                    {
+                    for (int64_t i = 0; i < func->locals.count; i++) {
                         auto allocl = func->locals[i];
                         assert(allocl->type->kind == AST_Type_Kind::POINTER);
                         auto allocl_type = allocl->type->pointer.base;
@@ -371,8 +378,7 @@ namespace Zodiac
                         interp->sp += size;
                     }
 
-                    for (int64_t i = 0; i < func->temps.count; i++)
-                    {
+                    for (int64_t i = 0; i < func->temps.count; i++) {
                         auto temp = func->temps[i];
 
                         assert(temp->type->bit_size % 8 == 0);
@@ -386,9 +392,6 @@ namespace Zodiac
                     }
 
                     assert(inst->a->kind == Bytecode_Value_Kind::FUNCTION);
-
-                    auto arg_count_val = inst->b;
-                    assert(arg_count_val->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
 
                     interp->frame_pointer = new_fp;
                     interp->ip = {
@@ -798,6 +801,56 @@ namespace Zodiac
             }
         }
 
+    }
+
+    void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
+                                              int64_t arg_count, Bytecode_Value *result_value)
+    {
+        assert(func->parameters.count == arg_count);
+        if (result_value) {
+            assert(result_value->kind == Bytecode_Value_Kind::TEMP);
+            assert(func->type->function.return_type);
+        }
+
+        auto old_fp = interp->frame_pointer;
+        interp->frame_pointer = interp->sp;
+
+        int64_t param_offset = 0;
+        int64_t total_arg_size = 0;
+
+        for (int64_t i = arg_count - 1; i >= 0; i--) {
+            auto param = func->parameters[i];
+            auto param_type = param->type;
+            assert(param_type->kind == AST_Type_Kind::POINTER);
+            param_type = param_type->pointer.base;
+
+            assert(param_type->bit_size % 8 == 0);
+            auto size = param_type->bit_size / 8;
+
+            param_offset -= size;
+            total_arg_size += size;
+
+            param->parameter.byte_offset_from_fp = param_offset;
+
+            uint8_t *arg_ptr = interpreter_load_lvalue(interp, param);
+            ffi_push_arg(&interp->ffi, arg_ptr, param_type);
+        }
+
+        interp->frame_pointer = old_fp;
+        interp->sp -= total_arg_size;
+
+        AST_Type *return_type = nullptr;
+        uint8_t * return_val_ptr = nullptr;
+
+        if (result_value) {
+            return_val_ptr = interpreter_load_lvalue(interp, result_value);
+            return_type = result_value->type;
+        }
+
+
+        ffi_call(&interp->ffi, func, return_val_ptr, return_type);
+
+        assert(false);
     }
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)

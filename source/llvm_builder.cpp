@@ -85,7 +85,10 @@ namespace Zodiac
         auto llvm_func = llvm_find_function(builder, bc_func);
         assert(llvm_func);
 
-        if (bc_func->flags & BC_FUNC_FLAG_FOREIGN) return;
+        if (bc_func->flags & BC_FUNC_FLAG_FOREIGN) {
+            bc_func->flags |= BC_FUNC_FLAG_EMITTED;
+            return;
+        }
 
         builder->blocks.count = 0;
         builder->parameters.count = 0;
@@ -447,7 +450,7 @@ namespace Zodiac
 
                 auto bc_arg_count = inst->b;
                 assert(bc_arg_count->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
-                assert(bc_arg_count->type == Builtin::type_u64);
+                assert(bc_arg_count->type == Builtin::type_s64);
 
                 uint64_t arg_count = bc_arg_count->integer_literal.u64;
 

@@ -114,6 +114,11 @@ namespace Zodiac
         builder->locals.count = 0;
         builder->next_temp_index = 0;
 
+        if (func->flags & BC_FUNC_FLAG_FOREIGN) {
+            assert(false && "register the func here, so we can load it on startup...");
+            return func;
+        }
+
         for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
         {
             auto param_decl = decl->function.parameter_declarations[i];
@@ -980,8 +985,8 @@ namespace Zodiac
         }
 
         auto func_val = bytecode_function_value_new(builder, func);
-        auto arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_u64,
-                                                          { .u64 = (uint64_t)arg_exprs.count });
+        auto arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
+                                                          { .s64 = arg_exprs.count });
 
         bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, return_value);
 

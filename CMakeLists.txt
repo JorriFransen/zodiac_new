@@ -23,6 +23,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/command_line_parser.cpp
     source/common.cpp
     source/const_interpreter.cpp
+    source/ffi.cpp
     source/file_pos.cpp
     source/hash_table.cpp
     source/interpreter.cpp
