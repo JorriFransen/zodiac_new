@@ -1880,23 +1880,26 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::INTEGER_LITERAL:
-            {
-                if (value->type->integer.sign)
-                {
+            case Bytecode_Value_Kind::INTEGER_LITERAL: {
+                if (value->type->integer.sign) {
                     switch (value->type->bit_size) {
                         default: assert(false);
                         case 8:
-                                 string_builder_appendf(sb, "%" PRId64 " ('%c')",
-                                                        value->integer_literal.s8,
+                                 string_builder_appendf(sb, "%" PRId8 " ('",
                                                         value->integer_literal.s8);
+                                 char c;
+                                 if (parser_make_escape_char(value->integer_literal.s8, &c)) {
+                                     string_builder_appendf(sb, "\\%c')", c);
+                                 } else {
+                                     string_builder_appendf(sb, "%c')", c);
+                                 }
                                  break;
                         case 16:
-                                 string_builder_appendf(sb, "%" PRId64,
+                                 string_builder_appendf(sb, "%" PRId16,
                                                         value->integer_literal.s16);
                                  break;
                         case 32:
-                                 string_builder_appendf(sb, "%" PRId64,
+                                 string_builder_appendf(sb, "%" PRId32,
                                                         value->integer_literal.s32);
                                  break;
                         case 64:
@@ -1904,22 +1907,25 @@ namespace Zodiac
                                                         value->integer_literal.s64);
                                  break;
                     }
-                }
-                else
-                {
+                } else {
                     switch (value->type->bit_size) {
                         default: assert(false);
                         case 8:
-                                 string_builder_appendf(sb, "%" PRIu64 " ('%c')",
-                                                        value->integer_literal.u8,
+                                 string_builder_appendf(sb, "%" PRIu8 " ('",
                                                         value->integer_literal.u8);
+                                 char c;
+                                 if (parser_make_escape_char(value->integer_literal.u8, &c)) {
+                                     string_builder_appendf(sb, "\\%c')", c);
+                                 } else {
+                                     string_builder_appendf(sb, "%c')", c);
+                                 }
                                  break;
                         case 16:
-                                 string_builder_appendf(sb, "%" PRIu64,
+                                 string_builder_appendf(sb, "%" PRIu16,
                                                         value->integer_literal.u16);
                                  break;
                         case 32:
-                                 string_builder_appendf(sb, "%" PRIu64,
+                                 string_builder_appendf(sb, "%" PRIu32,
                                                         value->integer_literal.u32);
                                  break;
                         case 64:
@@ -1931,19 +1937,14 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::STRING_LITERAL:
-            {
+            case Bytecode_Value_Kind::STRING_LITERAL: {
                 string_builder_append(sb, "\"");
 
-                for (uint64_t i = 0; i < value->string_literal.length; i++)
-                {
+                for (uint64_t i = 0; i < value->string_literal.length; i++) {
                     char c;
-                    if (parser_make_escape_char(value->string_literal.data[i], &c))
-                    {
+                    if (parser_make_escape_char(value->string_literal.data[i], &c)) {
                         string_builder_appendf(sb, "\\%c", c);
-                    }
-                    else
-                    {
+                    } else {
                         string_builder_appendf(sb, "%c", c);
                     }
                 }
@@ -1953,7 +1954,10 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::BOOL_LITERAL: assert(false);
+            case Bytecode_Value_Kind::BOOL_LITERAL: {
+                string_builder_append(sb, value->bool_literal ? "true" : "false");
+                break;
+            }
 
             case Bytecode_Value_Kind::NULL_LITERAL: {
                 string_builder_append(sb, "null");
@@ -1961,22 +1965,22 @@ namespace Zodiac
             }
 
             case Bytecode_Value_Kind::ALLOCL:
-            case Bytecode_Value_Kind::PARAM:
-            {
+            case Bytecode_Value_Kind::PARAM: {
                 string_builder_appendf(sb, "%%%s", value->allocl.name.data);
                 break;
             }
 
-            case Bytecode_Value_Kind::GLOBAL: assert(false);
+            case Bytecode_Value_Kind::GLOBAL: {
+                string_builder_appendf(sb, "%%%s", value->global.name.data);
+                break;
+            }
 
-            case Bytecode_Value_Kind::FUNCTION:
-            {
+            case Bytecode_Value_Kind::FUNCTION: {
                 string_builder_appendf(sb, "%s", value->function->name.data);
                 break;
             }
 
-            case Bytecode_Value_Kind::BLOCK:
-            {
+            case Bytecode_Value_Kind::BLOCK: {
                 string_builder_appendf(sb, "%s", value->block->name.data);
                 break;
             }

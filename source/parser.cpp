@@ -2176,14 +2176,17 @@ void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Toke
 
 bool parser_make_escape_char(char c, char *dest)
 {
-    switch (c)
-    {
-        case '\n':
-        {
+    switch (c) {
+
+        case '\n': {
             *dest = 'n';
             return true;
         }
 
+        case '\0': {
+            *dest = '0';
+            return true;
+        }
     }
 
     *dest = c;
