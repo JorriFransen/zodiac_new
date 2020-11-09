@@ -1,8 +1,8 @@
 
 std :: import std;
 
-#foreign puts :: func(cstr: *u8) -> s64
-#foreign printf :: func(fmt: *u8) -> s64
+#foreign puts :: func(cstr: *u8) -> s32
+#foreign printf :: func(fmt: *u8) -> s32
 
 main :: func() -> s64
 {

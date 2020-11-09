@@ -25,6 +25,9 @@ namespace Zodiac
         result.frame_pointer = 0;
         result.ip = {};
 
+        result.global_data = nullptr;
+        result.ffi = ffi_create(allocator);
+
         result.null_pointer = nullptr;
 
         result.exit_code = 0;
@@ -33,7 +36,8 @@ namespace Zodiac
     }
 
     void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func,
-                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info)
+                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info,
+                           Array<Bytecode_Function *> foreign_functions)
     {
         assert(entry_func->blocks.count);
 
@@ -44,6 +48,7 @@ namespace Zodiac
         };
 
         interpreter_initialize_globals(interp, global_data_size, global_info);
+        interpreter_initialize_foreigns(interp, foreign_functions);
 
         interp_stack_push(interp, 0); // fp
         Instruction_Pointer empty_ip = {};
@@ -803,6 +808,16 @@ namespace Zodiac
 
     }
 
+    void interpreter_initialize_foreigns(Interpreter *interp,
+                                         Array<Bytecode_Function *> foreign_functions)
+    {
+        for (int64_t i = 0; i < foreign_functions.count; i++) {
+            auto func = foreign_functions[i];
+            bool found = ffi_load_function(&interp->ffi, string_ref(func->name));
+            assert(found);
+        }
+    }
+
     void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
                                               int64_t arg_count, Bytecode_Value *result_value)
     {
@@ -811,6 +826,8 @@ namespace Zodiac
             assert(result_value->kind == Bytecode_Value_Kind::TEMP);
             assert(func->type->function.return_type);
         }
+
+        ffi_reset(&interp->ffi);
 
         auto old_fp = interp->frame_pointer;
         interp->frame_pointer = interp->sp;
@@ -848,9 +865,7 @@ namespace Zodiac
         }
 
 
-        ffi_call(&interp->ffi, func, return_val_ptr, return_type);
-
-        assert(false);
+        ffi_call(&interp->ffi, string_ref(func->name), return_val_ptr, return_type);
     }
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)

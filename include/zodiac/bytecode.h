@@ -243,6 +243,7 @@ namespace Zodiac
         Bytecode_Block *insert_block = nullptr;
 
         Array<Bytecode_Function_Info> functions = {};
+        Array<Bytecode_Function *> foreign_functions = {};
         Array<Bytecode_Global_Info> globals = {};
 
         int64_t global_data_size = 0;

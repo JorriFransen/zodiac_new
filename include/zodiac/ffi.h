@@ -3,17 +3,31 @@
 #include "ast.h"
 #include "bytecode.h"
 
+#include <dyncall.h>
+#include <dynload.h>
+
 #include <bits/stdint-uintn.h>
 
 namespace Zodiac
 {
-
     struct FFI_Context
     {
+        Allocator *allocator = nullptr;
 
+        DCCallVM *dc_vm = nullptr;
+
+        Hash_Table<String, DCpointer> functions = {};
+
+        Array<DLLib *> libs = {};
     };
 
-    void ffi_call(FFI_Context *ffi, Bytecode_Function *func, uint8_t *return_val_ptr,
+    FFI_Context ffi_create(Allocator *allocator);
+
+    bool ffi_load_function(FFI_Context *ffi, const String &name);
+    
+
+    void ffi_call(FFI_Context *ffi, const String &name, uint8_t *return_val_ptr,
                   AST_Type *return_type);
+    void ffi_reset(FFI_Context *ffi);
     void ffi_push_arg(FFI_Context *ffi, uint8_t *arg_ptr, AST_Type *type);
 }

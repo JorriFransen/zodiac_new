@@ -42,10 +42,13 @@ namespace Zodiac
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data);
 
     void interpreter_start(Interpreter *interp, Bytecode_Function *entry_func,
-                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info);
+                           int64_t global_data_size, Array<Bytecode_Global_Info> global_info,
+                           Array<Bytecode_Function *> foreign_functions);
 
     void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
                                         Array<Bytecode_Global_Info> global_info);
+    void interpreter_initialize_foreigns(Interpreter *interp,
+                                         Array<Bytecode_Function *> foreign_functions);
 
     void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
                                               int64_t arg_count, Bytecode_Value *result_value);

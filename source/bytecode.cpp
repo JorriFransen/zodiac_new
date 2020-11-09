@@ -22,6 +22,7 @@ namespace Zodiac
         result.current_function = nullptr;
 
         array_init(allocator, &result.functions);
+        array_init(allocator, &result.foreign_functions);
         array_init(allocator, &result.globals);
 
         result.global_data_size = 0;
@@ -71,7 +72,8 @@ namespace Zodiac
             auto param_decl = decl->function.parameter_declarations[i];
             assert(param_decl->kind == AST_Declaration_Kind::PARAMETER);
 
-            bytecode_parameter_new(builder, result, param_decl->type, param_decl->identifier->atom);
+            bytecode_parameter_new(builder, result, param_decl->type,
+                                   param_decl->identifier->atom);
         }
 
 
@@ -115,7 +117,10 @@ namespace Zodiac
         builder->next_temp_index = 0;
 
         if (func->flags & BC_FUNC_FLAG_FOREIGN) {
-            assert(false && "register the func here, so we can load it on startup...");
+            for (int64_t i = 0; i < builder->foreign_functions.count; i++) {
+                assert(builder->foreign_functions[i] != func);
+            }
+            array_append(&builder->foreign_functions, func);
             return func;
         }
 

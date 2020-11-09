@@ -60,7 +60,8 @@ int main(int argc, char **argv)
 
         interpreter_start(&interp, build_data.bc_bytecode_entry_function,
                           resolver.bytecode_builder.global_data_size,
-                          resolver.bytecode_builder.globals);
+                          resolver.bytecode_builder.globals,
+                          resolver.bytecode_builder.foreign_functions);
 
         printf("Interpreter exited with code: %" PRId64 "\n", interp.exit_code);
 
