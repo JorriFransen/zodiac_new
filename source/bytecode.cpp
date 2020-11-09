@@ -26,6 +26,7 @@ namespace Zodiac
         array_init(allocator, &result.globals);
 
         result.global_data_size = 0;
+        result.run_wrapper_count = 0;
 
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
@@ -195,6 +196,48 @@ namespace Zodiac
         return global_info;
     }
 
+    Bytecode_Function *bytecode_emit_run_wrapper(Bytecode_Builder *builder, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::RUN);
+
+        auto run_expr = decl->run.expression;
+        assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+        AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
+                                                               run_expr->type);
+        assert(wrapper_type);
+
+        auto ta = temp_allocator_get();
+        String _wrapper_name = string_append(ta, string_ref("_run_wrapper_"),
+                                             string_from_int(ta, builder->run_wrapper_count));
+        builder->run_wrapper_count += 1;
+        Atom wrapper_name = atom_get(&builder->build_data->atom_table, _wrapper_name);
+
+        Bytecode_Function *result = bytecode_new_function(builder, wrapper_type, wrapper_name);
+
+        builder->current_function = result;
+        builder->parameters.count = 0;
+        builder->locals.count = 0;
+        builder->next_temp_index = 0;
+
+        Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
+        bytecode_append_block(builder, result, entry_block);
+        bytecode_set_insert_point(builder, entry_block);
+
+        Bytecode_Value *return_value = bytecode_emit_expression(builder, decl->run.expression);
+        if (run_expr->type->kind == AST_Type_Kind::VOID) {
+            bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+        } else {
+            assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
+            bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
+        }
+
+        auto index = builder->functions.count;
+        array_append(&builder->functions, { decl, result, index });
+
+        return result;
+    }
+
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)
     {
         Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
@@ -303,6 +346,7 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::ENUM: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::POLY_TYPE: assert(false); //@@TODO: Implement!
+            case AST_Declaration_Kind::RUN: assert(false);
             case AST_Declaration_Kind::STATIC_IF: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false); //@@TODO: Implement!
         }

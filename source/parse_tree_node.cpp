@@ -35,29 +35,24 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
     assert(ptn);
     free_ptn(allocator, &ptn->self);
 
-    if (ptn->identifier)
-    {
+    if (ptn->identifier) {
         free_ptn(allocator, ptn->identifier);
     }
 
-    switch (ptn->kind)
-    {
+    switch (ptn->kind) {
         case Declaration_PTN_Kind::INVALID: assert(false);
 
-        case Declaration_PTN_Kind::IMPORT:
-        {
+        case Declaration_PTN_Kind::IMPORT: {
             free_ptn(allocator, ptn->import.module_ident_expr);
             break;
         }
 
-        case Declaration_PTN_Kind::USING:
-        {
+        case Declaration_PTN_Kind::USING: {
             free_ptn(allocator, ptn->using_decl.ident_expr);
             break;
         }
 
-        case Declaration_PTN_Kind::VARIABLE:
-        {
+        case Declaration_PTN_Kind::VARIABLE: {
             if (ptn->variable.init_expression)
                 free_ptn(allocator, ptn->variable.init_expression);
 
@@ -66,8 +61,7 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::CONSTANT:
-        {
+        case Declaration_PTN_Kind::CONSTANT: {
             if (ptn->constant.type_expression)
                 free_ptn(allocator, ptn->constant.type_expression);
 
@@ -75,24 +69,21 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::FUNCTION:
-        {
+        case Declaration_PTN_Kind::FUNCTION: {
             free_ptn(allocator, ptn->function.prototype);
             if (ptn->function.body) free_ptn(allocator, ptn->function.body);
             break;
         }
 
-        case Declaration_PTN_Kind::STRUCT:
-        {
-            for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++)
-            {
+        case Declaration_PTN_Kind::STRUCT: {
+
+            for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++) {
                 free_ptn(allocator, ptn->structure.member_declarations[i]);
             }
 
             array_free(&ptn->structure.member_declarations);
 
-            for (int64_t i = 0; i < ptn->structure.parameters.count; i++)
-            {
+            for (int64_t i = 0; i < ptn->structure.parameters.count; i++) {
                 free_ptn(allocator, ptn->structure.parameters[i]);
             }
 
@@ -100,40 +91,39 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::ENUM:
-        {
-            for (int64_t i = 0; i < ptn->enum_decl.members.count; i++)
-            {
+        case Declaration_PTN_Kind::ENUM: {
+
+            for (int64_t i = 0; i < ptn->enum_decl.members.count; i++) {
                 free_ptn(allocator, ptn->enum_decl.members[i]);
             }
             array_free(&ptn->enum_decl.members);
             break;
         }
 
-        case Declaration_PTN_Kind::TYPEDEF:
-        {
+        case Declaration_PTN_Kind::TYPEDEF: {
             free_ptn(allocator, ptn->typedef_decl.type_expression);
             break;
         }
 
-        case Declaration_PTN_Kind::STATIC_IF:
-        {
+        case Declaration_PTN_Kind::RUN: {
+            free_ptn(allocator, ptn->run.expression);
+            break;
+        }
+
+        case Declaration_PTN_Kind::STATIC_IF: {
             free_ptn(allocator, ptn->static_if.cond_expression);
 
-            for (int64_t i = 0; i < ptn->static_if.then_declarations.count; i++)
-            {
+            for (int64_t i = 0; i < ptn->static_if.then_declarations.count; i++) {
                 free_ptn(allocator, ptn->static_if.then_declarations[i]);
             }
 
-            for (int64_t i = 0; i < ptn->static_if.else_declarations.count; i++)
-            {
+            for (int64_t i = 0; i < ptn->static_if.else_declarations.count; i++) {
                 free_ptn(allocator, ptn->static_if.else_declarations[i]);
             }
             break;
         }
 
-        case Declaration_PTN_Kind::STATIC_ASSERT:
-        {
+        case Declaration_PTN_Kind::STATIC_ASSERT: {
             free_ptn(allocator, ptn->static_assert_decl.cond_expression);
             break;
         }
@@ -145,8 +135,7 @@ void free_ptn(Allocator *allocator, Function_Proto_PTN *ptn)
     assert(ptn);
     free_ptn(allocator, &ptn->self);
 
-    for (int64_t i = 0; i < ptn->parameters.count; i++)
-    {
+    for (int64_t i = 0; i < ptn->parameters.count; i++) {
         free_ptn(allocator, ptn->parameters[i]);
     }
 
@@ -661,6 +650,16 @@ Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN 
     return result;
 }
 
+Declaration_PTN *new_run_declaration_ptn(Allocator *allocator, Expression_PTN *run_expr,
+                                         const File_Pos &begin_fp, const File_Pos &end_fp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Declaration_PTN_Kind::RUN;
+    result->run.expression = run_expr;
+
+    return result;
+}
+
 Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
                                                Expression_PTN *cond_expr,
                                                Array<Declaration_PTN *> then_decls,
@@ -963,6 +962,8 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
             assert(false);
             break;
         }
+
+        case Declaration_PTN_Kind::RUN: assert(false);
 
         case Declaration_PTN_Kind::STATIC_IF: assert(false);
         case Declaration_PTN_Kind::STATIC_ASSERT: assert(false);
@@ -1468,6 +1469,8 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_expression_ptn(decl->typedef_decl.type_expression, 0);
             break;
         }
+
+        case Declaration_PTN_Kind::RUN: assert(false);
 
         case Declaration_PTN_Kind::STATIC_IF: {
             print_indent(indent);

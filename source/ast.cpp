@@ -344,13 +344,11 @@ namespace Zodiac
                 break;
             }
 
-            case Declaration_PTN_Kind::ENUM:
-            {
+            case Declaration_PTN_Kind::ENUM: {
                 AST_Type_Spec *ast_ts = nullptr;
 
                 auto ptn_ts = (PTN*)ptn->enum_decl.type_spec;
-                if (ptn_ts)
-                {
+                if (ptn_ts) {
                     ast_ts = ast_create_type_spec_from_ptn(ast_builder, ptn_ts);
                 }
 
@@ -361,8 +359,7 @@ namespace Zodiac
                                             parent_scope,
                                             ptn->enum_decl.members.count);
 
-                for (int64_t i = 0; i < ptn->enum_decl.members.count; i++)
-                {
+                for (int64_t i = 0; i < ptn->enum_decl.members.count; i++) {
                     auto ptn_mem = ptn->enum_decl.members[i];
                     auto ast_member = ast_create_enum_member_from_ptn(ast_builder, ptn_mem);
                     assert(ast_member->kind == AST_Declaration_Kind::CONSTANT);
@@ -378,8 +375,7 @@ namespace Zodiac
                 break;
             }
 
-            case Declaration_PTN_Kind::TYPEDEF:
-            {
+            case Declaration_PTN_Kind::TYPEDEF: {
                 auto type_spec =
                     ast_create_type_spec_from_expression_ptn(ast_builder,
                                                   ptn->typedef_decl.type_expression);
@@ -391,8 +387,15 @@ namespace Zodiac
                 break;
             }
 
-            case Declaration_PTN_Kind::STATIC_IF:
-            {
+            case Declaration_PTN_Kind::RUN: {
+                auto expression = ast_create_expression_from_ptn(ast_builder, ptn->run.expression);
+                result = ast_run_declaration_new(ast_builder->allocator, expression,
+                                                 ptn->self.begin_file_pos,
+                                                 ptn->self.end_file_pos);
+                break;
+            }
+
+            case Declaration_PTN_Kind::STATIC_IF: {
                 auto cond_expr = ast_create_expression_from_ptn(ast_builder,
                                                                 ptn->static_if.cond_expression);
 
@@ -405,8 +408,7 @@ namespace Zodiac
                 Scope *then_scope = scope_new(ast_builder->allocator, Scope_Kind::STATIC_IF,
                                               parent_scope);
 
-                for (int64_t i = 0; i < ptn->static_if.then_declarations.count; i++)
-                {
+                for (int64_t i = 0; i < ptn->static_if.then_declarations.count; i++) {
                     auto ptn_decl = ptn->static_if.then_declarations[i];
                     auto ast_decl = ast_create_declaration_from_ptn(ast_builder, ptn_decl,
                                                                     var_decls, then_scope);
@@ -419,14 +421,12 @@ namespace Zodiac
                                                     ptn->static_if.else_declarations.count);
 
                 Scope *else_scope = nullptr;
-                if (ptn->static_if.else_declarations.count)
-                {
+                if (ptn->static_if.else_declarations.count) {
                     else_scope = scope_new(ast_builder->allocator, Scope_Kind::STATIC_IF,
                                            parent_scope);
                 }
 
-                for (int64_t i = 0; i < ptn->static_if.else_declarations.count; i++)
-                {
+                for (int64_t i = 0; i < ptn->static_if.else_declarations.count; i++) {
                     auto ptn_decl = ptn->static_if.else_declarations[i];
                     auto ast_decl = ast_create_declaration_from_ptn(ast_builder, ptn_decl,
                                                                     var_decls, else_scope);
@@ -442,8 +442,7 @@ namespace Zodiac
                 break;
             }
 
-            case Declaration_PTN_Kind::STATIC_ASSERT:
-            {
+            case Declaration_PTN_Kind::STATIC_ASSERT: {
                 auto cond_expr =
                     ast_create_expression_from_ptn(ast_builder,
                                                    ptn->static_assert_decl.cond_expression);
@@ -1652,6 +1651,16 @@ namespace Zodiac
         return result;
     }
 
+    AST_Declaration *ast_run_declaration_new(Allocator *allocator, AST_Expression *expression,
+                                             const File_Pos &bfp, const File_Pos &efp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::RUN, nullptr,
+                                          bfp, efp);
+        result->run.expression = expression;
+
+        return result;
+    }
+
     AST_Declaration *ast_static_if_declaration_new(Allocator *allocator, AST_Expression *cond_expr,
                                                    Array<AST_Declaration *> then_decls,
                                                    Array<AST_Declaration *> else_decls,
@@ -2346,6 +2355,7 @@ namespace Zodiac
     {
         assert(decl->identifier ||
                decl->kind == AST_Declaration_Kind::USING ||
+               decl->kind == AST_Declaration_Kind::RUN ||
                decl->kind == AST_Declaration_Kind::STATIC_IF ||
                decl->kind == AST_Declaration_Kind::STATIC_ASSERT);
 
@@ -2581,6 +2591,8 @@ namespace Zodiac
                 }
                 break;
             }
+
+            case AST_Declaration_Kind::RUN: assert(false);
 
             case AST_Declaration_Kind::STATIC_IF: {
                 printf("#if (");
@@ -3201,6 +3213,7 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::RUN: assert(false);
             case AST_Declaration_Kind::STATIC_IF: assert(false);
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);

@@ -34,7 +34,7 @@ void parsed_file_init(Parser *parser, Parsed_File *pf)
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
 {
     Parsed_File result = {};
-    
+
     parsed_file_init(parser, &result);
     parser_parse_file(parser, ts, &result);
 
@@ -93,12 +93,33 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     bool is_noreturn = false;
     bool is_foreign = false;
 
-    if (parser_is_token(ts, TOK_POUND) && ts->peek_token(1).kind == TOK_KW_IF)
-    {
-        return parser_parse_static_if_declaration(parser, ts);
-    }
-    else if (parser_is_token(ts, TOK_AT) && ts->peek_token(1).kind == TOK_IDENTIFIER)
-    {
+    if (parser_is_token(ts, TOK_POUND)) {
+        auto pt = ts->peek_token(1);
+        if (pt.kind == TOK_KW_IF) {
+            return parser_parse_static_if_declaration(parser, ts);
+        } else if (pt.kind == TOK_IDENTIFIER && pt.atom == Builtin::atom_run) {
+            auto bfp = ts->current_token().begin_file_pos;
+            ts->next_token();
+            ts->next_token();
+
+            Expression_PTN *run_expression = parser_parse_expression(parser, ts, false);
+            if (!run_expression) return nullptr;
+
+            auto efp = ts->current_token().end_file_pos;
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) return nullptr;
+
+            if (run_expression->kind != Expression_PTN_Kind::CALL) {
+                zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID_RUN, bfp, efp,
+                                     "#run at top level must be a call expression");
+                return nullptr;
+            }
+
+            auto result = new_run_declaration_ptn(parser->allocator, run_expression, bfp, efp);
+            result->self.flags |= PTN_FLAG_SEMICOLON;
+            return result;
+        }
+
+    } else if (parser_is_token(ts, TOK_AT) && ts->peek_token(1).kind == TOK_IDENTIFIER) {
         // Static assert on declaration level
 
         auto bfp = ts->current_token().begin_file_pos;
@@ -118,32 +139,23 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
 
         auto result = new_static_assert_declaration_ptn(parser->allocator, cond_expr, bfp, efp);
 
-        if (parser_match_token(ts, TOK_SEMICOLON))
-        {
+        if (parser_match_token(ts, TOK_SEMICOLON)) {
             result->self.flags |= PTN_FLAG_SEMICOLON;
         }
 
         return result;
     }
 
-    while (ts->current_token().kind == TOK_POUND)
-    {
+    while (ts->current_token().kind == TOK_POUND) {
         auto directive_tok = ts->next_token();
-        if (directive_tok.atom == Builtin::atom_naked)
-        {
+        if (directive_tok.atom == Builtin::atom_naked) {
             is_naked = true;
-        }
-        else if (directive_tok.atom == Builtin::atom_noreturn)
-        {
+        } else if (directive_tok.atom == Builtin::atom_noreturn) {
             is_noreturn = true;
-        }
-        else if (directive_tok.atom == Builtin::atom_foreign)
-        {
+        } else if (directive_tok.atom == Builtin::atom_foreign) {
             is_foreign = true;
-        }
-        else 
-        {
-            zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID_DIRECTIVE, 
+        } else {
+            zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID_DIRECTIVE,
                                 directive_tok.begin_file_pos, directive_tok.end_file_pos,
                                 "Invalid directive: '#%s'", directive_tok.atom.data);
             return nullptr;
@@ -151,8 +163,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
         ts->next_token();
     }
 
-    if (ts->current_token().kind == TOK_KW_USING)
-    {
+    if (ts->current_token().kind == TOK_KW_USING) {
         auto begin_fp = ts->current_token().begin_file_pos;
         ts->next_token();
         auto import_expr = parser_parse_expression(parser, ts);
@@ -160,8 +171,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
 
         auto end_fp = ts->current_token().end_file_pos;
 
-        if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-        {
+        if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) {
             return nullptr;
         }
 
@@ -240,7 +250,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
         else if (parser_is_token(ts, TOK_KW_TYPEDEF))
         {
             ts->next_token();
-            auto type_expr = parser_parse_expression(parser, ts); 
+            auto type_expr = parser_parse_expression(parser, ts);
             assert(type_expr);
 
             result = new_typedef_declaration_ptn(parser->allocator, identifier,
@@ -377,7 +387,7 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
 
             for (int64_t i = 1; i < identifiers.count; i++)
             {
-                auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl); 
+                auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl);
                 assert(mem_decl);
                 assert(mem_decl->kind == Declaration_PTN_Kind::VARIABLE ||
                        mem_decl->kind == Declaration_PTN_Kind::CONSTANT);
@@ -467,7 +477,7 @@ Declaration_PTN *parser_parse_union_declaration(Parser *parser, Token_Stream *ts
 
             for (int64_t i = 1; i < identifiers.count; i++)
             {
-                auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl); 
+                auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl);
                 assert(mem_decl);
                 assert(mem_decl->kind == Declaration_PTN_Kind::VARIABLE ||
                        mem_decl->kind == Declaration_PTN_Kind::CONSTANT);
@@ -634,8 +644,8 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
         array_append(&else_decls, else_if_decl);
 
         auto result = new_static_if_declaration_ptn(parser->allocator, cond_expr, then_decls,
-                                                    else_decls, begin_fp, 
-                                                    else_if_decl->self.end_file_pos); 
+                                                    else_decls, begin_fp,
+                                                    else_if_decl->self.end_file_pos);
         result->self.flags |= PTN_FLAG_SEMICOLON;
         return result;
 
@@ -803,7 +813,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     }
                 }
 
-                end_fp = ts->current_token().end_file_pos; 
+                end_fp = ts->current_token().end_file_pos;
             }
 
             if (!block_statements.count) array_free(&block_statements);
@@ -1059,7 +1069,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     Statement_PTN *init_stmt =
                         new_declaration_statement_ptn(parser->allocator, init_decl,
                                                       init_decl->self.begin_file_pos,
-                                                      init_decl->self.end_file_pos); 
+                                                      init_decl->self.end_file_pos);
 
                     Expression_PTN *cond_expr = parser_parse_expression(parser, ts);
                     assert(cond_expr);
@@ -1435,7 +1445,7 @@ Array<Switch_Case_Expression_PTN> parser_parse_case_expressions(Parser *parser, 
 
     while (!parser_is_token(ts, TOK_COLON))
     {
-        Expression_PTN *expr = parser_parse_expression(parser, ts); 
+        Expression_PTN *expr = parser_parse_expression(parser, ts);
 
         Expression_PTN *range_end_expr = nullptr;
         if (parser_match_token(ts, TOK_DOT_DOT))
@@ -1471,7 +1481,7 @@ Expression_PTN *parser_parse_cmp_expression(Parser *parser, Token_Stream *ts, bo
         auto op = parser_parse_cmp_op(ts);
         auto rhs = parser_parse_add_expression(parser, ts, is_type);
         assert(rhs);
-        
+
         auto begin_fp = lhs->self.begin_file_pos;
         auto end_fp = rhs->self.end_file_pos;
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs, begin_fp, end_fp);
@@ -1491,7 +1501,7 @@ Expression_PTN *parser_parse_add_expression(Parser *parser, Token_Stream *ts, bo
         auto op = parser_parse_add_op(ts);
         auto rhs = parser_parse_mul_expression(parser, ts, is_type);
         assert(rhs);
-        
+
         auto begin_fp = lhs->self.begin_file_pos;
         auto end_fp = rhs->self.end_file_pos;
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs, begin_fp, end_fp);
@@ -1562,7 +1572,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
                 // This should probably be written as this anyways:
                 // p2 := cast(Vec3(float), {4, 5, 6 });
                 // or whatever the cast syntax will be
-                
+
                 //if (!is_type && parser_match_token(ts, TOK_LBRACE))
                 //{
                     //auto expr_list = parser_parse_expression_list(parser, ts);
@@ -1638,7 +1648,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
 
             auto begin_fp = null_tok.begin_file_pos;
             auto end_fp = null_tok.end_file_pos;
-            
+
             result = new_null_literal_expression_ptn(parser->allocator, begin_fp, end_fp);
             break;
         };
@@ -1667,7 +1677,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             auto expr_list= parser_parse_expression_list(parser, ts);
             assert(expr_list);
             auto end_fp = ts->current_token().end_file_pos;
-            if (!parser_expect_token(parser, ts, TOK_RBRACE)) 
+            if (!parser_expect_token(parser, ts, TOK_RBRACE))
             {
                 assert(false);
             }
@@ -2202,4 +2212,4 @@ void parsed_file_print(Parsed_File *parsed_file)
     }
 }
 
-} 
+}

@@ -238,29 +238,28 @@ namespace Zodiac
             if (resolver->build_data->redeclaration_error) break;
 
             auto bytecode_job_count = queue_count(&resolver->emit_bytecode_job_queue);
-            while (bytecode_job_count--)
-            {
+            while (bytecode_job_count--) {
+
                 auto job = queue_dequeue(&resolver->emit_bytecode_job_queue);
                 bool job_done = try_resolve_job(resolver, job);
 
-                if (!job_done)
-                {
+                if (!job_done) {
                     queue_enqueue(&resolver->emit_bytecode_job_queue, job);
-                }
-                else
-                {
-                    if (job->ast_node->kind == AST_Node_Kind::DECLARATION)
-                    {
+
+                } else {
+                    if (job->ast_node->kind == AST_Node_Kind::DECLARATION) {
+
                         auto decl = static_cast<AST_Declaration*>(job->ast_node);
-                        if (decl->kind == AST_Declaration_Kind::FUNCTION)
-                        {
+
+                        if (decl->kind == AST_Declaration_Kind::FUNCTION) {
                             assert(job->result.bc_func);
-                            if (job->ast_node == resolver->entry_decl)
-                            {
+
+                            if (job->ast_node == resolver->entry_decl) {
+
                                 auto exe_file_name = resolver->first_file_name.data;
                                 auto options = resolver->build_data->options;
-                                if (options->exe_file_name.data)
-                                {
+                                if (options->exe_file_name.data) {
+
                                     exe_file_name = options->exe_file_name.data;
                                 }
 
@@ -268,25 +267,27 @@ namespace Zodiac
                                     queue_emit_llvm_binary_job(resolver, exe_file_name);
                             }
 
-                            if (!options->dont_emit_llvm)
-                            {
+                            if (!options->dont_emit_llvm) {
                                 auto bc_func = job->result.bc_func;
                                 bool is_entry = (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY);
 
-                                if (!(options->link_c && is_entry))
-                                {
+                                if (!(options->link_c && is_entry)) {
                                     queue_emit_llvm_func_job(resolver, bc_func);
                                 }
                             }
-                        }
-                        else if (decl->kind == AST_Declaration_Kind::VARIABLE)
-                        {
+                        } else if (decl->kind == AST_Declaration_Kind::VARIABLE) {
                             assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
                             if (!options->dont_emit_llvm)
                                 queue_emit_llvm_global_job(resolver, job->result.bc_global);
+
+                        } else if (decl->kind == AST_Declaration_Kind::RUN) {
+                            assert(false && "TODO: queue run_bytecode jobs");
+                            // queue_emit_run_bytecode_job(resolver, job->result.bc_func);
+                        } else {
+                            assert(false);
                         }
                     }
-
                     free_job(resolver, job);
                 }
             } }
@@ -573,34 +574,39 @@ namespace Zodiac
             {
                 auto node = job->ast_node;
                 if (node->kind == AST_Node_Kind::TYPE &&
-                    !(node->flags & AST_NODE_FLAG_SIZED))
-                {
+                    !(node->flags & AST_NODE_FLAG_SIZED)) {
+
                     result = false;
                     assert(false);
-                }
-                else if (!(node->flags & AST_NODE_FLAG_TYPED))
-                {
+
+                } else if (!(node->flags & AST_NODE_FLAG_TYPED)) {
+
                     result = false;
-                }
-                else
-                {
+
+                } else {
                     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
                     auto decl = static_cast<AST_Declaration*>(job->ast_node);
 
-                    if (decl->kind == AST_Declaration_Kind::FUNCTION)
-                    {
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
                         assert(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE);
 
                         auto bc_func =
                             bytecode_emit_function_declaration(&resolver->bytecode_builder, decl);
                         job->result.bc_func = bc_func;
-                    }
-                    else if (decl->kind == AST_Declaration_Kind::VARIABLE)
-                    {
+
+                    } else if (decl->kind == AST_Declaration_Kind::VARIABLE) {
                         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
                         auto bc_glob = bytecode_emit_global_variable(&resolver->bytecode_builder,
                                                                      decl);
                         job->result.bc_global = bc_glob;
+                    } else if (decl->kind == AST_Declaration_Kind::RUN){
+                        auto bc_func = bytecode_emit_run_wrapper(&resolver->bytecode_builder,
+                                                                 decl);
+                        assert(bc_func);
+                        job->result.bc_func = bc_func;
+                    } else {
+                        assert(false);
                     }
                     result = true;
                 }
@@ -1016,44 +1022,39 @@ namespace Zodiac
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
-            case AST_Declaration_Kind::STATIC_IF:
-            {
+            case AST_Declaration_Kind::RUN: {
+                result = try_resolve_identifiers(resolver, ast_decl->run.expression, scope);
+                break;
+            }
+
+            case AST_Declaration_Kind::STATIC_IF: {
                 auto cond_expr = ast_decl->static_if.cond_expression;
 
-                if (!try_resolve_identifiers(resolver, cond_expr, scope))
-                {
+                if (!try_resolve_identifiers(resolver, cond_expr, scope)) {
                     result = false;
-                }
-                else
-                {
+                } else {
                     queue_type_job(resolver, cond_expr, scope);
                 }
 
-                if (!(cond_expr->flags & AST_NODE_FLAG_TYPED))
-                {
+                if (!(cond_expr->flags & AST_NODE_FLAG_TYPED)) {
                     result = false;
                     break;
                 }
 
                 Const_Value cond_val = const_interpret_expression(cond_expr);
 
-                if (cond_val.boolean)
-                {
+                if (cond_val.boolean) {
                     auto then_decls = ast_decl->static_if.then_declarations;
-                    for (int64_t i = 0; i < then_decls.count; i++)
-                    {
+                    for (int64_t i = 0; i < then_decls.count; i++) {
                         if (!try_resolve_identifiers(resolver, then_decls[i],
                                                      ast_decl->static_if.then_scope))
                         {
                             result = false;
                         }
                     }
-                }
-                else
-                {
+                } else {
                     auto else_decls = ast_decl->static_if.else_declarations;
-                    for (int64_t i = 0; i < else_decls.count; i++)
-                    {
+                    for (int64_t i = 0; i < else_decls.count; i++) {
                         if (!try_resolve_identifiers(resolver, else_decls[i],
                                                      ast_decl->static_if.else_scope))
                         {
@@ -1065,8 +1066,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::STATIC_ASSERT:
-            {
+            case AST_Declaration_Kind::STATIC_ASSERT: {
                 if (!try_resolve_identifiers(resolver,
                                              ast_decl->static_assert_decl.cond_expression,
                                              scope))
@@ -2291,23 +2291,19 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM:
-            {
+            case AST_Declaration_Kind::ENUM: {
                 AST_Type *base_type = nullptr;
 
                 result = true;
 
-                if (ast_decl->enum_decl.type_spec)
-                {
+                if (ast_decl->enum_decl.type_spec) {
                     if (!try_resolve_types(resolver, ast_decl->enum_decl.type_spec,
                                            scope, &base_type, nullptr))
                     {
                         result = false;
                         break;
                     }
-                }
-                else
-                {
+                } else {
                     base_type = Builtin::type_u64;
                 }
 
@@ -2318,12 +2314,10 @@ namespace Zodiac
                                                           scope);
 
                 auto mem_decls = ast_decl->enum_decl.member_declarations;
-                for (int64_t i = 0; i < mem_decls.count; i++)
-                {
+                for (int64_t i = 0; i < mem_decls.count; i++) {
                     auto mem_decl = mem_decls[i];
                     assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
-                    if (mem_decl->constant.type_spec == nullptr)
-                    {
+                    if (mem_decl->constant.type_spec == nullptr) {
                         mem_decl->constant.type_spec =
                             ast_type_spec_from_type_new(resolver->allocator, enum_type);
                     }
@@ -2331,21 +2325,18 @@ namespace Zodiac
                     bool mem_res = try_resolve_types(resolver, mem_decl,
                                                      ast_decl->enum_decl.member_scope);
                     if (!mem_res) result = false;
-                    else
-                    {
+                    else {
                         assert(mem_decl->type == enum_type);
                     }
                 }
 
-                if (result)
-                {
+                if (result) {
                     result = resolver_assign_enum_initializers(resolver, ast_decl,
                                                                enum_type);
                     assert(result);
                 }
 
-                if (result)
-                {
+                if (result) {
                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
                    ast_decl->type = enum_type;
                 }
@@ -2354,14 +2345,40 @@ namespace Zodiac
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
-            case AST_Declaration_Kind::STATIC_IF:
-            {
+            case AST_Declaration_Kind::RUN: {
+                auto run_expr = ast_decl->run.expression;
+                assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+                result = try_resolve_types(resolver, ast_decl->run.expression, scope);
+
+                if (result) {
+                    auto args = run_expr->call.arg_expressions;
+                    for (int64_t i = 0; i < args.count; i++) {
+                        assert(args[i]->expr_flags & AST_EXPR_FLAG_CONST);
+                    }
+                }
+
+                if (result) {
+                    ast_decl->flags |= AST_NODE_FLAG_TYPED;
+                    ast_decl->type = ast_decl->run.expression->type;
+
+                    if (resolver->build_data->options->verbose) {
+                        auto fp = run_expr->begin_file_pos;
+                        printf("Queing bytecode for run directive from: %s:%ld:%ld\n",
+                               fp.file_name.data, fp.line, fp.column);
+                    }
+                    queue_emit_bytecode_job(resolver, ast_decl, scope);
+
+                }
+                break;
+            }
+
+            case AST_Declaration_Kind::STATIC_IF: {
                 result = true;
 
                 auto cond_expr = ast_decl->static_if.cond_expression;
 
-                if (!try_resolve_types(resolver, cond_expr, scope))
-                {
+                if (!try_resolve_types(resolver, cond_expr, scope)) {
                     result = false;
                     break;
                 }
@@ -2374,41 +2391,29 @@ namespace Zodiac
                 auto then_scope = ast_decl->static_if.then_scope;
                 auto else_scope = ast_decl->static_if.else_scope;
 
-                if (cond_val.boolean)
-                {
-                    for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++)
-                    {
+                if (cond_val.boolean) {
+                    for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++) {
                         auto decl = ast_decl->static_if.then_declarations[i];
 
-                        if (!try_resolve_types(resolver, decl, then_scope))
-                        {
+                        if (!try_resolve_types(resolver, decl, then_scope)) {
                             result = false;
-                        }
-                        else if (!resolver_import_from_static_if(resolver, decl, scope))
-                        {
+                        } else if (!resolver_import_from_static_if(resolver, decl, scope)) {
                             result = false;
                         }
                     }
-                }
-                else
-                {
-                    for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++)
-                    {
+                } else {
+                    for (int64_t i = 0; i < ast_decl->static_if.else_declarations.count; i++) {
                         auto decl = ast_decl->static_if.else_declarations[i];
 
-                        if (!try_resolve_types(resolver, decl, else_scope))
-                        {
+                        if (!try_resolve_types(resolver, decl, else_scope)) {
                             result = false;
-                        }
-                        else if (!resolver_import_from_static_if(resolver, decl, scope))
-                        {
+                        } else if (!resolver_import_from_static_if(resolver, decl, scope)) {
                             result = false;
                         }
                     }
                 }
 
-                if (result)
-                {
+                if (result) {
                     ast_decl->flags |= AST_NODE_FLAG_TYPED;
                 }
 
@@ -3874,28 +3879,26 @@ namespace Zodiac
             case AST_Node_Kind::MODULE: assert(false);
             case AST_Node_Kind::IDENTIFIER: assert(false);
 
-            case AST_Node_Kind::DECLARATION:
-            {
+            case AST_Node_Kind::DECLARATION: {
                 auto decl = static_cast<AST_Declaration*>(ast_node);
-                switch (decl->kind)
-                {
+
+                switch (decl->kind) {
                     case AST_Declaration_Kind::INVALID: assert(false);
                     case AST_Declaration_Kind::IMPORT: assert(false);
 
                     case AST_Declaration_Kind::USING: assert(false);
 
-                    case AST_Declaration_Kind::VARIABLE:
-                    {
+                    case AST_Declaration_Kind::VARIABLE: {
+
                         result = try_resolve_sizes(resolver, decl->type, scope);
-                        if (result && decl->variable.init_expression)
-                        {
+
+                        if (result && decl->variable.init_expression) {
                             result = try_resolve_sizes(resolver,
                                                        decl->variable.init_expression,
                                                        scope);
                         }
 
-                        if (result)
-                            ast_node->flags |= AST_NODE_FLAG_SIZED;
+                        if (result) ast_node->flags |= AST_NODE_FLAG_SIZED;
                         break;
                     }
 
@@ -3910,6 +3913,7 @@ namespace Zodiac
 
                     case AST_Declaration_Kind::ENUM: assert(false);
 
+                    case AST_Declaration_Kind::RUN: assert(false);
                     case AST_Declaration_Kind::STATIC_IF: assert(false);
 
                     case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
@@ -3923,15 +3927,13 @@ namespace Zodiac
             case AST_Node_Kind::EXPRESSION: assert(false);
             case AST_Node_Kind::TYPE_SPEC: assert(false);
 
-            case AST_Node_Kind::TYPE:
-            {
+            case AST_Node_Kind::TYPE: {
                 result = try_resolve_sizes(resolver, static_cast<AST_Type*>(ast_node), scope);
                 break;
             }
         }
 
-        if (result)
-        {
+        if (result) {
             assert(ast_node->flags & AST_NODE_FLAG_SIZED);
         }
 
@@ -3944,8 +3946,7 @@ namespace Zodiac
         assert(ast_type);
         assert(scope);
 
-        if (ast_type->flags & AST_NODE_FLAG_SIZED)
-        {
+        if (ast_type->flags & AST_NODE_FLAG_SIZED) {
             assert(ast_type->bit_size > 0 ||
                    ast_type->kind == AST_Type_Kind::VOID);
             return true;
@@ -4816,8 +4817,9 @@ namespace Zodiac
 
                     if (!resolver->build_data->options->dont_emit_llvm)
                         llvm_register_function(&resolver->llvm_builder, bc_func);
+
+                    queue_emit_bytecode_job(resolver, decl, scope);
                 }
-                queue_emit_bytecode_job(resolver, decl, scope);
 
                 if (decl->kind == AST_Declaration_Kind::FUNCTION)
                 {

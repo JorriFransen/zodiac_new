@@ -81,7 +81,7 @@ namespace Zodiac
         S_TO_F       = 0x37,
         U_TO_F       = 0x38,
         F_TO_F       = 0x39,
-        
+
         SIZEOF       = 0x3a,
         OFFSETOF     = 0x3b,
 
@@ -251,6 +251,7 @@ namespace Zodiac
         Array<Bytecode_Global_Info> globals = {};
 
         int64_t global_data_size = 0;
+        int64_t run_wrapper_count = 0;
 
         Bytecode_Function *current_function = nullptr;
         // Holds parameters for the function currently being emitted
@@ -270,6 +271,7 @@ namespace Zodiac
                                                           AST_Declaration *decl);
     Bytecode_Global_Info bytecode_emit_global_variable(Bytecode_Builder *builder,
                                                   AST_Declaration *decl);
+    Bytecode_Function *bytecode_emit_run_wrapper(Bytecode_Builder *builder, AST_Declaration *decl);
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name);
     void bytecode_append_block(Bytecode_Builder *builder, Bytecode_Function *function,

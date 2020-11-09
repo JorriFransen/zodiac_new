@@ -1,0 +1,16 @@
+
+std :: import std;
+
+main :: func() -> s64
+{
+    std.println("rundirective main...");
+    return 0;
+}
+
+test :: func ()
+{
+    std.println("rundirective test...");
+    return;
+}
+
+#run test();

@@ -83,6 +83,7 @@ namespace Zodiac
 
         POLY_TYPE,
 
+        RUN,
         STATIC_IF,
         STATIC_ASSERT,
     };
@@ -178,6 +179,11 @@ namespace Zodiac
             {
                 AST_Identifier *specification_identifier;
             } poly_type;
+
+            struct 
+            {
+                AST_Expression *expression;
+            } run;
 
             struct
             {
@@ -685,6 +691,9 @@ namespace Zodiac
                                                    AST_Identifier *spec_ident,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
+
+    AST_Declaration *ast_run_declaration_new(Allocator *allocator, AST_Expression *expression,
+                                             const File_Pos &bfp, const File_Pos &efp);
 
     AST_Declaration *ast_static_if_declaration_new(Allocator *allocator, AST_Expression *cond_expr,
                                                    Array<AST_Declaration *> then_decls,

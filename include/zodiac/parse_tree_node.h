@@ -197,6 +197,7 @@ enum class Declaration_PTN_Kind
     ENUM,
     TYPEDEF,
 
+    RUN,
     STATIC_IF,
     STATIC_ASSERT,
 };
@@ -255,6 +256,11 @@ struct Declaration_PTN
             Expression_PTN *type_expression;
             Expression_PTN *init_expression;
         } constant;
+
+        struct
+        {
+            Expression_PTN *expression;
+        } run;
 
         struct
         {
@@ -516,6 +522,9 @@ Declaration_PTN *new_constant_declaration_ptn(Allocator *allocator, Identifier_P
 
 Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN *ident_expr,
                                            const File_Pos &begin_fp, const File_Pos &end_fp);
+
+Declaration_PTN *new_run_declaration_ptn(Allocator *allocator, Expression_PTN *run_expr,
+                                         const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
                                                Expression_PTN *cond_expr,
