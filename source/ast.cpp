@@ -2558,14 +2558,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM:
-            {
+            case AST_Declaration_Kind::ENUM: {
                 printf(" :: enum\n");
                 ast_print_indent(indent);
                 printf("{\n");
 
-                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++)
-                {
+                for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++) {
                     auto mem_decl = ast_decl->enum_decl.member_declarations[i];
                     ast_print_declaration(mem_decl, indent + 1);
                 }
@@ -2575,8 +2573,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::POLY_TYPE:
-            {
+            case AST_Declaration_Kind::POLY_TYPE: {
                 if (ast_decl->poly_type.specification_identifier)
                 {
                     printf("/");
@@ -2585,9 +2582,47 @@ namespace Zodiac
                 break;
             }
             
-            case AST_Declaration_Kind::STATIC_IF: assert(false);
+            case AST_Declaration_Kind::STATIC_IF: {
+                printf("#if (");
+                ast_print_expression(ast_decl->static_if.cond_expression, 0);
+                printf(") {\n");
 
-            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+                for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++) {
+                    auto decl = ast_decl->static_if.then_declarations[i];
+                    ast_print_declaration(decl, indent + 1);
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                        printf("\n");
+                    }
+                }
+                
+                ast_print_indent(indent);
+                printf("}");
+
+                auto else_decls = ast_decl->static_if.else_declarations;
+
+                if (else_decls.count == 1 && 
+                    else_decls[0]->kind == AST_Declaration_Kind::STATIC_IF) {
+                    printf(" else ");
+                    ast_print_declaration(else_decls[0], 0);
+                } else {
+                    printf(" else {\n");
+                    for (int64_t i = 0; i < else_decls.count; i++) {
+                        ast_print_declaration(else_decls[i], indent + 1);
+                    }
+                    printf("\n");
+                    ast_print_indent(indent);
+                    printf("}\n");
+                }
+
+                break;
+            }
+
+            case AST_Declaration_Kind::STATIC_ASSERT: {
+                printf("static_assert(");
+                ast_print_expression(ast_decl->static_assert_decl.cond_expression, 0);
+                printf(");");
+                break;
+            }
         }
     }
 
@@ -2596,17 +2631,14 @@ namespace Zodiac
     {
         ast_print_indent(indent);
 
-        switch (ast_stmt->kind)
-        {
+        switch (ast_stmt->kind) {
             case AST_Statement_Kind::INVALID: assert(false);
 
-            case AST_Statement_Kind::BLOCK:
-            {
+            case AST_Statement_Kind::BLOCK: {
                 printf("\n");
                 ast_print_indent(indent);
                 printf("{\n");
-                for (int64_t i = 0; i < ast_stmt->block.statements.count; i++)
-                {
+                for (int64_t i = 0; i < ast_stmt->block.statements.count; i++) {
                     if (i > 0) printf("\n");
                     ast_print_statement(ast_stmt->block.statements[i], indent + 1);
                 }
@@ -2617,20 +2649,16 @@ namespace Zodiac
                 break;  
             }
 
-            case AST_Statement_Kind::ASSIGNMENT:
-            {
+            case AST_Statement_Kind::ASSIGNMENT: {
                 ast_print_expression(ast_stmt->assignment.identifier_expression, 0);
                 printf(" = ");
                 ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
-                if (newline) printf("\n");
-                break;
+                if (newline) printf("\n"); break;
             }
 
-            case AST_Statement_Kind::RETURN:
-            {
+            case AST_Statement_Kind::RETURN: {
                 printf("return");
-                if (ast_stmt->expression)
-                {
+                if (ast_stmt->expression) {
                     printf(" ");
                     ast_print_expression(ast_stmt->expression, 0);
                 }
@@ -2638,8 +2666,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::BREAK:
-            {
+            case AST_Statement_Kind::BREAK: {
                 printf("break;");
                 if (newline) printf("\n");
                 break;
@@ -2913,10 +2940,8 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY:
-            {
-                switch(ast_expr->unary.op)
-                {
+            case AST_Expression_Kind::UNARY: {
+                switch(ast_expr->unary.op) {
                     case UNOP_INVALID: assert(false); break;
                     case UNOP_DEREF: printf("<"); break;
                     case UNOP_MINUS: printf("-"); break;
@@ -2926,12 +2951,10 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CALL: 
-            {
+            case AST_Expression_Kind::CALL: {
                 ast_print_expression(ast_expr->call.ident_expression, 0);
                 printf("(");
-                for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++)
-                {
+                for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++) {
                     if (i > 0) printf(", ");
                     ast_print_expression(ast_expr->call.arg_expressions[i], 0);
                 }
@@ -2939,25 +2962,32 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: {
+                printf("%s", ast_expr->builtin_call.identifier->atom.data);
+                printf("(");
+                for (int64_t i = 0; i < ast_expr->builtin_call.arg_expressions.count; i++) {
+                    if (i > 0) printf(", ");
+                    ast_print_expression(ast_expr->builtin_call.arg_expressions[i], 0);
+                }
+                printf(")");
+                break;
+            }
 
-            case AST_Expression_Kind::ADDROF:
-            {
+            case AST_Expression_Kind::ADDROF: {
                 printf("*");
                 ast_print_expression(ast_expr->addrof.operand_expr, 0);
                 break;
             }
 
-            case AST_Expression_Kind::COMPOUND:
-            {
-                if (ast_expr->compound.type_spec)
-                {
+            case AST_Expression_Kind::COMPOUND: {
+
+                if (ast_expr->compound.type_spec) {
                     ast_print_type_spec(ast_expr->compound.type_spec);
                     printf(" ");
                 }
+
                 printf("{");
-                for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++)
-                {
+                for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++) {
                     if (i > 0) printf(", ");
                     else printf(" ");
 
@@ -2967,8 +2997,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::SUBSCRIPT:
-            {
+            case AST_Expression_Kind::SUBSCRIPT: {
                 ast_print_expression(ast_expr->subscript.pointer_expression, indent);
                 printf("[");
                 ast_print_expression(ast_expr->subscript.index_expression, 0);
@@ -2976,8 +3005,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CAST:
-            {
+            case AST_Expression_Kind::CAST: {
                 printf("@compiler_cast(");
                 ast_print_type(ast_expr->cast.target_type);
                 printf(", ");
