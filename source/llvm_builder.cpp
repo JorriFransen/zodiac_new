@@ -934,7 +934,9 @@ namespace Zodiac
             }
         }
 
-        if (options->print_llvm) builder->llvm_module->dump();
+        if (options->print_llvm) {
+            builder->llvm_module->print(llvm::outs(), nullptr, false, true);
+        }
 
         bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
 

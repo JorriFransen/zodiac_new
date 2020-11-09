@@ -1,6 +1,4 @@
 
-print_llvm is printint to stderr, it should print to stdout
-
 /* @sizeof/@offsetof should use llvm types to get this information in the llvm
  backend, right now it is emitted into bytecode as literals, so there is no way
  to know in the llvm backend when sizeof/offsetof happened. */
