@@ -1,4 +1,6 @@
 
+print_llvm is printint to stderr, it should print to stdout
+
 /* @sizeof/@offsetof should use llvm types to get this information in the llvm
  backend, right now it is emitted into bytecode as literals, so there is no way
  to know in the llvm backend when sizeof/offsetof happened. */
@@ -7,8 +9,6 @@ cstr[i] != 0 in strlen(), std.zdc
 Here the inferred type of cstr[i] is s64, but it should really be u8, and the
  zero literal should infer that. If we decide to actually do upcasting in cases
  like this, we should at least retain the sign if possible.
-
-Get rid of LOAD_PARAM bytecode
 
 Warn when main is missing
 Warn on empty files
