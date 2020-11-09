@@ -46,7 +46,7 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
 
         case Declaration_PTN_Kind::IMPORT:
         {
-            free_ptn(allocator, ptn->import.module_ident_expr); 
+            free_ptn(allocator, ptn->import.module_ident_expr);
             break;
         }
 
@@ -61,7 +61,7 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             if (ptn->variable.init_expression)
                 free_ptn(allocator, ptn->variable.init_expression);
 
-            if (ptn->variable.type_expression) 
+            if (ptn->variable.type_expression)
                 free_ptn(allocator, ptn->variable.type_expression);
             break;
         }
@@ -99,7 +99,7 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             array_free(&ptn->structure.parameters);
             break;
         }
-        
+
         case Declaration_PTN_Kind::ENUM:
         {
             for (int64_t i = 0; i < ptn->enum_decl.members.count; i++)
@@ -149,7 +149,7 @@ void free_ptn(Allocator *allocator, Function_Proto_PTN *ptn)
     {
         free_ptn(allocator, ptn->parameters[i]);
     }
-    
+
     array_free(&ptn->parameters);
 
     if (ptn->return_type_expression) free_ptn(allocator, ptn->return_type_expression);
@@ -285,7 +285,7 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
 {
     assert(ptn);
     free_ptn(allocator, &ptn->self);
-    
+
     switch (ptn->kind)
     {
         case Expression_PTN_Kind::INVALID: assert(false);
@@ -391,7 +391,7 @@ Identifier_PTN *new_identifier_ptn(Allocator *allocator, const Atom& atom, const
     return result;
 }
 
-Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements, 
+Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN*> statements,
                                        const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::BLOCK, begin_fp, end_fp);
@@ -399,7 +399,7 @@ Statement_PTN *new_block_statement_ptn(Allocator *allocator, Array<Statement_PTN
     return result;
 }
 
-Statement_PTN *new_expression_statement_ptn(Allocator *allocator, Expression_PTN *expr, 
+Statement_PTN *new_expression_statement_ptn(Allocator *allocator, Expression_PTN *expr,
                                             const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     auto result = new_statement(allocator, Statement_PTN_Kind::EXPRESSION, begin_fp, end_fp);
@@ -601,7 +601,7 @@ Declaration_PTN *new_union_declaration_ptn(Allocator *allocator,
     result->union_decl.member_declarations = members;
     result->union_decl.parameters = parameters;
     return result;
-   
+
 }
 
 Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
@@ -623,8 +623,8 @@ Declaration_PTN *new_enum_declaration_ptn(Allocator *allocator,
 
 Declaration_PTN *new_typedef_declaration_ptn(Allocator *allocator,
                                              Identifier_PTN *identifier,
-                                             Expression_PTN *type_expr, 
-                                             const File_Pos &begin_fp, 
+                                             Expression_PTN *type_expr,
+                                             const File_Pos &begin_fp,
                                              const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
@@ -661,7 +661,7 @@ Declaration_PTN *new_using_declaration_ptn(Allocator *allocator, Expression_PTN 
     return result;
 }
 
-Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator, 
+Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
                                                Expression_PTN *cond_expr,
                                                Array<Declaration_PTN *> then_decls,
                                                Array<Declaration_PTN *> else_decls,
@@ -810,7 +810,7 @@ Expression_PTN *new_boolean_literal_expression_ptn(Allocator *allocator, bool va
     return result;
 }
 
-Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator, 
+Expression_PTN *new_null_literal_expression_ptn(Allocator *allocator,
                                                 const File_Pos &begin_file_pos,
                                                 const File_Pos &end_file_pos)
 {
@@ -947,7 +947,7 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
 
             assert(type_expr_copy);
             if (decl->variable.init_expression) assert(init_expr_copy);
-            
+
             return new_variable_declaration_ptn(allocator, ident_copy, type_expr_copy,
                                                 init_expr_copy, decl->self.begin_file_pos,
                                                 decl->self.end_file_pos);
@@ -1242,7 +1242,7 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
                 if (else_stmt->kind == Statement_PTN_Kind::IF)
                 {
                     printf("\n");
-                }                    
+                }
                 else if (else_stmt->kind != Statement_PTN_Kind::BLOCK)
                 {
                     printf("\n");
@@ -1445,14 +1445,12 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             break;
         }
 
-        case Declaration_PTN_Kind::ENUM:
-        {
+        case Declaration_PTN_Kind::ENUM: {
             print_indent(indent);
             printf("%s :: enum\n", decl->identifier->atom.data);
             print_indent(indent);
             printf("{\n");
-            for (int64_t i = 0; i < decl->enum_decl.members.count; i++)
-            {
+            for (int64_t i = 0; i < decl->enum_decl.members.count; i++) {
                 auto mem_decl = decl->enum_decl.members[i];
                 print_ptn(mem_decl, indent + 4);
 
@@ -1464,16 +1462,50 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             break;
         }
 
-        case Declaration_PTN_Kind::TYPEDEF:
-        {
+        case Declaration_PTN_Kind::TYPEDEF: {
             print_indent(indent);
             printf("%s :: typedef ", decl->identifier->atom.data);
-            print_expression_ptn(decl->typedef_decl.type_expression, 0); 
+            print_expression_ptn(decl->typedef_decl.type_expression, 0);
             break;
         }
 
-        case Declaration_PTN_Kind::STATIC_IF: assert(false);
-        case Declaration_PTN_Kind::STATIC_ASSERT: assert(false);
+        case Declaration_PTN_Kind::STATIC_IF: {
+            print_indent(indent);
+            printf("#if (");
+            print_expression_ptn(decl->static_if.cond_expression, 0);
+            printf(") {\n");
+
+            for (int64_t i = 0; i < decl->static_if.then_declarations.count; i++) {
+                print_declaration_ptn(decl->static_if.then_declarations[i], indent + 4);
+            }
+
+            printf("}");
+
+            if (decl->static_if.else_declarations.count == 1 &&
+                decl->static_if.else_declarations[0]->kind == Declaration_PTN_Kind::STATIC_IF) {
+                printf(" else ");
+                print_declaration_ptn(decl->static_if.else_declarations[0], 0);
+            } else if (decl->static_if.else_declarations.count) {
+                printf(" else {\n");
+                for (int64_t i = 0; i < decl->static_if.else_declarations.count; i++) {
+                    print_declaration_ptn(decl->static_if.else_declarations[i], indent + 4);
+                }
+                print_indent(indent);
+                printf("}\n");
+            }
+
+            printf("\n");
+
+            break;
+        }
+
+        case Declaration_PTN_Kind::STATIC_ASSERT: {
+            print_indent(indent);
+            printf("static_assert(");
+            print_expression_ptn(decl->static_assert_decl.cond_expression, 0);
+            printf(");\n");
+            break;
+        }
     }
 }
 
@@ -1517,13 +1549,13 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             switch (expression->binary.op)
             {
                 case BINOP_INVALID:    assert(false);
-                case BINOP_EQ:         printf(" == "); break; 
-                case BINOP_NEQ:        printf(" != "); break; 
-                case BINOP_LT:         printf(" < "); break; 
-                case BINOP_LTEQ:       printf(" <= "); break; 
-                case BINOP_GT:         printf(" > "); break; 
-                case BINOP_GTEQ:       printf(" >= "); break; 
-                case BINOP_ADD:        printf(" + "); break; 
+                case BINOP_EQ:         printf(" == "); break;
+                case BINOP_NEQ:        printf(" != "); break;
+                case BINOP_LT:         printf(" < "); break;
+                case BINOP_LTEQ:       printf(" <= "); break;
+                case BINOP_GT:         printf(" > "); break;
+                case BINOP_GTEQ:       printf(" >= "); break;
+                case BINOP_ADD:        printf(" + "); break;
                 case BINOP_SUB:        printf(" - "); break;
                 case BINOP_REMAINDER:  printf(" %% "); break;
                 case BINOP_MUL:        printf("  *"); break;
@@ -1587,7 +1619,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
                 }
                 else
                 {
-                    printf("%c", c); 
+                    printf("%c", c);
                 }
             }
             printf("\"");
@@ -1607,7 +1639,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         case Expression_PTN_Kind::COMPOUND:
         {
             print_indent(indent);
-            if (expression->compound.type_expression) 
+            if (expression->compound.type_expression)
             {
                 print_expression_ptn(expression->compound.type_expression, 0);
                 printf(" ");
