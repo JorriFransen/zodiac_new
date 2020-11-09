@@ -1047,10 +1047,11 @@ namespace Zodiac
             assert(args.count == 1);
 
             auto type = args[0]->type;
-            assert(type->bit_size % 8 == 0);
 
-            Integer_Literal il = { .s64 = (int64_t)(type->bit_size / 8) };
-            return bytecode_integer_literal_new(builder, Builtin::type_s64, il);
+            auto type_val = bytecode_type_value_new(builder, type);
+            auto result = bytecode_temporary_new(builder, Builtin::type_s64);
+            bytecode_emit_instruction(builder, SIZEOF, type_val, nullptr, result);
+            return result;
 
         } else if (name == Builtin::atom_offsetof) {
             assert(args.count == 2);
@@ -1064,7 +1065,7 @@ namespace Zodiac
             auto mem_decl = mem_name->identifier->declaration;
             assert(mem_decl);
 
-            int64_t offset = 0;
+            int64_t member_index = 0;
             bool found = false;
 
             for (int64_t i = 0; i < struct_decl->structure.member_declarations.count; i++)
@@ -1073,22 +1074,24 @@ namespace Zodiac
                 if (struct_mem == mem_decl)
                 {
                     found = true;
+                    member_index = i;
                     break;
                 }
-
-                auto mem_type = struct_mem->type;
-                assert(mem_type);
-
-                auto mem_size = mem_type->bit_size;
-                assert(mem_size % 8 == 0);
-
-                offset += mem_size / 8;
             }
 
             assert(found);
 
-            Integer_Literal il = { .s64 = offset };
-            return bytecode_integer_literal_new(builder, Builtin::type_s64, il);
+            auto struct_type = struct_decl->type;
+            assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+            auto type_val = bytecode_type_value_new(builder, struct_type);
+            Integer_Literal index_literal = { .s64 = member_index };
+            auto member_index_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
+                                                                 index_literal);
+            auto result = bytecode_temporary_new(builder, Builtin::type_s64);
+
+            bytecode_emit_instruction(builder, OFFSETOF, type_val, member_index_val, result);
+            return result;
         }
         else assert(false);
 
@@ -1295,6 +1298,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+            case Bytecode_Value_Kind::TYPE: assert(false);
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }
@@ -1338,6 +1342,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+            case Bytecode_Value_Kind::TYPE: assert(false);
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
 
@@ -1645,6 +1650,12 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Value *bytecode_type_value_new(Bytecode_Builder *builder, AST_Type *type)
+    {
+        auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TYPE, type);
+        return result;
+    }
+
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder)
     {
         String_Builder sb = {};
@@ -1837,6 +1848,9 @@ namespace Zodiac
             case U_TO_F: string_builder_append(sb, "U_TO_F "); break;
             case F_TO_F: string_builder_append(sb, "F_TO_F "); break;
 
+            case SIZEOF:   string_builder_append(sb, "SIZEOF "); break;
+            case OFFSETOF: string_builder_append(sb, "OFFSETOF "); break;
+
             case EXIT:    string_builder_append(sb, "EXIT "); break;
             case SYSCALL: string_builder_append(sb, "SYSCALL "); break;
         }
@@ -1984,6 +1998,8 @@ namespace Zodiac
                 string_builder_appendf(sb, "%s", value->block->name.data);
                 break;
             }
+
+            case Bytecode_Value_Kind::TYPE: assert(false);
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }

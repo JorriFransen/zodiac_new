@@ -81,9 +81,12 @@ namespace Zodiac
         S_TO_F       = 0x37,
         U_TO_F       = 0x38,
         F_TO_F       = 0x39,
+        
+        SIZEOF       = 0x3a,
+        OFFSETOF     = 0x3b,
 
-        EXIT         = 0x3a,
-        SYSCALL      = 0x3b,
+        EXIT         = 0x3c,
+        SYSCALL      = 0x3d,
     };
 
     enum class Bytecode_Value_Kind
@@ -103,6 +106,7 @@ namespace Zodiac
 
         FUNCTION,
         BLOCK,
+        TYPE,
 
         SWITCH_DATA,
     };
@@ -344,6 +348,7 @@ namespace Zodiac
     Bytecode_Value *bytecode_function_value_new(Bytecode_Builder *builder,
                                                 Bytecode_Function *func);
     Bytecode_Value *bytecode_block_value_new(Bytecode_Builder *builder, Bytecode_Block *block);
+    Bytecode_Value *bytecode_type_value_new(Bytecode_Builder *builder, AST_Type *type);
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);

@@ -8,12 +8,22 @@ main :: func() -> s64
 {
     std.print("offsetof test\n");
 
+    v3 : Vec3;
+    v3d : Vec3d;
+
     std.print("\n@offsetof(x, Vec3) = ");
     std.print_num(@offsetof(x, Vec3));
     std.print("\n@offsetof(y, Vec3) = ");
     std.print_num(@offsetof(y, Vec3));
     std.print("\n@offsetof(z, Vec3) = ");
     std.print_num(@offsetof(z, Vec3));
+
+    std.print("\n\n@offsetof(x, Vec3d) = ");
+    std.print_num(@offsetof(x, Vec3d));
+    std.print("\n@offsetof(y, Vec3d) = ");
+    std.print_num(@offsetof(y, Vec3d));
+    std.print("\n@offsetof(z, Vec3d) = ");
+    std.print_num(@offsetof(z, Vec3d));
 
     std.print("\n");
     return 0;

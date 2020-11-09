@@ -52,6 +52,7 @@ namespace Zodiac
         result.llvm_context = new llvm::LLVMContext();
         result.llvm_module = new llvm::Module("root_module", *result.llvm_context);
         result.llvm_builder = new llvm::IRBuilder<>(*result.llvm_context);
+        result.llvm_datalayout = new llvm::DataLayout(result.llvm_module);
 
         stack_init(allocator, &result.arg_stack);
 
@@ -647,6 +648,53 @@ namespace Zodiac
                 break;
             }
 
+            case SIZEOF: {
+                assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+
+                assert(inst->a->type->bit_size % 8 == 0);
+                auto bc_size = inst->a->type->bit_size / 8;
+
+                llvm::Type *llvm_type = llvm_type_from_ast(builder, inst->a->type);
+                auto llvm_size = builder->llvm_datalayout->getTypeAllocSize(llvm_type);
+                assert(llvm_size == bc_size);
+
+                llvm::Type *result_type = llvm_type_from_ast(builder, inst->result->type);
+
+                result = llvm::ConstantInt::get(result_type, llvm_size, true);
+                break;
+            }
+
+            case OFFSETOF: {
+                assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+                AST_Type *struct_type = inst->a->type;
+                assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+                assert(inst->b->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(inst->b->type == Builtin::type_s64);
+
+                auto llvm_type = llvm_type_from_ast<llvm::StructType>(builder, struct_type);
+
+                auto index = inst->b->integer_literal.s64;
+
+                const llvm::StructLayout *struct_layout =
+                    builder->llvm_datalayout->getStructLayout(llvm_type);
+                int64_t offset = struct_layout->getElementOffset(index);
+
+#ifndef NDEBUG
+                int64_t bc_offset = 0;
+                for (int64_t i = 0; i < index; i++) {
+                    auto bit_size = struct_type->structure.member_types[i]->bit_size;
+                    assert(bit_size % 8 == 0);
+                    bc_offset += (bit_size / 8);
+                }
+                assert(offset == bc_offset);
+#endif
+
+                llvm::Type *result_type = llvm_type_from_ast(builder, inst->result->type);
+                result = llvm::ConstantInt::get(result_type, offset, true);
+                break;
+            }
+
             case EXIT: {
                 llvm::Value *exit_code_val = llvm_emit_value(builder, inst->a);
                 llvm_emit_exit(builder, exit_code_val);
@@ -778,6 +826,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::FUNCTION: assert(false);
             case Bytecode_Value_Kind::BLOCK: assert(false);
+            case Bytecode_Value_Kind::TYPE: assert(false);
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }

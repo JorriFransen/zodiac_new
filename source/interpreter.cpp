@@ -736,6 +736,41 @@ namespace Zodiac
                      break;
                 }
 
+                case SIZEOF: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(inst->a->type->bit_size % 8 == 0);
+                    int64_t size = inst->a->type->bit_size / 8;
+
+                    interp_store(result_addr, size);
+                    break;
+                }
+
+                case OFFSETOF: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+                    assert(inst->b->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                    assert(inst->b->type == Builtin::type_s64);
+
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    int64_t index = inst->b->integer_literal.s64;
+                    int64_t offset = 0;
+
+                    AST_Type *struct_type = inst->a->type;
+                    assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+                    for (int64_t i = 0; i < index; i++) {
+                        auto bit_size = struct_type->structure.member_types[i]->bit_size;
+                        assert(bit_size % 8 == 0);
+                        offset += (bit_size / 8);
+                    }
+
+                    interp_store(result_addr, offset);
+
+                    break;
+                }
+
                 case EXIT: {
                     assert(inst->a);
 
@@ -1009,6 +1044,7 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::INVALID:
             case Bytecode_Value_Kind::BLOCK:
+            case Bytecode_Value_Kind::TYPE:
             case Bytecode_Value_Kind::SWITCH_DATA:
             case Bytecode_Value_Kind::FUNCTION: assert(false);
         }

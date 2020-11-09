@@ -37,6 +37,7 @@ namespace Zodiac
         llvm::LLVMContext *llvm_context = nullptr;
         llvm::Module *llvm_module = nullptr;
         llvm::IRBuilder<> *llvm_builder = nullptr;
+        llvm::DataLayout *llvm_datalayout = nullptr;
 
         Array<LLVM_Function_Info> registered_functions = {};
         Array<llvm::GlobalVariable *> globals = {};
