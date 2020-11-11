@@ -50,11 +50,12 @@ namespace Zodiac
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
-        // interp_stack_push(interp, (int64_t)0); // total_arg_size 
-        interp_stack_push(interp, interp->sp); // fp
+        interp_stack_push(interp, (int64_t)0); // total_arg_size 
+        interp->frame_pointer += sizeof(int64_t);
+        interp_stack_push(interp, (int64_t)-1); // fp
         Instruction_Pointer empty_ip = {};
         interp_stack_push(interp, empty_ip);
-        // interp_stack_push(interp, nullptr); // ret_val_ptr
+        interp_stack_push(interp, nullptr); // ret_val_ptr
 
         for (int64_t i = 0; i < entry_func->locals.count; i++)
         {
@@ -437,14 +438,19 @@ namespace Zodiac
                     int64_t offset = 0;
                     int64_t old_fp = *(int64_t*)(&interp->stack[interp->frame_pointer]);
 
-                    offset += sizeof(old_fp);
-                    interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer + offset]);
+                    if (old_fp != -1) {
+                        offset += sizeof(old_fp);
+                        interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer + offset]);
+                        interp->sp = interp->frame_pointer;
+                        interp->frame_pointer = old_fp;
 
-                    interp->sp = interp->frame_pointer;
-                    interp->frame_pointer = old_fp;
+                        int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
+                        interp->sp -= total_arg_size;
 
-                    int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
-                    interp->sp -= total_arg_size;
+                    } else {
+                        interp->running = false; 
+                        advance_ip = false;
+                    }
                     break;
                 }
 

@@ -49,7 +49,7 @@ namespace Zodiac
         }
         assert(func_type);
 
-        // printf("[BYTECODE] registering function: %s\n", decl->identifier->atom.data);
+        printf("[BYTECODE] registering function: %s\n", decl->identifier->atom.data);
 
         auto ex_func = bytecode_find_function(builder, decl);
 
@@ -95,9 +95,6 @@ namespace Zodiac
 
         auto func = bytecode_find_function(builder, decl);
         assert(func);
-
-        // printf("[BYTECODE] emitting function: %s\n", decl->identifier->atom.data);
-
         auto bd = builder->build_data;
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
@@ -115,6 +112,13 @@ namespace Zodiac
         {
             func->flags |= BC_FUNC_FLAG_FOREIGN;
         }
+
+        if (func->flags & BC_FUNC_FLAG_EMITTED) {
+            return func;
+        }
+
+        printf("[BYTECODE] emitting function: %s\n", decl->identifier->atom.data);
+
 
         builder->current_function = func;
         builder->parameters.count = 0;
@@ -157,6 +161,7 @@ namespace Zodiac
 
         bytecode_emit_statement(builder, decl->function.body);
 
+        func->flags |= BC_FUNC_FLAG_EMITTED;
         return func;
     }
 
@@ -206,6 +211,9 @@ namespace Zodiac
         auto run_expr = decl->run.expression;
         assert(run_expr->kind == AST_Expression_Kind::CALL);
 
+        printf("[BYTECODE] Emitting run wrapper calling: '%s'\n",
+               run_expr->call.callee_declaration->identifier->atom.data);
+
         AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
                                                                run_expr->type);
         assert(wrapper_type);
@@ -228,16 +236,12 @@ namespace Zodiac
         bytecode_set_insert_point(builder, entry_block);
 
         Bytecode_Value *return_value = bytecode_emit_expression(builder, decl->run.expression);
-        // if (run_expr->type->kind == AST_Type_Kind::VOID) {
-        //     bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
-        // } else {
-        //     assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
-        //     bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
-        // }
-        assert(return_value || decl->run.expression->type->kind == AST_Type_Kind::VOID);
-        Integer_Literal il = { .s64 = 0 };
-        Bytecode_Value *zero_val = bytecode_integer_literal_new(builder, Builtin::type_s64, il);
-        bytecode_emit_instruction(builder, EXIT, zero_val, nullptr, nullptr);
+        if (run_expr->type->kind == AST_Type_Kind::VOID) {
+            bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+        } else {
+            assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
+            bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
+        }
 
         auto index = builder->functions.count;
         array_append(&builder->functions, { decl, result, index });
