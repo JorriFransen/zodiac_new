@@ -63,6 +63,7 @@ namespace Zodiac
         Queue<Resolve_Job*> type_job_queue = {};
         Queue<Resolve_Job*> size_job_queue = {};
         Queue<Resolve_Job*> emit_bytecode_job_queue = {};
+        Queue<Resolve_Job*> run_bytecode_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_func_job_queue = {};
         Queue<Resolve_Job*> emit_llvm_binary_job_queue = {};
 
@@ -89,6 +90,7 @@ namespace Zodiac
         TYPE,
         SIZE,
         EMIT_BYTECODE,
+        RUN_BYTECODE,
         EMIT_LLVM_FUNC,
         EMIT_LLVM_GLOB,
         EMIT_LLVM_BINARY,
@@ -204,6 +206,7 @@ namespace Zodiac
     void queue_type_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_size_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope);
+    void queue_run_bytecode_job(Resolver *resolver, Bytecode_Function *bc_func);
     void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func);
     void queue_emit_llvm_global_job(Resolver *resolver, Bytecode_Global_Info bc_glob);
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name);
@@ -211,6 +214,8 @@ namespace Zodiac
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind);
     Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind, AST_Node *ast_node,
                                  Scope *scope);
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind,
+                                 Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_new(Allocator *allocator, Bytecode_Global_Info bc_val);
     Resolve_Job *resolve_job_new(Allocator *allocator, const char *output_file_name);
@@ -221,6 +226,7 @@ namespace Zodiac
     Resolve_Job *resolve_job_size_new(Allocator *allocator, AST_Node *ast_node, Scope *scope);
     Resolve_Job *resolve_job_emit_bytecode_new(Allocator *allocator, AST_Node *ast_node,
                                                Scope *scope);
+    Resolve_Job *resolve_job_run_bytecode_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func);
     Resolve_Job *resolve_job_emit_llvm_global_new(Allocator *allocator,
                                                   Bytecode_Global_Info bc_val);

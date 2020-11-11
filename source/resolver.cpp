@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "builtin.h"
 #include "const_interpreter.h"
+#include "interpreter.h"
 #include "scope.h"
 #include "os.h"
 #include "temp_allocator.h"
@@ -58,6 +59,7 @@ namespace Zodiac
         queue_init(allocator, &resolver->type_job_queue);
         queue_init(allocator, &resolver->size_job_queue);
         queue_init(allocator, &resolver->emit_bytecode_job_queue);
+        queue_init(allocator, &resolver->run_bytecode_job_queue);
         queue_init(allocator, &resolver->emit_llvm_func_job_queue);
         queue_init(allocator, &resolver->emit_llvm_binary_job_queue);
 
@@ -282,8 +284,7 @@ namespace Zodiac
                                 queue_emit_llvm_global_job(resolver, job->result.bc_global);
 
                         } else if (decl->kind == AST_Declaration_Kind::RUN) {
-                            assert(false && "TODO: queue run_bytecode jobs");
-                            // queue_emit_run_bytecode_job(resolver, job->result.bc_func);
+                            queue_run_bytecode_job(resolver, job->result.bc_func);
                         } else {
                             assert(false);
                         }
@@ -291,6 +292,17 @@ namespace Zodiac
                     free_job(resolver, job);
                 }
             } }
+
+            { ZoneScopedNC("llvm_jobs", 0xff00ff)
+
+                auto run_bytecode_job_count = queue_count(&resolver->run_bytecode_job_queue);
+                while (run_bytecode_job_count--) {
+                    auto job = queue_dequeue(&resolver->run_bytecode_job_queue);
+                    bool job_done = try_resolve_job(resolver, job);
+                    assert(job_done);
+                    free_job(resolver, job);
+                }
+            }
 
             { ZoneScopedNC("llvm_jobs", 0x0000ff)
 
@@ -410,21 +422,17 @@ namespace Zodiac
 
         bool result = false;
 
-        switch (job->kind)
-        {
+        switch (job->kind) {
             case Resolve_Job_Kind::INVALID: assert(false);
 
-            case Resolve_Job_Kind::PARSE:
-            {
+            case Resolve_Job_Kind::PARSE: {
                 ZoneScopedNC("try_resolve_job (PARSE)", 0x0000ff)
 
                 bool done = false;
 
-                for (int64_t i = 0; i < resolver->parsed_modules.count; i++)
-                {
+                for (int64_t i = 0; i < resolver->parsed_modules.count; i++) {
                     auto &pm = resolver->parsed_modules[i];
-                    if (string_equal(pm.full_path, job->parse.module_path))
-                    {
+                    if (string_equal(pm.full_path, job->parse.module_path)) {
                         job->result.ast_module = pm.ast;
                         result = true;
                         done = true;
@@ -437,14 +445,12 @@ namespace Zodiac
                 Parsed_File epf = {};
                 bool append = false;
 
-                if (job->parse.insert_entry_module)
-                {
+                if (job->parse.insert_entry_module) {
                     append = true;
 
                     Lexed_File lf_entry = lexer_lex_file(&resolver->lexer,
                                                          resolver->entry_module_path);
-                    if (!lf_entry.valid)
-                    {
+                    if (!lf_entry.valid) {
                         result = false;
                         break;
                     }
@@ -452,8 +458,7 @@ namespace Zodiac
                     Token_Stream *ets = lexer_new_token_stream(resolver->allocator, &lf_entry);
 
                     epf = parser_parse_file(&resolver->parser, ets);
-                    if (!epf.valid)
-                    {
+                    if (!epf.valid) {
                         result = false;
                         break;
                     }
@@ -463,8 +468,7 @@ namespace Zodiac
                 }
 
                 Lexed_File lexed_file = lexer_lex_file(&resolver->lexer, job->parse.module_path);
-                if (!lexed_file.valid)
-                {
+                if (!lexed_file.valid) {
                     result = false;
                     break;
                 }
@@ -473,18 +477,14 @@ namespace Zodiac
                                                                     &lexed_file);
                 Parsed_File parsed_file = {};
 
-                if (append)
-                {
+                if (append) {
                     parsed_file = epf;
-                }
-                else
-                {
+                } else {
                     parsed_file_init(&resolver->parser, &parsed_file);
                 }
 
                 parser_parse_file(&resolver->parser, token_stream, &parsed_file);
-                if (!parsed_file.valid)
-                {
+                if (!parsed_file.valid) {
                     result = false;
                     break;
                 }
@@ -499,8 +499,7 @@ namespace Zodiac
                 // @CLEANUP: @TODO: @FIXME: This should only check for redeclarations
                 //                           (later maybe other errors generated by the
                 //                            ast builder)
-                if (resolver->build_data->errors.count)
-                {
+                if (resolver->build_data->errors.count) {
                     result = false;
                     break;
                 }
@@ -511,19 +510,14 @@ namespace Zodiac
 
                 job->result.ast_module = module_ast;
 
-                for (int64_t i = 0; i < module_ast->declarations.count; i++)
-                {
+                for (int64_t i = 0; i < module_ast->declarations.count; i++) {
                     auto decl = module_ast->declarations[i];
-                    if (decl->kind == AST_Declaration_Kind::FUNCTION)
-                    {
-                        if (is_entry_decl(resolver, decl))
-                        {
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                        if (is_entry_decl(resolver, decl)) {
                             assert(!resolver->entry_decl);
                             decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
                             resolver->entry_decl = decl;
-                        }
-                        else if (is_bc_entry_decl(resolver, decl))
-                        {
+                        } else if (is_bc_entry_decl(resolver, decl)) {
                             assert(!resolver->bc_entry_decl);
                             decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
                             resolver->bc_entry_decl = decl;
@@ -540,38 +534,31 @@ namespace Zodiac
                 break;
             }
 
-            case Resolve_Job_Kind::IDENTIFIER:
-            {
+            case Resolve_Job_Kind::IDENTIFIER: {
                 result = try_resolve_identifiers(resolver, job->ast_node, job->node_scope);
-                if (result)
-                {
+                if (result) {
                     assert(job->ast_node->flags & AST_NODE_FLAG_RESOLVED_ID);
                 }
                 break;
             }
 
-            case Resolve_Job_Kind::TYPE:
-            {
+            case Resolve_Job_Kind::TYPE: {
                 result = try_resolve_types(resolver, job->ast_node, job->node_scope, nullptr);
-                if (result)
-                {
+                if (result) {
                     assert(job->ast_node->flags & AST_NODE_FLAG_TYPED);
                 }
                 break;
             }
 
-            case Resolve_Job_Kind::SIZE:
-            {
+            case Resolve_Job_Kind::SIZE: {
                 result = try_resolve_sizes(resolver, job->ast_node, job->node_scope);
-                if (result)
-                {
+                if (result) {
                     assert(job->ast_node->flags & AST_NODE_FLAG_SIZED);
                 }
                 break;
             }
 
-            case Resolve_Job_Kind::EMIT_BYTECODE:
-            {
+            case Resolve_Job_Kind::EMIT_BYTECODE: {
                 auto node = job->ast_node;
                 if (node->kind == AST_Node_Kind::TYPE &&
                     !(node->flags & AST_NODE_FLAG_SIZED)) {
@@ -601,6 +588,12 @@ namespace Zodiac
                                                                      decl);
                         job->result.bc_global = bc_glob;
                     } else if (decl->kind == AST_Declaration_Kind::RUN){
+                        auto run_expr = decl->run.expression;
+                        assert(run_expr->kind == AST_Expression_Kind::CALL);
+                        auto callee_decl = run_expr->call.callee_declaration;
+                        assert(callee_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE);
+                        bytecode_emit_function_declaration(&resolver->bytecode_builder,
+                                                           callee_decl);
                         auto bc_func = bytecode_emit_run_wrapper(&resolver->bytecode_builder,
                                                                  decl);
                         assert(bc_func);
@@ -613,26 +606,37 @@ namespace Zodiac
                 break;
             }
 
-            case Resolve_Job_Kind::EMIT_LLVM_FUNC:
-            {
+            case Resolve_Job_Kind::RUN_BYTECODE: {
+                auto bd = resolver->build_data;
+                auto bc_func = job->bc_func;
+                Interpreter interp = interpreter_create(resolver->allocator, bd);
+
+                interpreter_start(&interp, bc_func, resolver->bytecode_builder.global_data_size,
+                                  resolver->bytecode_builder.globals,
+                                  resolver->bytecode_builder.foreign_functions);
+
+                printf("Interpreter exited with code: %" PRId64 " after run directive\n",
+                       interp.exit_code);
+                result = true;
+                break;
+            }
+
+            case Resolve_Job_Kind::EMIT_LLVM_FUNC: {
                 auto bc_func = job->bc_func;
                 llvm_emit_function(&resolver->llvm_builder, bc_func);
                 result = true;
                 break;
             }
 
-            case Resolve_Job_Kind::EMIT_LLVM_GLOB:
-            {
+            case Resolve_Job_Kind::EMIT_LLVM_GLOB: {
                 auto bc_glob = job->bc_glob;
                 llvm_emit_global(&resolver->llvm_builder, bc_glob);
                 result = true;
                 break;
             }
 
-            case Resolve_Job_Kind::EMIT_LLVM_BINARY:
-            {
-                if (llvm_emit_binary(&resolver->llvm_builder, job->llvm_bin.output_file_name))
-                {
+            case Resolve_Job_Kind::EMIT_LLVM_BINARY: {
+                if (llvm_emit_binary(&resolver->llvm_builder, job->llvm_bin.output_file_name)) {
                     result = true;
                 }
                 break;
@@ -4455,14 +4459,11 @@ namespace Zodiac
 
     void queue_emit_bytecode_job(Resolver *resolver, AST_Node *ast_node, Scope *scope)
     {
-        assert(resolver->allocator);
-
         if (ast_node->flags & AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION)
             return;
 
 #ifndef NDEBUG
-        if (ast_node->kind == AST_Node_Kind::DECLARATION)
-        {
+        if (ast_node->kind == AST_Node_Kind::DECLARATION) {
             auto decl = static_cast<AST_Declaration*>(ast_node);
 
             if (decl->kind == AST_Declaration_Kind::FUNCTION)
@@ -4477,10 +4478,16 @@ namespace Zodiac
         ast_node->flags |= AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION;
     }
 
+    void queue_run_bytecode_job(Resolver *resolver, Bytecode_Function *bc_func)
+    {
+        auto job = resolve_job_run_bytecode_new(resolver->allocator, bc_func);
+        assert(job);
+
+        queue_enqueue(&resolver->run_bytecode_job_queue, job);
+    }
+
     void queue_emit_llvm_func_job(Resolver *resolver, Bytecode_Function *bc_func)
     {
-        assert(resolver->allocator);
-
         auto job = resolve_job_emit_llvm_func_new(resolver->allocator, bc_func);
         assert(job);
         queue_enqueue(&resolver->emit_llvm_func_job_queue, job);
@@ -4498,8 +4505,6 @@ namespace Zodiac
 
     void queue_emit_llvm_binary_job(Resolver *resolver, const char *output_file_name)
     {
-        assert(resolver->allocator);
-
         auto job = resolve_job_emit_llvm_binary_new(resolver->allocator, output_file_name);
         assert(job);
         queue_enqueue(&resolver->emit_llvm_binary_job_queue, job);
@@ -4520,6 +4525,14 @@ namespace Zodiac
         auto result = resolve_job_new(allocator, kind);
         result->ast_node = ast_node;
         result->node_scope = scope;
+        return result;
+    }
+
+    Resolve_Job *resolve_job_new(Allocator *allocator, Resolve_Job_Kind kind,
+                                 Bytecode_Function *bc_func)
+    {
+        auto result = resolve_job_new(allocator, kind);
+        result->bc_func = bc_func;
         return result;
     }
 
@@ -4575,6 +4588,11 @@ namespace Zodiac
                                                Scope *scope)
     {
         return resolve_job_new(allocator, Resolve_Job_Kind::EMIT_BYTECODE, ast_node, scope);
+    }
+
+    Resolve_Job *resolve_job_run_bytecode_new(Allocator *allocator, Bytecode_Function *bc_func)
+    {
+        return resolve_job_new(allocator, Resolve_Job_Kind::RUN_BYTECODE, bc_func);
     }
 
     Resolve_Job *resolve_job_emit_llvm_func_new(Allocator *allocator, Bytecode_Function *bc_func)

@@ -50,9 +50,11 @@ namespace Zodiac
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
-        interp_stack_push(interp, 0); // fp
+        // interp_stack_push(interp, (int64_t)0); // total_arg_size 
+        interp_stack_push(interp, interp->sp); // fp
         Instruction_Pointer empty_ip = {};
         interp_stack_push(interp, empty_ip);
+        // interp_stack_push(interp, nullptr); // ret_val_ptr
 
         for (int64_t i = 0; i < entry_func->locals.count; i++)
         {

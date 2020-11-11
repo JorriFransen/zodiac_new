@@ -49,6 +49,8 @@ namespace Zodiac
         }
         assert(func_type);
 
+        // printf("[BYTECODE] registering function: %s\n", decl->identifier->atom.data);
+
         auto ex_func = bytecode_find_function(builder, decl);
 
         if (ex_func)
@@ -94,6 +96,8 @@ namespace Zodiac
         auto func = bytecode_find_function(builder, decl);
         assert(func);
 
+        // printf("[BYTECODE] emitting function: %s\n", decl->identifier->atom.data);
+
         auto bd = builder->build_data;
 
         if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
@@ -131,7 +135,6 @@ namespace Zodiac
             auto param_val = func->parameters[i];
             array_append(&builder->parameters, { param_decl, param_val });
         }
-
 
         Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
         bytecode_append_block(builder, func, entry_block);
@@ -225,12 +228,16 @@ namespace Zodiac
         bytecode_set_insert_point(builder, entry_block);
 
         Bytecode_Value *return_value = bytecode_emit_expression(builder, decl->run.expression);
-        if (run_expr->type->kind == AST_Type_Kind::VOID) {
-            bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
-        } else {
-            assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
-            bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
-        }
+        // if (run_expr->type->kind == AST_Type_Kind::VOID) {
+        //     bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+        // } else {
+        //     assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
+        //     bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
+        // }
+        assert(return_value || decl->run.expression->type->kind == AST_Type_Kind::VOID);
+        Integer_Literal il = { .s64 = 0 };
+        Bytecode_Value *zero_val = bytecode_integer_literal_new(builder, Builtin::type_s64, il);
+        bytecode_emit_instruction(builder, EXIT, zero_val, nullptr, nullptr);
 
         auto index = builder->functions.count;
         array_append(&builder->functions, { decl, result, index });
