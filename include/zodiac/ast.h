@@ -102,8 +102,12 @@ namespace Zodiac
         AST_DECL_FLAG_IS_ENUM_MEMBER          = 0x040,
         AST_DECL_FLAG_ENUM_MEMBER_INTINIT     = 0x080,
         AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT   = 0x100,
-        AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF = 0x200,
         AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x400,
+    };
+
+    struct AST_Flat_Declaration
+    {
+        Array<AST_Node *> nodes = {};
     };
 
     struct AST_Declaration : public AST_Node
@@ -117,6 +121,8 @@ namespace Zodiac
 
         AST_Identifier *identifier = nullptr;
         AST_Type *type = nullptr;
+
+        AST_Flat_Declaration *flat = nullptr;
 
         union
         {
@@ -149,8 +155,6 @@ namespace Zodiac
                 Array<AST_Declaration*> variable_declarations;
                 AST_Statement *body;
 
-                AST_Type *inferred_return_type;
-
                 Scope *parameter_scope;
             } function;
 
@@ -180,7 +184,7 @@ namespace Zodiac
                 AST_Identifier *specification_identifier;
             } poly_type;
 
-            struct 
+            struct
             {
                 AST_Expression *expression;
             } run;
@@ -608,6 +612,18 @@ namespace Zodiac
 
     AST_Type_Spec *ast_create_type_spec_from_expression_ptn(AST_Builder *ast_builder,
                                                             Expression_PTN *ptn);
+
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl);
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl,
+                                 Array<AST_Node *> *nodes);
+    void ast_flatten_statement(AST_Builder *builder, AST_Statement *stmt,
+                               Array<AST_Node *> *nodes);
+    void ast_flatten_expression(AST_Builder *builder, AST_Expression *expr,
+                                Array<AST_Node *> *nodes);
+    void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec *type_spec,
+                               Array<AST_Node *> *nodes);
+
+    AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node *> nodes);
 
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);

@@ -9,21 +9,21 @@
     @exit(exit_code);
 }
 
-#if (PLATFORM_WINDOWS) {
+// #if (PLATFORM_WINDOWS) {
 
-    mainCRTStartup :: func ()
-    {
-        call_main_and_exit();
-    }
+    // mainCRTStartup :: func ()
+    // {
+    //     call_main_and_exit();
+    // }
 
-} #elseif (PLATFORM_LINUX) {
+// } #elseif (PLATFORM_LINUX) {
 
     #naked #noreturn _start :: func ()
     {
         call_main_and_exit();
     }
 
-} #else {
-    @static_assert(false);
-}
+// } #else {
+//     @static_assert(false);
+// }
 

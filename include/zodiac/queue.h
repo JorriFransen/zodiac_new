@@ -29,7 +29,7 @@ namespace Zodiac
     template <typename Element_Type>
     void queue_enqueue(Queue<Element_Type> *queue, Element_Type value)
     {
-        assert(value);
+        // assert(value);
         queue_ensure_capacity(queue);
 
         int64_t target_index = -1;
@@ -105,7 +105,6 @@ namespace Zodiac
     Element_Type queue_dequeue(Queue<Element_Type> *queue)
     {
         auto front = queue_front(queue);
-        assert(front);
 
         queue->used--;
         queue->front++;

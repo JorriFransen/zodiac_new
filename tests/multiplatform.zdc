@@ -1,53 +1,58 @@
 
-std :: import std;
-
 main :: func() -> s64
 {
-    std.print("Hello, World! from multiple platforms...\n");
-
-    @syscall(1, 1, "Test!\n", 6);
-
-    std.print_num(42);
-    std.print("\n");
-
-    std.print_float(4.2);
-    std.print("\n");
-
-    std.print_double(44.22);
-    std.print("\n");
-
-    std.print_char('x');
-    std.print_char('\n');
-
-    _48 := add(return_46(), 2);
-    return addone(sub(add(_48, 3), 9));
+    return 42;
 }
 
-addone :: func (x: s64) -> s64
-{
-    return x + 1;
-}
+// std :: import std;
 
-return_46 :: func() -> s64
-{
-    result := _impl_return_3();
-    return result + 40 + _impl_return_3();
-}
+// main :: func() -> s64
+// {
+//     std.print("Hello, World! from multiple platforms...\n");
 
-_impl_return_3 :: func() -> s64
-{
-    result := 3;
-    return result;
-}
+//     @syscall(1, 1, "Test!\n", 6);
+
+//     std.print_num(42);
+//     std.print("\n");
+
+//     std.print_float(4.2);
+//     std.print("\n");
+
+//     std.print_double(44.22);
+//     std.print("\n");
+
+//     std.print_char('x');
+//     std.print_char('\n');
+
+//     _48 := add(return_46(), 2);
+//     return addone(sub(add(_48, 3), 9));
+// }
+
+// addone :: func (x: s64) -> s64
+// {
+//     return x + 1;
+// }
+
+// return_46 :: func() -> s64
+// {
+//     result := _impl_return_3();
+//     return result + 40 + _impl_return_3();
+// }
+
+// _impl_return_3 :: func() -> s64
+// {
+//     result := 3;
+//     return result;
+// }
 
 
-add :: func(a: s64, b: s64) -> s64
-{
-    return a + b;
-}
+// add :: func(a: s64, b: s64) -> s64
+// {
+//     return a + b;
+// }
 
-sub :: func (a: s64, b: s64) -> s64
-{
-    return a - b;
-}
+// sub :: func (a: s64, b: s64) -> s64
+// {
+//     return a - b;
+// }
 
