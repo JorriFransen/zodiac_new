@@ -15,6 +15,7 @@ CTestTestfile.cmake
 _deps
 
 .clangd/
+.cache/
 
 
 lib/dyncall-1.1/

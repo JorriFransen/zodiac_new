@@ -3,6 +3,7 @@
 #include "array.h"
 #include "atom.h"
 #include "file_pos.h"
+#include "stack.h"
 #include "struct_predecls.h"
 #include "operator.h"
 
@@ -42,6 +43,8 @@ namespace Zodiac
     {
         AST_Node_Kind kind = AST_Node_Kind::INVALID;
         AST_Node_Flags flags = AST_NODE_FLAG_NONE;
+
+        Scope *scope = nullptr;
 
         File_Pos begin_file_pos = {};
         File_Pos end_file_pos = {};
@@ -102,7 +105,7 @@ namespace Zodiac
         AST_DECL_FLAG_IS_ENUM_MEMBER          = 0x040,
         AST_DECL_FLAG_ENUM_MEMBER_INTINIT     = 0x080,
         AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT   = 0x100,
-        AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x400,
+        AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x200,
     };
 
     struct AST_Flat_Declaration
@@ -570,14 +573,15 @@ namespace Zodiac
         Build_Data *build_data = nullptr;
     };
 
-    void ast_node_init(AST_Node *ast_node, AST_Node_Kind kind, const File_Pos &begin_fp,
-                       const File_Pos &end_fp);
+    void ast_node_init(AST_Node *ast_node, AST_Node_Kind kind, Scope *scope,
+                       const File_Pos &begin_fp, const File_Pos &end_fp);
 
     template <typename T>
-    T *ast_node_new(Allocator *allocator, const File_Pos &begin_fp, const File_Pos &end_fp)
+    T *ast_node_new(Allocator *allocator, Scope *scope,
+                    const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         T *result = alloc_type<T>(allocator);
-        ast_node_init(result, T::_kind, begin_fp, end_fp);
+        ast_node_init(result, T::_kind, scope, begin_fp, end_fp);
         return result;
     }
 
@@ -585,10 +589,10 @@ namespace Zodiac
                                             Parsed_File *parsed_file,
                                             Scope *global_scope);
 
-    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder,
-                                                   Identifier_PTN *ptn);
-    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder,
-                                                   Expression_PTN *ptn);
+    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder, Identifier_PTN *ptn,
+                                                   Scope *scope);
+    AST_Identifier *ast_create_identifier_from_ptn(AST_Builder *ast_builder, Expression_PTN *ptn,
+                                                   Scope *scope);
 
     AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Declaration_PTN *ptn,
@@ -600,18 +604,21 @@ namespace Zodiac
                                                      AST_Type_Spec *type_spec,
                                                      Scope *scope);
 
-    AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn);
+    AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn,
+                                                     Scope *scope);
 
     AST_Statement *ast_create_statement_from_ptn(AST_Builder *ast_builder, Statement_PTN *ptn,
                                                  Array<AST_Declaration*> *var_decls,
                                                  Scope *parent_scope);
 
     AST_Expression *ast_create_expression_from_ptn(AST_Builder *ast_builder,
-                                                   Expression_PTN *ptn);
-    AST_Type_Spec *ast_create_type_spec_from_ptn(AST_Builder *ast_builder, PT_Node *ptn);
+                                                   Expression_PTN *ptn, Scope *scope);
+
+    AST_Type_Spec *ast_create_type_spec_from_ptn(AST_Builder *ast_builder, PT_Node *ptn,
+                                                 Scope *scope);
 
     AST_Type_Spec *ast_create_type_spec_from_expression_ptn(AST_Builder *ast_builder,
-                                                            Expression_PTN *ptn);
+                                                            Expression_PTN *ptn, Scope *scope);
 
     void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl);
     void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl,
@@ -625,7 +632,7 @@ namespace Zodiac
 
     AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node *> nodes);
 
-    AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom,
+    AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom, Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls,
@@ -634,34 +641,41 @@ namespace Zodiac
 
     AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind,
                                          AST_Identifier *identifier,
+                                         Scope *scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
     AST_Declaration *ast_import_declaration_new(Allocator *allocator,
                                                 AST_Identifier *identifier,
                                                 AST_Expression *ident_expr,
+                                                Scope *scope,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp);
 
     AST_Declaration *ast_using_declaration_new(Allocator *allocator,
                                                AST_Expression *import_ident_expr,
+                                                Scope *scope,
                                                const File_Pos &begin_fp,
                                                const File_Pos &end_fp);
 
     AST_Declaration *ast_variable_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
+                                                  Scope *scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp);
 
     AST_Declaration *ast_constant_declaration_new(Allocator *allocator, AST_Identifier *identifier,
                                                   AST_Type_Spec *type_spec,
                                                   AST_Expression *init_expr,
+                                                  Scope *scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp);
 
-    AST_Declaration *ast_parameter_declaration_new(Allocator *allocator, AST_Identifier *identifier,
+    AST_Declaration *ast_parameter_declaration_new(Allocator *allocator,
+                                                   AST_Identifier *identifier,
                                                    AST_Type_Spec *type_spec,
+                                                   Scope *scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
@@ -673,18 +687,21 @@ namespace Zodiac
                                                   AST_Statement *body,
                                                   bool is_naked, bool is_noreturn,
                                                   bool is_foreign,
+                                                  Scope *parent_scope,
                                                   Scope *param_scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp);
 
     AST_Declaration *ast_type_declaration_new(Allocator *allocator, AST_Type *type,
-                                              AST_Identifier *identifier);
+                                              AST_Identifier *identifier, Scope *scope);
 
     AST_Declaration *ast_structure_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
                                                    Array<AST_Declaration*> member_decls,
                                                    Array<AST_Declaration*> parameters,
-                                                   Scope *param_scope, Scope *mem_scope,
+                                                   Scope *parent_scope,
+                                                   Scope *param_scope,
+                                                   Scope *mem_scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
@@ -692,6 +709,7 @@ namespace Zodiac
                                               AST_Identifier *identifier,
                                               AST_Type_Spec *ast_ts,
                                               Array<AST_Declaration*> member_decls,
+                                              Scope *parent_scope,
                                               Scope *enum_scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
@@ -699,40 +717,48 @@ namespace Zodiac
     AST_Declaration *ast_typedef_declaration_new(Allocator *allocator,
                                                  AST_Identifier *identifier,
                                                  AST_Type_Spec *type_spec,
+                                                 Scope *scope,
                                                  const File_Pos &begin_fp,
                                                  const File_Pos &end_fp);
 
     AST_Declaration *ast_poly_type_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
                                                    AST_Identifier *spec_ident,
+                                                   Scope *scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
 
     AST_Declaration *ast_run_declaration_new(Allocator *allocator, AST_Expression *expression,
+                                             Scope *scope,
                                              const File_Pos &bfp, const File_Pos &efp);
 
     AST_Declaration *ast_static_if_declaration_new(Allocator *allocator, AST_Expression *cond_expr,
                                                    Array<AST_Declaration *> then_decls,
                                                    Array<AST_Declaration *> else_decls,
                                                    Scope *then_scope, Scope *else_scope,
+                                                   Scope *parent_scope,
                                                    const File_Pos &bfp, const File_Pos &efp);
 
     AST_Declaration  *ast_static_assert_declaration_new(Allocator *allocator,
                                                         AST_Expression *cond_expr,
+                                                        Scope *scope,
                                                         const File_Pos &bfp,
                                                         const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Array<AST_Expression *> case_exprs,
                                          bool is_default, AST_Statement *body,
+                                         Scope *scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
     AST_Statement *ast_statement_new(Allocator *allocator, AST_Statement_Kind kind,
+                                     Scope *scope,
                                      const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Statement *ast_block_statement_new(Allocator *allocator,
                                            Array<AST_Statement*> statements,
+                                           Scope *parent_scope,
                                            Scope *block_scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
@@ -740,29 +766,34 @@ namespace Zodiac
     AST_Statement *ast_assignment_statement_new(Allocator *allocator,
                                                 AST_Expression *ident_expr,
                                                 AST_Expression *rhs_expr,
+                                                Scope *scope,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp);
 
     AST_Statement *ast_return_statement_new(Allocator *allocator,
                                             AST_Expression *return_expr,
+                                            Scope *scope,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 
-    AST_Statement *ast_break_statement_new(Allocator *allocator, const File_Pos &begin_fp,
-                                           const File_Pos &end_fp);
+    AST_Statement *ast_break_statement_new(Allocator *allocator, Scope *scope,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Statement *ast_declaration_statement_new(Allocator *allocator,
                                                  AST_Declaration *declaration,
+                                                 Scope *scope,
                                                  const File_Pos &begin_fp,
                                                  const File_Pos &end_fp);
 
     AST_Statement *ast_expression_statement_new(Allocator *allocator,
                                                 AST_Expression *expression,
+                                                Scope *scope,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp);
 
     AST_Statement *ast_while_statement_new(Allocator *allocator, AST_Expression *cond_expr,
                                            AST_Statement *body, Scope *body_scope,
+                                           Scope *parent_scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
@@ -773,128 +804,148 @@ namespace Zodiac
                                          Array<AST_Statement *> step_statements,
                                          AST_Statement *body_stmt,
                                          Scope *for_scope,
+                                         Scope *parent_scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
     AST_Statement *ast_if_statement_new(Allocator *allocator, AST_Expression *cond_expr,
-                                           AST_Statement *then_stmt,
-                                           AST_Statement *else_stmt,
-                                           Scope *then_scope, Scope *else_scope,
-                                           const File_Pos &begin_fp,
-                                           const File_Pos &end_fp);
+                                        AST_Statement *then_stmt,
+                                        AST_Statement *else_stmt,
+                                        Scope *then_scope, Scope *else_scope,
+                                        Scope *parent_scope,
+                                        const File_Pos &begin_fp,
+                                        const File_Pos &end_fp);
 
     AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
                                             AST_Switch_Case *default_case,
                                             Array<AST_Switch_Case*> cases,
                                             uint32_t case_expr_count,
                                             bool allow_incomplete,
+                                            Scope *scope,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 
     AST_Expression *ast_expression_new(Allocator *allocator, AST_Expression_Kind kind,
+                                       Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Expression *ast_identifier_expression_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
+                                                  Scope *scope,
                                                   const File_Pos &begin_fp,
                                                   const File_Pos &end_fp);
 
     AST_Expression *ast_poly_identifier_expression_new(Allocator *allocator,
                                                        AST_Declaration *poly_type_decl,
+                                                       Scope *scope,
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
 
     AST_Expression *ast_dot_expression_new(Allocator *allocator,
                                            AST_Expression *parent_expr,
                                            AST_Identifier *child_ident,
+                                           Scope *scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
     AST_Expression *ast_binary_expression_new(Allocator *allocator, Binary_Operator op,
                                               AST_Expression *lhs, AST_Expression *rhs,
+                                              Scope *scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
     AST_Expression *ast_unary_expression_new(Allocator *allocator, Unary_Operator op,
-                                             AST_Expression *operand_expr,
+                                             AST_Expression *operand_expr, Scope *scope,
                                              const File_Pos &begin_fp,
                                              const File_Pos &end_fp);
 
-    AST_Expression *ast_call_expression_new(Allocator *allocator,
-                                            AST_Expression *ident_expr,
-                                            Array<AST_Expression*> arg_expressions,
+    AST_Expression *ast_call_expression_new(Allocator *allocator, AST_Expression *ident_expr,
+                                            Array<AST_Expression*> arg_expressions, Scope *scope,
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 
     AST_Expression *ast_builtin_call_expression_new(Allocator *allocator,
                                                     AST_Identifier *identifier,
                                                     Array<AST_Expression*> arg_expressions,
+                                                    Scope *scope,
                                                     const File_Pos &begin_fp,
                                                     const File_Pos &end_fp);
 
-    AST_Expression *ast_addrof_expression_new(Allocator *allocator,
-                                              AST_Expression *operand_expr,
+    AST_Expression *ast_addrof_expression_new(Allocator *allocator, AST_Expression *operand_expr,
+                                              Scope *scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
     AST_Expression *ast_compound_expression_new(Allocator *allocator,
                                                 Array<AST_Expression*> exprs,
                                                 AST_Type_Spec *type_spec,
+                                                Scope *scope,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp);
 
     AST_Expression *ast_subscript_expression_new(Allocator *allocator,
                                                  AST_Expression *pointer_expr,
                                                  AST_Expression *index_expr,
+                                                 Scope *scope,
                                                  const File_Pos &bfp, const File_Pos &efp);
 
     AST_Expression *ast_cast_expression_new(Allocator *allocator,
                                             AST_Expression *operand_expr,
-                                            AST_Type *target_type, const File_Pos &bfp,
-                                            const File_Pos &efp);
+                                            AST_Type *target_type, Scope *scope,
+                                            const File_Pos &bfp, const File_Pos &efp);
 
     AST_Expression *ast_integer_literal_expression_new(Allocator *allocator, int64_t value,
+                                                       Scope *scope,
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
 
     AST_Expression *ast_float_literal_expression_new(Allocator *allocator, float f, double d,
+                                                     Scope *scope,
                                                      const File_Pos &begin_fp,
                                                      const File_Pos &end_fp);
 
     AST_Expression *ast_string_literal_expression_new(Allocator *allocator, Atom& atom,
+                                                      Scope *scope,
                                                       const File_Pos &begin_fp,
                                                       const File_Pos &end_fp);
 
     AST_Expression *ast_char_literal_expression_new(Allocator *allocator, char c,
-                                                      const File_Pos &begin_fp,
-                                                      const File_Pos &end_fp);
+                                                    Scope *scope,
+                                                    const File_Pos &begin_fp,
+                                                    const File_Pos &end_fp);
 
     AST_Expression *ast_boolean_literal_expression_new(Allocator *allocator, bool value,
+                                                       Scope *scope,
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
 
     AST_Expression *ast_null_literal_expression_new(Allocator *allocator,
+                                                    Scope *scope,
                                                     const File_Pos &begin_fp,
                                                     const File_Pos &end_fp);
 
     AST_Expression *ast_range_expression_new(Allocator *allocator,
-                                              AST_Expression *begin_expr,
-                                              AST_Expression *end_expr);
+                                             AST_Expression *begin_expr,
+                                             AST_Expression *end_expr, Scope *scope);
 
     AST_Type_Spec *ast_type_spec_new(Allocator *allocator, AST_Type_Spec_Kind kind,
+                                     Scope *scope,
                                      const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Type_Spec *ast_identifier_type_spec_new(Allocator *allocator,
                                                 AST_Identifier *identifier,
+                                                Scope *scope,
                                                 const File_Pos &begin_fp,
                                                 const File_Pos &end_fp);
 
     AST_Type_Spec *ast_pointer_type_spec_new(Allocator *allocator,
                                              AST_Type_Spec *base_ts,
+                                             Scope *scope,
                                              const File_Pos &begin_fp,
                                              const File_Pos &end_fp);
 
     AST_Type_Spec *ast_dot_type_spec_new(Allocator *allocator, AST_Expression *dot_expr,
+                                         Scope *scope,
                                          const File_Pos &begin_fp,
                                          const File_Pos &end_fp);
 
@@ -902,28 +953,32 @@ namespace Zodiac
                                               Array<AST_Type_Spec*> param_type_specs,
                                               AST_Type_Spec *return_type_spec,
                                               AST_Declaration *from_declaration,
+                                              Scope *scope,
                                               const File_Pos &begin_fp,
                                               const File_Pos &end_fp);
 
     AST_Type_Spec *ast_array_type_spec_new(Allocator *allocator,
                                            AST_Expression *length_expr,
                                            AST_Type_Spec *element_ts,
+                                           Scope *scope,
                                            const File_Pos &begin_fp,
                                            const File_Pos &end_fp);
 
     AST_Type_Spec *ast_templated_type_spec_new(Allocator *allocator,
                                                AST_Expression *ident_expr,
                                                Array<AST_Expression*> arg_exprs,
+                                               Scope *scope,
                                                const File_Pos &begin_fp,
                                                const File_Pos &end_fp);
 
     AST_Type_Spec *ast_poly_identifier_type_spec_new(Allocator *allocator,
                                                      AST_Declaration *decl,
                                                      AST_Identifier *spec_ident,
+                                                     Scope *scope,
                                                      const File_Pos &begin_fp,
                                                      const File_Pos &end_fp);
 
-    AST_Type_Spec *ast_type_spec_from_type_new(Allocator *allocator, AST_Type *type);
+    AST_Type_Spec *ast_type_spec_from_type_new(Allocator *allocator, AST_Type *type, Scope *scope);
 
     AST_Type *ast_type_new(Allocator *allocator, AST_Type_Kind kind, uint64_t bit_size);
     AST_Type *ast_integer_type_new(Allocator *allocator, uint64_t bit_size, bool sign);

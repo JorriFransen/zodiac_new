@@ -23,6 +23,13 @@ namespace Zodiac
         String module_name = {};
         String module_path = {};
         bool insert_entry_module = false;
+
+        int64_t parsed_module_index = -1;
+    };
+
+    struct Resolve_Job
+    {
+        AST_Node *ast_node = nullptr;
     };
 
     struct Resolver
@@ -35,6 +42,7 @@ namespace Zodiac
         Bytecode_Builder bytecode_builder = {};
 
         Queue<Parse_Job> parse_jobs = {};
+        Queue<Resolve_Job> resolve_jobs = {};
         Array<Parsed_Module> parsed_modules = {};
 
         Scope *global_scope =  nullptr;
@@ -57,5 +65,11 @@ namespace Zodiac
 
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          bool insert_entry_module = false);
-    bool try_parse_job(Resolver *resolver, Parse_Job job);
+    void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
+
+    bool try_parse_job(Resolver *resolver, Parse_Job *job);
+    bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
+
+    bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration);
+    bool try_resolve_expression(Resolver *resolver, AST_Expression *expression);
 }

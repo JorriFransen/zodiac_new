@@ -98,8 +98,9 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
     File_Pos fp = { 0, 0, 0, string_ref("<builtin type>") };
 
     #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) { \
-        auto ident = ast_identifier_new(allocator, Builtin::atom_##name, fp, fp); \
-        auto decl = ast_type_declaration_new(allocator, Builtin::type_##name, ident); \
+        auto ident = ast_identifier_new(allocator, Builtin::atom_##name, global_scope, fp, fp); \
+        auto decl = ast_type_declaration_new(allocator, Builtin::type_##name, ident, \
+                                             global_scope); \
         decl->flags |= AST_NODE_FLAG_TYPED; \
         scope_add_declaration(global_scope, decl); \
     }
@@ -123,21 +124,25 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
 #endif
 
     fp.file_name = string_ref("<builtin PLATFORM_LINUX>");
-    auto ident_PLATFORM_LINUX = ast_identifier_new(allocator, Builtin::atom_PLATFORM_LINUX, fp, fp);
-    auto expr_PLATFORM_LINUX = ast_boolean_literal_expression_new(allocator, platform_linux, fp, fp);
+    auto ident_PLATFORM_LINUX = ast_identifier_new(allocator, Builtin::atom_PLATFORM_LINUX,
+                                                   global_scope, fp, fp);
+    auto expr_PLATFORM_LINUX = ast_boolean_literal_expression_new(allocator, platform_linux,
+                                                                  global_scope, fp, fp);
     auto decl_PLATFORM_LINUX = ast_constant_declaration_new(allocator, ident_PLATFORM_LINUX,
-                                                            nullptr, expr_PLATFORM_LINUX, fp, fp);
+                                                            nullptr, expr_PLATFORM_LINUX,
+                                                            global_scope, fp, fp);
     decl_PLATFORM_LINUX->decl_flags |= AST_DECL_FLAG_GLOBAL;
     scope_add_declaration(global_scope, decl_PLATFORM_LINUX);
     array_append(&decls_to_resolve, decl_PLATFORM_LINUX);
 
     fp.file_name = string_ref("<builtin PLATFORM_WINDOWS>");
     auto ident_PLATFORM_WINDOWS = ast_identifier_new(allocator, Builtin::atom_PLATFORM_WINDOWS,
-                                                     fp, fp);
+                                                     global_scope, fp, fp);
     auto expr_PLATFORM_WINDOWS = ast_boolean_literal_expression_new(allocator, platform_windows,
-                                                                    fp, fp);
+                                                                    global_scope, fp, fp);
     auto decl_PLATFORM_WINDOWS = ast_constant_declaration_new(allocator, ident_PLATFORM_WINDOWS,
-                                                              nullptr, expr_PLATFORM_WINDOWS, fp, fp);
+                                                              nullptr, expr_PLATFORM_WINDOWS,
+                                                              global_scope, fp, fp);
     decl_PLATFORM_WINDOWS->decl_flags |= AST_DECL_FLAG_GLOBAL;
     scope_add_declaration(global_scope, decl_PLATFORM_WINDOWS);
     array_append(&decls_to_resolve, decl_PLATFORM_WINDOWS);
