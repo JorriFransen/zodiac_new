@@ -101,6 +101,7 @@ Array<AST_Declaration *> builtin_populate_scope(Allocator *allocator, Scope *glo
         auto ident = ast_identifier_new(allocator, Builtin::atom_##name, global_scope, fp, fp); \
         auto decl = ast_type_declaration_new(allocator, Builtin::type_##name, ident, \
                                              global_scope); \
+        decl->flags |= AST_NODE_FLAG_RESOLVED_ID; \
         decl->flags |= AST_NODE_FLAG_TYPED; \
         scope_add_declaration(global_scope, decl); \
     }

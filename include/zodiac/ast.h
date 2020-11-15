@@ -33,10 +33,10 @@ namespace Zodiac
         AST_NODE_FLAG_TYPED                    = 0x02,
         AST_NODE_FLAG_SIZED                    = 0x04,
 
-        AST_NODE_FLAG_QUEUED_ID                = 0x08,
-        AST_NODE_FLAG_QUEUED_PARSING           = 0x10,
-        AST_NODE_FLAG_QUEUED_TYPING            = 0x20,
-        AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION = 0x40,
+        // AST_NODE_FLAG_QUEUED_ID                = 0x08,
+        // AST_NODE_FLAG_QUEUED_PARSING           = 0x10,
+        // AST_NODE_FLAG_QUEUED_TYPING            = 0x20,
+        // AST_NODE_FLAG_QUEUED_BYTECODE_EMISSION = 0x40,
     };
 
     struct AST_Node
@@ -111,6 +111,7 @@ namespace Zodiac
     struct AST_Flat_Declaration
     {
         Array<AST_Node *> nodes = {};
+        int64_t waiting_on = 0;
     };
 
     struct AST_Declaration : public AST_Node

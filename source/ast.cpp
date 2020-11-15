@@ -1498,6 +1498,8 @@ namespace Zodiac
                     ast_flatten_type_spec(builder, decl->variable.type_spec, nodes);
 
                 ast_flatten_expression(builder, decl->variable.init_expression, nodes);
+
+                array_append(nodes, static_cast<AST_Node*>(decl));
                 break;
             }
 
@@ -1510,6 +1512,8 @@ namespace Zodiac
                     auto param_decl = decl->function.parameter_declarations[i];
                     ast_flatten_declaration(builder, param_decl, nodes);
                 }
+
+                ast_flatten_type_spec(builder, decl->function.type_spec, nodes);
 
                 ast_flatten_statement(builder, decl->function.body, nodes);
 
@@ -1539,6 +1543,8 @@ namespace Zodiac
                 for (int64_t i = 0; i < stmt->block.statements.count; i++) {
                     ast_flatten_statement(builder, stmt->block.statements[i], nodes);
                 }
+
+                array_append(nodes, static_cast<AST_Node *>(stmt));
                 break;
             }
 
@@ -1557,11 +1563,13 @@ namespace Zodiac
 
             case AST_Statement_Kind::DECLARATION: {
                 ast_flatten_declaration(builder, stmt->declaration, nodes);
+                array_append(nodes, static_cast<AST_Node *>(stmt));
                 break;
             }
 
             case AST_Statement_Kind::EXPRESSION: {
                 ast_flatten_expression(builder, stmt->expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(stmt));
                 break;
             }
 
@@ -1631,7 +1639,37 @@ namespace Zodiac
     void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec *type_spec,
                                Array<AST_Node *> *nodes)
     {
-        assert(false);
+        switch (type_spec->kind) {
+            case AST_Type_Spec_Kind::INVALID: assert(false);
+
+            case AST_Type_Spec_Kind::IDENTIFIER:
+            {
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
+
+            case AST_Type_Spec_Kind::POINTER: assert(false);
+            case AST_Type_Spec_Kind::DOT: assert(false);
+
+            case AST_Type_Spec_Kind::FUNCTION:
+            {
+                for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
+                    auto param_ts = type_spec->function.parameter_type_specs[i];
+                    ast_flatten_type_spec(builder, param_ts, nodes);
+                }
+
+                if (type_spec->function.return_type_spec)
+                    ast_flatten_type_spec(builder, type_spec->function.return_type_spec, nodes);
+
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
+
+            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::TEMPLATED: assert(false);
+            case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
+        }
     }
 
     AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node *> nodes)
@@ -1639,6 +1677,7 @@ namespace Zodiac
         auto result = alloc_type<AST_Flat_Declaration>(allocator);
 
         result->nodes = nodes;
+        result->waiting_on = 0;
 
         return result;
     }

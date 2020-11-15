@@ -87,9 +87,9 @@ namespace Zodiac
                 auto job = queue_dequeue(&resolver->resolve_jobs);
 
                 if (!try_resolve_job(resolver, &job)) {
-                    assert(false);
+                    queue_enqueue(&resolver->resolve_jobs, job);
                 } else {
-                    assert(false);
+                    // Queue for sizeing
                 }
             }
 
@@ -246,7 +246,9 @@ namespace Zodiac
 
         bool result = true;
 
-        for (int64_t i = 0; i < decl->flat->nodes.count; i++) {
+        AST_Node *waiting_on = nullptr;
+
+        for (int64_t i = decl->flat->waiting_on; i < decl->flat->nodes.count; i++) {
             AST_Node *node = decl->flat->nodes[i];
 
             switch (node->kind) {
@@ -259,7 +261,11 @@ namespace Zodiac
                     break;
                 }
 
-                case AST_Node_Kind::STATEMENT: assert(false);
+                case AST_Node_Kind::STATEMENT: {
+                    auto stmt = static_cast<AST_Statement *>(node);
+                    result = try_resolve_statement(resolver, stmt);
+                    break;
+                }
 
                 case AST_Node_Kind::EXPRESSION: {
                     auto expr = static_cast<AST_Expression *>(node);
@@ -269,11 +275,28 @@ namespace Zodiac
 
                 case AST_Node_Kind::IDENTIFIER: assert(false);
                 case AST_Node_Kind::SWITCH_CASE: assert(false);
-                case AST_Node_Kind::TYPE_SPEC: assert(false);
+
+                case AST_Node_Kind::TYPE_SPEC: {
+                    auto ts = static_cast<AST_Type_Spec *>(node);
+                    result = try_resolve_type_spec(resolver, ts);
+                    break;
+                }
+
                 case AST_Node_Kind::TYPE: assert(false);
             }
 
-            if (!result) break;
+            if (!result) {
+                waiting_on = node;
+                decl->flat->waiting_on = i;
+                break;
+            }
+        }
+
+        if (!result && resolver->build_data->options->verbose) {
+            assert(waiting_on);
+            auto bfp = waiting_on->begin_file_pos;
+            printf("           ..Failed! (waiting on: '%s:%lu:%lu')\n",
+                    bfp.file_name.data, bfp.line, bfp.column);
         }
 
         return result;
@@ -281,7 +304,147 @@ namespace Zodiac
 
     bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration)
     {
-        assert(false);
+        switch (declaration->kind) {
+            case AST_Declaration_Kind::INVALID: assert(false);
+            case AST_Declaration_Kind::IMPORT: assert(false);
+            case AST_Declaration_Kind::USING: assert(false);
+
+            case AST_Declaration_Kind::VARIABLE: {
+
+                AST_Type_Spec *ts = nullptr;
+                if (declaration->variable.type_spec) {
+                    AST_Type_Spec *ts = declaration->variable.type_spec;
+                    assert(ts->type);
+                    assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(ts->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                AST_Expression *init_expr = declaration->variable.init_expression;
+                assert(init_expr->type);
+                assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(init_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *type = nullptr;
+
+                if (ts) {
+                    assert(ts->type == init_expr->type);
+                    type = ts->type;
+                } else {
+                    type = init_expr->type;
+                }
+
+                assert(type);
+
+                declaration->type = type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::FUNCTION: {
+
+                for (int64_t i = 0; i < declaration->function.parameter_declarations.count; i++) {
+                    AST_Declaration *param_decl = declaration->function.parameter_declarations[i];
+                    assert(param_decl->type);
+                    assert(param_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(param_decl->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                AST_Type_Spec *func_ts = declaration->function.type_spec;
+                assert(func_ts->type);
+                assert(func_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(func_ts->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Statement *body = declaration->function.body;
+                assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(body->flags & AST_NODE_FLAG_TYPED);
+
+                declaration->type = func_ts->type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::TYPEDEF: assert(false);
+            case AST_Declaration_Kind::STRUCTURE: assert(false);
+            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::POLY_TYPE: assert(false);
+            case AST_Declaration_Kind::RUN: assert(false);
+            case AST_Declaration_Kind::STATIC_IF: assert(false);
+            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+        }
+    }
+
+    bool try_resolve_statement(Resolver *resolver, AST_Statement *statement)
+    {
+        switch (statement->kind) {
+            case AST_Statement_Kind::INVALID: assert(false);
+
+            case AST_Statement_Kind::BLOCK:
+            {
+                for (int64_t i = 0; i < statement->block.statements.count; i++) {
+                    auto mem_stmt = statement->block.statements[i];
+                    assert(mem_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(mem_stmt->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+
+            case AST_Statement_Kind::RETURN: {
+                AST_Expression *operand_expr = statement->expression;
+                assert(operand_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(operand_expr->flags & AST_NODE_FLAG_TYPED);
+                assert(operand_expr->type);
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Statement_Kind::BREAK: assert(false);
+
+            case AST_Statement_Kind::DECLARATION: {
+                AST_Declaration *decl = statement->declaration;
+                assert(decl->type);
+                assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(decl->flags & AST_NODE_FLAG_TYPED);
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Statement_Kind::EXPRESSION: {
+                AST_Expression *expr = statement->expression;
+                assert(expr->type);
+                assert(expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(expr->flags & AST_NODE_FLAG_TYPED);
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::IF: assert(false);
+            case AST_Statement_Kind::SWITCH: assert(false);
+        }
     }
 
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
@@ -292,6 +455,20 @@ namespace Zodiac
             case AST_Expression_Kind::IDENTIFIER: {
                 auto decl = scope_find_declaration(expression->scope, expression->identifier);
                 assert(decl);
+
+                if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+                    return false;
+                }
+
+                if (!(decl->flags & AST_NODE_FLAG_TYPED)) {
+                    return false;
+                }
+
+                assert(decl->type);
+
+                expression->type = decl->type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
                 return true;
                 break;
             }
@@ -302,25 +479,148 @@ namespace Zodiac
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL: {
+
                 AST_Expression *ident_expr = expression->call.ident_expression;
+                assert(ident_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(ident_expr->flags & AST_NODE_FLAG_TYPED);
+
                 AST_Identifier *callee_ident = ident_expr->identifier;
                 assert(callee_ident->declaration);
-                assert(false);
+
+                AST_Declaration *callee_decl = callee_ident->declaration;
+                assert(callee_decl->type);
+                assert(callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(callee_decl->flags & AST_NODE_FLAG_TYPED);
+
+                expression->type = callee_decl->type->function.return_type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL: assert(false);
+            case AST_Expression_Kind::BUILTIN_CALL: {
+
+                auto args = expression->builtin_call.arg_expressions;
+                for (int64_t i = 0; i < args.count; i++) {
+                    AST_Expression *arg_expr = args[i];
+                    assert(arg_expr->type);
+                    assert(arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID);
+                    assert(arg_expr->flags |= AST_NODE_FLAG_TYPED);
+                }
+
+                Atom name = expression->builtin_call.identifier->atom;
+
+                if (name == Builtin::atom_exit) {
+                    assert(args.count == 1);
+                    assert(args[0]->type == Builtin::type_s64);
+
+                    expression->type = Builtin::type_void;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
+                } else {
+                    assert(false);
+                }
+
+                assert(false);
+
+                break;
+            }
+
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
             case AST_Expression_Kind::SUBSCRIPT: assert(false);
             case AST_Expression_Kind::CAST: assert(false);
-            case AST_Expression_Kind::INTEGER_LITERAL: assert(false);
+
+            case AST_Expression_Kind::INTEGER_LITERAL: {
+                assert(!expression->type);
+                expression->type = Builtin::type_s64;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
             case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
             case AST_Expression_Kind::RANGE: assert(false);
+        }
+    }
+
+    bool try_resolve_type_spec(Resolver *resolver, AST_Type_Spec *type_spec)
+    {
+        switch (type_spec->kind) {
+            case AST_Type_Spec_Kind::INVALID: assert(false);
+
+            case AST_Type_Spec_Kind::IDENTIFIER: {
+                AST_Declaration *decl = scope_find_declaration(type_spec->scope,
+                                                               type_spec->identifier);
+                assert(decl);
+                assert(decl->type);
+                assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(decl->flags & AST_NODE_FLAG_TYPED);
+
+                type_spec->type = decl->type;
+                type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                type_spec->flags |= AST_NODE_FLAG_TYPED;
+
+                return true;
+            }
+
+            case AST_Type_Spec_Kind::POINTER: assert(false);
+            case AST_Type_Spec_Kind::DOT: assert(false);
+
+            case AST_Type_Spec_Kind::FUNCTION: {
+
+                for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
+                    auto param_ts = type_spec->function.parameter_type_specs[i];
+                    assert(param_ts->type);
+                    assert(param_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(param_ts->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                AST_Type_Spec *return_ts = nullptr;
+                if (type_spec->function.return_type_spec) {
+                    return_ts = type_spec->function.return_type_spec;
+                    assert(return_ts->type);
+                    assert(return_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(return_ts->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                Array<AST_Type *> param_types = {};
+                AST_Type *return_type = nullptr;
+
+                if (return_ts) {
+                    return_type = return_ts->type;
+                } else {
+                    return_type = Builtin::type_void;
+                }
+
+                AST_Type *function_type =
+                    build_data_find_function_type(resolver->build_data,
+                                                            param_types, return_type);
+                if (!function_type) {
+                    function_type = ast_function_type_new(resolver->allocator, param_types,
+                                                          return_type);
+                    array_append(&resolver->build_data->type_table, function_type);
+                }
+                assert(function_type);
+
+                type_spec->type = function_type;
+                type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                type_spec->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::TEMPLATED: assert(false);
+            case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
     }
 }

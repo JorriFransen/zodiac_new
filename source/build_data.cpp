@@ -45,8 +45,8 @@ namespace Zodiac
             if (r_type->kind == AST_Type_Kind::POINTER &&
                 r_type->pointer.base == base_type)
             {
-                return r_type; 
-            } 
+                return r_type;
+            }
         }
 
         //AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
@@ -66,7 +66,7 @@ namespace Zodiac
                 r_type->array.element_type == elem_type &&
                 r_type->array.element_count == element_count)
             {
-                return r_type; 
+                return r_type;
             }
         }
 
