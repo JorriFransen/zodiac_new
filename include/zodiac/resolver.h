@@ -32,6 +32,16 @@ namespace Zodiac
         AST_Node *ast_node = nullptr;
     };
 
+    struct Size_Job
+    {
+        AST_Node *ast_node = nullptr;
+    };
+
+    struct Bytecode_Job
+    {
+        AST_Declaration *decl = nullptr;
+    };
+
     struct Resolver
     {
         Allocator *allocator = nullptr;
@@ -43,6 +53,9 @@ namespace Zodiac
 
         Queue<Parse_Job> parse_jobs = {};
         Queue<Resolve_Job> resolve_jobs = {};
+        Queue<Size_Job> size_jobs = {};
+        Queue<Bytecode_Job> bytecode_jobs = {};
+
         Array<Parsed_Module> parsed_modules = {};
 
         Scope *global_scope =  nullptr;
@@ -66,12 +79,21 @@ namespace Zodiac
     void queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          bool insert_entry_module = false);
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
+    void queue_size_job(Resolver *resolver, AST_Node *node);
+    void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
 
     bool try_parse_job(Resolver *resolver, Parse_Job *job);
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
+    bool try_size_job(Resolver *resolver, Size_Job *job);
 
     bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration);
     bool try_resolve_statement(Resolver *resolver, AST_Statement *statement);
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression);
     bool try_resolve_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
+
+    bool try_size_declaration(Resolver *resolver, AST_Declaration *decl);
+    bool try_size_statement(Resolver *resolver, AST_Statement *statement);
+    bool try_size_expression(Resolver *resolver, AST_Expression *expression);
+    bool try_size_type(Resolver *resolver, AST_Type *type);
+    bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
 }
