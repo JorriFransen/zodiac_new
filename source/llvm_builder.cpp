@@ -644,7 +644,19 @@ namespace Zodiac
                 assert(operand_value->getType()->isFloatingPointTy());
                 assert(dest_type->isFloatingPointTy());
 
-                result = builder->llvm_builder->CreateFPCast(operand_value, dest_type, "");
+                result = builder->llvm_builder->CreateFPCast(operand_value, dest_type);
+                break;
+            }
+
+            case PTR_TO_INT:
+            {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isPointerTy());
+                assert(dest_type->isIntegerTy());
+
+                result = builder->llvm_builder->CreatePtrToInt(operand_value, dest_type);
                 break;
             }
 

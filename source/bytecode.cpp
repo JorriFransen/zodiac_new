@@ -1245,7 +1245,12 @@ namespace Zodiac
             }
 
             case  AST_Type_Kind::BOOL: assert(false);
-            case  AST_Type_Kind::POINTER: assert(false);
+
+            case  AST_Type_Kind::POINTER: {
+                bytecode_emit_instruction(builder, PTR_TO_INT, operand_value, nullptr, result);
+                break;
+            }
+
             case  AST_Type_Kind::FUNCTION: assert(false);
             case  AST_Type_Kind::STRUCTURE: assert(false);
             case  AST_Type_Kind::ENUM: assert(false);
@@ -1905,6 +1910,8 @@ namespace Zodiac
             case S_TO_F: string_builder_append(sb, "S_TO_F "); break;
             case U_TO_F: string_builder_append(sb, "U_TO_F "); break;
             case F_TO_F: string_builder_append(sb, "F_TO_F "); break;
+
+            case PTR_TO_INT: string_builder_append(sb, "PTR_TO_INT "); break;
 
             case SIZEOF:   string_builder_append(sb, "SIZEOF "); break;
             case OFFSETOF: string_builder_append(sb, "OFFSETOF "); break;

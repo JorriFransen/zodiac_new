@@ -1622,13 +1622,13 @@ namespace Zodiac
             case AST_Expression_Kind::SUBSCRIPT: assert(false);
             case AST_Expression_Kind::CAST: assert(false);
 
-            case AST_Expression_Kind::INTEGER_LITERAL: {
+            case AST_Expression_Kind::INTEGER_LITERAL:
+            case AST_Expression_Kind::STRING_LITERAL: {
                 array_append(nodes, static_cast<AST_Node *>(expr));
                 break;
             }
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);

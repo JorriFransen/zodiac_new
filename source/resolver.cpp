@@ -167,6 +167,10 @@ namespace Zodiac
                 queue_count(&resolver->llvm_jobs)     == 0) {
                 done = true;
             }
+
+            if (fatal_error_reported(resolver)) {
+                done = true;
+            }
         }
 
         return result;
@@ -645,6 +649,8 @@ namespace Zodiac
 
                 expression->call.callee_declaration = callee_decl;
 
+                assert(expression->call.arg_expressions.count == 0); // Check arg types.
+
                 expression->type = callee_decl->type->function.return_type;
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
@@ -672,8 +678,40 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
+
+                } else if (name == Builtin::atom_syscall) {
+                    assert(args.count >= 1);
+
+                    for (int64_t i = 0; i < args.count; i++) {
+                        assert(args[i]->type);
+                        assert(args[i]->flags & AST_NODE_FLAG_RESOLVED_ID);
+                        assert(args[i]->flags & AST_NODE_FLAG_TYPED);
+
+                        if (args[i]->type->kind == AST_Type_Kind::POINTER) {
+                            args[i] = ast_cast_expression_new(resolver->allocator,
+                                                              args[i],
+                                                              Builtin::type_s64,
+                                                              args[i]->scope,
+                                                              args[i]->begin_file_pos,
+                                                              args[i]->end_file_pos);
+                            bool cast_res = try_resolve_expression(resolver, args[i]);
+                            assert(cast_res);
+                        } else {
+                            assert(args[i]->type == Builtin::type_s64);
+                        }
+                    }
+
+                    expression->type = Builtin::type_s64;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
                 } else {
-                    assert(false);
+                    zodiac_report_error(resolver->build_data,
+                                        Zodiac_Error_Kind::UNIMPLEMENTED,
+                                        expression,
+                                        "Builtin call '%s' is not implemented!",
+                                        name.data);
+                    return false;
                 }
 
                 assert(false);
@@ -684,7 +722,51 @@ namespace Zodiac
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
             case AST_Expression_Kind::SUBSCRIPT: assert(false);
-            case AST_Expression_Kind::CAST: assert(false);
+
+            case AST_Expression_Kind::CAST:
+            {
+                AST_Expression *op_expr = expression->cast.operand_expression;
+                assert(op_expr->type);
+                assert(op_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(op_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *target_type = expression->cast.target_type;
+                assert(target_type);
+                assert(target_type->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(target_type->flags & AST_NODE_FLAG_TYPED);
+
+                bool result = true;
+                AST_Type *result_type = nullptr;
+
+                if (op_expr->type == target_type) {
+                    result = true;
+                    result_type = target_type;
+                } else if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    if (op_expr->type->kind == AST_Type_Kind::POINTER) {
+                        assert(target_type->bit_size >= op_expr->type->bit_size);
+                        result = true;
+                        result_type = target_type;
+                    } else {
+                        assert(false);
+                    }
+                } else if (target_type->kind == AST_Type_Kind::POINTER) {
+                    assert(false);
+                } else {
+                    assert(false);
+                }
+
+                if (result) {
+                    assert(result_type);
+                    expression->type = result_type;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
+                } else {
+                    return false;
+                }
+
+                break;
+            }
 
             case AST_Expression_Kind::INTEGER_LITERAL: {
                 assert(!expression->type);
@@ -696,7 +778,17 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                assert(!expression->type);
+                expression->type = Builtin::type_ptr_u8;
+                expression->expr_flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->expr_flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
@@ -930,7 +1022,23 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
-            case AST_Expression_Kind::STRING_LITERAL: assert(false);
+
+            case AST_Expression_Kind::STRING_LITERAL:
+            {
+                AST_Type *type = expression->type;
+                assert(type);
+
+                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type)) {
+                        return false;
+                    }
+                }
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
@@ -1025,6 +1133,19 @@ namespace Zodiac
             }
         } else {
             assert(false);
+        }
+
+        return false;
+    }
+
+    bool fatal_error_reported(Resolver *resolver)
+    {
+        auto bd = resolver->build_data;
+
+        for (int64_t i = 0; i < bd->errors.count; i++) {
+            if (bd->errors[i].kind == Zodiac_Error_Kind::UNIMPLEMENTED) {
+                return true;
+            }
         }
 
         return false;

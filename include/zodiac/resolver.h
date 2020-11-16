@@ -109,4 +109,6 @@ namespace Zodiac
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
+
+    bool fatal_error_reported(Resolver *resolver);
 }

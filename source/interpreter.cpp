@@ -744,6 +744,8 @@ namespace Zodiac
                      break;
                 }
 
+                case PTR_TO_INT: assert(false);
+
                 case SIZEOF: {
                     assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
