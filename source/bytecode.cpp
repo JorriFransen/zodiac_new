@@ -49,7 +49,8 @@ namespace Zodiac
         }
         assert(func_type);
 
-        printf("[BYTECODE] registering function: %s\n", decl->identifier->atom.data);
+        if (builder->build_data->options->verbose)
+            printf("[BYTECODE] registering function: %s\n", decl->identifier->atom.data);
 
         auto ex_func = bytecode_find_function(builder, decl);
 
@@ -117,7 +118,8 @@ namespace Zodiac
             return func;
         }
 
-        printf("[BYTECODE] emitting function: %s\n", decl->identifier->atom.data);
+        if (builder->build_data->options->verbose)
+            printf("[BYTECODE] emitting function: %s\n", decl->identifier->atom.data);
 
 
         builder->current_function = func;
@@ -211,8 +213,9 @@ namespace Zodiac
         auto run_expr = decl->run.expression;
         assert(run_expr->kind == AST_Expression_Kind::CALL);
 
-        printf("[BYTECODE] Emitting run wrapper calling: '%s'\n",
-               run_expr->call.callee_declaration->identifier->atom.data);
+        if (builder->build_data->options->verbose)
+            printf("[BYTECODE] Emitting run wrapper calling: '%s'\n",
+                   run_expr->call.callee_declaration->identifier->atom.data);
 
         AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
                                                                run_expr->type);

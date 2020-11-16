@@ -5,6 +5,7 @@
 #include "build_data.h"
 #include "bytecode.h"
 #include "lexer.h"
+#include "llvm_builder.h"
 #include "parser.h"
 #include "queue.h"
 #include "scope.h"
@@ -42,6 +43,11 @@ namespace Zodiac
         AST_Declaration *decl = nullptr;
     };
 
+    struct LLVM_Job
+    {
+        Bytecode_Function *bc_func = nullptr;
+    };
+
     struct Resolver
     {
         Allocator *allocator = nullptr;
@@ -50,15 +56,19 @@ namespace Zodiac
         Lexer lexer = {};
         Parser parser = {};
         Bytecode_Builder bytecode_builder = {};
+        LLVM_Builder llvm_builder = {};
 
         Queue<Parse_Job> parse_jobs = {};
         Queue<Resolve_Job> resolve_jobs = {};
         Queue<Size_Job> size_jobs = {};
         Queue<Bytecode_Job> bytecode_jobs = {};
+        Queue<LLVM_Job> llvm_jobs = {};
 
         Array<Parsed_Module> parsed_modules = {};
 
         Scope *global_scope =  nullptr;
+
+        AST_Declaration *entry_decl = nullptr;
 
         String entry_module_path = {};
     };
@@ -81,6 +91,7 @@ namespace Zodiac
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
     void queue_size_job(Resolver *resolver, AST_Node *node);
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
+    void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func);
 
     bool try_parse_job(Resolver *resolver, Parse_Job *job);
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
@@ -96,4 +107,6 @@ namespace Zodiac
     bool try_size_expression(Resolver *resolver, AST_Expression *expression);
     bool try_size_type(Resolver *resolver, AST_Type *type);
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
+
+    bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
 }
