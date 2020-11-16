@@ -102,54 +102,54 @@ print_num :: func (n: s64) {
     return;
 }
 
-// print_float :: func (f: float)
-// {
-//     int_part := @cast(s32, f);
-//     print_num(int_part);
-//     print(".");
+print_float :: func (f: float)
+{
+    int_part := @cast(s32, f);
+    print_num(int_part);
+    print(".");
 
-//     it := 6;
+    it := 6;
 
-//     rem := f - int_part;
-//     rem = rem * 10;
+    rem := f - int_part;
+    rem = rem * 10;
 
-//     while (rem > 0.001) {
+    while (rem > 0.001) {
 
-//         if (it <= 0) break;
+        if (it <= 0) break;
 
-//         int_part = @cast(s32, rem);
-//         print_num(int_part);
+        int_part = @cast(s32, rem);
+        print_num(int_part);
 
-//         rem = rem - int_part;
-//         rem = rem * 10;
-//         it = it - 1;
-//     }
+        rem = rem - int_part;
+        rem = rem * 10;
+        it = it - 1;
+    }
 
-//     return;
-// }
+    return;
+}
 
-// print_double :: func (d: double)
-// {
-//     int_part := @cast(s64, d);
-//     print_num(int_part);
-//     print(".");
+print_double :: func (d: double)
+{
+    int_part := @cast(s64, d);
+    print_num(int_part);
+    print(".");
 
-//     it := 6;
+    it := 6;
 
-//     rem := d - int_part;
-//     rem = rem * 10;
+    rem := d - int_part;
+    rem = rem * 10;
 
-//     while (rem > 0.001)
-//     {
-//         if (it <= 0) break;
+    while (rem > 0.001)
+    {
+        if (it <= 0) break;
 
-//         int_part = @cast(s64, rem);
-//         print_num(int_part);
+        int_part = @cast(s64, rem);
+        print_num(int_part);
 
-//         rem = rem - int_part;
-//         rem = rem * 10;
-//         it = it - 1;
-//     }
+        rem = rem - int_part;
+        rem = rem * 10;
+        it = it - 1;
+    }
 
-//     return;
-// }
+    return;
+}

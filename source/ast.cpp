@@ -1575,7 +1575,10 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::BREAK: assert(false);
+            case AST_Statement_Kind::BREAK: {
+                array_append(nodes, static_cast<AST_Node *>(stmt));
+                break;
+            }
 
             case AST_Statement_Kind::DECLARATION: {
                 ast_flatten_declaration(builder, stmt->declaration, nodes);

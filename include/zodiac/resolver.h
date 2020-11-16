@@ -110,6 +110,7 @@ namespace Zodiac
     bool try_size_type(Resolver *resolver, AST_Type *type);
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
 
+    bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type);
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);

@@ -832,30 +832,34 @@ namespace Zodiac
                 AST_Type *result_type = nullptr;
 
                 if (lhs->type != rhs->type) {
-                    if (lhs->type->kind == AST_Type_Kind::INTEGER &&
-                        rhs->type->kind == AST_Type_Kind::INTEGER){
+
+                    if (lhs->kind != AST_Expression_Kind::INTEGER_LITERAL &&
+                        rhs->kind == AST_Expression_Kind::INTEGER_LITERAL &&
+                        integer_literal_fits_in_type(rhs->integer_literal, lhs->type)) {
+
+                                rhs->type = lhs->type;
+
+                    } else if (lhs->type->kind == AST_Type_Kind::INTEGER &&
+                               rhs->type->kind == AST_Type_Kind::INTEGER){
+
                         if (lhs->type->bit_size == rhs->type->bit_size) {
                             assert(false);
                         } else if (lhs->type->bit_size > rhs->type->bit_size) {
                             assert(false);
                         } else if (rhs->type->bit_size > lhs->type->bit_size) {
-                            if (rhs->kind == AST_Expression_Kind::INTEGER_LITERAL &&
-                                integer_literal_fits_in_type(rhs->integer_literal, lhs->type)) {
-                                rhs->type = lhs->type;
-                            } else {
-                                if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
-                                result_type = rhs->type;
-                                expression->binary.lhs =
-                                    ast_cast_expression_new(resolver->allocator, lhs,
-                                                            result_type, lhs->scope,
-                                                            lhs->begin_file_pos,
-                                                            lhs->begin_file_pos);
-                                lhs = expression->binary.lhs;
-                                if (!try_resolve_expression(resolver, lhs)) assert(false);
-                            }
+                            if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
+                            result_type = rhs->type;
+                            expression->binary.lhs =
+                                ast_cast_expression_new(resolver->allocator, lhs,
+                                                        result_type, lhs->scope,
+                                                        lhs->begin_file_pos,
+                                                        lhs->begin_file_pos);
+                            lhs = expression->binary.lhs;
+                            if (!try_resolve_expression(resolver, lhs)) assert(false);
                         } else {
                             assert(false);
                         }
+
                     } else {
                         assert(false);
                     }
@@ -929,7 +933,20 @@ namespace Zodiac
                 for (int64_t i = 0; i < args.count; i++) {
                     AST_Expression *arg_expr = args[i];
                     assert(arg_expr->type);
-                    assert(arg_expr->type == params[i]->type);
+                    if (arg_expr->type != params[i]->type) {
+                        if (is_valid_type_conversion(arg_expr->type, params[i]->type)) {
+                            args[i] = ast_cast_expression_new(resolver->allocator,
+                                                              arg_expr, params[i]->type,
+                                                              arg_expr->scope,
+                                                              arg_expr->begin_file_pos,
+                                                              arg_expr->end_file_pos);
+                            bool cast_res = try_resolve_expression(resolver, args[i]);
+                            assert(cast_res);
+                            arg_expr = args[i];
+                        } else {
+                            assert(false);
+                        }
+                    }
                 }
 
                 expression->type = callee_decl->type->function.return_type;
@@ -1656,6 +1673,62 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
+    }
+
+    bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type)
+    {
+        assert(type);
+        assert(target_type);
+
+        switch (type->kind) {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER: {
+                if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    if (type->integer.sign == target_type->integer.sign) {
+                        return type->bit_size < target_type->bit_size;
+                    } else if (type->integer.sign) {
+                        return false;
+                    } else {
+                        assert(target_type->integer.sign);
+                        return type->bit_size < target_type->bit_size;
+                    }
+                } else if (target_type->kind == AST_Type_Kind::BOOL) {
+                    return true;
+                }
+                else assert(false);
+
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: {
+                if (target_type->kind == AST_Type_Kind::FLOAT) {
+                    return target_type->bit_size > type->bit_size;
+                } else if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    return false;
+                } else assert(false);
+            }
+
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+
+            case AST_Type_Kind::ENUM: {
+                if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    assert(type->enum_type.base_type);
+                    return is_valid_type_conversion(type->enum_type.base_type, target_type);
+                }
+                else assert(false);
+                break;
+            }
+
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+
+        assert(false);
+        return false;
     }
 
     bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type)
