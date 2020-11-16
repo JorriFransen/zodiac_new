@@ -1,21 +1,14 @@
 
+std :: import std;
+
 main :: func() -> s64
 {
+    std.print("Hello, World! from multiple platforms...\n");
+
     @syscall(1, 1, "Test!\n", 6);
-    _48 := add(return_46(), 2);
-    return addone(sub(add(_48, 3), 9));
-}
 
-// std :: import std;
-
-// main :: func() -> s64
-// {
-//     std.print("Hello, World! from multiple platforms...\n");
-
-//     @syscall(1, 1, "Test!\n", 6);
-
-//     std.print_num(42);
-//     std.print("\n");
+    // std.print_num(42);
+    // std.print("\n");
 
 //     std.print_float(4.2);
 //     std.print("\n");
@@ -26,9 +19,9 @@ main :: func() -> s64
 //     std.print_char('x');
 //     std.print_char('\n');
 
-//     _48 := add(return_46(), 2);
-//     return addone(sub(add(_48, 3), 9));
-// }
+    _48 := add(return_46(), 2);
+    return addone(sub(add(_48, 3), 9));
+}
 
 addone :: func (x: s64) -> s64
 {

@@ -27,11 +27,11 @@ namespace Zodiac
 
     enum AST_Node_Flags_ : AST_Node_Flags
     {
-        AST_NODE_FLAG_NONE                     = 0x00,
+        AST_NODE_FLAG_NONE        = 0x00,
 
-        AST_NODE_FLAG_RESOLVED_ID              = 0x01,
-        AST_NODE_FLAG_TYPED                    = 0x02,
-        AST_NODE_FLAG_SIZED                    = 0x04,
+        AST_NODE_FLAG_RESOLVED_ID = 0x01,
+        AST_NODE_FLAG_TYPED       = 0x02,
+        AST_NODE_FLAG_SIZED       = 0x04,
     };
 
     struct AST_Node
@@ -357,6 +357,7 @@ namespace Zodiac
                 AST_Expression *parent_expression;
                 AST_Identifier *child_identifier;
 
+                AST_Declaration *parent_decl;
                 AST_Declaration *child_decl;
                 int64_t child_index;
             } dot;

@@ -1489,7 +1489,12 @@ namespace Zodiac
     {
         switch (decl->kind) {
             case AST_Declaration_Kind::INVALID: assert(false);
-            case AST_Declaration_Kind::IMPORT: assert(false);
+
+            case AST_Declaration_Kind::IMPORT: {
+                array_append(nodes, static_cast<AST_Node *>(decl));
+                break;
+            }
+
             case AST_Declaration_Kind::USING: assert(false);
 
             case AST_Declaration_Kind::VARIABLE: {
@@ -1553,7 +1558,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::ASSIGNMENT: assert(false);
+            case AST_Statement_Kind::ASSIGNMENT: {
+                ast_flatten_expression(builder, stmt->assignment.identifier_expression, nodes);
+                ast_flatten_expression(builder, stmt->assignment.rhs_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(stmt));
+                break;
+            }
 
             case AST_Statement_Kind::RETURN: {
                 if (stmt->expression) {
@@ -1578,7 +1588,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::WHILE: assert(false);
+            case AST_Statement_Kind::WHILE: {
+                ast_flatten_expression(builder, stmt->while_stmt.cond_expr, nodes);
+                ast_flatten_statement(builder, stmt->while_stmt.body, nodes);
+                array_append(nodes, static_cast<AST_Node *>(stmt));
+                break;
+            }
+
             case AST_Statement_Kind::FOR: assert(false);
             case AST_Statement_Kind::IF: assert(false);
             case AST_Statement_Kind::SWITCH: assert(false);
@@ -1597,7 +1613,12 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Expression_Kind::DOT: assert(false);
+
+            case AST_Expression_Kind::DOT: {
+                ast_flatten_expression(builder, expr->dot.parent_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
 
             case AST_Expression_Kind::BINARY: {
                 ast_flatten_expression(builder, expr->binary.lhs, nodes);
@@ -1631,7 +1652,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::ADDROF: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
-            case AST_Expression_Kind::SUBSCRIPT: assert(false);
+
+            case AST_Expression_Kind::SUBSCRIPT: {
+                ast_flatten_expression(builder, expr->subscript.index_expression, nodes);
+                ast_flatten_expression(builder, expr->subscript.pointer_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
+
             case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::INTEGER_LITERAL:
@@ -1660,7 +1688,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::POINTER: assert(false);
+            case AST_Type_Spec_Kind::POINTER: {
+                ast_flatten_type_spec(builder, type_spec->base_type_spec, nodes);
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
+
             case AST_Type_Spec_Kind::DOT: assert(false);
 
             case AST_Type_Spec_Kind::FUNCTION:
@@ -2228,8 +2261,9 @@ namespace Zodiac
 
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
-        result->dot.child_index = -1;
+        result->dot.parent_decl = nullptr;
         result->dot.child_decl = nullptr;
+        result->dot.child_index = -1;
 
         return result;
     }

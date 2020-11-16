@@ -16,6 +16,7 @@ namespace Zodiac
     struct Parsed_Module
     {
         String full_path = {};
+        String name = {};
         AST_Module *ast;
     };
 
@@ -71,6 +72,7 @@ namespace Zodiac
         AST_Declaration *entry_decl = nullptr;
 
         String entry_module_path = {};
+        String first_file_dir = {};
     };
 
     struct Resolve_Result
@@ -86,8 +88,8 @@ namespace Zodiac
     void start_resolving(Resolver *resolver);
     Resolve_Result finish_resolving(Resolver *resolver);
 
-    void queue_parse_job(Resolver *resolver, String module_name, String module_path,
-                         bool insert_entry_module = false);
+    bool queue_parse_job(Resolver *resolver, String module_name, String module_path,
+                         AST_Module **ast_module, bool insert_entry_module = false);
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
     void queue_size_job(Resolver *resolver, AST_Node *node);
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
