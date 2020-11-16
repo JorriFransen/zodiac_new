@@ -66,6 +66,8 @@ namespace Zodiac
 
         Resolve_Result result = {};
 
+        bool progressed = false;
+
         while (!done) {
 
             auto parse_job_count = queue_count(&resolver->parse_jobs);
@@ -78,6 +80,9 @@ namespace Zodiac
                     break;
                 } else {
                     assert(job.parsed_module_index >= 0);
+
+                    progressed = true;
+
                     Parsed_Module &pm = resolver->parsed_modules[job.parsed_module_index];
 
                     assert(pm.ast->kind == AST_Node_Kind::MODULE);
@@ -101,6 +106,7 @@ namespace Zodiac
                 if (!try_resolve_job(resolver, &job)) {
                     queue_enqueue(&resolver->resolve_jobs, job);
                 } else {
+                    progressed = true;
                     queue_size_job(resolver, job.ast_node);
 
                     if (job.ast_node->kind == AST_Node_Kind::DECLARATION) {
@@ -130,6 +136,8 @@ namespace Zodiac
                     } else {
                         assert(false);
                     }
+
+                    progressed = true;
                 }
             }
 
@@ -142,7 +150,11 @@ namespace Zodiac
                                                                   job.decl);
                 assert(bc_func);
 
-                queue_llvm_job(resolver, bc_func);
+                if (!resolver->build_data->options->dont_emit_llvm) {
+                    queue_llvm_job(resolver, bc_func);
+                }
+
+                progressed = true;
             }
 
             auto llvm_job_count = queue_count(&resolver->llvm_jobs);
@@ -158,6 +170,8 @@ namespace Zodiac
                     llvm_emit_binary(&resolver->llvm_builder,
                                      resolver->build_data->options->exe_file_name.data);
                 }
+
+                progressed = true;
             }
 
             if (queue_count(&resolver->parse_jobs)    == 0 &&
@@ -166,11 +180,13 @@ namespace Zodiac
                 queue_count(&resolver->bytecode_jobs) == 0 &&
                 queue_count(&resolver->llvm_jobs)     == 0) {
                 done = true;
-            }
+            } 
 
-            if (fatal_error_reported(resolver)) {
+            if (fatal_error_reported(resolver) || !progressed) {
                 done = true;
             }
+
+            progressed = false;
         }
 
         return result;
@@ -498,7 +514,19 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::CONSTANT: assert(false);
-            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER: {
+                AST_Type_Spec *ts = declaration->parameter.type_spec;
+                assert(ts->type);
+                assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(ts->flags & AST_NODE_FLAG_TYPED);
+
+                declaration->type = ts->type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Declaration_Kind::FUNCTION: {
 
@@ -609,7 +637,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER: {
                 auto decl = scope_find_declaration(expression->scope, expression->identifier);
-                assert(decl);
+                if (!decl) {
+                    zodiac_report_error(resolver->build_data,
+                                        Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                        expression->identifier,
+                                        "Reference to undeclared identifier '%s'",
+                                        expression->identifier->atom.data);
+                    return false;
+                }
 
                 if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
                     return false;
@@ -630,7 +665,34 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY: {
+                AST_Expression *lhs = expression->binary.lhs;
+                assert(lhs->type);
+                assert(lhs->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(lhs->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Expression *rhs = expression->binary.rhs;
+                assert(rhs->type);
+                assert(rhs->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(rhs->flags & AST_NODE_FLAG_TYPED);
+
+                assert(lhs->type == rhs->type);
+
+                AST_Type *result_type = nullptr;
+                if (binop_is_cmp(expression->binary.op)) {
+                    result_type = Builtin::type_bool;
+                } else {
+                    result_type = lhs->type;
+                }
+                assert(result_type);
+
+                expression->type = result_type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL: {
@@ -649,7 +711,15 @@ namespace Zodiac
 
                 expression->call.callee_declaration = callee_decl;
 
-                assert(expression->call.arg_expressions.count == 0); // Check arg types.
+                auto args = expression->call.arg_expressions;
+                auto params = callee_decl->function.parameter_declarations;
+
+                assert(args.count == params.count);
+                for (int64_t i = 0; i < args.count; i++) {
+                    AST_Expression *arg_expr = args[i];
+                    assert(arg_expr->type);
+                    assert(arg_expr->type == params[i]->type);
+                }
 
                 expression->type = callee_decl->type->function.return_type;
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -821,11 +891,17 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::FUNCTION: {
 
+                Array<AST_Type *> param_types = {};
+                array_init(resolver->allocator, &param_types,
+                           type_spec->function.parameter_type_specs.count);
+
                 for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
                     auto param_ts = type_spec->function.parameter_type_specs[i];
                     assert(param_ts->type);
                     assert(param_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(param_ts->flags & AST_NODE_FLAG_TYPED);
+
+                    array_append(&param_types, param_ts->type);
                 }
 
                 AST_Type_Spec *return_ts = nullptr;
@@ -836,7 +912,6 @@ namespace Zodiac
                     assert(return_ts->flags & AST_NODE_FLAG_TYPED);
                 }
 
-                Array<AST_Type *> param_types = {};
                 AST_Type *return_type = nullptr;
 
                 if (return_ts) {
@@ -854,6 +929,8 @@ namespace Zodiac
                     function_type->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     function_type->flags |= AST_NODE_FLAG_TYPED;
                     array_append(&resolver->build_data->type_table, function_type);
+                } else {
+                    array_free(&param_types);
                 }
                 assert(function_type);
 
@@ -889,9 +966,16 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::CONSTANT: assert(false);
-            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER: {
+                assert(decl->type);
+                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+            }
 
             case AST_Declaration_Kind::FUNCTION: {
+                assert(decl->type);
                 assert(decl->type->flags & AST_NODE_FLAG_SIZED);
                 decl->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -980,7 +1064,16 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY: {
+                assert(expression->type);
+                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL: {

@@ -1499,12 +1499,17 @@ namespace Zodiac
 
                 ast_flatten_expression(builder, decl->variable.init_expression, nodes);
 
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                array_append(nodes, static_cast<AST_Node *>(decl));
                 break;
             }
 
             case AST_Declaration_Kind::CONSTANT: assert(false);
-            case AST_Declaration_Kind::PARAMETER: assert(false);
+
+            case AST_Declaration_Kind::PARAMETER: {
+                ast_flatten_type_spec(builder, decl->parameter.type_spec, nodes);
+                array_append(nodes, static_cast<AST_Node *>(decl));
+                break;
+            }
 
             case AST_Declaration_Kind::FUNCTION: {
 
@@ -1593,7 +1598,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::DOT: assert(false);
-            case AST_Expression_Kind::BINARY: assert(false);
+
+            case AST_Expression_Kind::BINARY: {
+                ast_flatten_expression(builder, expr->binary.lhs, nodes);
+                ast_flatten_expression(builder, expr->binary.rhs, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
+
             case AST_Expression_Kind::UNARY: assert(false);
 
             case AST_Expression_Kind::CALL: {

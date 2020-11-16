@@ -648,8 +648,7 @@ namespace Zodiac
                 break;
             }
 
-            case PTR_TO_INT:
-            {
+            case PTR_TO_INT: {
                 llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
                 llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
 
