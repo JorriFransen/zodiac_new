@@ -1502,7 +1502,8 @@ namespace Zodiac
                 if (decl->variable.type_spec)
                     ast_flatten_type_spec(builder, decl->variable.type_spec, nodes);
 
-                ast_flatten_expression(builder, decl->variable.init_expression, nodes);
+                if (decl->variable.init_expression)
+                    ast_flatten_expression(builder, decl->variable.init_expression, nodes);
 
                 array_append(nodes, static_cast<AST_Node *>(decl));
                 break;
@@ -1596,7 +1597,18 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::FOR: assert(false);
-            case AST_Statement_Kind::IF: assert(false);
+
+            case AST_Statement_Kind::IF: {
+                ast_flatten_expression(builder, stmt->if_stmt.cond_expr, nodes);
+                ast_flatten_statement(builder, stmt->if_stmt.then_stmt, nodes);
+
+                if (stmt->if_stmt.else_stmt)
+                    ast_flatten_statement(builder, stmt->if_stmt.else_stmt, nodes);
+
+                array_append(nodes, static_cast<AST_Node *>(stmt));
+                break;
+            }
+
             case AST_Statement_Kind::SWITCH: assert(false);
         }
     }
@@ -1627,7 +1639,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY: {
+                ast_flatten_expression(builder, expr->unary.operand_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
 
             case AST_Expression_Kind::CALL: {
                 ast_flatten_expression(builder, expr->call.ident_expression, nodes);
@@ -1650,7 +1666,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::ADDROF: {
+                ast_flatten_expression(builder, expr->addrof.operand_expr, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
+
             case AST_Expression_Kind::COMPOUND: assert(false);
 
             case AST_Expression_Kind::SUBSCRIPT: {
@@ -1663,14 +1684,14 @@ namespace Zodiac
             case AST_Expression_Kind::CAST: assert(false);
 
             case AST_Expression_Kind::INTEGER_LITERAL:
-            case AST_Expression_Kind::STRING_LITERAL: {
+            case AST_Expression_Kind::STRING_LITERAL:
+            case AST_Expression_Kind::FLOAT_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL:
+            case AST_Expression_Kind::BOOL_LITERAL: {
                 array_append(nodes, static_cast<AST_Node *>(expr));
                 break;
             }
 
-            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
             case AST_Expression_Kind::RANGE: assert(false);
         }
@@ -1696,8 +1717,7 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::DOT: assert(false);
 
-            case AST_Type_Spec_Kind::FUNCTION:
-            {
+            case AST_Type_Spec_Kind::FUNCTION: {
                 for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
                     auto param_ts = type_spec->function.parameter_type_specs[i];
                     ast_flatten_type_spec(builder, param_ts, nodes);
@@ -1710,7 +1730,13 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::ARRAY: {
+                ast_flatten_expression(builder, type_spec->array.length_expression, nodes);
+                ast_flatten_type_spec(builder, type_spec->array.element_type_spec, nodes);
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
+
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Type_Spec_Kind::FROM_TYPE: assert(false);

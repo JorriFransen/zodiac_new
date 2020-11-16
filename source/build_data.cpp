@@ -56,8 +56,8 @@ namespace Zodiac
         return ptr_type;
     }
 
-    AST_Type *build_data_find_array_type(Allocator *allocator, Build_Data *build_data,
-                                                   AST_Type *elem_type, int64_t element_count)
+    AST_Type *build_data_find_array_type(Build_Data *build_data, AST_Type *elem_type,
+                                         int64_t element_count)
     {
         for (int64_t i = 0; i < build_data->type_table.count; i++)
         {

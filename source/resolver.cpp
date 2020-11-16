@@ -1,6 +1,7 @@
 #include "resolver.h"
 
 #include "builtin.h"
+#include "const_interpreter.h"
 #include "os.h"
 #include "temp_allocator.h"
 
@@ -524,21 +525,23 @@ namespace Zodiac
 
                 AST_Type_Spec *ts = nullptr;
                 if (declaration->variable.type_spec) {
-                    AST_Type_Spec *ts = declaration->variable.type_spec;
+                    ts = declaration->variable.type_spec;
                     assert(ts->type);
                     assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(ts->flags & AST_NODE_FLAG_TYPED);
                 }
 
                 AST_Expression *init_expr = declaration->variable.init_expression;
-                assert(init_expr->type);
-                assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(init_expr->flags & AST_NODE_FLAG_TYPED);
+                if (init_expr) {
+                    assert(init_expr->type);
+                    assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(init_expr->flags & AST_NODE_FLAG_TYPED);
+                }
 
                 AST_Type *type = nullptr;
 
                 if (ts) {
-                    assert(ts->type == init_expr->type);
+                    if (init_expr) assert(ts->type == init_expr->type);
                     type = ts->type;
                 } else {
                     type = init_expr->type;
@@ -700,7 +703,32 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::FOR: assert(false);
-            case AST_Statement_Kind::IF: assert(false);
+
+            case AST_Statement_Kind::IF:
+            {
+                AST_Expression *cond_expr = statement->if_stmt.cond_expr;
+                assert(cond_expr->type);
+                assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+
+                AST_Statement *then_stmt = statement->if_stmt.then_stmt;
+                assert(then_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(then_stmt->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Statement *else_stmt = statement->if_stmt.else_stmt;
+                if (else_stmt) {
+                    assert(else_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(else_stmt->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Statement_Kind::SWITCH: assert(false);
         }
     }
@@ -811,7 +839,11 @@ namespace Zodiac
                         } else if (lhs->type->bit_size > rhs->type->bit_size) {
                             assert(false);
                         } else if (rhs->type->bit_size > lhs->type->bit_size) {
-                            if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
+                            if (rhs->kind == AST_Expression_Kind::INTEGER_LITERAL &&
+                                integer_literal_fits_in_type(rhs->integer_literal, lhs->type)) {
+                                rhs->type = lhs->type;
+                            } else {
+                                if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
                                 result_type = rhs->type;
                                 expression->binary.lhs =
                                     ast_cast_expression_new(resolver->allocator, lhs,
@@ -820,6 +852,7 @@ namespace Zodiac
                                                             lhs->begin_file_pos);
                                 lhs = expression->binary.lhs;
                                 if (!try_resolve_expression(resolver, lhs)) assert(false);
+                            }
                         } else {
                             assert(false);
                         }
@@ -841,7 +874,34 @@ namespace Zodiac
                 return true;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY: {
+                AST_Expression *op_expr = expression->unary.operand_expression;
+                assert(op_expr->type);
+                assert(op_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(op_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *result_type = nullptr;
+
+                switch (expression->unary.op) {
+                    case UNOP_INVALID: assert(false);
+                    case UNOP_DEREF: assert(false);
+
+                    case UNOP_MINUS: {
+                        assert(op_expr->type->kind == AST_Type_Kind::INTEGER);
+                        assert(op_expr->type->integer.sign);
+                        result_type = op_expr->type;
+                        break;
+                    }
+                }
+
+                assert(result_type);
+
+                expression->type = op_expr->type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Expression_Kind::CALL: {
 
@@ -926,6 +986,24 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
+                } else if (name == Builtin::atom_cast) {
+                    assert(args.count == 2);
+
+                    AST_Expression *type_expr = args[0];
+                    AST_Expression *op_expr = args[1];
+
+                    assert(type_expr->type);
+                    assert(type_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(type_expr->flags & AST_NODE_FLAG_TYPED);
+
+                    assert(op_expr->type);
+                    assert(op_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(op_expr->flags & AST_NODE_FLAG_TYPED);
+
+                    expression->type = type_expr->type;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
                 } else {
                     zodiac_report_error(resolver->build_data,
                                         Zodiac_Error_Kind::UNIMPLEMENTED,
@@ -940,7 +1018,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::ADDROF: {
+                AST_Expression *op_expr = expression->addrof.operand_expr;
+                assert(op_expr->type);
+                assert(op_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(op_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *pointer_type =
+                    build_data_find_or_create_pointer_type(resolver->allocator,
+                                                           resolver->build_data,
+                                                           op_expr->type);
+                assert(pointer_type);
+
+                expression->type = pointer_type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::COMPOUND: assert(false);
 
             case AST_Expression_Kind::SUBSCRIPT: {
@@ -952,11 +1048,17 @@ namespace Zodiac
 
                 AST_Expression *pointer_expr = expression->subscript.pointer_expression;
                 assert(pointer_expr->type);
-                assert(pointer_expr->type->kind == AST_Type_Kind::POINTER);
                 assert(pointer_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(pointer_expr->flags & AST_NODE_FLAG_TYPED);
 
-                expression->type = pointer_expr->type->pointer.base;
+                if (pointer_expr->type->kind == AST_Type_Kind::POINTER) {
+                    expression->type = pointer_expr->type->pointer.base;
+                } else if (pointer_expr->type->kind == AST_Type_Kind::ARRAY) {
+                    expression->type = pointer_expr->type->array.element_type;
+                } else {
+                    assert(false);
+                }
+
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
                 return true;
@@ -1023,17 +1125,24 @@ namespace Zodiac
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
 
-            case AST_Expression_Kind::STRING_LITERAL:
-            {
+            case AST_Expression_Kind::STRING_LITERAL: {
                 assert(!expression->type);
                 expression->type = Builtin::type_ptr_u8;
-                expression->expr_flags |= AST_NODE_FLAG_RESOLVED_ID;
-                expression->expr_flags |= AST_NODE_FLAG_TYPED;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
                 return true;
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
+            case AST_Expression_Kind::CHAR_LITERAL: {
+                assert(!expression->type);
+                expression->type = Builtin::type_u8;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
             case AST_Expression_Kind::RANGE: assert(false);
@@ -1133,7 +1242,38 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::ARRAY: {
+                AST_Expression *length_expr = type_spec->array.length_expression;
+                assert(length_expr->type);
+                assert(length_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(length_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type_Spec *elem_ts = type_spec->array.element_type_spec;
+                assert(elem_ts->type);
+                assert(elem_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(elem_ts->flags & AST_NODE_FLAG_TYPED);
+
+                Const_Value elem_count = const_interpret_expression(length_expr);
+                assert(elem_count.type == Builtin::type_s64);
+
+                AST_Type *array_type = build_data_find_array_type(resolver->build_data,
+                                                                  elem_ts->type,
+                                                                  elem_count.integer.s64);
+                if (!array_type) {
+                    array_type = build_data_create_array_type(resolver->allocator,
+                                                              resolver->build_data,
+                                                              elem_ts->type,
+                                                              elem_count.integer.s64);
+                }
+                assert(array_type);
+
+                type_spec->type = array_type;
+                type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                type_spec->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
@@ -1262,7 +1402,24 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::FOR: assert(false);
-            case AST_Statement_Kind::IF: assert(false);
+
+            case AST_Statement_Kind::IF: {
+                AST_Expression *cond_expr = statement->if_stmt.cond_expr;
+                assert(cond_expr->flags & AST_NODE_FLAG_SIZED);
+
+                AST_Statement *then_stmt = statement->if_stmt.then_stmt;
+                assert(then_stmt->flags & AST_NODE_FLAG_SIZED);
+
+                AST_Statement *else_stmt = statement->if_stmt.else_stmt;
+                if (else_stmt) {
+                    assert(else_stmt->flags & AST_NODE_FLAG_SIZED);
+                }
+
+                statement->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Statement_Kind::SWITCH: assert(false);
         }
     }
@@ -1309,7 +1466,14 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::UNARY: assert(false);
+            case AST_Expression_Kind::UNARY: {
+                assert(expression->type);
+                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
 
             case AST_Expression_Kind::CALL: {
                 assert(expression->type);
@@ -1329,7 +1493,15 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::ADDROF: assert(false);
+            case AST_Expression_Kind::ADDROF: {
+                assert(expression->type);
+                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::COMPOUND: assert(false);
 
             case AST_Expression_Kind::SUBSCRIPT: {
@@ -1343,7 +1515,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST: assert(false);
 
-            case AST_Expression_Kind::INTEGER_LITERAL: {
+            case AST_Expression_Kind::INTEGER_LITERAL:
+            case AST_Expression_Kind::CHAR_LITERAL: {
                 AST_Type *type = expression->type;
                 assert(type);
 
@@ -1360,8 +1533,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
 
-            case AST_Expression_Kind::STRING_LITERAL:
-            {
+            case AST_Expression_Kind::STRING_LITERAL: {
                 AST_Type *type = expression->type;
                 assert(type);
 
@@ -1376,7 +1548,6 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL: assert(false);
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
             case AST_Expression_Kind::NULL_LITERAL: assert(false);
             case AST_Expression_Kind::RANGE: assert(false);
@@ -1404,7 +1575,15 @@ namespace Zodiac
 
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
-            case AST_Type_Kind::ARRAY: assert(false);
+
+            case AST_Type_Kind::ARRAY: {
+                AST_Type *element_type = type->array.element_type;
+                assert(element_type->flags & AST_NODE_FLAG_TYPED);
+
+                type->bit_size = element_type->bit_size * type->array.element_count;
+                type->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+            }
         }
     }
 
@@ -1460,11 +1639,80 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY: assert(false);
+            case AST_Type_Spec_Kind::ARRAY: {
+                assert(type_spec->type);
+                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type_spec->type)) {
+                        return false;
+                    }
+                }
+
+                type_spec->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
+    }
+
+    bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type)
+    {
+        if (type->kind == AST_Type_Kind::ENUM) {
+            type = type->enum_type.base_type;
+        }
+
+        if (type->kind == AST_Type_Kind::INTEGER) {
+            auto val = il.s64;
+
+#define CHECK_BIT_WIDTH_CASE(bit_width) \
+            case bit_width: { \
+                if (type->integer.sign) { \
+                    return val >= INT##bit_width##_MIN && val <= INT##bit_width##_MAX; \
+                } else {\
+                    return (uint##bit_width##_t)val >= 0 && \
+                           (uint##bit_width##_t)val <= UINT##bit_width##_MAX; \
+                } \
+            }
+
+            switch (type->bit_size) {
+                CHECK_BIT_WIDTH_CASE(8);
+                CHECK_BIT_WIDTH_CASE(16);
+                CHECK_BIT_WIDTH_CASE(32);
+                CHECK_BIT_WIDTH_CASE(64);
+
+                default: assert(false);
+            }
+
+#undef CHECK_BIT_WIDTH_CASE
+        } else if (type->kind == AST_Type_Kind::FLOAT) {
+
+            auto val = il.s64;
+
+#define FLOAT_INT_MAX 0x1000000
+#define DOUBLE_INT_MAX 0x20000000000000
+
+            switch (type->bit_size) {
+                case 32: {
+                    return val >= (-FLOAT_INT_MAX) && val <= FLOAT_INT_MAX;
+                }
+
+                case 64: {
+                    return val >= (-DOUBLE_INT_MAX) && val <= DOUBLE_INT_MAX;
+                }
+
+                default: assert(false);
+            }
+
+#undef FLOAT_INT_MAX
+#undef DOUBLE_INT_MAX
+
+        } else assert(false);
+
+        assert(false);
+        return false;
     }
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)

@@ -7,8 +7,8 @@ main :: func() -> s64
 
     @syscall(1, 1, "Test!\n", 6);
 
-    // std.print_num(42);
-    // std.print("\n");
+    std.print_num(42);
+    std.print("\n");
 
 //     std.print_float(4.2);
 //     std.print("\n");

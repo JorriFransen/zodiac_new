@@ -47,12 +47,12 @@ strlen :: func (cstr: *u8) -> s64 {
         return;
     }
 
-//     print_char :: func (c: u8)
-//     {
-//         _c : u8 = c;
-//         @syscall(1, 1, *_c, 1);
-//         return;
-//     }
+    print_char :: func (c: u8)
+    {
+        _c : u8 = c;
+        @syscall(1, 1, *_c, 1);
+        return;
+    }
 // }
 // #else {
 //     @static_assert(false);
@@ -70,37 +70,37 @@ strlen :: func (cstr: *u8) -> s64 {
 //     return;
 // }
 
-// print_num :: func (n: s64) {
+print_num :: func (n: s64) {
 
-//     buf : [32]u8;
-//     i := 0;
+    buf : [32]u8;
+    i := 0;
 
-//     if (n < 0)
-//     {
-//         n = -n;
-//         print_char('-');
-//     }
-//     else if (n == 0)
-//     {
-//         print_char('0');
-//         return;
-//     }
+    if (n < 0)
+    {
+        n = -n;
+        print_char('-');
+    }
+    else if (n == 0)
+    {
+        print_char('0');
+        return;
+    }
 
-//     while (n > 0)
-//     {
-//         nc := @cast(u8, n % 10);
-//         buf[i] = nc + 48;
-//         i = i + 1;
-//         n = n / 10;
-//     }
+    while (n > 0)
+    {
+        nc := @cast(u8, n % 10);
+        buf[i] = nc + 48;
+        i = i + 1;
+        n = n / 10;
+    }
 
-//     while (i > 0)
-//     {
-//         print_char(buf[i - 1]);
-//         i = i - 1;
-//     }
-//     return;
-// }
+    while (i > 0)
+    {
+        print_char(buf[i - 1]);
+        i = i - 1;
+    }
+    return;
+}
 
 // print_float :: func (f: float)
 // {
