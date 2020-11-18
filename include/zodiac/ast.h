@@ -350,6 +350,8 @@ namespace Zodiac
 
         AST_Expression_Flags expr_flags = AST_EXPR_FLAG_NONE;
 
+        AST_Node *infer_type_from = nullptr;
+
         union
         {
             AST_Identifier *identifier;
@@ -618,7 +620,9 @@ namespace Zodiac
                                                  Scope *parent_scope);
 
     AST_Expression *ast_create_expression_from_ptn(AST_Builder *ast_builder,
-                                                   Expression_PTN *ptn, Scope *scope);
+                                                   Expression_PTN *ptn,
+                                                   Scope *scope,
+                                                   AST_Node *infer_type_from = nullptr);
 
     AST_Type_Spec *ast_create_type_spec_from_ptn(AST_Builder *ast_builder, PT_Node *ptn,
                                                  Scope *scope);

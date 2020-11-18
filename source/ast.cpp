@@ -150,7 +150,7 @@ namespace Zodiac
                     init_expr =
                         ast_create_expression_from_ptn(ast_builder,
                                                        ptn->variable.init_expression,
-                                                       parent_scope);
+                                                       parent_scope, type_expr);
                     assert(init_expr);
                 }
 
@@ -1036,7 +1036,9 @@ namespace Zodiac
     }
 
     AST_Expression *ast_create_expression_from_ptn(AST_Builder *ast_builder,
-                                                   Expression_PTN *ptn, Scope *scope)
+                                                   Expression_PTN *ptn,
+                                                   Scope *scope,
+                                                   AST_Node *infer_type_from /*=nullptr*/)
     {
         auto begin_fp = ptn->self.begin_file_pos;
         auto end_fp = ptn->self.end_file_pos;
@@ -1045,15 +1047,12 @@ namespace Zodiac
         {
             case Expression_PTN_Kind::INVALID: assert(false);
 
-            case Expression_PTN_Kind::CALL:
-            {
+            case Expression_PTN_Kind::CALL: {
                 Array<AST_Expression*> arg_exprs = {};
-                if (ptn->call.arg_list)
-                {
+                if (ptn->call.arg_list) {
                     array_init(ast_builder->allocator, &arg_exprs);
 
-                    for (int64_t i = 0; i < ptn->call.arg_list->expressions.count; i++)
-                    {
+                    for (int64_t i = 0; i < ptn->call.arg_list->expressions.count; i++) {
                         AST_Expression *arg_expr =
                             ast_create_expression_from_ptn(ast_builder,
                                     ptn->call.arg_list->expressions[i], scope);
@@ -1063,8 +1062,7 @@ namespace Zodiac
                     }
                 }
 
-                if (ptn->call.is_builtin)
-                {
+                if (ptn->call.is_builtin) {
                     AST_Identifier *identifier =
                         ast_create_identifier_from_ptn(ast_builder,
                                                        ptn->call.ident_expression,
@@ -1085,8 +1083,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::IDENTIFIER:
-            {
+            case Expression_PTN_Kind::IDENTIFIER: {
                 auto identifier = ast_create_identifier_from_ptn(ast_builder,
                                                                  ptn->identifier, scope);
                 return ast_identifier_expression_new(ast_builder->allocator, identifier,
@@ -1111,8 +1108,7 @@ namespace Zodiac
                 break;
             };
 
-            case Expression_PTN_Kind::UNARY:
-            {
+            case Expression_PTN_Kind::UNARY: {
                 auto ast_operand_expr =
                     ast_create_expression_from_ptn(ast_builder, ptn->unary.operand_expression,
                                                    scope);
@@ -1124,8 +1120,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::DOT:
-            {
+            case Expression_PTN_Kind::DOT: {
                 auto ast_parent_expr = ast_create_expression_from_ptn(ast_builder,
                                                                       ptn->dot.parent_expression,
                                                                       scope);
@@ -1142,8 +1137,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::COMPOUND:
-            {
+            case Expression_PTN_Kind::COMPOUND: {
                 Array<AST_Expression*> ast_compound_exprs = {};
                 if (ptn->compound.list->expressions.count)
                 {
@@ -1176,8 +1170,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::SUBSCRIPT:
-            {
+            case Expression_PTN_Kind::SUBSCRIPT: {
                 auto pointer_expr =
                     ast_create_expression_from_ptn(ast_builder,
                                                    ptn->subscript.pointer_expression, scope);
@@ -1193,8 +1186,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::INTEGER_LITERAL:
-            {
+            case Expression_PTN_Kind::INTEGER_LITERAL: {
                 assert(((int64_t)ptn->integer_literal.u64) ==
                        ptn->integer_literal.s64);
                 return ast_integer_literal_expression_new(ast_builder->allocator,
@@ -1203,8 +1195,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::FLOAT_LITERAL:
-            {
+            case Expression_PTN_Kind::FLOAT_LITERAL: {
                 return ast_float_literal_expression_new(ast_builder->allocator,
                                                         ptn->float_literal.r32,
                                                         ptn->float_literal.r64,
@@ -1213,8 +1204,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::STRING_LITERAL:
-            {
+            case Expression_PTN_Kind::STRING_LITERAL: {
                 return ast_string_literal_expression_new(ast_builder->allocator,
                                                          ptn->string_literal.atom,
                                                          scope,
@@ -1222,16 +1212,14 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::CHAR_LITERAL:
-            {
+            case Expression_PTN_Kind::CHAR_LITERAL: {
                 return ast_char_literal_expression_new(ast_builder->allocator,
                                                        ptn->char_literal.c,
                                                        scope,
                                                        begin_fp, end_fp);
             }
 
-            case Expression_PTN_Kind::BOOL_LITERAL:
-            {
+            case Expression_PTN_Kind::BOOL_LITERAL: {
                 return ast_boolean_literal_expression_new(ast_builder->allocator,
                                                           ptn->bool_literal.value,
                                                           scope,
@@ -1240,8 +1228,11 @@ namespace Zodiac
             }
 
             case Expression_PTN_Kind::NULL_LITERAL: {
-                return ast_null_literal_expression_new(ast_builder->allocator, scope,
-                                                       begin_fp, end_fp);
+                assert(infer_type_from);
+                auto result =  ast_null_literal_expression_new(ast_builder->allocator, scope,
+                                                               begin_fp, end_fp);
+                result->infer_type_from = infer_type_from;
+                return result;
                 break;
             }
 
@@ -2284,6 +2275,7 @@ namespace Zodiac
 
         result->kind = kind;
         result->expr_flags = AST_EXPR_FLAG_NONE;
+        result->infer_type_from = nullptr;
 
         return result;
     }

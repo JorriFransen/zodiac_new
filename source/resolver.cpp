@@ -148,8 +148,13 @@ namespace Zodiac
 
                             queue_bytecode_job(resolver, decl);
 
+                        } else if (decl->kind == AST_Declaration_Kind::CONSTANT ||
+                                   decl->kind == AST_Declaration_Kind::VARIABLE) {
+                            assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+                            queue_bytecode_job(resolver, decl);
                         } else {
-                            assert(decl->kind == AST_Declaration_Kind::IMPORT);
+                            assert(decl->kind == AST_Declaration_Kind::IMPORT ||
+                                   decl->kind == AST_Declaration_Kind::USING);
                         }
                     } else {
                         assert(false);
@@ -176,6 +181,11 @@ namespace Zodiac
                     if (!resolver->build_data->options->dont_emit_llvm) {
                         queue_llvm_job(resolver, bc_func);
                     }
+                } else if (job.decl->kind == AST_Declaration_Kind::VARIABLE) {
+                    assert(job.decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+                    bytecode_emit_global_variable(&resolver->bytecode_builder, job.decl);
+                } else if (job.decl->kind == AST_Declaration_Kind::CONSTANT) {
+                    // Dont do anything
                 } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
                     Bytecode_Function *wrapper =
                         bytecode_emit_run_wrapper(&resolver->bytecode_builder, job.decl);
@@ -298,6 +308,10 @@ namespace Zodiac
             if (decl->identifier) {
                 printf("[RESOLVER] Queueing resolve job for declaration: '%s'\n",
                        decl->identifier->atom.data);
+            } else if (decl->kind == AST_Declaration_Kind::USING) {
+                printf("[RESOLVER] Queueing resolve job for using: '");
+                ast_print_expression(decl->using_decl.ident_expr, 0);
+                printf("'\n");
             } else if (decl->kind == AST_Declaration_Kind::RUN) {
                 printf("[RESOLVER] Queueing resolve job for #run: '");
                 ast_print_expression(decl->run.expression, 0);
@@ -336,7 +350,9 @@ namespace Zodiac
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
     {
         assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
-               decl->kind == AST_Declaration_Kind::RUN);
+               decl->kind == AST_Declaration_Kind::RUN ||
+               decl->kind == AST_Declaration_Kind::VARIABLE ||
+               decl->kind == AST_Declaration_Kind::CONSTANT);
 
         assert(!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE));
 
@@ -445,6 +461,10 @@ namespace Zodiac
             if (decl->identifier) {
             printf("[RESOLVER] Trying to resolve declaration: '%s'\n",
                    decl->identifier->atom.data);
+            } else if (decl->kind == AST_Declaration_Kind::USING) {
+                printf("[RESOLVER] Trying to resolve using: '");
+                ast_print_expression(decl->using_decl.ident_expr, 0);
+                printf("'\n");
             } else if (decl->kind == AST_Declaration_Kind::RUN) {
                 printf("[RESOLVER] Trying to resolve #run: '");
                 ast_print_expression(decl->run.expression, 0);
@@ -1345,9 +1365,38 @@ namespace Zodiac
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
 
             case AST_Expression_Kind::NULL_LITERAL: {
-                // We need some way to pass the type this should have
-                //  (it should be inferred from the context)
-                assert(false);
+                assert(expression->infer_type_from);
+                AST_Node *_infer_type_from = expression->infer_type_from;
+                assert(_infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(_infer_type_from->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *result_type = nullptr;
+
+                switch (_infer_type_from->kind) {
+                    case AST_Node_Kind::INVALID: assert(false);
+                    case AST_Node_Kind::MODULE: assert(false);
+                    case AST_Node_Kind::IDENTIFIER: assert(false);
+                    case AST_Node_Kind::DECLARATION: assert(false);
+                    case AST_Node_Kind::SWITCH_CASE: assert(false);
+                    case AST_Node_Kind::STATEMENT: assert(false);
+                    case AST_Node_Kind::EXPRESSION: assert(false);
+
+                    case AST_Node_Kind::TYPE_SPEC: {
+                        auto ts = static_cast<AST_Type_Spec *>(_infer_type_from);
+                        assert(ts->type);
+                        assert(ts->type->kind == AST_Type_Kind::POINTER);
+                        result_type = ts->type;
+                        break;
+                    }
+
+                    case AST_Node_Kind::TYPE: assert(false);
+                }
+
+                assert(result_type);
+                expression->type = result_type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
                 break;
             }
 
@@ -1518,7 +1567,14 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT: {
+                assert(decl->type);
+                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER: {
                 assert(decl->type);
