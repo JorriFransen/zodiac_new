@@ -100,8 +100,9 @@ namespace Zodiac
         AST_DECL_FLAG_IS_ENUM_MEMBER          = 0x040,
         AST_DECL_FLAG_ENUM_MEMBER_INTINIT     = 0x080,
         AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT   = 0x100,
-        AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x200,
-        AST_DECL_FLAG_EMITTED_BYTECODE        = 0x400,
+        AST_DECL_FLAG_QUEUED_BYTECODE         = 0x200,
+        AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x400,
+        AST_DECL_FLAG_EMITTED_BYTECODE        = 0x800,
     };
 
     struct AST_Flat_Declaration

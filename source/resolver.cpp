@@ -135,7 +135,12 @@ namespace Zodiac
                     if (node->kind == AST_Node_Kind::DECLARATION) {
                         auto decl = static_cast<AST_Declaration *>(node);
                         if (decl->kind == AST_Declaration_Kind::FUNCTION) {
-                            queue_bytecode_job(resolver, decl);
+
+                            // We already queue a job because this node is at the end of the
+                            //  flattened list..
+                            //
+                            // queue_bytecode_job(resolver, decl);
+
                         } else if (decl->kind == AST_Declaration_Kind::RUN) {
                             // Any function this might call should have been queued
                             //  by now, or in this loop after we fail this run for
@@ -333,8 +338,12 @@ namespace Zodiac
         assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
                decl->kind == AST_Declaration_Kind::RUN);
 
+        assert(!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE));
+
         Bytecode_Job job = { .decl = decl };
         queue_enqueue(&resolver->bytecode_jobs, job);
+
+        decl->decl_flags |= AST_DECL_FLAG_QUEUED_BYTECODE;
     }
 
     void queue_run_job(Resolver *resolver, AST_Declaration *run_decl, Bytecode_Function *wrapper)
@@ -1484,6 +1493,10 @@ namespace Zodiac
                 assert(decl->type);
                 assert(decl->type->flags & AST_NODE_FLAG_SIZED);
                 decl->flags |= AST_NODE_FLAG_SIZED;
+
+                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
+                    queue_bytecode_job(resolver, decl);
+                }
                 return true;
             }
 
