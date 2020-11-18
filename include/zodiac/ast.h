@@ -259,6 +259,11 @@ namespace Zodiac
 
             struct
             {
+                AST_Statement *break_from;
+            } break_stmt;
+
+            struct
+            {
                 AST_Expression *cond_expr;
                 AST_Statement *body;
                 Scope *body_scope;
@@ -568,6 +573,8 @@ namespace Zodiac
     {
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
+
+        Stack<AST_Statement *> break_stack = {};
     };
 
     void ast_node_init(AST_Node *ast_node, AST_Node_Kind kind, Scope *scope,
@@ -773,7 +780,8 @@ namespace Zodiac
                                             const File_Pos &begin_fp,
                                             const File_Pos &end_fp);
 
-    AST_Statement *ast_break_statement_new(Allocator *allocator, Scope *scope,
+    AST_Statement *ast_break_statement_new(Allocator *allocator, AST_Statement *target_stmt,
+                                           Scope *scope,
                                            const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Statement *ast_declaration_statement_new(Allocator *allocator,

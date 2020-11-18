@@ -331,6 +331,7 @@ namespace Zodiac
         if (resolver->build_data->options->print_parse_tree) parsed_file_print(&parsed_file);
 
         AST_Builder ast_builder = { resolver->allocator, resolver->build_data };
+        stack_init(resolver->allocator, &ast_builder.break_stack);
 
         AST_Module *module_ast = ast_create_from_parsed_file(&ast_builder, &parsed_file,
                                                              resolver->global_scope);
@@ -658,7 +659,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::BREAK: assert(false);
+            case AST_Statement_Kind::BREAK: {
+                AST_Statement *break_from = statement->break_stmt.break_from;
+                assert(break_from);
+                assert(break_from->kind == AST_Statement_Kind::WHILE);
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Statement_Kind::DECLARATION: {
                 AST_Declaration *decl = statement->declaration;
@@ -860,6 +870,17 @@ namespace Zodiac
                             assert(false);
                         }
 
+                    } else if (rhs->type->kind == AST_Type_Kind::INTEGER &&
+                               lhs->type->kind == AST_Type_Kind::FLOAT) {
+                        assert(lhs->type->bit_size >= rhs->type->bit_size);
+                        result_type = lhs->type;
+                        expression->binary.rhs =
+                            ast_cast_expression_new(resolver->allocator, rhs,
+                                                    result_type, rhs->scope,
+                                                    rhs->begin_file_pos,
+                                                    rhs->end_file_pos);
+                        rhs = expression->binary.rhs;
+                        if (!try_resolve_expression(resolver, rhs)) assert(false);
                     } else {
                         assert(false);
                     }
@@ -1112,6 +1133,12 @@ namespace Zodiac
                     } else {
                         assert(false);
                     }
+                } else if (target_type->kind == AST_Type_Kind::FLOAT) {
+
+                    assert(target_type->bit_size >= op_expr->type->bit_size);
+                    result = true;
+                    result_type = target_type;
+
                 } else if (target_type->kind == AST_Type_Kind::POINTER) {
                     assert(false);
                 } else {
@@ -1140,7 +1167,14 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: {
+                assert(!expression->type);
+                expression->type = Builtin::type_float;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Expression_Kind::STRING_LITERAL: {
                 assert(!expression->type);
@@ -1384,7 +1418,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::BREAK: assert(false);
+            case AST_Statement_Kind::BREAK: {
+                statement->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
 
             case AST_Statement_Kind::DECLARATION: {
                 AST_Declaration *decl = statement->declaration;
@@ -1548,7 +1586,20 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::FLOAT_LITERAL: assert(false);
+            case AST_Expression_Kind::FLOAT_LITERAL: {
+                AST_Type *type = expression->type;
+                assert(type);
+
+                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type)) {
+                        return false;
+                    }
+                }
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
 
             case AST_Expression_Kind::STRING_LITERAL: {
                 AST_Type *type = expression->type;

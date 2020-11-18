@@ -671,9 +671,10 @@ namespace Zodiac
                 break;
             }
 
-            case Statement_PTN_Kind::BREAK:
-            {
-                return ast_break_statement_new(ast_builder->allocator, parent_scope,
+            case Statement_PTN_Kind::BREAK: {
+                AST_Statement *break_from = stack_top(&ast_builder->break_stack);
+                assert(break_from);
+                return ast_break_statement_new(ast_builder->allocator, break_from, parent_scope,
                                                begin_fp, end_fp);
                 break;
             }
@@ -695,28 +696,36 @@ namespace Zodiac
                 break;
             }
 
-            case Statement_PTN_Kind::WHILE:
-            {
+            case Statement_PTN_Kind::WHILE: {
                 auto cond_expr = ast_create_expression_from_ptn(ast_builder,
                                                                 ptn->while_stmt.cond_expr,
                                                                 parent_scope);
+
+                AST_Statement *while_stmt = ast_while_statement_new(ast_builder->allocator,
+                                                                    cond_expr,
+                                                                    nullptr, // Body
+                                                                    nullptr, // Body scope
+                                                                    parent_scope,
+                                                                    begin_fp, end_fp);
+
+                stack_push(&ast_builder->break_stack, while_stmt);
                 auto body = ast_create_statement_from_ptn(ast_builder,
                                                           ptn->while_stmt.body,
                                                           var_decls, parent_scope);
+                stack_pop(&ast_builder->break_stack);
+
                 Scope *body_scope = nullptr;
 
-                if (body->kind == AST_Statement_Kind::BLOCK)
-                {
+                if (body->kind == AST_Statement_Kind::BLOCK) {
                     body_scope = body->block.scope;
-                }
-                else
-                {
+                } else {
                     assert(false);
                 }
 
                 assert(body_scope);
-                return ast_while_statement_new(ast_builder->allocator, cond_expr, body,
-                                               body_scope, parent_scope, begin_fp, end_fp);
+                while_stmt->while_stmt.body = body;
+                while_stmt->while_stmt.body_scope = body_scope;
+                return while_stmt;
                 break;
             }
 
@@ -2117,11 +2126,13 @@ namespace Zodiac
         return result;
     }
 
-    AST_Statement *ast_break_statement_new(Allocator *allocator, Scope *scope,
-                                           const File_Pos & begin_fp, const File_Pos &end_fp)
+    AST_Statement *ast_break_statement_new(Allocator *allocator, AST_Statement *target_stmt,
+                                           Scope *scope,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         auto result = ast_statement_new(allocator, AST_Statement_Kind::BREAK, scope,
                                         begin_fp, end_fp);
+        result->break_stmt.break_from = target_stmt;
         return result;
     }
 
