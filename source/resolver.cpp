@@ -881,6 +881,14 @@ namespace Zodiac
                                                     rhs->end_file_pos);
                         rhs = expression->binary.rhs;
                         if (!try_resolve_expression(resolver, rhs)) assert(false);
+                    } else if (lhs->type == Builtin::type_double &&
+                               rhs->type == Builtin::type_float) {
+                        if (rhs->kind == AST_Expression_Kind::FLOAT_LITERAL) {
+                            result_type = Builtin::type_double;
+                            rhs->type = Builtin::type_double; 
+                        } else {
+                            assert(false);
+                        }
                     } else {
                         assert(false);
                     }
