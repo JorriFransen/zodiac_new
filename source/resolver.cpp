@@ -99,6 +99,7 @@ namespace Zodiac
             }
 
             if (result.parse_error) {
+                zodiac_report_errors(resolver->build_data);
                 break;
             }
 
