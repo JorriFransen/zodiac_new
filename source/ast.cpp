@@ -1546,7 +1546,13 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
-            case AST_Declaration_Kind::RUN: assert(false);
+
+            case AST_Declaration_Kind::RUN: {
+                ast_flatten_expression(builder, decl->run.expression, nodes);
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
+
             case AST_Declaration_Kind::STATIC_IF: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }

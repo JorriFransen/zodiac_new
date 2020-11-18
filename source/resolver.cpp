@@ -2,6 +2,7 @@
 
 #include "builtin.h"
 #include "const_interpreter.h"
+#include "interpreter.h"
 #include "os.h"
 #include "temp_allocator.h"
 
@@ -22,6 +23,7 @@ namespace Zodiac
         queue_init(allocator, &resolver->resolve_jobs);
         queue_init(allocator, &resolver->size_jobs);
         queue_init(allocator, &resolver->bytecode_jobs);
+        queue_init(allocator, &resolver->run_jobs);
         queue_init(allocator, &resolver->llvm_jobs);
 
         array_init(allocator, &resolver->parsed_modules);
@@ -133,6 +135,15 @@ namespace Zodiac
                         auto decl = static_cast<AST_Declaration *>(node);
                         if (decl->kind == AST_Declaration_Kind::FUNCTION) {
                             queue_bytecode_job(resolver, decl);
+                        } else if (decl->kind == AST_Declaration_Kind::RUN) {
+                            // Any function this might call should have been queued
+                            //  by now, or in this loop after we fail this run for
+                            //  the first time..
+
+                            queue_bytecode_job(resolver, decl);
+
+                        } else {
+                            assert(decl->kind == AST_Declaration_Kind::IMPORT);
                         }
                     } else {
                         assert(false);
@@ -146,14 +157,48 @@ namespace Zodiac
             while (bytecode_job_count--) {
                 auto job = queue_dequeue(&resolver->bytecode_jobs);
 
-                bytecode_register_function(&resolver->bytecode_builder, job.decl);
-                auto bc_func = bytecode_emit_function_declaration(&resolver->bytecode_builder,
-                                                                  job.decl);
-                assert(bc_func);
+                if (job.decl->kind == AST_Declaration_Kind::FUNCTION) {
 
-                if (!resolver->build_data->options->dont_emit_llvm) {
-                    queue_llvm_job(resolver, bc_func);
+                    bytecode_register_function(&resolver->bytecode_builder, job.decl);
+                    auto bc_func =
+                        bytecode_emit_function_declaration(&resolver->bytecode_builder,
+                                                           job.decl);
+                    assert(bc_func);
+
+                    job.decl->decl_flags |= AST_DECL_FLAG_EMITTED_BYTECODE;
+
+                    if (!resolver->build_data->options->dont_emit_llvm) {
+                        queue_llvm_job(resolver, bc_func);
+                    }
+                } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
+                    Bytecode_Function *wrapper =
+                        bytecode_emit_run_wrapper(&resolver->bytecode_builder, job.decl);
+                    queue_run_job(resolver, job.decl, wrapper);
+                } else {
+                    assert(false);
                 }
+
+
+                progressed = true;
+            }
+
+            auto run_job_count = queue_count(&resolver->run_jobs);
+            while (run_job_count--) {
+                auto job = queue_dequeue(&resolver->run_jobs);
+
+                assert(job.wrapper);
+                assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
+
+                Interpreter interp = interpreter_create(resolver->allocator,
+                                                        resolver->build_data);
+
+                interpreter_start(&interp, job.wrapper,
+                                  resolver->bytecode_builder.global_data_size,
+                                  resolver->bytecode_builder.globals,
+                                  resolver->bytecode_builder.foreign_functions);
+
+                printf("Interpreter exited with code: %" PRId64 " after run directive\n",
+                       interp.exit_code);
 
                 progressed = true;
             }
@@ -243,13 +288,17 @@ namespace Zodiac
         assert(ast_node->kind == AST_Node_Kind::DECLARATION);
 
         if (resolver->build_data->options->verbose) {
-        auto decl = static_cast<AST_Declaration *>(ast_node);
-        if (decl->identifier) {
-            printf("[RESOLVER] Queueing resolve job for declaration: '%s'\n",
-                   decl->identifier->atom.data);
-        } else {
-            assert(false);
-        }
+            auto decl = static_cast<AST_Declaration *>(ast_node);
+            if (decl->identifier) {
+                printf("[RESOLVER] Queueing resolve job for declaration: '%s'\n",
+                       decl->identifier->atom.data);
+            } else if (decl->kind == AST_Declaration_Kind::RUN) {
+                printf("[RESOLVER] Queueing resolve job for #run: '");
+                ast_print_expression(decl->run.expression, 0);
+                printf("'\n");
+            } else {
+                assert(false);
+            }
         }
 
         Resolve_Job job = { .ast_node = ast_node, };
@@ -260,16 +309,39 @@ namespace Zodiac
     {
         assert(node->kind == AST_Node_Kind::DECLARATION);
 
+        // if (resolver->build_data->options->verbose) {
+        //     auto decl = static_cast<AST_Declaration *>(node);
+        //     if (decl->identifier) {
+        //         printf("[RESOLVER] Queueing size job for declaration: '%s'\n",
+        //                decl->identifier->atom.data);
+        //     } else if (decl->kind == AST_Declaration_Kind::RUN) {
+        //         printf("[RESOLVER] Queueing size job for #run: '");
+        //         ast_print_expression(decl->run.expression, 0);
+        //         printf("'\n");
+        //     } else {
+        //         assert(false);
+        //     }
+        // }
+
         Size_Job job = { .ast_node = node };
         queue_enqueue(&resolver->size_jobs, job);
     }
 
-    void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl)
+    void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
     {
-        assert(func_decl->kind == AST_Declaration_Kind::FUNCTION);
+        assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
+               decl->kind == AST_Declaration_Kind::RUN);
 
-        Bytecode_Job job = { .decl = func_decl };
+        Bytecode_Job job = { .decl = decl };
         queue_enqueue(&resolver->bytecode_jobs, job);
+    }
+
+    void queue_run_job(Resolver *resolver, AST_Declaration *run_decl, Bytecode_Function *wrapper)
+    {
+        assert(run_decl->kind == AST_Declaration_Kind::RUN);
+
+        Run_Job run_job = { .run_decl = run_decl, .wrapper = wrapper };
+        queue_enqueue(&resolver->run_jobs, run_job);
     }
 
     void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
@@ -360,9 +432,16 @@ namespace Zodiac
         AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
 
         if (resolver->build_data->options->verbose) {
-            assert(decl->identifier);
+            if (decl->identifier) {
             printf("[RESOLVER] Trying to resolve declaration: '%s'\n",
                    decl->identifier->atom.data);
+            } else if (decl->kind == AST_Declaration_Kind::RUN) {
+                printf("[RESOLVER] Trying to resolve #run: '");
+                ast_print_expression(decl->run.expression, 0);
+                printf("'\n");
+            } else {
+                assert(false);
+            }
         }
 
         assert(decl->flat);
@@ -433,6 +512,19 @@ namespace Zodiac
                decl->kind == AST_Declaration_Kind::IMPORT);
         assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(decl->flags & AST_NODE_FLAG_TYPED);
+
+        // if (resolver->build_data->options->verbose) {
+        //     if (decl->identifier) {
+        //     printf("[RESOLVER] Trying to size declaration: '%s'\n",
+        //            decl->identifier->atom.data);
+        //     } else if (decl->kind == AST_Declaration_Kind::RUN) {
+        //         printf("[RESOLVER] Trying to size #run: '");
+        //         ast_print_expression(decl->run.expression, 0);
+        //         printf("'\n");
+        //     } else {
+        //         assert(false);
+        //     }
+        // }
 
         bool result = true;
 
@@ -602,7 +694,22 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
-            case AST_Declaration_Kind::RUN: assert(false);
+
+            case AST_Declaration_Kind::RUN: {
+                AST_Expression *run_expr = declaration->run.expression;
+                assert(run_expr->type);
+                assert(run_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(run_expr->flags & AST_NODE_FLAG_TYPED);
+
+                assert(run_expr->kind == AST_Expression_Kind::CALL);
+
+                declaration->type = run_expr->type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Declaration_Kind::STATIC_IF: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
@@ -885,7 +992,7 @@ namespace Zodiac
                                rhs->type == Builtin::type_float) {
                         if (rhs->kind == AST_Expression_Kind::FLOAT_LITERAL) {
                             result_type = Builtin::type_double;
-                            rhs->type = Builtin::type_double; 
+                            rhs->type = Builtin::type_double;
                         } else {
                             assert(false);
                         }
@@ -1384,7 +1491,14 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
-            case AST_Declaration_Kind::RUN: assert(false);
+
+            case AST_Declaration_Kind::RUN: {
+                assert(decl->type);
+                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+            }
+
             case AST_Declaration_Kind::STATIC_IF: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }

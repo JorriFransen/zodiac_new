@@ -38,7 +38,8 @@ namespace Zodiac
         return result;
     }
 
-    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder, AST_Declaration *decl)
+    Bytecode_Function *bytecode_register_function(Bytecode_Builder *builder,
+                                                  AST_Declaration *decl)
     {
         assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
@@ -248,6 +249,8 @@ namespace Zodiac
 
         auto index = builder->functions.count;
         array_append(&builder->functions, { decl, result, index });
+
+        result->flags |= BC_FUNC_FLAG_EMITTED;
 
         return result;
     }

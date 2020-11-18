@@ -36,10 +36,10 @@ strlen :: func (cstr: *u8) -> s64 {
 
 // } #elseif (PLATFORM_LINUX) {
 
-//     _open_default_io_handles :: func()
-//     {
-//         return;
-//     }
+    _open_default_io_handles :: func()
+    {
+        return;
+    }
 
     print :: func (cstr: *u8)
     {
@@ -58,17 +58,17 @@ strlen :: func (cstr: *u8) -> s64 {
 //     @static_assert(false);
 // }
 
-// println :: func (cstr: *u8) {
-//     print(cstr);
-//     print("\n");
-//     return;
-// }
+println :: func (cstr: *u8) {
+    print(cstr);
+    print("\n");
+    return;
+}
 
-// print_numln :: func (n: s64) {
-//     print_num(n);
-//     print_char('\n');
-//     return;
-// }
+print_numln :: func (n: s64) {
+    print_num(n);
+    print_char('\n');
+    return;
+}
 
 print_num :: func (n: s64) {
 
