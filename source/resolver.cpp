@@ -659,7 +659,30 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT:
+            {
+                AST_Type_Spec *ts = declaration->constant.type_spec;
+                if (ts) {
+                    assert(ts->type);
+                    assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(ts->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                AST_Expression *init_expr = declaration->constant.init_expression;
+                assert(init_expr->type);
+                assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(init_expr->flags & AST_NODE_FLAG_TYPED);
+
+                if (ts) {
+                    assert(ts->type == init_expr->type);
+                }
+
+                declaration->type = init_expr->type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER: {
                 AST_Type_Spec *ts = declaration->parameter.type_spec;
@@ -1320,7 +1343,14 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::BOOL_LITERAL: assert(false);
-            case AST_Expression_Kind::NULL_LITERAL: assert(false);
+
+            case AST_Expression_Kind::NULL_LITERAL: {
+                // We need some way to pass the type this should have
+                //  (it should be inferred from the context)
+                assert(false);
+                break;
+            }
+
             case AST_Expression_Kind::RANGE: assert(false);
         }
     }
@@ -1333,10 +1363,18 @@ namespace Zodiac
             case AST_Type_Spec_Kind::IDENTIFIER: {
                 AST_Declaration *decl = scope_find_declaration(type_spec->scope,
                                                                type_spec->identifier);
-                assert(decl);
-                assert(decl->type);
-                assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                if (!decl) {
+                    zodiac_report_error(resolver->build_data,
+                                        Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                        type_spec->identifier,
+                                        "Reference to undeclared identifier '%s'",
+                                        type_spec->identifier->atom.data);
+                    return false;
+                }
+
+                if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) return false;
                 assert(decl->flags & AST_NODE_FLAG_TYPED);
+                assert(decl->type);
 
                 type_spec->type = decl->type;
                 type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;

@@ -1504,7 +1504,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::USING: assert(false);
+            case AST_Declaration_Kind::USING: {
+                ast_flatten_expression(builder, decl->using_decl.ident_expr, nodes);
+                array_append(nodes, static_cast<AST_Node *>(decl));
+                break;
+            }
 
             case AST_Declaration_Kind::VARIABLE: {
 
@@ -1518,7 +1522,15 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT: assert(false);
+            case AST_Declaration_Kind::CONSTANT: {
+
+                if (decl->constant.type_spec)
+                    ast_flatten_type_spec(builder, decl->constant.type_spec, nodes);
+
+                ast_flatten_expression(builder, decl->constant.init_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(decl));
+                break;
+            }
 
             case AST_Declaration_Kind::PARAMETER: {
                 ast_flatten_type_spec(builder, decl->parameter.type_spec, nodes);
@@ -1542,7 +1554,13 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::TYPEDEF: assert(false);
+
+            case AST_Declaration_Kind::TYPEDEF: {
+                ast_flatten_type_spec(builder, decl->typedef_decl.type_spec, nodes);
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
+
             case AST_Declaration_Kind::STRUCTURE: assert(false);
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
@@ -1705,12 +1723,12 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::FLOAT_LITERAL:
             case AST_Expression_Kind::CHAR_LITERAL:
-            case AST_Expression_Kind::BOOL_LITERAL: {
+            case AST_Expression_Kind::BOOL_LITERAL:
+            case AST_Expression_Kind::NULL_LITERAL: {
                 array_append(nodes, static_cast<AST_Node *>(expr));
                 break;
             }
 
-            case AST_Expression_Kind::NULL_LITERAL: assert(false);
             case AST_Expression_Kind::RANGE: assert(false);
         }
     }
