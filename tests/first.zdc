@@ -16,7 +16,7 @@ print_vec2 :: func (v: *Vec2)
 
 Vec2_Ptr :: typedef *Vec2;
 
-add_vec2 :: func (v: Vec2_Ptr)
+add_vec2 :: func (v: Vec2_Ptr) -> s64
 {
     return v.x + v.y;
 }
@@ -25,6 +25,9 @@ glob_int_const : s64 : 5;
 
 // global_int := 4 + 1;
 global_int : s64;
+
+_main :: func () { main(); return; }
+#run _main();
 
 main :: func () -> s64
 {

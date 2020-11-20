@@ -70,8 +70,13 @@ namespace Zodiac
         Resolve_Result result = {};
 
         bool progressed = false;
+        uint64_t cycle_count = 0;
 
         while (!done) {
+
+            if (resolver->build_data->options->verbose) {
+                printf("[RESOLVER] Starting resolve cycle: %lu\n", cycle_count);
+            }
 
             auto parse_job_count = queue_count(&resolver->parse_jobs);
             while (parse_job_count--) {
@@ -154,7 +159,9 @@ namespace Zodiac
                             queue_bytecode_job(resolver, decl);
                         } else {
                             assert(decl->kind == AST_Declaration_Kind::IMPORT ||
-                                   decl->kind == AST_Declaration_Kind::USING);
+                                   decl->kind == AST_Declaration_Kind::USING ||
+                                   decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                                   decl->kind == AST_Declaration_Kind::TYPEDEF);
                         }
                     } else {
                         assert(false);
@@ -183,7 +190,13 @@ namespace Zodiac
                     }
                 } else if (job.decl->kind == AST_Declaration_Kind::VARIABLE) {
                     assert(job.decl->decl_flags & AST_DECL_FLAG_GLOBAL);
-                    bytecode_emit_global_variable(&resolver->bytecode_builder, job.decl);
+                    auto bc_global =
+                        bytecode_emit_global_variable(&resolver->bytecode_builder, job.decl);
+
+                    if (!resolver->build_data->options->dont_emit_llvm) {
+                        queue_llvm_job(resolver, bc_global);
+                    }
+
                 } else if (job.decl->kind == AST_Declaration_Kind::CONSTANT) {
                     // Dont do anything
                 } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
@@ -223,17 +236,31 @@ namespace Zodiac
             while (llvm_job_count--) {
                 auto job = queue_dequeue(&resolver->llvm_jobs);
 
-                auto bc_func = job.bc_func;
+                switch (job.kind) {
+                    case LLVM_Job_Kind::FUNCTION: {
+                        auto bc_func = job.bc_func;
 
-                llvm_register_function(&resolver->llvm_builder, bc_func);
-                llvm_emit_function(&resolver->llvm_builder, bc_func);
+                        llvm_register_function(&resolver->llvm_builder, bc_func);
+                        llvm_emit_function(&resolver->llvm_builder, bc_func);
 
-                if (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY) {
-                    llvm_emit_binary(&resolver->llvm_builder,
-                                     resolver->build_data->options->exe_file_name.data);
+                        if (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY) {
+                            llvm_emit_binary(&resolver->llvm_builder,
+                                             resolver->build_data->options->exe_file_name.data);
+                        }
+
+                        progressed = true;
+                        break;
+                    }
+
+                    case LLVM_Job_Kind::GLOBAL: {
+                        auto &bc_global = job.bc_global;
+                        llvm_emit_global(&resolver->llvm_builder, bc_global);
+                        progressed = true;
+                        break;
+                    }
+
+                    case LLVM_Job_Kind::INVALID: assert(false);
                 }
-
-                progressed = true;
             }
 
             if (queue_count(&resolver->parse_jobs)    == 0 &&
@@ -246,9 +273,12 @@ namespace Zodiac
 
             if (fatal_error_reported(resolver) || !progressed) {
                 done = true;
+            } else {
+                zodiac_clear_errors(resolver->build_data);
             }
 
             progressed = false;
+            cycle_count++;
         }
 
         return result;
@@ -372,7 +402,13 @@ namespace Zodiac
 
     void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
     {
-        LLVM_Job job = { .bc_func = bc_func };
+        LLVM_Job job = { .kind = LLVM_Job_Kind::FUNCTION, .bc_func = bc_func };
+        queue_enqueue(&resolver->llvm_jobs, job);
+    }
+
+    void queue_llvm_job(Resolver *resolver, Bytecode_Global_Info bc_global)
+    {
+        LLVM_Job job = { .kind = LLVM_Job_Kind::GLOBAL, .bc_global = bc_global };
         queue_enqueue(&resolver->llvm_jobs, job);
     }
 
@@ -539,7 +575,8 @@ namespace Zodiac
         assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
         AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
         assert(decl->type ||
-               decl->kind == AST_Declaration_Kind::IMPORT);
+               decl->kind == AST_Declaration_Kind::IMPORT ||
+               decl->kind == AST_Declaration_Kind::USING);
         assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(decl->flags & AST_NODE_FLAG_TYPED);
 
@@ -642,7 +679,65 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::USING: assert(false);
+            case AST_Declaration_Kind::USING: {
+                AST_Expression *ident_expr = declaration->using_decl.ident_expr;
+                assert(ident_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(ident_expr->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Declaration *import_decl = nullptr;
+                if (ident_expr->kind == AST_Expression_Kind::IDENTIFIER) {
+                    import_decl = ident_expr->identifier->declaration;
+                } else {
+                    assert(false);
+                }
+                assert(import_decl);
+
+                assert(import_decl->kind == AST_Declaration_Kind::IMPORT);
+                assert(import_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(import_decl->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Module *module_to_import = import_decl->import.ast_module;
+                Scope *scope_to_import = module_to_import->module_scope;
+
+                Scope *current_scope = declaration->scope;
+                assert(current_scope != scope_to_import);
+
+                Scope_Block *scope_block = &scope_to_import->first_block;
+
+                bool result = true;
+
+                while (scope_block) {
+                    for (int64_t i = 0; i < scope_block->decl_count; i++) {
+                        AST_Declaration *decl = scope_block->declarations[i];
+                        if (decl->identifier) {
+                            auto redecl = scope_find_declaration(current_scope, decl->identifier);
+                            if (redecl) {
+                                zodiac_report_error(resolver->build_data,
+                                                    Zodiac_Error_Kind::REDECLARATION,
+                                                    decl->identifier,
+                                                    "Redeclaration of identifier: '%s'",
+                                                    decl->identifier->atom.data);
+
+                                zodiac_report_info(resolver->build_data, redecl->identifier,
+                                                   "Previous declaration was here");
+                                result = false;
+                            } else {
+                                scope_add_declaration(current_scope, decl);
+                            }
+                        } else {
+                            assert(false);
+                        }
+                    }
+
+                    scope_block = scope_block->next_block;
+                }
+
+                assert(result);
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Declaration_Kind::VARIABLE: {
 
@@ -664,8 +759,22 @@ namespace Zodiac
                 AST_Type *type = nullptr;
 
                 if (ts) {
-                    if (init_expr) assert(ts->type == init_expr->type);
+                    if (init_expr) {
+                        if (ts->type != init_expr->type) {
+                            if (ts->type->kind == AST_Type_Kind::INTEGER &&
+                                init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
+                                integer_literal_fits_in_type(init_expr->integer_literal,
+                                                             ts->type)) {
+                                init_expr->type = ts->type;
+                            } else {
+                                assert(false);
+                            }
+                        } else {
+                        }
+                    }
+
                     type = ts->type;
+
                 } else {
                     type = init_expr->type;
                 }
@@ -743,8 +852,53 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::TYPEDEF: assert(false);
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+
+            case AST_Declaration_Kind::TYPEDEF: {
+                AST_Type_Spec *type_spec = declaration->typedef_decl.type_spec;
+                assert(type_spec->type);
+                assert(type_spec->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(type_spec->flags & AST_NODE_FLAG_TYPED);
+
+                declaration->type = type_spec->type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Declaration_Kind::STRUCTURE: {
+                assert(declaration->structure.parameters.count == 0);
+
+                Array<AST_Type *> member_types = {};
+                array_init(resolver->allocator, &member_types,
+                           declaration->structure.member_declarations.count);
+
+                for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
+                    AST_Declaration *mem_decl = declaration->structure.member_declarations[i];
+                    assert(mem_decl->type);
+                    assert(mem_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(mem_decl->flags & AST_NODE_FLAG_TYPED);
+
+                    array_append(&member_types, mem_decl->type);
+                }
+
+                AST_Type *struct_type =
+                    ast_structure_type_new(resolver->allocator, declaration, member_types,
+                                           declaration->structure.member_scope);
+                assert(struct_type);
+
+                struct_type->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                struct_type->flags |= AST_NODE_FLAG_TYPED;
+                array_append(&resolver->build_data->type_table, struct_type);
+
+
+                declaration->type = struct_type;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
@@ -979,6 +1133,57 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
                 } else {
+                    assert(parent_decl->type);
+                    AST_Type *struct_type = parent_decl->type;
+                    if (struct_type->kind != AST_Type_Kind::STRUCTURE) {
+                        assert(struct_type->kind == AST_Type_Kind::POINTER);
+                        struct_type = struct_type->pointer.base;
+                        assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+                    }
+
+                    assert(struct_type);
+
+                    assert(struct_type->structure.member_scope);
+                    auto mem_scope = struct_type->structure.member_scope;
+                    assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+                    AST_Declaration *child_decl = nullptr;
+                    if (!child_ident->declaration) {
+                        child_decl = scope_find_declaration(mem_scope, child_ident);
+                        assert(child_decl);
+                        assert(child_decl->type);
+                        assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                        assert(child_decl->flags & AST_NODE_FLAG_TYPED);
+
+                        auto struct_decl = struct_type->structure.declaration;
+                        assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                        bool index_found = false;
+                        int64_t index = -1;
+                        for (int64_t i = 0;
+                             i < struct_decl->structure.member_declarations.count;
+                             i++) {
+                            if (child_decl == struct_decl->structure.member_declarations[i]) {
+                                assert(!index_found);
+                                index_found = true;
+                                index = i;
+                                break;
+                            }
+                        }
+                        assert(index_found);
+                        assert(index >= 0);
+
+                        expression->dot.child_index = index;
+                        expression->dot.child_decl = child_decl;
+                        expression->type = child_decl->type;
+                        expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                        expression->flags |= AST_NODE_FLAG_TYPED;
+                        return true;
+
+                    } else {
+                        assert(false);
+                    }
+
                     assert(false);
                 }
 
@@ -1077,7 +1282,12 @@ namespace Zodiac
 
                 switch (expression->unary.op) {
                     case UNOP_INVALID: assert(false);
-                    case UNOP_DEREF: assert(false);
+
+                    case UNOP_DEREF: {
+                        assert(op_expr->type->kind == AST_Type_Kind::POINTER);
+                        result_type = op_expr->type->pointer.base;
+                        break;
+                    }
 
                     case UNOP_MINUS: {
                         assert(op_expr->type->kind == AST_Type_Kind::INTEGER);
@@ -1089,7 +1299,7 @@ namespace Zodiac
 
                 assert(result_type);
 
-                expression->type = op_expr->type;
+                expression->type = result_type;
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
                 return true;
@@ -1362,7 +1572,14 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL: {
+                assert(!expression->type);
+                expression->type = Builtin::type_bool;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Expression_Kind::NULL_LITERAL: {
                 assert(expression->infer_type_from);
@@ -1557,7 +1774,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::USING: assert(false);
+            case AST_Declaration_Kind::USING: {
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
 
             case AST_Declaration_Kind::VARIABLE: {
                 assert(decl->type);
@@ -1595,8 +1816,27 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
-            case AST_Declaration_Kind::TYPEDEF: assert(false);
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+
+            case AST_Declaration_Kind::TYPEDEF: {
+                assert(decl->type);
+                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
+                    bool result = try_size_type(resolver, decl->type);
+                    assert(result);
+                }
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+            }
+
+            case AST_Declaration_Kind::STRUCTURE: {
+                assert(decl->type);
+                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
+                    bool result = try_size_type(resolver, decl->type);
+                    assert(result);
+                }
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+            }
+
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
@@ -1846,8 +2086,22 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BOOL_LITERAL: assert(false);
-            case AST_Expression_Kind::NULL_LITERAL: assert(false);
+            case AST_Expression_Kind::BOOL_LITERAL:
+            case AST_Expression_Kind::NULL_LITERAL: {
+                AST_Type *type = expression->type;
+                assert(type);
+
+                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type)) {
+                        return false;
+                    }
+                }
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Expression_Kind::RANGE: assert(false);
         }
     }
@@ -1871,7 +2125,22 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::STRUCTURE:
+            {
+                int64_t bit_size = 0;
+                for (int64_t i = 0; i < type->structure.member_types.count; i++) {
+                    AST_Type *mem_type = type->structure.member_types[i];
+                    assert(mem_type->flags & AST_NODE_FLAG_SIZED);
+
+                    bit_size += mem_type->bit_size;
+                }
+
+                type->bit_size = bit_size;
+                type->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Type_Kind::ENUM: assert(false);
 
             case AST_Type_Kind::ARRAY: {
@@ -1881,6 +2150,7 @@ namespace Zodiac
                 type->bit_size = element_type->bit_size * type->array.element_count;
                 type->flags |= AST_NODE_FLAG_SIZED;
                 return true;
+                break;
             }
         }
     }
@@ -1992,7 +2262,13 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::BOOL: assert(false);
-            case AST_Type_Kind::POINTER: assert(false);
+
+            case AST_Type_Kind::POINTER:
+            {
+                assert(false);
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
 

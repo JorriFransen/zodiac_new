@@ -174,6 +174,10 @@ namespace Zodiac
         assert(decl->kind == AST_Declaration_Kind::VARIABLE);
         assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
 
+        if (builder->build_data->options->verbose) {
+            printf("[BYTECODE] Emitting global: '%s'\n", decl->identifier->atom.data);
+        }
+
         Bytecode_Value *global_value = bytecode_global_new(builder, decl->type,
                                                            decl->identifier->atom);
 
@@ -244,6 +248,7 @@ namespace Zodiac
             bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
         } else {
             assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
+            assert(return_value);
             bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
         }
 
@@ -400,6 +405,7 @@ namespace Zodiac
             case AST_Statement_Kind::RETURN: {
                 if (stmt->expression) {
                     auto ret_val = bytecode_emit_expression(builder, stmt->expression);
+                    assert(ret_val);
                     bytecode_emit_instruction(builder, RETURN, ret_val, nullptr, nullptr);
                 } else {
                     bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);

@@ -1552,7 +1552,18 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::STRUCTURE: assert(false);
+            case AST_Declaration_Kind::STRUCTURE: {
+                assert(decl->structure.parameters.count == 0);
+
+                for (int64_t i = 0; i < decl->structure.member_declarations.count; i++) {
+                    ast_flatten_declaration(builder, decl->structure.member_declarations[i],
+                                            nodes);
+                }
+
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
+
             case AST_Declaration_Kind::ENUM: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 

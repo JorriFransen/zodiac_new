@@ -50,9 +50,22 @@ namespace Zodiac
         Bytecode_Function *wrapper = nullptr;
     };
 
+    enum class LLVM_Job_Kind
+    {
+        INVALID,
+        FUNCTION,
+        GLOBAL,
+    };
+
     struct LLVM_Job
     {
-        Bytecode_Function *bc_func = nullptr;
+        LLVM_Job_Kind kind = LLVM_Job_Kind::INVALID;
+
+        union
+        {
+            Bytecode_Global_Info bc_global = {};
+            Bytecode_Function *bc_func;
+        };
     };
 
     struct Resolver
@@ -102,6 +115,7 @@ namespace Zodiac
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
     void queue_run_job(Resolver *resolver, AST_Declaration *run_decl, Bytecode_Function *wrapper);
     void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func);
+    void queue_llvm_job(Resolver *resolver, Bytecode_Global_Info bc_global);
 
     bool try_parse_job(Resolver *resolver, Parse_Job *job);
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);
