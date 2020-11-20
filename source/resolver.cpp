@@ -903,7 +903,19 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::ENUM: {
+                AST_Type_Spec *mem_ts = declaration->enum_decl.type_spec;
+                assert(mem_ts->type);
+                assert(mem_ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(mem_ts->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Type *mem_type = mem_ts->type;
+                assert(mem_type->kind == AST_Type_Kind::INTEGER);
+
+                assert(false);
+                break;
+            }
+
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
             case AST_Declaration_Kind::RUN: {
@@ -1797,7 +1809,14 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
+
+            case AST_Type_Spec_Kind::FROM_TYPE: {
+                assert(type_spec->type);
+                type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                type_spec->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
         }
     }
 

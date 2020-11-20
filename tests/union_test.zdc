@@ -15,6 +15,9 @@ Value :: union
     string  : String;
 }
 
+_main :: func() { main(); return; }
+#run _main();
+
 main :: func() -> s64
 {
     std.println("union test");

@@ -363,6 +363,10 @@ namespace Zodiac
                 auto ptn_ts = (PTN*)ptn->enum_decl.type_spec;
                 if (ptn_ts) {
                     ast_ts = ast_create_type_spec_from_ptn(ast_builder, ptn_ts, parent_scope);
+                } else {
+                    ast_ts = ast_type_spec_from_type_new(ast_builder->allocator,
+                                                         Builtin::type_s64,
+                                                         parent_scope);
                 }
 
                 Array<AST_Declaration*> ast_members;
@@ -378,6 +382,7 @@ namespace Zodiac
                                                                       enum_scope);
                     assert(ast_member->kind == AST_Declaration_Kind::CONSTANT);
                     assert(ast_member->constant.type_spec == nullptr);
+                    ast_member->constant.type_spec = ast_ts;
 
                     array_append(&ast_members, ast_member);
                     ast_scope_add_declaration(ast_builder, enum_scope, ast_member);
@@ -1573,10 +1578,10 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::ENUM: {
-                for (int64_t i = 0; i < decl->enum_decl.member_declarations.count; i++) {
-                    ast_flatten_declaration(builder, decl->enum_decl.member_declarations[i],
-                                            nodes);
-                }
+                assert(decl->enum_decl.type_spec);
+                if (decl->enum_decl.type_spec)
+                    ast_flatten_type_spec(builder, decl->enum_decl.type_spec, nodes);
+
                 array_append(nodes, static_cast<AST_Node*>(decl));
                 break;
             }
@@ -1663,9 +1668,23 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH:
-            {
-                assert(false);
+            case AST_Statement_Kind::SWITCH: {
+                ast_flatten_expression(builder, stmt->switch_stmt.expression, nodes);
+
+                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++) {
+                    auto switch_case = stmt->switch_stmt.cases[i];
+                    if (!switch_case->is_default) {
+                        for (int64_t expr_idx = 0;
+                             expr_idx < switch_case->expressions.count;
+                             expr_idx++) {
+                            ast_flatten_expression(builder, switch_case->expressions[expr_idx],
+                                                   nodes);
+                        }
+                    }
+
+                    ast_flatten_statement(builder, switch_case->body, nodes);
+                }
+                array_append(nodes, static_cast<AST_Node *>(stmt));
                 break;
             }
         }
@@ -1805,7 +1824,11 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::TEMPLATED: assert(false);
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
-            case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
+
+            case AST_Type_Spec_Kind::FROM_TYPE: {
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
         }
     }
 
