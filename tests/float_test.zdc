@@ -4,6 +4,9 @@ using _math;
 
 std :: import std;
 
+_main :: func() { main(); return; }
+#run _main();
+
 main :: func() -> s64
 {
     v3 : Vec3;

@@ -1521,7 +1521,12 @@ namespace Zodiac
                 if (decl->constant.type_spec)
                     ast_flatten_type_spec(builder, decl->constant.type_spec, nodes);
 
-                ast_flatten_expression(builder, decl->constant.init_expression, nodes);
+                assert(decl->constant.init_expression ||
+                       (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER));
+
+                if (decl->constant.init_expression)
+                    ast_flatten_expression(builder, decl->constant.init_expression, nodes);
+
                 array_append(nodes, static_cast<AST_Node *>(decl));
                 break;
             }
@@ -1567,7 +1572,15 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::ENUM: assert(false);
+            case AST_Declaration_Kind::ENUM: {
+                for (int64_t i = 0; i < decl->enum_decl.member_declarations.count; i++) {
+                    ast_flatten_declaration(builder, decl->enum_decl.member_declarations[i],
+                                            nodes);
+                }
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
+
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
             case AST_Declaration_Kind::RUN: {
@@ -1650,7 +1663,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH:
+            {
+                assert(false);
+                break;
+            }
         }
     }
 
@@ -1699,8 +1716,16 @@ namespace Zodiac
 
             case AST_Expression_Kind::BUILTIN_CALL: {
 
-                for (int64_t i = 0; i < expr->call.arg_expressions.count; i++) {
-                    ast_flatten_expression(builder, expr->call.arg_expressions[i], nodes);
+                auto args = expr->builtin_call.arg_expressions;
+
+                if (expr->builtin_call.identifier->atom == Builtin::atom_offsetof) {
+                    assert(args.count == 2);
+                    ast_flatten_expression(builder, args[1], nodes);
+
+                } else {
+                    for (int64_t i = 0; i < args.count; i++) {
+                        ast_flatten_expression(builder, args[i], nodes);
+                    }
                 }
 
                 array_append(nodes, static_cast<AST_Node *>(expr));

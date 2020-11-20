@@ -1362,16 +1362,19 @@ namespace Zodiac
             case AST_Expression_Kind::BUILTIN_CALL: {
 
                 auto args = expression->builtin_call.arg_expressions;
-                for (int64_t i = 0; i < args.count; i++) {
-                    AST_Expression *arg_expr = args[i];
-                    assert(arg_expr->type);
-                    assert(arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID);
-                    assert(arg_expr->flags |= AST_NODE_FLAG_TYPED);
-                }
+
+#define _ENSURE_ARGS_ARE_TYPED \
+    for (int64_t i = 0; i < args.count; i++) { \
+        AST_Expression *arg_expr = args[i]; \
+        assert(arg_expr->type); \
+        assert(arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID); \
+        assert(arg_expr->flags |= AST_NODE_FLAG_TYPED); \
+    } \
 
                 Atom name = expression->builtin_call.identifier->atom;
 
                 if (name == Builtin::atom_exit) {
+                    _ENSURE_ARGS_ARE_TYPED
                     assert(args.count == 1);
                     assert(args[0]->type == Builtin::type_s64);
 
@@ -1381,6 +1384,7 @@ namespace Zodiac
                     return true;
 
                 } else if (name == Builtin::atom_syscall) {
+                    _ENSURE_ARGS_ARE_TYPED
                     assert(args.count >= 1);
 
                     for (int64_t i = 0; i < args.count; i++) {
@@ -1407,6 +1411,7 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
                 } else if (name == Builtin::atom_cast) {
+                    _ENSURE_ARGS_ARE_TYPED
                     assert(args.count == 2);
 
                     AST_Expression *type_expr = args[0];
@@ -1424,7 +1429,38 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
+                } else if (name == Builtin::atom_offsetof) {
+                    assert(args.count == 2);
+
+                    assert(args[1]->type);
+                    assert(args[1]->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(args[1]->flags & AST_NODE_FLAG_TYPED);
+
+                    assert(args[1]->type->kind == AST_Type_Kind::STRUCTURE);
+                    assert(args[1]->type->structure.declaration);
+
+                    AST_Declaration *struct_decl = args[1]->type->structure.declaration;
+                    assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                    Scope *struct_scope = struct_decl->structure.member_scope;
+                    assert(struct_scope);
+
+                    assert(args[0]->scope != struct_scope);
+                    args[0]->scope = struct_scope;
+
+                    if (!try_resolve_expression(resolver, args[0])) {
+                        assert(false);
+                    }
+
+                    assert(args[0]->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(args[0]->flags & AST_NODE_FLAG_TYPED);
+
+                    expression->type = Builtin::type_s64;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
                 } else {
+                    _ENSURE_ARGS_ARE_TYPED
                     zodiac_report_error(resolver->build_data,
                                         Zodiac_Error_Kind::UNIMPLEMENTED,
                                         expression,
@@ -1432,6 +1468,8 @@ namespace Zodiac
                                         name.data);
                     return false;
                 }
+
+#undef _ENSURE_ARGS_ARE_TYPED
 
                 assert(false);
 

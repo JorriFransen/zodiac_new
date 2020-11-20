@@ -100,7 +100,6 @@ test_operators :: func()
 
 print_day :: func(day: Day)
 {
-
     std.print("Day.");
 
     switch (day)
