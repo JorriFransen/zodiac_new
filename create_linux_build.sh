@@ -23,6 +23,11 @@ if  [ ! -d "lib/dyncall-1.1" ]; then
     echo Unpacking dyncall
     pushd lib
     tar xvf dyncall-1.1.tar.gz
+    echo Building dyncall
+    pushd dyncall-1.1
+    ./configure
+    make
+    popd
     popd
 fi
 
