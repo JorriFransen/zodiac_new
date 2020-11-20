@@ -378,14 +378,11 @@ namespace Zodiac
     {
         assert(builder->insert_block);
 
-        switch (stmt->kind)
-        {
+        switch (stmt->kind) {
             case AST_Statement_Kind::INVALID: assert(false);
 
-            case AST_Statement_Kind::BLOCK:
-            {
-                for (int64_t i = 0; i < stmt->block.statements.count; i++)
-                {
+            case AST_Statement_Kind::BLOCK: {
+                for (int64_t i = 0; i < stmt->block.statements.count; i++) {
                     bytecode_emit_statement(builder, stmt->block.statements[i]);
                 }
                 break;
@@ -471,8 +468,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH:
-            {
+            case AST_Statement_Kind::SWITCH: {
                 auto switch_expr = stmt->switch_stmt.expression;
                 Bytecode_Value *switch_val = bytecode_emit_expression(builder, switch_expr);
 
@@ -529,8 +525,7 @@ namespace Zodiac
 
                 bool added_default = false;
 
-                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++)
-                {
+                for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++) {
                     AST_Switch_Case *switch_case = stmt->switch_stmt.cases[i];
                     Bytecode_Block *case_block = case_blocks[i];
 
@@ -540,8 +535,7 @@ namespace Zodiac
                         continue;
                     }
 
-                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++)
-                    {
+                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
                         AST_Expression *expr = switch_case->expressions[expr_i];
                         assert(expr->expr_flags & AST_EXPR_FLAG_CONST);
 

@@ -761,15 +761,19 @@ namespace Zodiac
                 if (ts) {
                     if (init_expr) {
                         if (ts->type != init_expr->type) {
-                            if (ts->type->kind == AST_Type_Kind::INTEGER &&
-                                init_expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
-                                integer_literal_fits_in_type(init_expr->integer_literal,
-                                                             ts->type)) {
-                                init_expr->type = ts->type;
-                            } else {
-                                assert(false);
-                            }
-                        } else {
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                init_expr,
+                                                "Mismatching types in variable declaration");
+                            auto err_allocator = resolver->build_data->err_allocator;
+                            zodiac_report_info(resolver->build_data, ts,
+                                               "Expected type: %s",
+                                               ast_type_to_string(err_allocator, ts->type));
+                            zodiac_report_info(resolver->build_data, init_expr,
+                                               "Given type: %s",
+                                               ast_type_to_string(err_allocator,
+                                                                  init_expr->type));
+                            return false;
                         }
                     }
 
@@ -1538,7 +1542,17 @@ namespace Zodiac
 
             case AST_Expression_Kind::INTEGER_LITERAL: {
                 assert(!expression->type);
-                expression->type = Builtin::type_s64;
+                if (!expression->infer_type_from) {
+                    expression->type = Builtin::type_s64;
+                } else {
+                    auto infer_type_from = expression->infer_type_from;
+                    assert(infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(infer_type_from->flags & AST_NODE_FLAG_TYPED);
+                    auto type = infer_type(infer_type_from);
+                    assert(type);
+                    assert(type->kind == AST_Type_Kind::INTEGER);
+                    expression->type = type;
+                }
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
                 return true;
@@ -1583,33 +1597,14 @@ namespace Zodiac
 
             case AST_Expression_Kind::NULL_LITERAL: {
                 assert(expression->infer_type_from);
-                AST_Node *_infer_type_from = expression->infer_type_from;
-                assert(_infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(_infer_type_from->flags & AST_NODE_FLAG_TYPED);
+                AST_Node *infer_type_from = expression->infer_type_from;
+                assert(infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(infer_type_from->flags & AST_NODE_FLAG_TYPED);
 
-                AST_Type *result_type = nullptr;
-
-                switch (_infer_type_from->kind) {
-                    case AST_Node_Kind::INVALID: assert(false);
-                    case AST_Node_Kind::MODULE: assert(false);
-                    case AST_Node_Kind::IDENTIFIER: assert(false);
-                    case AST_Node_Kind::DECLARATION: assert(false);
-                    case AST_Node_Kind::SWITCH_CASE: assert(false);
-                    case AST_Node_Kind::STATEMENT: assert(false);
-                    case AST_Node_Kind::EXPRESSION: assert(false);
-
-                    case AST_Node_Kind::TYPE_SPEC: {
-                        auto ts = static_cast<AST_Type_Spec *>(_infer_type_from);
-                        assert(ts->type);
-                        assert(ts->type->kind == AST_Type_Kind::POINTER);
-                        result_type = ts->type;
-                        break;
-                    }
-
-                    case AST_Node_Kind::TYPE: assert(false);
-                }
-
+                AST_Type *result_type = infer_type(infer_type_from);
                 assert(result_type);
+                assert(result_type->kind == AST_Type_Kind::POINTER);
+
                 expression->type = result_type;
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
@@ -2224,6 +2219,36 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Type_Spec_Kind::FROM_TYPE: assert(false);
         }
+    }
+
+    AST_Type *infer_type(AST_Node *ast_node)
+    {
+        assert(ast_node->flags & AST_NODE_FLAG_RESOLVED_ID);
+        assert(ast_node->flags & AST_NODE_FLAG_TYPED);
+
+        AST_Type *result_type = nullptr;
+
+        switch (ast_node->kind) {
+            case AST_Node_Kind::INVALID: assert(false);
+            case AST_Node_Kind::MODULE: assert(false);
+            case AST_Node_Kind::IDENTIFIER: assert(false);
+            case AST_Node_Kind::DECLARATION: assert(false);
+            case AST_Node_Kind::SWITCH_CASE: assert(false);
+            case AST_Node_Kind::STATEMENT: assert(false);
+            case AST_Node_Kind::EXPRESSION: assert(false);
+
+            case AST_Node_Kind::TYPE_SPEC: {
+                auto ts = static_cast<AST_Type_Spec *>(ast_node);
+                assert(ts->type);
+                result_type = ts->type;
+                break;
+            }
+
+            case AST_Node_Kind::TYPE: assert(false);
+        }
+
+        assert(result_type);
+        return result_type;
     }
 
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type)

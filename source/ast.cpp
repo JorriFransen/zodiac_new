@@ -189,7 +189,7 @@ namespace Zodiac
                     ast_init_expr =
                         ast_create_expression_from_ptn(ast_builder,
                                                        ptn->constant.init_expression,
-                                                       parent_scope);
+                                                       parent_scope, ast_type);
                     assert(ast_init_expr);
                 }
 
@@ -1189,9 +1189,12 @@ namespace Zodiac
             case Expression_PTN_Kind::INTEGER_LITERAL: {
                 assert(((int64_t)ptn->integer_literal.u64) ==
                        ptn->integer_literal.s64);
-                return ast_integer_literal_expression_new(ast_builder->allocator,
-                                                          ptn->integer_literal.s64, scope,
-                                                          begin_fp, end_fp);
+                auto result =  ast_integer_literal_expression_new(ast_builder->allocator,
+                                                                  ptn->integer_literal.s64,
+                                                                  scope,
+                                                                  begin_fp, end_fp);
+                result->infer_type_from = infer_type_from;
+                return result;
                 break;
             }
 

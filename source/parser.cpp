@@ -283,7 +283,8 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
             Expression_PTN *const_expr = parser_parse_expression(parser, ts);
             assert(const_expr);
             end_fp = ts->current_token().end_file_pos;
-            result = new_constant_declaration_ptn(parser->allocator, identifier, nullptr,
+            result = new_constant_declaration_ptn(parser->allocator, identifier,
+                                                  specified_type,
                                                   const_expr,
                                                   identifier->self.begin_file_pos,
                                                   end_fp);
