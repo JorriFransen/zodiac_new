@@ -1459,6 +1459,14 @@ namespace Zodiac
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     return true;
+                } else if (name == Builtin::atom_sizeof) {
+                    _ENSURE_ARGS_ARE_TYPED
+                    assert(args.count == 1);
+
+                    expression->type = Builtin::type_s64;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    return true;
                 } else {
                     _ENSURE_ARGS_ARE_TYPED
                     zodiac_report_error(resolver->build_data,

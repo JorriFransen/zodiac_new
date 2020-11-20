@@ -4,6 +4,9 @@ std :: import std;
 structs :: import structs;
 using structs;
 
+_main :: func() { main(); return; }
+#run _main();
+
 main :: func() -> s64
 {
     std.print("sizeof test\n");
