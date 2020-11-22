@@ -68,22 +68,17 @@ namespace Zodiac
 
             case AST_Expression_Kind::CAST: assert(false);
 
-            case AST_Expression_Kind::INTEGER_LITERAL:
-            {
+            case AST_Expression_Kind::INTEGER_LITERAL: {
                 Const_Value result = {};
                 result.type = expr->type;
 
-                if (expr->type->kind == AST_Type_Kind::ENUM)
-                {
+                if (expr->type->kind == AST_Type_Kind::ENUM) {
 #ifndef NDEBUG
                     auto base_type = expr->type->enum_type.base_type;
                     assert(base_type->kind == AST_Type_Kind::INTEGER);
 #endif
                     result.integer = expr->integer_literal;
-                }
-                else
-                {
-                    assert(expr->type == Builtin::type_s64);
+                } else {
                     result.integer = expr->integer_literal;
                 }
 

@@ -946,6 +946,8 @@ namespace Zodiac
                             }
                         }
 
+                        assert (init_expr->type == mem_type);
+
                         if (!((mem_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
                               (mem_decl->flags & AST_NODE_FLAG_TYPED))) {
                             if (!try_resolve_declaration(resolver, mem_decl)) {
@@ -983,7 +985,9 @@ namespace Zodiac
                     assert(mem_decl->type == mem_type);
 
                     if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_INTINIT) {
-                        assert(false);
+                        auto nv = const_interpret_expression(mem_decl->constant.init_expression);
+                        next_value = nv.integer.s64 + 1;
+                        current_value = nv.integer.s64;
                     } else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT) {
 
                         assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
@@ -1197,6 +1201,8 @@ namespace Zodiac
 
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
     {
+        bool allow_null_type = false;
+
         switch (expression->kind) {
             case AST_Expression_Kind::INVALID: assert(false);
 
@@ -1219,10 +1225,15 @@ namespace Zodiac
                     return false;
                 }
 
-                if (decl->kind != AST_Declaration_Kind::IMPORT) {
+                if (decl->kind == AST_Declaration_Kind::IMPORT) {
+                    allow_null_type = true;
+                } else {
                     assert(decl->type);
                     expression->type = decl->type;
                 }
+
+                expression->identifier->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->identifier->flags |= AST_NODE_FLAG_TYPED;
 
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
@@ -1271,6 +1282,9 @@ namespace Zodiac
                     break;
                 } else {
                     assert(parent_decl->type);
+                    assert(parent_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(parent_decl->flags & AST_NODE_FLAG_TYPED);
+
                     AST_Type *parent_type = parent_decl->type;
                     if (parent_type->kind == AST_Type_Kind::ENUM) {
 
@@ -1723,6 +1737,12 @@ namespace Zodiac
                         assert(target_type->bit_size >= op_expr->type->bit_size);
                         result = true;
                         result_type = target_type;
+                    } else if (op_expr->type->kind == AST_Type_Kind::ENUM) {
+                        assert(false); // We do want this cast to happen, look into why it
+                                       //  doesn't always happen...
+                        assert(is_valid_type_conversion(op_expr->type, target_type));
+                        result = true;
+                        result_type = target_type;
                     } else {
                         assert(false);
                     }
@@ -1821,7 +1841,7 @@ namespace Zodiac
 
         assert(expression->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(expression->flags & AST_NODE_FLAG_TYPED);
-        assert(expression->type);
+        assert(expression->type || allow_null_type);
         resolver_inherit_const(expression);
         return true;
     }
