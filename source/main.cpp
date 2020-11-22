@@ -41,10 +41,9 @@ int main(int argc, char **argv)
     if (rr.parse_error || rr.llvm_error) return 1;
 
     if (options.print_scope) scope_print(resolver.global_scope);
-    if (options.print_resolved_ast)
-    {
-        for (int64_t i = 0; i < resolver.parsed_modules.count; i++)
-        {
+
+    if (options.print_resolved_ast) {
+        for (int64_t i = 0; i < resolver.parsed_modules.count; i++) {
             ast_print(resolver.parsed_modules[i].ast);
         }
     }

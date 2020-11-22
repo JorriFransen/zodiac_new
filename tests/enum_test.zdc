@@ -33,12 +33,15 @@ Operator : u8 : enum
     Invalid :: 0,
 }
 
+_main :: func() { main(); return; }
+#run _main();
+
 main :: func() -> s64
 {
     std.println("Enum test");
 
     test_day();
-    test_operators();
+    // test_operators();
 
     return 0;
 }
@@ -65,34 +68,34 @@ test_operators :: func()
 {
     std.print("\nOperator.First_Math = ");
     std.print_num(Operator.First_Math);
-    std.print("\nOperator.Add = ");
-    std.print_num(Operator.Add);
-    std.print("\nOperator.Sub = ");
-    std.print_num(Operator.Sub);
-    std.print("\nOperator.Mul = ");
-    std.print_num(Operator.Mul);
-    std.print("\nOperator.Div = ");
-    std.print_num(Operator.Div);
-    std.print("\nOperator.Last_Math = ");
-    std.print_num(Operator.Last_Math);
-    std.print("\nOperator.First_Cmp = ");
-    std.print_num(Operator.First_Cmp);
-    std.print("\nOperator.Eq = ");
-    std.print_num(Operator.Eq);
-    std.print("\nOperator.Neq = ");
-    std.print_num(Operator.NEq);
-    std.print("\nOperator.Lt = ");
-    std.print_num(Operator.Lt);
-    std.print("\nOperator.LtEq = ");
-    std.print_num(Operator.LtEq);
-    std.print("\nOperator.Gt = ");
-    std.print_num(Operator.Gt);
-    std.print("\nOperator.GtEq = ");
-    std.print_num(Operator.GtEq);
-    std.print("\nOperator.Last_Cmp = ");
-    std.print_num(Operator.Last_Cmp);
-    std.print("\nOperator.Invalid = ");
-    std.print_num(Operator.Invalid);
+//     std.print("\nOperator.Add = ");
+//     std.print_num(Operator.Add);
+//     std.print("\nOperator.Sub = ");
+//     std.print_num(Operator.Sub);
+//     std.print("\nOperator.Mul = ");
+//     std.print_num(Operator.Mul);
+//     std.print("\nOperator.Div = ");
+//     std.print_num(Operator.Div);
+//     std.print("\nOperator.Last_Math = ");
+//     std.print_num(Operator.Last_Math);
+//     std.print("\nOperator.First_Cmp = ");
+//     std.print_num(Operator.First_Cmp);
+//     std.print("\nOperator.Eq = ");
+//     std.print_num(Operator.Eq);
+//     std.print("\nOperator.Neq = ");
+//     std.print_num(Operator.NEq);
+//     std.print("\nOperator.Lt = ");
+//     std.print_num(Operator.Lt);
+//     std.print("\nOperator.LtEq = ");
+//     std.print_num(Operator.LtEq);
+//     std.print("\nOperator.Gt = ");
+//     std.print_num(Operator.Gt);
+//     std.print("\nOperator.GtEq = ");
+//     std.print_num(Operator.GtEq);
+//     std.print("\nOperator.Last_Cmp = ");
+//     std.print_num(Operator.Last_Cmp);
+//     std.print("\nOperator.Invalid = ");
+//     std.print_num(Operator.Invalid);
     std.print("\n");
 
     return;
@@ -102,17 +105,26 @@ print_day :: func(day: Day)
 {
     std.print("Day.");
 
-    switch (day)
-    {
-        case Day.Monday: std.print("Monday");
-        case Day.Tuesday: std.print("Tuesday");
-        case Day.Wednesday: std.print("Wednesday");
-        case Day.Thursday: std.print("Thursday");
-        case Day.Friday: std.print("Friday");
-        case Day.Saturday: std.print("Saturday");
-        case Day.Sunday: std.print("Sunday");
-        default: std.print("INVALID");
-    }
+    // switch (day)
+    // {
+    //     case Day.Monday: std.print("Monday");
+    //     case Day.Tuesday: std.print("Tuesday");
+    //     case Day.Wednesday: std.print("Wednesday");
+    //     case Day.Thursday: std.print("Thursday");
+    //     case Day.Friday: std.print("Friday");
+    //     case Day.Saturday: std.print("Saturday");
+    //     case Day.Sunday: std.print("Sunday");
+    //     default: std.print("INVALID");
+    // }
+
+    if      (day == Day.Monday) std.print("Monday");
+    else if (day == Day.Tuesday) std.print("Tuesday");
+    else if (day == Day.Wednesday) std.print("Wednesday");
+    else if (day == Day.Thursday) std.print("Thursday");
+    else if (day == Day.Friday) std.print("Friday");
+    else if (day == Day.Saturday) std.print("Saturday");
+    else if (day == Day.Sunday) std.print("Sunday");
+    else std.print("INVALID");
 
     std.print("\n");
     return;

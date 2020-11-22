@@ -888,8 +888,7 @@ namespace Zodiac
                                              begin_fp, end_fp);
             }
 
-            case Statement_PTN_Kind::IF:
-            {
+            case Statement_PTN_Kind::IF: {
                 auto cond_expr = ast_create_expression_from_ptn(ast_builder,
                                                                 ptn->if_stmt.cond_expr,
                                                                 parent_scope);
@@ -898,11 +897,11 @@ namespace Zodiac
                                                                var_decls, parent_scope);
                 Scope *then_scope = nullptr;
 
-                if (then_stmt->kind == AST_Statement_Kind::BLOCK)
+                if (then_stmt->kind == AST_Statement_Kind::BLOCK) {
                     then_scope = then_stmt->block.scope;
-                else
-                {
-                    then_scope = scope_new(ast_builder->allocator, Scope_Kind::BLOCK, parent_scope);
+                } else {
+                    then_scope = scope_new(ast_builder->allocator, Scope_Kind::BLOCK,
+                                           parent_scope);
                 }
 
                 assert(then_scope);
@@ -910,19 +909,19 @@ namespace Zodiac
                 Scope *else_scope = nullptr;
 
                 AST_Statement *else_stmt = nullptr;
-                if (ptn->if_stmt.else_stmt)
-                {
+
+                if (ptn->if_stmt.else_stmt) {
                     else_stmt = ast_create_statement_from_ptn(ast_builder,
                                                               ptn->if_stmt.else_stmt,
                                                               var_decls, parent_scope);
 
-                    if (else_stmt->kind == AST_Statement_Kind::BLOCK)
+                    if (else_stmt->kind == AST_Statement_Kind::BLOCK) {
                         else_scope = else_stmt->block.scope;
-                    else if (else_stmt->kind == AST_Statement_Kind::IF)
+                    } else if (else_stmt->kind == AST_Statement_Kind::IF) {
                         else_scope = else_stmt->if_stmt.then_scope;
-                    else
-                    {
-                        assert(false);
+                    } else {
+                        else_scope = scope_new(ast_builder->allocator, Scope_Kind::BLOCK,
+                                               parent_scope);
                     }
 
                     assert(else_scope);
@@ -1581,6 +1580,11 @@ namespace Zodiac
                 assert(decl->enum_decl.type_spec);
                 if (decl->enum_decl.type_spec)
                     ast_flatten_type_spec(builder, decl->enum_decl.type_spec, nodes);
+
+                // for (int64_t i = 0; i < decl->enum_decl.member_declarations.count; i++) {
+                //     ast_flatten_declaration(builder, decl->enum_decl.member_declarations[i],
+                //                             nodes);
+                // }
 
                 array_append(nodes, static_cast<AST_Node*>(decl));
                 break;

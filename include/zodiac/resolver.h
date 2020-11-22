@@ -139,5 +139,8 @@ namespace Zodiac
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
 
+    AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
+                                       AST_Type *base_type, Scope *mem_scope, Scope *current_scope);
+
     bool fatal_error_reported(Resolver *resolver);
 }

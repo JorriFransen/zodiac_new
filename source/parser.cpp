@@ -868,6 +868,10 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     result = new_expression_statement_ptn(parser->allocator, expr, begin_fp,
                                                           expr->self.end_file_pos);
                 }
+
+                if (expr->self.flags & PTN_FLAG_SEMICOLON) {
+                    result->self.flags |= PTNC_FLAG_NONE;
+                }
             }
             assert(result);
             return result;
@@ -1125,14 +1129,22 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
 
             auto then_stmt = parser_parse_statement(parser, ts);
             if (!then_stmt) return nullptr;
+            if (!(then_stmt->self.flags & PTN_FLAG_SEMICOLON)) {
+                if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) return nullptr;
+                then_stmt->self.flags |= PTN_FLAG_SEMICOLON;
+            }
 
             Statement_PTN *else_stmt = nullptr;
 
             auto end_fp = then_stmt->self.end_file_pos;
 
-            if (parser_match_token(ts, TOK_KW_ELSE))
-            {
+            if (parser_match_token(ts, TOK_KW_ELSE)) {
                 else_stmt = parser_parse_statement(parser, ts);
+                assert(else_stmt);
+                if (!(else_stmt->self.flags & PTN_FLAG_SEMICOLON)) {
+                    if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) return nullptr;
+                    else_stmt->self.flags |= PTN_FLAG_SEMICOLON;
+                }
                 end_fp = then_stmt->self.end_file_pos;
             }
 
