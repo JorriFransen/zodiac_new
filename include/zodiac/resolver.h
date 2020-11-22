@@ -134,6 +134,9 @@ namespace Zodiac
 
     AST_Type *infer_type(AST_Node *ast_node);
 
+    AST_Declaration *resolver_get_declaration(AST_Expression *expr);
+    void resolver_inherit_const(AST_Expression *expr);
+
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type);
 
