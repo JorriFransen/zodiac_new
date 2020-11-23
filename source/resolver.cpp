@@ -2287,9 +2287,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::FOR:
-            {
-                assert(false);
+            case AST_Statement_Kind::FOR: {
+                for (int64_t i = 0; i < statement->for_stmt.init_statements.count; i++) {
+                    AST_Statement *init_stmt = statement->for_stmt.init_statements[i];
+                    assert(init_stmt->flags & AST_NODE_FLAG_SIZED);
+                }
+
+                AST_Expression *cond_expr = statement->for_stmt.cond_expr;
+                assert(cond_expr->flags & AST_NODE_FLAG_SIZED);
+
+                for (int64_t i = 0; i < statement->for_stmt.step_statements.count; i++) {
+                    AST_Statement *step_stmt = statement->for_stmt.step_statements[i];
+                    assert(step_stmt->flags & AST_NODE_FLAG_SIZED);
+                }
+
+                AST_Statement *body_stmt = statement->for_stmt.body_stmt;
+                assert(body_stmt->flags & AST_NODE_FLAG_SIZED);
+
+                statement->flags |= AST_NODE_FLAG_SIZED;
+                return true;
                 break;
             }
 
