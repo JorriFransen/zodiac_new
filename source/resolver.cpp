@@ -1243,6 +1243,11 @@ namespace Zodiac
                     }
                 }
 
+                if (!statement->switch_stmt.allow_incomplete &&
+                    !resolver_check_switch_completeness(resolver, statement)) {
+                    return false;
+                }
+
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
                 return true;
@@ -3066,6 +3071,83 @@ namespace Zodiac
                          temp_case_exprs[j]);
         }
 
+    }
+
+    bool resolver_check_switch_completeness(Resolver *resolver, AST_Statement *ast_stmt)
+    {
+        assert(ast_stmt->kind == AST_Statement_Kind::SWITCH);
+
+        AST_Type *enum_type = ast_stmt->switch_stmt.expression->type;
+        assert(enum_type);
+
+        if (ast_stmt->switch_stmt.default_case) return true;
+
+        auto umvs = enum_type->enum_type.unique_member_values;
+
+        auto ta = temp_allocator_get();
+
+        Array<Integer_Literal> unhandled_umvs = {};
+        array_init(ta, &unhandled_umvs, umvs.count);
+
+        for (int64_t i = 0; i < umvs.count; i++) array_append(&unhandled_umvs, umvs[i]);
+
+        auto cases = ast_stmt->switch_stmt.cases;
+
+        for (int64_t i = 0; i < cases.count; i++) {
+            AST_Switch_Case *switch_case = cases[i];
+
+            for (int64_t j = 0; j < switch_case->expressions.count; j++) {
+                auto case_expr = switch_case->expressions[j];
+
+                Const_Value expr_val = const_interpret_expression(case_expr);
+
+                int64_t match_idx = -1;
+
+                for (int64_t umv_i = 0; umv_i < unhandled_umvs.count; umv_i++) {
+                    auto u_umv = unhandled_umvs[umv_i];
+                    if (u_umv.u64 == expr_val.integer.u64) {
+                        match_idx = umv_i;
+                        break;
+                    }
+                }
+
+                if (match_idx != -1) {
+                    array_unordered_remove(&unhandled_umvs, match_idx);
+                }
+
+                if (unhandled_umvs.count <= 0) break;
+            }
+
+            if (unhandled_umvs.count <= 0) break;
+        }
+
+        if (unhandled_umvs.count) {
+            zodiac_report_error(resolver->build_data,
+                                Zodiac_Error_Kind::INCOMPLETE_SWITCH,
+                                ast_stmt,
+                                "Incomplete switch case, %" PRId64 " unhandled enum values.",
+                                unhandled_umvs.count);
+
+            auto edecl = enum_type->enum_type.declaration;
+
+            int64_t report_count = min(unhandled_umvs.count, 3);
+            for (int64_t i = 0; i < report_count; i++)
+            {
+                Const_Value cv = { .type = enum_type, .integer = unhandled_umvs[i] };
+                auto emem = ast_find_enum_member(enum_type, cv);
+
+                zodiac_report_error(resolver->build_data,
+                                    Zodiac_Error_Kind::INCOMPLETE_SWITCH,
+                                    ast_stmt,
+                                    "Unhandled enum value: %s.%s",
+                                    edecl->identifier->atom.data,
+                                    emem->identifier->atom.data);
+            }
+
+            return false;
+        }
+
+        return true;
     }
 
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
