@@ -1199,7 +1199,41 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH: {
+                AST_Expression *switch_expr = statement->switch_stmt.expression;
+                assert(switch_expr->type);
+                assert(switch_expr->flags  & AST_NODE_FLAG_RESOLVED_ID);
+                assert(switch_expr->flags  & AST_NODE_FLAG_TYPED);
+
+                assert(switch_expr->type->kind == AST_Type_Kind::INTEGER ||
+                       switch_expr->type->kind == AST_Type_Kind::ENUM);
+
+                for (int64_t i = 0; i < statement->switch_stmt.cases.count; i++) {
+                    AST_Switch_Case *switch_case = statement->switch_stmt.cases[i];
+
+                    // assert(switch_case->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    // assert(switch_case->flags & AST_NODE_FLAG_TYPED);
+
+                    assert(switch_case->body->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(switch_case->body->flags & AST_NODE_FLAG_TYPED);
+
+                    if (switch_case->is_default) continue;
+
+                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
+                        AST_Expression *case_expr = switch_case->expressions[expr_i];
+                        assert(case_expr->type);
+                        assert(case_expr->type == switch_expr->type);
+                        assert(case_expr->expr_flags & AST_EXPR_FLAG_CONST);
+                        assert(case_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                        assert(case_expr->flags & AST_NODE_FLAG_TYPED);
+                    }
+                }
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
         }
     }
 
@@ -2191,7 +2225,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH: assert(false);
+            case AST_Statement_Kind::SWITCH: {
+                AST_Expression *switch_expr = statement->switch_stmt.expression;
+                assert(switch_expr->flags & AST_NODE_FLAG_SIZED);
+
+                for (int64_t i = 0; i < statement->switch_stmt.cases.count; i++) {
+                    AST_Switch_Case *switch_case = statement->switch_stmt.cases[i];
+
+                    assert(switch_case->body->flags & AST_NODE_FLAG_SIZED);
+
+                    if (switch_case->is_default) continue;
+
+                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
+                        AST_Expression *case_expr = switch_case->expressions[expr_i];
+                        assert(case_expr->flags & AST_NODE_FLAG_SIZED);
+                    }
+                }
+                return true;
+                break;
+            }
         }
     }
 
