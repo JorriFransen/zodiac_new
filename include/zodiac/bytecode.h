@@ -188,11 +188,12 @@ namespace Zodiac
 
     enum Bytecode_Function_Flags_ : Bytecode_Function_Flags
     {
-        BC_FUNC_FLAG_NONE      = 0,
-        BC_FUNC_FLAG_CRT_ENTRY = 1,
-        BC_FUNC_FLAG_FOREIGN   = 2,
-        BC_FUNC_FLAG_EMITTED   = 4,
-        BC_FUNC_FLAG_NORETURN  = 8,
+        BC_FUNC_FLAG_NONE           = 0x00,
+        BC_FUNC_FLAG_CRT_ENTRY      = 0x01,
+        BC_FUNC_FLAG_BYTECODE_ENTRY = 0x02,
+        BC_FUNC_FLAG_FOREIGN        = 0x04,
+        BC_FUNC_FLAG_EMITTED        = 0x08,
+        BC_FUNC_FLAG_NORETURN       = 0x10,
     };
 
     struct Bytecode_Function;

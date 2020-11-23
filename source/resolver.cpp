@@ -123,6 +123,8 @@ namespace Zodiac
                         if (!resolver->entry_decl && is_entry_decl(resolver, decl)) {
                             resolver->entry_decl = decl;
                             decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
+                        } else if (is_bytecode_entry_decl(resolver, decl)) {
+                            decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
                         }
                     }
                 }
@@ -177,6 +179,11 @@ namespace Zodiac
                 auto job = queue_dequeue(&resolver->bytecode_jobs);
 
                 if (job.decl->kind == AST_Declaration_Kind::FUNCTION) {
+
+                    if (resolver->build_data->options->link_c &&
+                        (job.decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)) {
+                        continue;
+                    }
 
                     bytecode_register_function(&resolver->bytecode_builder, job.decl);
                     auto bc_func =
@@ -244,7 +251,11 @@ namespace Zodiac
                         llvm_register_function(&resolver->llvm_builder, bc_func);
                         llvm_emit_function(&resolver->llvm_builder, bc_func);
 
-                        if (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY) {
+                        if (resolver->build_data->options->link_c &&
+                            (bc_func->flags & BC_FUNC_FLAG_BYTECODE_ENTRY)) {
+                            llvm_emit_binary(&resolver->llvm_builder,
+                                             resolver->build_data->options->exe_file_name.data);
+                        } else if (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY) {
                             llvm_emit_binary(&resolver->llvm_builder,
                                              resolver->build_data->options->exe_file_name.data);
                         }
@@ -858,8 +869,12 @@ namespace Zodiac
                 assert(func_ts->flags & AST_NODE_FLAG_TYPED);
 
                 AST_Statement *body = declaration->function.body;
-                assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(body->flags & AST_NODE_FLAG_TYPED);
+                if (body) {
+                    assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(body->flags & AST_NODE_FLAG_TYPED);
+                } else {
+                    assert(declaration->decl_flags & AST_DECL_FLAG_FOREIGN);
+                }
 
                 declaration->type = func_ts->type;
                 declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2991,6 +3006,16 @@ namespace Zodiac
             }
         } else {
             assert(false);
+        }
+
+        return false;
+    }
+
+    bool is_bytecode_entry_decl(Resolver *resolver, AST_Declaration *decl)
+    {
+        if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+            decl->identifier->atom == Builtin::atom_call_main_and_exit) {
+            return true;
         }
 
         return false;

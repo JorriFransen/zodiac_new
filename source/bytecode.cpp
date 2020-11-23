@@ -99,19 +99,19 @@ namespace Zodiac
         assert(func);
         auto bd = builder->build_data;
 
-        if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)
-        {
+        if (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY) {
             assert(!bd->bc_entry_function);
             bd->bc_entry_function = func;
             func->flags |= BC_FUNC_FLAG_CRT_ENTRY;
         }
-        if (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY)
-        {
+
+        if (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY) {
             assert(!bd->bc_bytecode_entry_function);
             bd->bc_bytecode_entry_function = func;
+            func->flags |= BC_FUNC_FLAG_BYTECODE_ENTRY;
         }
-        if (decl->decl_flags & AST_DECL_FLAG_FOREIGN)
-        {
+
+        if (decl->decl_flags & AST_DECL_FLAG_FOREIGN) {
             func->flags |= BC_FUNC_FLAG_FOREIGN;
         }
 
@@ -136,8 +136,7 @@ namespace Zodiac
             return func;
         }
 
-        for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
-        {
+        for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++) {
             auto param_decl = decl->function.parameter_declarations[i];
             auto param_val = func->parameters[i];
             array_append(&builder->parameters, { param_decl, param_val });
@@ -148,8 +147,7 @@ namespace Zodiac
 
         bytecode_set_insert_point(builder, entry_block);
 
-        for (int64_t i = 0; i < decl->function.variable_declarations.count; i++)
-        {
+        for (int64_t i = 0; i < decl->function.variable_declarations.count; i++) {
             auto var_decl = decl->function.variable_declarations[i];
             assert(var_decl->kind == AST_Declaration_Kind::VARIABLE);
 

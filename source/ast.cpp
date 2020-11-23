@@ -1555,7 +1555,11 @@ namespace Zodiac
 
                 ast_flatten_type_spec(builder, decl->function.type_spec, nodes);
 
-                ast_flatten_statement(builder, decl->function.body, nodes);
+                if (decl->function.body) {
+                    ast_flatten_statement(builder, decl->function.body, nodes);
+                } else {
+                    assert(decl->decl_flags & AST_DECL_FLAG_FOREIGN);
+                }
 
                 array_append(nodes, static_cast<AST_Node*>(decl));
                 break;
