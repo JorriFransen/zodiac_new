@@ -1123,7 +1123,8 @@ namespace Zodiac
             case AST_Statement_Kind::BREAK: {
                 AST_Statement *break_from = statement->break_stmt.break_from;
                 assert(break_from);
-                assert(break_from->kind == AST_Statement_Kind::WHILE);
+                assert(break_from->kind == AST_Statement_Kind::WHILE ||
+                       break_from->kind == AST_Statement_Kind::SWITCH);
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1219,7 +1220,9 @@ namespace Zodiac
 
                     if (switch_case->is_default) continue;
 
-                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
+                    for (int64_t expr_i = 0;
+                         expr_i < switch_case->expressions.count;
+                         expr_i++) {
                         AST_Expression *case_expr = switch_case->expressions[expr_i];
                         assert(case_expr->type);
                         assert(case_expr->type == switch_expr->type);
@@ -1874,7 +1877,26 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::RANGE: assert(false);
+            case AST_Expression_Kind::RANGE: {
+                AST_Expression *begin = expression->range.begin;
+                assert(begin->type);
+                assert(begin->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(begin->flags & AST_NODE_FLAG_TYPED);
+
+                AST_Expression *end = expression->range.end;
+                assert(end->type);
+                assert(end->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(end->flags & AST_NODE_FLAG_TYPED);
+
+                assert(begin->type == end->type);
+                assert(begin->type->kind == AST_Type_Kind::INTEGER ||
+                       begin->type->kind == AST_Type_Kind::ENUM);
+
+                expression->type = begin->type;
+                expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                expression->flags |= AST_NODE_FLAG_TYPED;
+                break;
+            }
         }
 
         assert(expression->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -2400,7 +2422,20 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::RANGE: assert(false);
+            case AST_Expression_Kind::RANGE: {
+                AST_Type *type = expression->type;
+                assert(type);
+
+                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type)) {
+                        return false;
+                    }
+                }
+
+                expression->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
         }
     }
 

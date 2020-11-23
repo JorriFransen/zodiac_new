@@ -905,7 +905,8 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::RANGE: assert(false); //@TODO: Implement!
+            // Illegal, should be converted to different expressions (depending on the context).
+            case AST_Expression_Kind::RANGE: assert(false);
         }
 
         assert(result || expr->type->kind == AST_Type_Kind::VOID);
