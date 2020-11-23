@@ -660,11 +660,9 @@ namespace Zodiac
                 break;
             }
 
-            case Statement_PTN_Kind::RETURN:
-            {
+            case Statement_PTN_Kind::RETURN: {
                 AST_Expression *return_val_expr = nullptr;
-                if (ptn->return_stmt.expression)
-                {
+                if (ptn->return_stmt.expression) {
                     return_val_expr =
                         ast_create_expression_from_ptn(ast_builder, ptn->return_stmt.expression,
                                                        parent_scope);
@@ -677,6 +675,7 @@ namespace Zodiac
             }
 
             case Statement_PTN_Kind::BREAK: {
+                assert(stack_count(&ast_builder->break_stack));
                 AST_Statement *break_from = stack_top(&ast_builder->break_stack);
                 assert(break_from);
                 return ast_break_statement_new(ast_builder->allocator, break_from, parent_scope,
@@ -684,8 +683,7 @@ namespace Zodiac
                 break;
             }
 
-            case Statement_PTN_Kind::ASSIGNMENT:
-            {
+            case Statement_PTN_Kind::ASSIGNMENT: {
                 auto ast_ident_expr =
                     ast_create_expression_from_ptn(ast_builder, ptn->assignment.ident_expression,
                                                    parent_scope);
@@ -947,6 +945,17 @@ namespace Zodiac
                 AST_Switch_Case *default_case = nullptr;
                 uint32_t case_expr_count = 0;
 
+                bool allow_incomplete = ptn->switch_stmt.allow_incomplete;
+
+                AST_Statement *switch_stmt =
+                    ast_switch_statement_new(ast_builder->allocator,
+                            expression,
+                            ptn->switch_stmt.cases.count,
+                            allow_incomplete,
+                            parent_scope,
+                            begin_fp,
+                            end_fp);
+
                 for (int64_t i = 0; i < ptn->switch_stmt.cases.count; i++)
                 {
                     auto ptn_case = ptn->switch_stmt.cases[i];
@@ -955,30 +964,23 @@ namespace Zodiac
 
                     Array<AST_Expression *> case_expressions = {};
 
-                    if (is_default)
-                    {
+                    if (is_default) {
                         assert(!ptn_case.expressions.count);
-                    }
-                    else
-                    {
+                    } else {
                         auto ptn_exprs = ptn_case.expressions;
                         array_init(ast_builder->allocator, &case_expressions, ptn_exprs.count);
 
                         assert(ptn_case.expressions.count);
-                        for (int64_t expr_i = 0; expr_i < ptn_exprs.count; expr_i++)
-                        {
+                        for (int64_t expr_i = 0; expr_i < ptn_exprs.count; expr_i++) {
                             auto switch_case_expr = ptn_exprs[expr_i];
                             AST_Expression *case_expr = nullptr;
-                            if (!switch_case_expr.range_end_expr)
-                            {
+                            if (!switch_case_expr.range_end_expr) {
                                 auto ptn_case_expr = switch_case_expr.expression;
                                 case_expr =
                                     ast_create_expression_from_ptn(ast_builder,
                                                                    ptn_case_expr,
                                                                    parent_scope);
-                            }
-                            else
-                            {
+                            } else {
                                 auto r_begin_expr =
                                     ast_create_expression_from_ptn(
                                             ast_builder,
@@ -1005,10 +1007,12 @@ namespace Zodiac
 
                     }
 
+                    stack_push(&ast_builder->break_stack, switch_stmt);
                     AST_Statement *body = ast_create_statement_from_ptn(ast_builder,
                                                                         ptn_case.body,
                                                                         var_decls,
                                                                         parent_scope);
+                    stack_pop(&ast_builder->break_stack);
 
                     AST_Switch_Case *ast_case = ast_switch_case_new(ast_builder->allocator,
                                                                     case_expressions,
@@ -1017,8 +1021,9 @@ namespace Zodiac
                                                                     ptn_case.begin_fp,
                                                                     ptn_case.end_fp);
 
-                    if (is_default)
-                    {
+                    array_append(&switch_stmt->switch_stmt.cases, ast_case);
+
+                    if (is_default) {
                         assert(default_case == nullptr);
                         default_case = ast_case;
                     }
@@ -1026,11 +1031,11 @@ namespace Zodiac
                     array_append(&cases, ast_case);
                 }
 
-                bool allow_incomplete = ptn->switch_stmt.allow_incomplete;
-
-                return ast_switch_statement_new(ast_builder->allocator, expression, default_case,
-                                                cases, case_expr_count, allow_incomplete,
-                                                parent_scope, begin_fp, end_fp);
+                if (default_case) {
+                    switch_stmt->switch_stmt.default_case = default_case;
+                }
+                switch_stmt->switch_stmt.case_expr_count = case_expr_count;
+                return switch_stmt;
                 break;
             }
         }
@@ -1782,7 +1787,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::RANGE: assert(false);
+            case AST_Expression_Kind::RANGE: {
+                ast_flatten_expression(builder, expr->range.begin, nodes);
+                ast_flatten_expression(builder, expr->range.end, nodes);
+                array_append(nodes, static_cast<AST_Node *>(expr));
+                break;
+            }
         }
     }
 
@@ -2313,9 +2323,7 @@ namespace Zodiac
     }
 
     AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
-                                            AST_Switch_Case *default_case,
-                                            Array<AST_Switch_Case*> cases,
-                                            uint32_t case_expr_count,
+                                            uint64_t case_count,
                                             bool allow_incomplete,
                                             Scope *scope,
                                             const File_Pos &begin_fp,
@@ -2325,9 +2333,9 @@ namespace Zodiac
                                         begin_fp, end_fp);
 
         result->switch_stmt.expression = expression;
-        result->switch_stmt.default_case = default_case;
-        result->switch_stmt.cases = cases;
-        result->switch_stmt.case_expr_count = case_expr_count;
+        result->switch_stmt.default_case = nullptr;
+        array_init(allocator, &result->switch_stmt.cases, case_count);
+        result->switch_stmt.case_expr_count = -1;
         result->switch_stmt.allow_incomplete = allow_incomplete;
 
         return result;

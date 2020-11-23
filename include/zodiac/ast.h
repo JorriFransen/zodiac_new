@@ -828,9 +828,7 @@ namespace Zodiac
                                         const File_Pos &end_fp);
 
     AST_Statement *ast_switch_statement_new(Allocator *allocator, AST_Expression *expression,
-                                            AST_Switch_Case *default_case,
-                                            Array<AST_Switch_Case*> cases,
-                                            uint32_t case_expr_count,
+                                            uint64_t case_count,
                                             bool allow_incomplete,
                                             Scope *scope,
                                             const File_Pos &begin_fp,
