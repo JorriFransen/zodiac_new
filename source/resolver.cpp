@@ -15,6 +15,13 @@ namespace Zodiac
         resolver->build_data = build_data;
 
         resolver->lexer = lexer_create(allocator, build_data);
+        resolver->ast_builder = { .allocator = allocator,
+                                  .build_data = build_data,
+                                  .break_stack = {}
+        };
+
+        stack_init(allocator, &resolver->ast_builder.break_stack);
+
         resolver->parser = parser_create(allocator, build_data);
         resolver->bytecode_builder = bytecode_builder_create(allocator, build_data);
         resolver->llvm_builder = llvm_builder_create(allocator, build_data);
@@ -33,7 +40,11 @@ namespace Zodiac
         resolver->entry_decl = nullptr;
 
         auto builtin_declarations = builtin_populate_scope(allocator, resolver->global_scope);
-        assert(builtin_declarations.count);
+
+        for (int64_t i = 0; i < builtin_declarations.count; i++) {
+            ast_flatten_declaration(&resolver->ast_builder, builtin_declarations[i]);
+            queue_resolve_job(resolver, builtin_declarations[i]);
+        }
 
         if (is_relative_path(first_file_path)) {
             first_file_path = get_absolute_path(allocator, first_file_path);
@@ -164,7 +175,8 @@ namespace Zodiac
                                    decl->kind == AST_Declaration_Kind::USING ||
                                    decl->kind == AST_Declaration_Kind::STRUCTURE ||
                                    decl->kind == AST_Declaration_Kind::TYPEDEF ||
-                                   decl->kind == AST_Declaration_Kind::ENUM);
+                                   decl->kind == AST_Declaration_Kind::ENUM ||
+                                   decl->kind == AST_Declaration_Kind::STATIC_IF);
                         }
                     } else {
                         assert(false);
@@ -358,6 +370,10 @@ namespace Zodiac
                 printf("[RESOLVER] Queueing resolve job for #run: '");
                 ast_print_expression(decl->run.expression, 0);
                 printf("'\n");
+            } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
+                printf("[RESOLVER] Queueing resolve job for static_if: '");
+                ast_print_expression(decl->static_if.cond_expression, 0);
+                printf("'\n");
             } else {
                 assert(false);
             }
@@ -516,6 +532,10 @@ namespace Zodiac
             } else if (decl->kind == AST_Declaration_Kind::RUN) {
                 printf("[RESOLVER] Trying to resolve #run: '");
                 ast_print_expression(decl->run.expression, 0);
+                printf("'\n");
+            } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
+                printf("[RESOLVER] Trying to resolve static_if: '");
+                ast_print_expression(decl->static_if.cond_expression, 0);
                 printf("'\n");
             } else {
                 assert(false);
@@ -1079,8 +1099,62 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::STATIC_IF: assert(false);
-            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+            case AST_Declaration_Kind::STATIC_IF: {
+                AST_Expression *cond_expr = declaration->static_if.cond_expression;
+                assert(cond_expr->type);
+                assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+
+                Const_Value cv = const_interpret_expression(cond_expr);
+                Array<AST_Declaration *> *decls_to_add = nullptr;
+                if (cv.boolean) {
+                    decls_to_add = &declaration->static_if.then_declarations;
+                } else if (declaration->static_if.else_declarations.count) {
+                    decls_to_add = &declaration->static_if.else_declarations;
+                }
+
+                if (decls_to_add) {
+                    for (int64_t i = 0; i < decls_to_add->count; i++) {
+                        AST_Declaration *then_decl = (*decls_to_add)[i];
+                        bool imported = resolver_import_from_static_if(resolver, then_decl,
+                                                                     declaration->scope);
+                        if (!imported) return false;
+
+                        ast_flatten_declaration(&resolver->ast_builder, then_decl);
+                        queue_resolve_job(resolver, then_decl);
+                    }
+                }
+
+                declaration->type = Builtin::type_void;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
+
+            case AST_Declaration_Kind::STATIC_ASSERT: {
+                AST_Expression *cond_expr = declaration->static_assert_decl.cond_expression;
+                assert(cond_expr->type);
+                assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                Const_Value cv = const_interpret_expression(cond_expr);
+
+                if (!cv.boolean) {
+                    zodiac_report_error(resolver->build_data,
+                                        Zodiac_Error_Kind::STATIC_ASSERTION_FAILED,
+                                        declaration, "Static assert failed!");
+                    return false;
+                }
+
+                declaration->type = Builtin::type_void;
+                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                declaration->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
         }
     }
 
@@ -1373,7 +1447,7 @@ namespace Zodiac
 
                     AST_Declaration *child_decl = scope_find_declaration(ast_module->module_scope,
                                                                          child_ident);
-                    assert(child_decl);
+                    if (!child_decl) return false;
                     if (!(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
                         return false;
                     }
@@ -2212,6 +2286,7 @@ namespace Zodiac
                 }
                 decl->flags |= AST_NODE_FLAG_SIZED;
                 return true;
+                break;
             }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
@@ -2221,9 +2296,17 @@ namespace Zodiac
                 assert(decl->type->flags & AST_NODE_FLAG_SIZED);
                 decl->flags |= AST_NODE_FLAG_SIZED;
                 return true;
+                break;
             }
 
-            case AST_Declaration_Kind::STATIC_IF: assert(false);
+            case AST_Declaration_Kind::STATIC_IF: {
+                assert(decl->type);
+                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
+                decl->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
+
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
     }
@@ -3036,12 +3119,6 @@ namespace Zodiac
         Array<AST_Node *> new_nodes = {};
         array_init(ta, &new_nodes,  temp_case_exprs.capacity * 2);
 
-        AST_Builder ast_builder = { .allocator = resolver->allocator,
-                                    .build_data = resolver->build_data,
-                                    .break_stack = {},
-        };
-        stack_init(ta, &ast_builder.break_stack, 1);
-
         for (int64_t expr_i = 0;
              expr_i < switch_case->expressions.count;
              expr_i++) {
@@ -3120,7 +3197,7 @@ namespace Zodiac
 
                     }
 
-                    ast_flatten_expression(&ast_builder, new_expr, &new_nodes);
+                    ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
 
                     array_append(&temp_case_exprs, new_expr);
 
@@ -3235,6 +3312,32 @@ namespace Zodiac
             return false;
         }
 
+        return true;
+    }
+
+    bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl, Scope *scope)
+    {
+        while (scope->kind == Scope_Kind::STATIC_IF) {
+            assert(scope->parent);
+            scope = scope->parent;
+        }
+
+        if (decl->identifier) {
+            auto redecl = scope_find_declaration(scope, decl->identifier);
+            if (redecl) {
+                zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::REDECLARATION,
+                                    decl->identifier, "Redelaration of identifier: '%s'",
+                                    decl->identifier->atom.data);
+                zodiac_report_info(resolver->build_data, redecl->identifier,
+                                   "Previous declaration was here");
+                return false;
+            }
+        }
+
+        // resolver->progression.scope_imports_done = true;
+
+        scope_add_declaration(scope, decl);
+        // decl->decl_flags |= AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF;
         return true;
     }
 

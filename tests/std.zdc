@@ -7,34 +7,34 @@ strlen :: func (cstr: *u8) -> s64 {
     return i;
 }
 
-// #if (PLATFORM_WINDOWS) {
+#if (PLATFORM_WINDOWS) {
 
-//     windows :: import windows;
+    windows :: import windows;
 
-//     stdout : windows.HANDLE;
+    stdout : windows.HANDLE;
 
-//     _open_default_io_handles :: func() {
-//         stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
-//         return;
-//     }
+    _open_default_io_handles :: func() {
+        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+        return;
+    }
 
-//     print :: func(str: *u8) {
-//         written : windows.DWORD;
-//         len := @cast(windows.DWORD, strlen(str));
-//         windows.WriteFile(stdout, str, len, *written, null);
+    print :: func(str: *u8) {
+        written : windows.DWORD;
+        len := @cast(windows.DWORD, strlen(str));
+        windows.WriteFile(stdout, str, len, *written, null);
 
-//         return;
-//     }
+        return;
+    }
 
-//     print_char :: func (c: u8)
-//     {
-//         _c := c;
-//         written : windows.DWORD;
-//         windows.WriteFile(stdout, *_c, 1, *written, null);
-//         return;
-//     }
+    print_char :: func (c: u8)
+    {
+        _c := c;
+        written : windows.DWORD;
+        windows.WriteFile(stdout, *_c, 1, *written, null);
+        return;
+    }
 
-// } #elseif (PLATFORM_LINUX) {
+} #elseif (PLATFORM_LINUX) {
 
     _open_default_io_handles :: func()
     {
@@ -53,10 +53,10 @@ strlen :: func (cstr: *u8) -> s64 {
         @syscall(1, 1, *_c, 1);
         return;
     }
-// }
-// #else {
-//     @static_assert(false);
-// }
+}
+#else {
+    @static_assert(false);
+}
 
 println :: func (cstr: *u8) {
     print(cstr);

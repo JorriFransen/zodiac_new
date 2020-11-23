@@ -1240,7 +1240,7 @@ namespace Zodiac
             }
 
             case Expression_PTN_Kind::NULL_LITERAL: {
-                assert(infer_type_from);
+                // assert(infer_type_from);
                 auto result =  ast_null_literal_expression_new(ast_builder->allocator, scope,
                                                                begin_fp, end_fp);
                 result->infer_type_from = infer_type_from;
@@ -1590,6 +1590,10 @@ namespace Zodiac
                 if (decl->enum_decl.type_spec)
                     ast_flatten_type_spec(builder, decl->enum_decl.type_spec, nodes);
 
+                // We don't flatten member declarations, because then we might get stuck on
+                //  a reference to a later member. We iterate all members when resolving the
+                //  enum declaration pushed below.
+                //
                 // for (int64_t i = 0; i < decl->enum_decl.member_declarations.count; i++) {
                 //     ast_flatten_declaration(builder, decl->enum_decl.member_declarations[i],
                 //                             nodes);
@@ -1607,8 +1611,17 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::STATIC_IF: assert(false);
-            case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+            case AST_Declaration_Kind::STATIC_IF: {
+                ast_flatten_expression(builder, decl->static_if.cond_expression, nodes);
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
+
+            case AST_Declaration_Kind::STATIC_ASSERT: {
+                ast_flatten_expression(builder, decl->static_assert_decl.cond_expression, nodes);
+                array_append(nodes, static_cast<AST_Node*>(decl));
+                break;
+            }
         }
     }
 

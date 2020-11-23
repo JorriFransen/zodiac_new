@@ -74,6 +74,7 @@ namespace Zodiac
         Build_Data *build_data = nullptr;
 
         Lexer lexer = {};
+        AST_Builder ast_builder = {};
         Parser parser = {};
         Bytecode_Builder bytecode_builder = {};
         LLVM_Builder llvm_builder = {};
@@ -147,6 +148,8 @@ namespace Zodiac
                                             AST_Switch_Case *switch_case, uint64_t range_count,
                                             Scope *switch_scope);
     bool resolver_check_switch_completeness(Resolver *resolver, AST_Statement *ast_stmt);
+
+    bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl, Scope *scope);
 
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
                                        AST_Type *base_type, Scope *mem_scope, Scope *current_scope);
