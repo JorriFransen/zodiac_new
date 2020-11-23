@@ -988,6 +988,7 @@ namespace Zodiac
                         auto nv = const_interpret_expression(mem_decl->constant.init_expression);
                         next_value = nv.integer.s64 + 1;
                         current_value = nv.integer.s64;
+                        mem_decl->type = enum_type;
                     } else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT) {
 
                         assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
@@ -998,6 +999,9 @@ namespace Zodiac
                         auto nv = const_interpret_expression(id_init_expr);
                         next_value = nv.integer.s64 + 1;
                         current_value = nv.integer.s64;
+
+                        mem_decl->type = enum_type;
+                        mem_decl->constant.init_expression->type = enum_type;
                     } else {
                         assert(!mem_decl->constant.init_expression);
                         mem_decl->constant.init_expression =
@@ -1738,8 +1742,8 @@ namespace Zodiac
                         result = true;
                         result_type = target_type;
                     } else if (op_expr->type->kind == AST_Type_Kind::ENUM) {
-                        assert(false); // We do want this cast to happen, look into why it
-                                       //  doesn't always happen...
+                        // assert(false); // We do want this cast to happen, look into why it
+                        //                //  doesn't always happen...
                         assert(is_valid_type_conversion(op_expr->type, target_type));
                         result = true;
                         result_type = target_type;

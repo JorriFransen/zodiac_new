@@ -76,8 +76,8 @@ test_operators :: func()
     std.print_num(Operator.Mul);
     std.print("\nOperator.Div = ");
     std.print_num(Operator.Div);
-    // std.print("\nOperator.Last_Math = ");
-    // std.print_num(Operator.Last_Math);
+    std.print("\nOperator.Last_Math = ");
+    std.print_num(Operator.Last_Math);
     std.print("\nOperator.First_Cmp = ");
     std.print_num(Operator.First_Cmp);
     std.print("\nOperator.Eq = ");
@@ -92,8 +92,8 @@ test_operators :: func()
     std.print_num(Operator.Gt);
     std.print("\nOperator.GtEq = ");
     std.print_num(Operator.GtEq);
-    // std.print("\nOperator.Last_Cmp = ");
-    // std.print_num(Operator.Last_Cmp);
+    std.print("\nOperator.Last_Cmp = ");
+    std.print_num(Operator.Last_Cmp);
     std.print("\nOperator.Invalid = ");
     std.print_num(Operator.Invalid);
     std.print("\n");
