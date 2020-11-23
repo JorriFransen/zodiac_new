@@ -12,6 +12,9 @@ Day :: enum
     Sunday,
 }
 
+_main :: func() { main(); return; }
+#run _main();
+
 main :: func() -> s64
 {
     std.println("Switch test");

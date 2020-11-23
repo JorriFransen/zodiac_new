@@ -142,6 +142,10 @@ namespace Zodiac
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
 
+    void resolver_expand_switch_case_ranges(Resolver *resolver, AST_Statement *stmt,
+                                            AST_Switch_Case *switch_case, uint64_t range_count,
+                                            Scope *switch_scope);
+
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
                                        AST_Type *base_type, Scope *mem_scope, Scope *current_scope);
 

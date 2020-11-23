@@ -1211,6 +1211,7 @@ namespace Zodiac
 
                 for (int64_t i = 0; i < statement->switch_stmt.cases.count; i++) {
                     AST_Switch_Case *switch_case = statement->switch_stmt.cases[i];
+                    int64_t range_count = 0;
 
                     // assert(switch_case->flags & AST_NODE_FLAG_RESOLVED_ID);
                     // assert(switch_case->flags & AST_NODE_FLAG_TYPED);
@@ -1229,6 +1230,16 @@ namespace Zodiac
                         assert(case_expr->expr_flags & AST_EXPR_FLAG_CONST);
                         assert(case_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                         assert(case_expr->flags & AST_NODE_FLAG_TYPED);
+
+                        if (case_expr->kind == AST_Expression_Kind::RANGE) {
+                            range_count++;
+                        }
+                    }
+
+                    if (range_count) {
+                        resolver_expand_switch_case_ranges(resolver, statement,
+                                                           switch_case, range_count,
+                                                           statement->scope);
                     }
                 }
 
@@ -1285,8 +1296,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT: {
                 AST_Expression *parent_expr = expression->dot.parent_expression;
-                assert(parent_expr->flags |= AST_NODE_FLAG_RESOLVED_ID);
-                assert(parent_expr->flags |= AST_NODE_FLAG_TYPED);
+                if (!(parent_expr->flags & AST_NODE_FLAG_RESOLVED_ID)) return false;
+                assert(parent_expr->flags & AST_NODE_FLAG_TYPED);
 
                 AST_Declaration *parent_decl = nullptr;
                 if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER) {
@@ -2258,9 +2269,14 @@ namespace Zodiac
 
                     if (switch_case->is_default) continue;
 
-                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
+                    for (int64_t expr_i = 0;
+                         expr_i < switch_case->expressions.count;
+                         expr_i++) {
                         AST_Expression *case_expr = switch_case->expressions[expr_i];
-                        assert(case_expr->flags & AST_NODE_FLAG_SIZED);
+                        if (!(case_expr->flags & AST_NODE_FLAG_SIZED)) {
+                            try_size_expression(resolver, case_expr);
+                            assert(case_expr->flags & AST_NODE_FLAG_SIZED);
+                        }
                     }
                 }
                 return true;
@@ -2900,7 +2916,8 @@ namespace Zodiac
                 (decl->decl_flags & AST_DECL_FLAG_IS_NAKED)) {
                 return true;
             }
-        } else if (resolver->llvm_builder.target_platform == Zodiac_Target_Platform::WINDOWS) {
+        } else if (resolver->llvm_builder.target_platform ==
+                   Zodiac_Target_Platform::WINDOWS) {
             if (decl->identifier->atom == Builtin::atom_mainCRTStartup) {
                 return true;
             }
@@ -2911,8 +2928,149 @@ namespace Zodiac
         return false;
     }
 
+    void resolver_expand_switch_case_ranges(Resolver *resolver,
+                                            AST_Statement *stmt,
+                                            AST_Switch_Case *switch_case,
+                                            uint64_t range_count,
+                                            Scope *switch_scope)
+    {
+        Array<AST_Expression*> temp_case_exprs = {};
+        auto ta = temp_allocator_get();
+        array_init(ta, &temp_case_exprs, range_count * 3);
+
+        int64_t first_range_index = -1;
+
+        Array<AST_Node *> new_nodes = {};
+        array_init(ta, &new_nodes,  temp_case_exprs.capacity * 2);
+
+        AST_Builder ast_builder = { .allocator = resolver->allocator,
+                                    .build_data = resolver->build_data,
+                                    .break_stack = {},
+        };
+        stack_init(ta, &ast_builder.break_stack, 1);
+
+        for (int64_t expr_i = 0;
+             expr_i < switch_case->expressions.count;
+             expr_i++) {
+
+            auto case_expr = switch_case->expressions[expr_i];
+
+            if (case_expr->kind == AST_Expression_Kind::RANGE) {
+
+                if (first_range_index == -1) {
+                    first_range_index = expr_i;
+                }
+
+                auto begin_expr = case_expr->range.begin;
+                auto end_expr = case_expr->range.end;
+
+                array_append(&temp_case_exprs, begin_expr);
+
+                Const_Value begin_val =
+                    const_interpret_expression(begin_expr);
+
+                Const_Value end_val =
+                    const_interpret_expression(end_expr);
+
+                assert(begin_val.type == end_val.type);
+                assert(begin_val.type->kind == AST_Type_Kind::INTEGER ||
+                       begin_val.type->kind == AST_Type_Kind::ENUM);
+                assert(begin_val.type->integer.sign == false);
+
+                assert(begin_val.integer.u64 < end_val.integer.u64);
+
+                File_Pos begin_fp = begin_expr->begin_file_pos;
+                begin_fp.file_name =
+                    string_append(resolver->allocator,
+                                  string_ref("<expanded from range expression> "),
+                                  begin_expr->begin_file_pos.file_name);
+
+                auto end_fp = begin_fp;
+
+                uint64_t val = begin_val.integer.u64 + 1;
+                while (val < end_val.integer.u64) {
+                    AST_Expression *new_expr =
+                        ast_integer_literal_expression_new(resolver->allocator,
+                                                           val, switch_scope,
+                                                           begin_fp, end_fp);
+
+                    if (begin_expr->type->kind == AST_Type_Kind::ENUM) {
+                        auto enum_type = begin_expr->type;
+
+                        auto enum_name =
+                            enum_type->enum_type.declaration->identifier->atom;
+
+                        auto parent_ident = ast_identifier_new(resolver->allocator,
+                                                               enum_name, switch_scope,
+                                                               begin_fp, end_fp);
+
+                        auto parent_expr =
+                            ast_identifier_expression_new(resolver->allocator,
+                                                          parent_ident, switch_scope,
+                                                          begin_fp, end_fp);;
+
+                        auto member_decl = ast_find_enum_member(enum_type,
+                                                                { .type = enum_type,
+                                                                  .integer={.u64=val}});
+                        assert(member_decl);
+
+                        auto child_name = member_decl->identifier->atom;
+                        AST_Identifier *child_ident =
+                            ast_identifier_new(resolver->allocator, child_name,
+                                               switch_scope,
+                                               begin_fp, end_fp);
+
+                        new_expr = ast_dot_expression_new(resolver->allocator,
+                                                          parent_expr, child_ident,
+                                                          switch_scope,
+                                                          begin_fp, end_fp);
+
+                    }
+
+                    ast_flatten_expression(&ast_builder, new_expr, &new_nodes);
+
+                    array_append(&temp_case_exprs, new_expr);
+
+                    val += 1;
+                    stmt->switch_stmt.case_expr_count += 1;
+                }
+
+                array_append(&temp_case_exprs, end_expr);
+                stmt->switch_stmt.case_expr_count += 1;
+
+                //@FIXME:@LEAK: We are leaking 'case_expr' here, right now we can't be
+                //               sure about the allocator that was used to allocate the
+                //               expression. (in practice we are only using the c
+                //               allocator at the moment, but if we change any of them we
+                //               won't know)
+
+            } else if (first_range_index >= 0) {
+                array_append(&temp_case_exprs, case_expr);
+            }
+        }
+
+        for (int64_t i = 0; i < new_nodes.count; i++) {
+            assert(new_nodes[i]->kind == AST_Node_Kind::EXPRESSION);
+            if (!try_resolve_expression(resolver,
+                                        static_cast<AST_Expression *>(new_nodes[i]))) {
+                assert(false);
+            }
+        }
+
+        assert(first_range_index >= 0);
+
+        switch_case->expressions.count = first_range_index;
+
+        for (int64_t j = 0; j < temp_case_exprs.count; j++) {
+            array_append(&switch_case->expressions,
+                         temp_case_exprs[j]);
+        }
+
+    }
+
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
-                                       AST_Type *base_type, Scope *mem_scope, Scope *current_scope)
+                                       AST_Type *base_type, Scope *mem_scope,
+                                       Scope *current_scope)
     {
         assert(enum_decl->kind == AST_Declaration_Kind::ENUM);
 
