@@ -742,7 +742,7 @@ namespace Zodiac
 
                 auto cond_expr = ast_create_expression_from_ptn(ast_builder,
                                                                 ptn->for_stmt.cond_expr,
-                                                                parent_scope);
+                                                                for_scope);
 
                 auto step_stmt = ast_create_statement_from_ptn(ast_builder,
                                                                ptn->for_stmt.step_stmt,
@@ -1664,7 +1664,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR: {
+                for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++) {
+                    ast_flatten_statement(builder, stmt->for_stmt.init_statements[i], nodes);
+                }
+
+                if (stmt->for_stmt.it_decl) {
+                    ast_flatten_declaration(builder, stmt->for_stmt.it_decl, nodes);
+                }
+
+                ast_flatten_expression(builder, stmt->for_stmt.cond_expr, nodes);
+
+                for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++) {
+                    ast_flatten_statement(builder, stmt->for_stmt.step_statements[i], nodes);
+                }
+
+                ast_flatten_statement(builder, stmt->for_stmt.body_stmt, nodes);
+                array_append(nodes, static_cast<AST_Node *>(stmt));
+                break;
+            }
 
             case AST_Statement_Kind::IF: {
                 ast_flatten_expression(builder, stmt->if_stmt.cond_expr, nodes);

@@ -1077,7 +1077,8 @@ namespace Zodiac
             case AST_Statement_Kind::BLOCK: {
                 for (int64_t i = 0; i < statement->block.statements.count; i++) {
                     auto mem_stmt = statement->block.statements[i];
-                    assert(mem_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    if (!(mem_stmt->flags &  AST_NODE_FLAG_RESOLVED_ID))
+                        return false;
                     assert(mem_stmt->flags & AST_NODE_FLAG_TYPED);
                 }
 
@@ -1174,7 +1175,39 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                for (int64_t i = 0; i < statement->for_stmt.init_statements.count; i++) {
+                    AST_Statement *init_stmt = statement->for_stmt.init_statements[i];
+                    assert(init_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(init_stmt->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                if (statement->for_stmt.it_decl) {
+                    assert(statement->for_stmt.it_decl->type);
+                    assert(statement->for_stmt.it_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(statement->for_stmt.it_decl->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                assert(statement->for_stmt.cond_expr->type);
+                assert(statement->for_stmt.cond_expr->type == Builtin::type_bool);
+                assert(statement->for_stmt.cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(statement->for_stmt.cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                for (int64_t i = 0; i < statement->for_stmt.step_statements.count; i++) {
+                    AST_Statement *step_stmt = statement->for_stmt.step_statements[i];
+                    assert(step_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(step_stmt->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                assert(statement->for_stmt.body_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(statement->for_stmt.body_stmt->flags & AST_NODE_FLAG_TYPED);
+
+                statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                statement->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Statement_Kind::IF: {
                 AST_Expression *cond_expr = statement->if_stmt.cond_expr;
@@ -1343,7 +1376,17 @@ namespace Zodiac
                     assert(parent_decl->flags & AST_NODE_FLAG_TYPED);
 
                     AST_Type *parent_type = parent_decl->type;
-                    if (parent_type->kind == AST_Type_Kind::ENUM) {
+                    if (parent_type->kind == AST_Type_Kind::ARRAY) {
+                        if (child_ident->atom == Builtin::atom_count) {
+                            expression->expr_flags |= AST_EXPR_FLAG_DOT_COUNT;
+                            expression->type = Builtin::type_s64;
+                            expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                            expression->flags |= AST_NODE_FLAG_TYPED;
+                            break;
+                        } else {
+                            assert(false);
+                        }
+                    } else if (parent_type->kind == AST_Type_Kind::ENUM) {
 
                         Scope *enum_scope = parent_type->enum_type.member_scope;
 
@@ -2244,7 +2287,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Statement_Kind::FOR: assert(false);
+            case AST_Statement_Kind::FOR:
+            {
+                assert(false);
+                break;
+            }
 
             case AST_Statement_Kind::IF: {
                 AST_Expression *cond_expr = statement->if_stmt.cond_expr;
