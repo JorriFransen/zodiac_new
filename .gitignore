@@ -17,5 +17,7 @@ _deps
 .clangd/
 .cache/
 
+*.rdbg
+
 
 lib/dyncall-1.1/

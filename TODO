@@ -70,6 +70,8 @@ Windows build
        - Match the -DCMAKE_BUILD_TYPE= option with the llvm build
          (check if mismatch is possible like on linux)
 
+  (cmake .. -G Ninja -DCMAKE_C_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_CXX_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_PREFIX_PATH=C:\Users\jorri\Desktop\llvm_install_debug\ -DCMAKE_BUILD_TYPE=Debug)
+
 UNREACHABLE instruction in our own bytecode.
 Dont't store File Positions on ast nodes.
 

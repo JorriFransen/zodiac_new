@@ -86,6 +86,8 @@ namespace Zodiac
         Queue<Run_Job> run_jobs = {};
         Queue<LLVM_Job> llvm_jobs = {};
 
+        bool progressed = false;
+
         Array<Parsed_Module> parsed_modules = {};
 
         Scope *global_scope =  nullptr;

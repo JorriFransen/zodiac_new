@@ -49,23 +49,6 @@ int main(int argc, char **argv)
     }
 
     if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
-    // assert(build_data.bc_entry_function);
-
-    // if (options.run_bytecode)
-    // {
-    //     assert(build_data.bc_bytecode_entry_function);
-
-    //     Interpreter interp = interpreter_create(ca, &build_data);
-
-    //     interpreter_start(&interp, build_data.bc_bytecode_entry_function,
-    //                       resolver.bytecode_builder.global_data_size,
-    //                       resolver.bytecode_builder.globals,
-    //                       resolver.bytecode_builder.foreign_functions);
-
-    //     printf("Interpreter exited with code: %" PRId64 "\n", interp.exit_code);
-
-    //     interpreter_free(&interp);
-    // }
 
     if (build_data.errors.count != 0)
     {

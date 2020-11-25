@@ -33,6 +33,8 @@ namespace Zodiac
         queue_init(allocator, &resolver->run_jobs);
         queue_init(allocator, &resolver->llvm_jobs);
 
+        resolver->progressed = false;
+
         array_init(allocator, &resolver->parsed_modules);
 
         resolver->global_scope = scope_new(allocator, Scope_Kind::GLOBAL, nullptr);
@@ -295,13 +297,14 @@ namespace Zodiac
                 done = true;
             }
 
-            if (fatal_error_reported(resolver) || !progressed) {
+            if (fatal_error_reported(resolver) || (!progressed && !resolver->progressed)) {
                 done = true;
             } else {
                 zodiac_clear_errors(resolver->build_data);
             }
 
             progressed = false;
+            resolver->progressed = false;
             cycle_count++;
         }
 
@@ -547,6 +550,7 @@ namespace Zodiac
         bool result = true;
 
         AST_Node *waiting_on = nullptr;
+        int64_t was_waiting_on = decl->flat->waiting_on;
 
         for (int64_t i = decl->flat->waiting_on; i < decl->flat->nodes.count; i++) {
             AST_Node *node = decl->flat->nodes[i];
@@ -588,6 +592,8 @@ namespace Zodiac
             if (!result) {
                 waiting_on = node;
                 decl->flat->waiting_on = i;
+
+                if (i > was_waiting_on) resolver->progressed = true;
                 break;
             }
         }
@@ -2101,7 +2107,19 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT: assert(false);
+            case AST_Type_Spec_Kind::DOT: {
+                AST_Expression *dot_expr = type_spec->dot_expression;
+                assert(dot_expr->type);
+                assert(dot_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(dot_expr->flags & AST_NODE_FLAG_TYPED);
+
+
+                type_spec->type = dot_expr->type;
+                type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                type_spec->flags |= AST_NODE_FLAG_TYPED;
+                return true;
+                break;
+            }
 
             case AST_Type_Spec_Kind::FUNCTION: {
 
