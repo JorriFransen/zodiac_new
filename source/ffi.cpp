@@ -63,13 +63,13 @@ namespace Zodiac {
         switch (return_type->kind) {
             default: assert(false);
 
-            case AST_Type_Kind::INTEGER:
-            {
+            case AST_Type_Kind::INTEGER: {
                 if (return_type->integer.sign) {
                     switch (return_type->bit_size) {
                         default: assert(false);
                         case 8: assert(false);
                         case 16: assert(false);
+
                         case 32: {
                             assert(sizeof(int) == 4);
                             assert(sizeof(DCint) == 4);
@@ -77,11 +77,24 @@ namespace Zodiac {
                             *(int*)return_val_ptr = result;
                             break;
                         }
-                        case 64: assert(false);
+
+                        case 64: {
+                            assert(sizeof(DClonglong) == 8);
+                            int64_t result = dcCallLongLong(ffi->dc_vm, func_ptr);
+                            *(int64_t*)return_val_ptr = result;
+                            break;
+                        }
+
                     }
                 } else {
                     assert(false);
                 }
+                break;
+            }
+
+            case AST_Type_Kind::POINTER: {
+                void *result = dcCallPointer(ffi->dc_vm, func_ptr);
+                *(void**)return_val_ptr = result;
                 break;
             }
         }
@@ -97,6 +110,18 @@ namespace Zodiac {
     {
         switch (type->kind) {
             default: assert(false);
+
+            case AST_Type_Kind::INTEGER: {
+                switch (type->bit_size) {
+                    default: assert(false);
+                    case 32: {
+                         assert(sizeof(DCint) == 4);
+                         dcArgInt(ffi->dc_vm, *((DCint *)arg_ptr));
+                         break;
+                     }
+                }
+                break;
+            }
 
             case AST_Type_Kind::POINTER: {
                 dcArgPointer(ffi->dc_vm, *(void**)arg_ptr);

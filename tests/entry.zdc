@@ -1,29 +1,35 @@
 
-// _std_ :: import std;
+_std_ :: import std;
 
-#noreturn call_main_and_exit :: func()
+pre_main :: func()
 {
-    // _std_._open_default_io_handles();
-
-    exit_code := main();
-    @exit(exit_code);
+    _std_._open_default_io_handles();
+    return;
 }
 
-// #if (PLATFORM_WINDOWS) {
+#if (PLATFORM_WINDOWS) {
 
-    // mainCRTStartup :: func ()
-    // {
-    //     call_main_and_exit();
-    // }
+    mainCRTStartup :: func ()
+    {
+        // call_main_and_exit();
+        pre_main();
+        @exit(main());
+    }
 
-// } #elseif (PLATFORM_LINUX) {
+} #elseif (PLATFORM_LINUX) {
+
+    #noreturn call_main_and_exit :: func ()
+    {
+        @exit(main());
+    }
 
     #naked #noreturn _start :: func ()
     {
+        pre_main();
         call_main_and_exit();
     }
 
-// } #else {
-//     @static_assert(false);
-// }
+} #else {
+    @static_assert(false);
+}
 

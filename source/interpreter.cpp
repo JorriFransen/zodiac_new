@@ -335,7 +335,8 @@ namespace Zodiac
                         assert(kind == Bytecode_Value_Kind::TEMP ||
                                kind == Bytecode_Value_Kind::INTEGER_LITERAL ||
                                kind == Bytecode_Value_Kind::FLOAT_LITERAL ||
-                               kind == Bytecode_Value_Kind::STRING_LITERAL);
+                               kind == Bytecode_Value_Kind::STRING_LITERAL ||
+                               kind == Bytecode_Value_Kind::NULL_LITERAL);
                         arg_val = interpreter_load_value(interp, inst->a);
                     }
 
@@ -675,10 +676,20 @@ namespace Zodiac
                             }
                             interp_store(result_addr, new_val);
                             break;
-
                         }
+
                         case 16: assert(false);
-                        case 32: assert(false);
+
+                        case 32: {
+                            uint32_t new_val;
+                            switch (operand_val.type->bit_size) {
+                                default: assert(false);
+                                case 64: new_val = operand_val.integer_literal.u64; break;
+                            }
+                            interp_store(result_addr, new_val);
+                            break;
+                        }
+
                         case 64: assert(false);
                     }
 

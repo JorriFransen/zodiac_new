@@ -1089,6 +1089,11 @@ namespace Zodiac
             return nullptr;
 
         } else if (name == Builtin::atom_syscall) {
+
+#ifndef linux
+            assert(false && "Syscall is only supported on linux");
+#endif
+
             int64_t total_arg_size = 0;
             for (int64_t i = 0; i < args.count; i++)
             {
@@ -1783,7 +1788,7 @@ namespace Zodiac
 
     void bytecode_print_block(String_Builder *sb, Bytecode_Block *block)
     {
-        string_builder_appendf(sb, "  %s:\n", block->name);
+        string_builder_appendf(sb, "  %s:\n", block->name.data);
 
         for (int64_t i = 0; i < block->instructions.count; i++)
         {

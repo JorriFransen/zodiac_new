@@ -1128,7 +1128,7 @@ namespace Zodiac
 
 #elif _WIN32
 
-        auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.27.29110/bin/Hostx64/x64/link.exe");
+        auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/link.exe");
 
         string_builder_append(sb, linker_path.data);
 

@@ -1,19 +1,14 @@
 
 std :: import std;
 
+_main :: func () { pre_main(); main(); return; }
 #run _main();
-
-_main :: func ()
-{
-    main();
-    return;
-}
 
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
 
-    @syscall(1, 1, "Test!\n", 6);
+    // @syscall(1, 1, "Test!\n", 6);
 
     std.print_num(42);
     std.print("\n");

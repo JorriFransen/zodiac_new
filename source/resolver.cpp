@@ -240,6 +240,8 @@ namespace Zodiac
                 assert(job.wrapper);
                 assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
 
+                printf("Starting run directive...\n");
+
                 Interpreter interp = interpreter_create(resolver->allocator,
                                                         resolver->build_data);
 
@@ -1714,7 +1716,15 @@ namespace Zodiac
                     AST_Expression *arg_expr = args[i];
                     assert(arg_expr->type);
                     if (arg_expr->type != params[i]->type) {
-                        if (is_valid_type_conversion(arg_expr->type, params[i]->type)) {
+
+                        if (arg_expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
+                            integer_literal_fits_in_type(arg_expr->integer_literal,
+                                                         params[i]->type)) {
+                            arg_expr->type = params[i]->type;
+
+                        } else if (arg_expr->kind == AST_Expression_Kind::NULL_LITERAL) {
+                            assert(false);
+                        } else  if (is_valid_type_conversion(arg_expr->type, params[i]->type)) {
                             args[i] = ast_cast_expression_new(resolver->allocator,
                                                               arg_expr, params[i]->type,
                                                               arg_expr->scope,
@@ -2016,12 +2026,18 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::NULL_LITERAL: {
-                assert(expression->infer_type_from);
-                AST_Node *infer_type_from = expression->infer_type_from;
-                assert(infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(infer_type_from->flags & AST_NODE_FLAG_TYPED);
+                AST_Type *result_type = nullptr;
 
-                AST_Type *result_type = infer_type(infer_type_from);
+                if (expression->infer_type_from) {
+                    AST_Node *infer_type_from = expression->infer_type_from;
+                    assert(infer_type_from->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(infer_type_from->flags & AST_NODE_FLAG_TYPED);
+
+                    result_type = infer_type(infer_type_from);
+                } else {
+                    result_type = Builtin::type_void->pointer_to;
+                }
+
                 assert(result_type);
                 assert(result_type->kind == AST_Type_Kind::POINTER);
 
@@ -2734,7 +2750,18 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT: assert(false);
+            case AST_Type_Spec_Kind::DOT: {
+                assert(type_spec->type);
+                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
+                    if (!try_size_type(resolver, type_spec->type)) {
+                        return false;
+                    }
+                }
+
+                type_spec->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
+            }
 
             case AST_Type_Spec_Kind::FUNCTION: {
                 assert(type_spec->type);
@@ -3343,6 +3370,9 @@ namespace Zodiac
             scope = scope->parent;
         }
 
+        bool is_global = scope->kind == Scope_Kind::GLOBAL ||
+                         scope->kind == Scope_Kind::MODULE;
+
         if (decl->identifier) {
             auto redecl = scope_find_declaration(scope, decl->identifier);
             if (redecl) {
@@ -3359,6 +3389,7 @@ namespace Zodiac
 
         scope_add_declaration(scope, decl);
         // decl->decl_flags |= AST_DECL_FLAG_IMPORTED_FROM_STATIC_IF;
+        if (is_global) decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
         return true;
     }
 
