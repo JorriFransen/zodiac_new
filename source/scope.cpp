@@ -9,22 +9,17 @@
 
 namespace Zodiac
 {
-    AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier)
+    AST_Declaration *scope_find_declaration(Scope *scope, Atom atom)
     {
         assert(scope);
-        assert(identifier);
-
-        if (identifier->declaration) return identifier->declaration;
 
         auto scope_block = &scope->first_block;                 
-        while (scope_block)
-        {
-            for (int64_t i = 0; i < scope_block->decl_count; i++)
-            {
+        while (scope_block) {
+
+            for (int64_t i = 0; i < scope_block->decl_count; i++) {
                 AST_Declaration *decl = scope_block->declarations[i];
-                if (decl->identifier && decl->identifier->atom == identifier->atom)
-                {
-                    identifier->declaration = decl;
+
+                if (decl->identifier && decl->identifier->atom == atom) {
                     return decl;
                 }
             }
@@ -32,12 +27,26 @@ namespace Zodiac
             scope_block = scope_block->next_block;
         }
 
-        if (scope->parent)
-        {
-            return scope_find_declaration(scope->parent, identifier);
+        if (scope->parent) {
+            return scope_find_declaration(scope->parent, atom);
         }
 
         return nullptr;
+    }
+
+    AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier)
+    {
+        assert(scope);
+        assert(identifier);
+
+        if (identifier->declaration) return identifier->declaration;
+
+        AST_Declaration *result = scope_find_declaration(scope, identifier->atom);
+        if (result) {
+            identifier->declaration = result;
+        }
+
+        return result;
     }
 
     void scope_add_declaration(Scope *scope, AST_Declaration *adecl)

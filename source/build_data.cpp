@@ -21,6 +21,7 @@ namespace Zodiac
         }
 
         array_init(allocator, &build_data->type_table);
+        build_data->entry_module = nullptr;
 
         build_data->bc_entry_function = nullptr;
         build_data->bc_bytecode_entry_function = nullptr;

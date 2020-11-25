@@ -1,5 +1,6 @@
 #pragma once
 
+#include "atom.h"
 #include "struct_predecls.h"
 
 namespace Zodiac
@@ -35,6 +36,7 @@ namespace Zodiac
         Allocator *allocator = nullptr;
     };
 
+    AST_Declaration *scope_find_declaration(Scope *scope, Atom atom);
     AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier);
 
     void scope_add_declaration(Scope *scope, AST_Declaration *adecl);

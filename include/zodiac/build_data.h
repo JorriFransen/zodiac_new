@@ -17,6 +17,7 @@ namespace Zodiac
         Array<Atom> kw_atoms = {};
 
         Array<AST_Type*> type_table = {};
+        AST_Module *entry_module = nullptr;
 
         Bytecode_Function *bc_entry_function = nullptr;
         Bytecode_Function *bc_bytecode_entry_function = nullptr;
