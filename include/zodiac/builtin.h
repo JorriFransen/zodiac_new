@@ -4,7 +4,7 @@
 #include "struct_predecls.h"
 #include "atom.h"
 
-enum Builtin_Type_Kind
+enum class Builtin_Type_Kind
 {
     INVALID,
 

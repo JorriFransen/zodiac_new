@@ -11,7 +11,6 @@ pre_main :: func()
 
     mainCRTStartup :: func ()
     {
-        // call_main_and_exit();
         pre_main();
         @exit(main());
     }
@@ -20,12 +19,12 @@ pre_main :: func()
 
     #noreturn call_main_and_exit :: func ()
     {
+        pre_main();
         @exit(main());
     }
 
     #naked #noreturn _start :: func ()
     {
-        pre_main();
         call_main_and_exit();
     }
 

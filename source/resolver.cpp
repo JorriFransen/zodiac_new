@@ -240,8 +240,6 @@ namespace Zodiac
                 assert(job.wrapper);
                 assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
 
-                printf("Starting run directive...\n");
-
                 Interpreter interp = interpreter_create(resolver->allocator,
                                                         resolver->build_data);
 

@@ -73,8 +73,8 @@ namespace Zodiac {
                         case 32: {
                             assert(sizeof(int) == 4);
                             assert(sizeof(DCint) == 4);
-                            int result = dcCallInt(ffi->dc_vm, func_ptr);
-                            *(int*)return_val_ptr = result;
+                            int32_t result = dcCallInt(ffi->dc_vm, func_ptr);
+                            *(int32_t*)return_val_ptr = result;
                             break;
                         }
 
@@ -87,7 +87,27 @@ namespace Zodiac {
 
                     }
                 } else {
-                    assert(false);
+                    switch (return_type->bit_size) {
+                        default: assert(false);
+                        case 8: assert(false);
+                        case 16: assert(false);
+
+                        case 32: {
+                            assert(sizeof(int) == 4);
+                            assert(sizeof(DCint) == 4);
+                            int32_t result = dcCallInt(ffi->dc_vm, func_ptr);
+                            *(uint32_t*)return_val_ptr = result;
+                            break;
+                        }
+
+                        case 64: {
+                            assert(sizeof(DClonglong) == 8);
+                            int64_t result = dcCallLongLong(ffi->dc_vm, func_ptr);
+                            *(uint64_t*)return_val_ptr = result;
+                            break;
+                        }
+
+                    }
                 }
                 break;
             }
@@ -117,6 +137,12 @@ namespace Zodiac {
                     case 32: {
                          assert(sizeof(DCint) == 4);
                          dcArgInt(ffi->dc_vm, *((DCint *)arg_ptr));
+                         break;
+                     }
+
+                    case 64: {
+                         assert(sizeof(DClonglong) == 8);
+                         dcArgLongLong(ffi->dc_vm, *((DClonglong *)arg_ptr));
                          break;
                      }
                 }

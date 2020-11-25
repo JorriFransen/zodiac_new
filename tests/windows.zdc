@@ -3,6 +3,7 @@ DWORD :: typedef u32;
 LPDWORD :: typedef *DWORD;
 BOOL :: typedef s64;
 HANDLE :: typedef *void;
+// HANDLE :: typedef u64;
 LPCVOID :: typedef *void;
 
 LPOVERLAPPED :: typedef *void;

@@ -618,10 +618,13 @@ namespace Zodiac
                         case 32: assert(false);
 
                         case 64: {
-                            uint64_t new_val;
+                            uint64_t new_val = 0xdddd;
                             switch (operand_val.type->bit_size) {
-                                default: assert(false);
                                 case 8: new_val = operand_val.integer_literal.u8; break;
+                                case 16: new_val = operand_val.integer_literal.u16; break;
+                                case 32: new_val = operand_val.integer_literal.u32; break;
+                                case 64: new_val = operand_val.integer_literal.u64; break;
+                                default: assert(false);
                             }
                             interp_store(result_addr, new_val);
                             break;
@@ -935,10 +938,9 @@ namespace Zodiac
         auto old_fp = interp->frame_pointer;
         interp->frame_pointer = interp->sp;
 
-        int64_t param_offset = 0;
         int64_t total_arg_size = 0;
 
-        for (int64_t i = arg_count - 1; i >= 0; i--) {
+        for (int64_t i = 0; i < arg_count; i++) {
             auto param = func->parameters[i];
             auto param_type = param->type;
             assert(param_type->kind == AST_Type_Kind::POINTER);
@@ -947,10 +949,22 @@ namespace Zodiac
             assert(param_type->bit_size % 8 == 0);
             auto size = param_type->bit_size / 8;
 
-            param_offset -= size;
             total_arg_size += size;
+        }
 
-            param->parameter.byte_offset_from_fp = param_offset;
+        int64_t param_offset = -total_arg_size;
+
+        for (int64_t i = 0; i < arg_count; i++) {
+            auto param = func->parameters[i];
+            auto param_type = param->type;
+            assert(param_type->kind == AST_Type_Kind::POINTER);
+            param_type = param_type->pointer.base;
+
+            auto size = param_type->bit_size / 8;
+
+            param_offset += size;
+
+            param->parameter.byte_offset_from_fp = param_offset - size;
 
             uint8_t *arg_ptr = interpreter_load_lvalue(interp, param);
             ffi_push_arg(&interp->ffi, arg_ptr, param_type);
