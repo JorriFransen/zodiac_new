@@ -26,7 +26,20 @@ namespace Zodiac {
 
 #if _WIN32
         DLLib *kernel32_lib = dlLoadLibrary("kernel32.dll");
+        assert(kernel32_lib);
         array_append(&result.libs, kernel32_lib);
+
+        // DLLib *user32_lib = dlLoadLibrary("user32.dll");
+        // assert(user32_lib);
+        // array_append(&result.libs, user32_lib);
+
+        // DLLib *msvcr100_lib = dlLoadLibrary("msvcr100.dll");
+        // assert(msvcr100_lib);
+        // array_append(&result.libs, msvcr100_lib);
+
+        DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
+        assert(ucrtbase_lib);
+        array_append(&result.libs, ucrtbase_lib);
 #endif
 
 

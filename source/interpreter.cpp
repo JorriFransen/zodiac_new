@@ -920,6 +920,9 @@ namespace Zodiac
         for (int64_t i = 0; i < foreign_functions.count; i++) {
             auto func = foreign_functions[i];
             bool found = ffi_load_function(&interp->ffi, string_ref(func->name));
+            if (!found) {
+                fprintf(stderr, "Did not find foreign function: '%s'\n", func->name.data);
+            }
             assert(found);
         }
     }

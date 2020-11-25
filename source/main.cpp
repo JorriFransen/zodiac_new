@@ -17,6 +17,7 @@ using namespace Zodiac;
 
 int main(int argc, char **argv)
 {
+    printf("test\n");
     TracyCZoneN(tcz_init, "init", true);
 
     auto options = parse_command_line(argc, argv);

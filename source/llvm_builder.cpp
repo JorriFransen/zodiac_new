@@ -1132,8 +1132,8 @@ namespace Zodiac
 
         string_builder_append(sb, linker_path.data);
 
-        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
-        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
 
         string_builder_append(sb, " kernel32.lib");
         string_builder_append(sb, " msvcrtd.lib");
