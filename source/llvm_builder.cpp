@@ -3,6 +3,7 @@
 
 #include "builtin.h"
 #include "bytecode.h"
+#include "os.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
 
@@ -186,6 +187,9 @@ namespace Zodiac
             case 64:  return llvm::ConstantInt::get(llvm_type, const_val.integer.u64, sign);
             default: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
@@ -840,6 +844,9 @@ namespace Zodiac
             case Bytecode_Value_Kind::TYPE: assert(false);
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     void llvm_emit_exit(LLVM_Builder *builder, llvm::Value *exit_code_val)

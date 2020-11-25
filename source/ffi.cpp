@@ -26,8 +26,9 @@ namespace Zodiac {
 
 #if _WIN32
         DLLib *kernel32_lib = dlLoadLibrary("kernel32.dll");
-        array_append(&result.libs, this_exe_lib);
+        array_append(&result.libs, kernel32_lib);
 #endif
+
 
         return result;
     }

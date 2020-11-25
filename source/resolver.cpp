@@ -86,7 +86,7 @@ namespace Zodiac
         while (!done) {
 
             if (resolver->build_data->options->verbose) {
-                printf("[RESOLVER] Starting resolve cycle: %lu\n", cycle_count);
+                printf("[RESOLVER] Starting resolve cycle: %" PRIu64 "\n", cycle_count);
             }
 
             auto parse_job_count = queue_count(&resolver->parse_jobs);
@@ -595,7 +595,7 @@ namespace Zodiac
         if (!result && resolver->build_data->options->verbose) {
             assert(waiting_on);
             auto bfp = waiting_on->begin_file_pos;
-            printf("           ..Failed! (waiting on: '%s:%lu:%lu')\n",
+            printf("           ..Failed! (waiting on: '%s:%" PRIu64 ":%" PRIu64 "')\n",
                     bfp.file_name.data, bfp.line, bfp.column);
         }
 
@@ -2309,6 +2309,9 @@ namespace Zodiac
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
+
+        assert(false);
+        return false;
     }
 
     bool try_size_statement(Resolver *resolver, AST_Statement *statement)

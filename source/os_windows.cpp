@@ -172,6 +172,13 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
 
     return result;
 }
+
+int64_t os_syscall(Array<int64_t> args)
+{
+    assert(false && "Syscall is not supported on windows...");
+    return 0;
+}
+
 }
 
 #endif // #ifdef WIN32

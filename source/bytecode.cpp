@@ -1170,6 +1170,7 @@ namespace Zodiac
         else assert(false);
 
         assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *expr)
@@ -1203,6 +1204,8 @@ namespace Zodiac
             case  AST_Type_Kind::ARRAY: assert(false);
         }
 
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Value *bytecode_emit_cast_to_int(Bytecode_Builder *builder,
@@ -1434,8 +1437,8 @@ namespace Zodiac
         auto type = literal_expr->type;
         assert(type->kind == AST_Type_Kind::FLOAT);
 
-        float f;
-        double d;
+        float f = 0.0;
+        double d = 0.0;
 
         if (literal_expr->kind == AST_Expression_Kind::FLOAT_LITERAL) {
             f = literal_expr->float_literal.r32;
@@ -1476,6 +1479,9 @@ namespace Zodiac
             case AST_Type_Kind::ENUM: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,

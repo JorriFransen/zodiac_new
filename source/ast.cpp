@@ -1849,7 +1849,11 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT: assert(false);
+            case AST_Type_Spec_Kind::DOT: {
+                ast_flatten_expression(builder, type_spec->dot_expression, nodes);
+                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                break;
+            }
 
             case AST_Type_Spec_Kind::FUNCTION: {
                 for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {

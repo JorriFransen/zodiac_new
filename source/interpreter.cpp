@@ -256,7 +256,7 @@ namespace Zodiac
     auto type = lhs.type; \
     if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
     auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    bool result_value; \
+    bool result_value = false; \
     if (type->integer.sign) { \
         switch (type->bit_size) { \
             case 8: result_value = lhs.integer_literal.s8 op rhs.integer_literal.s8; break; \
@@ -301,7 +301,7 @@ namespace Zodiac
     assert(lhs.type == rhs.type); \
     assert(lhs.type->kind == AST_Type_Kind::FLOAT); \
     auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    bool result_value; \
+    bool result_value = false; \
     if (lhs.type == Builtin::type_float) { \
         result_value = lhs.float_literal.r32 op rhs.float_literal.r32; \
     } else if (lhs.type == Builtin::type_double) { \
@@ -1105,6 +1105,9 @@ namespace Zodiac
             case Bytecode_Value_Kind::SWITCH_DATA:
             case Bytecode_Value_Kind::FUNCTION: assert(false);
         }
+
+        assert(false);
+        return nullptr;
     }
 
     Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp)
