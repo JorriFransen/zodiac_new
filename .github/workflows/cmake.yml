@@ -22,6 +22,10 @@ jobs:
       # We'll use this as our working directory for all subsequent commands
       #run: cmake -E make_directory ${{runner.workspace}}/build
   
+     -name: Install dependencies
+      shell: bash
+      run: sudo apt install Ninja
+      
     - name: Configure Dependencies
       shell: bash
       run: ./create_linux_build.sh
