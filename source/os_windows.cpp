@@ -167,7 +167,11 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
         CloseHandle(process_info.hThread);
 
         result.exit_code = exit_code;
-        result.success = true;
+        if (exit_code == 0) {
+            result.success = true;
+        } else {
+            result.success = false;
+        }
     }
 
 

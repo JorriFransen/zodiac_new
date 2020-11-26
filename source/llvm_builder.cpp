@@ -1099,7 +1099,7 @@ namespace Zodiac
 
         if (options->link_c)
         {
-            string_builder_appendf(sb, " /usr/lib64/crtn.o");
+            string_builder_append(sb, " /usr/lib64/crtn.o");
         }
 
         auto link_cmd = string_builder_to_string(builder->allocator, sb);
@@ -1136,11 +1136,15 @@ namespace Zodiac
 
         string_builder_append(sb, linker_path.data);
 
-        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
-        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
+        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
 
         string_builder_append(sb, " kernel32.lib");
         string_builder_append(sb, " msvcrtd.lib");
+
+        if (options->link_c) {
+            string_builder_append(sb, " ucrt.lib");
+        }
 
         string_builder_appendf(sb, " %s.o", output_file_name);
 

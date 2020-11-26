@@ -23,7 +23,7 @@ namespace Zodiac
         Array<DLLib *> libs = {};
     };
 
-    FFI_Context ffi_create(Allocator *allocator);
+    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data);
 
     bool ffi_load_function(FFI_Context *ffi, const String &name);
 

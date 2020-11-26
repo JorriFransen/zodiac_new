@@ -26,7 +26,7 @@ namespace Zodiac
         result.ip = {};
 
         result.global_data = nullptr;
-        result.ffi = ffi_create(allocator);
+        result.ffi = ffi_create(allocator, build_data);
 
         result.null_pointer = nullptr;
 

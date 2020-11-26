@@ -7,7 +7,7 @@ namespace Zodiac {
         return a == b;
     }
 
-    FFI_Context ffi_create(Allocator *allocator)
+    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data)
     {
         FFI_Context result = {};
 
@@ -38,9 +38,11 @@ namespace Zodiac {
         // assert(msvcr100_lib);
         // array_append(&result.libs, msvcr100_lib);
 
-        DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
-        assert(ucrtbase_lib);
-        array_append(&result.libs, ucrtbase_lib);
+        if (build_data->options->link_c) {
+            DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
+            assert(ucrtbase_lib);
+            array_append(&result.libs, ucrtbase_lib);
+        }
 #endif
 
 
@@ -59,7 +61,7 @@ namespace Zodiac {
         }
 
         if (symbol) {
-            printf("Loaded symbol '%s': %p\n", name.data, symbol);
+            // printf("Loaded symbol '%s': %p\n", name.data, symbol);
             hash_table_add(&ffi->functions, name, symbol);
             return true;
         }
