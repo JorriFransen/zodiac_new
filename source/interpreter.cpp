@@ -331,12 +331,14 @@ namespace Zodiac
                         arg_val.type = inst->a->type;
                         assert(arg_val.type->kind == AST_Type_Kind::POINTER);
                     } else {
+#ifndef NDEBUG
                         auto kind = inst->a->kind;
                         assert(kind == Bytecode_Value_Kind::TEMP ||
                                kind == Bytecode_Value_Kind::INTEGER_LITERAL ||
                                kind == Bytecode_Value_Kind::FLOAT_LITERAL ||
                                kind == Bytecode_Value_Kind::STRING_LITERAL ||
                                kind == Bytecode_Value_Kind::NULL_LITERAL);
+#endif
                         arg_val = interpreter_load_value(interp, inst->a);
                     }
 
@@ -1146,10 +1148,12 @@ namespace Zodiac
 
     void interpreter_advance_ip(Interpreter *interp)
     {
+#ifndef NDEBUG
         auto cb = interp->ip.block;
         auto index = interp->ip.index;
 
         assert(index + 1 < cb->instructions.count);
+#endif
 
         interp->ip.index += 1;
     }
@@ -1214,9 +1218,10 @@ namespace Zodiac
 
     void interp_store_constant(uint8_t *dest, Const_Value val)
     {
+#ifndef NDEBUG
         auto type = val.type;
-
         assert(type->kind == AST_Type_Kind::INTEGER);
+#endif
 
         switch (val.type->bit_size)
         {

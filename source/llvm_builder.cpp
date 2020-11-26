@@ -672,6 +672,10 @@ namespace Zodiac
                 llvm::Type *llvm_type = llvm_type_from_ast(builder, inst->a->type);
                 auto llvm_size = builder->llvm_datalayout->getTypeAllocSize(llvm_type);
                 assert(llvm_size == bc_size);
+                if (llvm_size != bc_size) {
+                    fprintf(stderr, "Bytecode and llvm sizeof don't match!!!\n");
+                    exit(-1);
+                }
 
                 llvm::Type *result_type = llvm_type_from_ast(builder, inst->result->type);
 

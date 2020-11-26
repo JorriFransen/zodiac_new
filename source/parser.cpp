@@ -124,8 +124,12 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
 
         auto bfp = ts->current_token().begin_file_pos;
 
+#ifndef NDEBUG
         auto id_tok = ts->next_token();
         assert(id_tok.atom == Builtin::atom_static_assert);
+#else
+        ts->next_token();
+#endif
         ts->next_token();
 
         if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
@@ -600,9 +604,11 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
 
     if (elseif)
     {
+#ifndef NDEBUG
         auto ft = ts->current_token();
         assert(ft.kind == TOK_IDENTIFIER);
         assert(ft.atom == Builtin::atom_elseif);
+#endif
         ts->next_token();
     }
     else

@@ -108,9 +108,10 @@ Unicode_String widen(Allocator *allocator, const String &str)
     }
 
     LPWSTR buf = alloc_array<WCHAR>(allocator, size);
-    auto written_size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED,
-                                            str.data, str.length + 1,
-                                            buf, size);
+#ifndef NDEBUG
+    auto written_size =
+#endif
+        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, str.data, str.length + 1, buf, size);
     assert(written_size == size);
 
     return unicode_string_ref((LPCWSTR)buf, size - 1);

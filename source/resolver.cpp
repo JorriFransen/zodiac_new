@@ -887,12 +887,14 @@ namespace Zodiac
 
             case AST_Declaration_Kind::FUNCTION: {
 
+#ifndef NDEBUG
                 for (int64_t i = 0; i < declaration->function.parameter_declarations.count; i++) {
                     AST_Declaration *param_decl = declaration->function.parameter_declarations[i];
                     assert(param_decl->type);
                     assert(param_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(param_decl->flags & AST_NODE_FLAG_TYPED);
                 }
+#endif
 
                 AST_Type_Spec *func_ts = declaration->function.type_spec;
                 assert(func_ts->type);
@@ -1189,6 +1191,7 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::ASSIGNMENT: {
+#ifndef NDEBUG
                 AST_Expression *ident_expr = statement->assignment.identifier_expression;
                 assert(ident_expr->type);
                 assert(ident_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1198,6 +1201,7 @@ namespace Zodiac
                 assert(rhs_expr->type);
                 assert(rhs_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(rhs_expr->flags & AST_NODE_FLAG_TYPED);
+#endif
 
                 assert(ident_expr->type == rhs_expr->type);
 
@@ -1222,10 +1226,12 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::BREAK: {
+#ifndef NDEBUG
                 AST_Statement *break_from = statement->break_stmt.break_from;
                 assert(break_from);
                 assert(break_from->kind == AST_Statement_Kind::WHILE ||
                        break_from->kind == AST_Statement_Kind::SWITCH);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1234,10 +1240,12 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::DECLARATION: {
+#ifndef NDEBUG
                 AST_Declaration *decl = statement->declaration;
                 assert(decl->type);
                 assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(decl->flags & AST_NODE_FLAG_TYPED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1246,10 +1254,12 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::EXPRESSION: {
+#ifndef NDEBUG
                 AST_Expression *expr = statement->expression;
                 assert(expr->type);
                 assert(expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(expr->flags & AST_NODE_FLAG_TYPED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1258,6 +1268,7 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::WHILE: {
+#ifndef NDEBUG
                 AST_Expression *cond_expr = statement->while_stmt.cond_expr;
                 assert(cond_expr->type);
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1268,6 +1279,7 @@ namespace Zodiac
                 AST_Statement *body = statement->while_stmt.body;
                 assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(body->flags & AST_NODE_FLAG_TYPED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1277,6 +1289,7 @@ namespace Zodiac
 
             case AST_Statement_Kind::FOR:
             {
+#ifndef NDEBUG
                 for (int64_t i = 0; i < statement->for_stmt.init_statements.count; i++) {
                     AST_Statement *init_stmt = statement->for_stmt.init_statements[i];
                     assert(init_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1299,6 +1312,7 @@ namespace Zodiac
                     assert(step_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(step_stmt->flags & AST_NODE_FLAG_TYPED);
                 }
+#endif
 
                 assert(statement->for_stmt.body_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(statement->for_stmt.body_stmt->flags & AST_NODE_FLAG_TYPED);
@@ -1310,6 +1324,7 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::IF: {
+#ifndef NDEBUG
                 AST_Expression *cond_expr = statement->if_stmt.cond_expr;
                 assert(cond_expr->type);
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1326,6 +1341,7 @@ namespace Zodiac
                     assert(else_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(else_stmt->flags & AST_NODE_FLAG_TYPED);
                 }
+#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -1334,10 +1350,12 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::SWITCH: {
+#ifndef NDEBUG
                 AST_Expression *switch_expr = statement->switch_stmt.expression;
                 assert(switch_expr->type);
                 assert(switch_expr->flags  & AST_NODE_FLAG_RESOLVED_ID);
                 assert(switch_expr->flags  & AST_NODE_FLAG_TYPED);
+#endif
 
                 assert(switch_expr->type->kind == AST_Type_Kind::INTEGER ||
                        switch_expr->type->kind == AST_Type_Kind::ENUM);
@@ -1733,7 +1751,10 @@ namespace Zodiac
                                                               arg_expr->scope,
                                                               arg_expr->begin_file_pos,
                                                               arg_expr->end_file_pos);
-                            bool cast_res = try_resolve_expression(resolver, args[i]);
+#ifndef NDEBUG
+                            bool cast_res =
+#endif
+                                try_resolve_expression(resolver, args[i]);
                             assert(cast_res);
                             arg_expr = args[i];
                         } else {
@@ -1752,14 +1773,17 @@ namespace Zodiac
 
                 auto args = expression->builtin_call.arg_expressions;
 
+#ifdef NDEBUG
+#define _ENSURE_ARGS_ARE_TYPED
+#else
 #define _ENSURE_ARGS_ARE_TYPED \
     for (int64_t i = 0; i < args.count; i++) { \
         AST_Expression *arg_expr = args[i]; \
         assert(arg_expr->type); \
         assert(arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID); \
         assert(arg_expr->flags |= AST_NODE_FLAG_TYPED); \
-    } \
-
+    } 
+#endif
                 Atom name = expression->builtin_call.identifier->atom;
 
                 if (name == Builtin::atom_exit) {
@@ -1788,7 +1812,10 @@ namespace Zodiac
                                                               args[i]->scope,
                                                               args[i]->begin_file_pos,
                                                               args[i]->end_file_pos);
-                            bool cast_res = try_resolve_expression(resolver, args[i]);
+#ifndef NDEBUG
+                            bool cast_res =
+#endif
+                                try_resolve_expression(resolver, args[i]);
                             assert(cast_res);
                         } else {
                             assert(args[i]->type == Builtin::type_s64);
@@ -1804,7 +1831,9 @@ namespace Zodiac
                     assert(args.count == 2);
 
                     AST_Expression *type_expr = args[0];
+#ifndef NDEBUG
                     AST_Expression *op_expr = args[1];
+#endif
 
                     assert(type_expr->type);
                     assert(type_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1894,7 +1923,9 @@ namespace Zodiac
             case AST_Expression_Kind::COMPOUND: assert(false);
 
             case AST_Expression_Kind::SUBSCRIPT: {
+#ifndef NDEBUG
                 AST_Expression *index_expr = expression->subscript.index_expression;
+#endif
                 assert(index_expr->type);
                 assert(index_expr->type->kind == AST_Type_Kind::INTEGER);
                 assert(index_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -2056,7 +2087,9 @@ namespace Zodiac
                 assert(begin->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(begin->flags & AST_NODE_FLAG_TYPED);
 
+#ifndef NDEBUG
                 AST_Expression *end = expression->range.end;
+#endif
                 assert(end->type);
                 assert(end->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(end->flags & AST_NODE_FLAG_TYPED);
@@ -2268,7 +2301,10 @@ namespace Zodiac
             case AST_Declaration_Kind::CONSTANT: {
                 assert(decl->type);
                 if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-                    bool result = try_size_type(resolver, decl->type);
+#ifndef NDEBUG
+                    bool result =
+#endif
+                        try_size_type(resolver, decl->type);
                     assert(result);
                 }
                 decl->flags |= AST_NODE_FLAG_SIZED;
@@ -2298,7 +2334,10 @@ namespace Zodiac
             case AST_Declaration_Kind::TYPEDEF: {
                 assert(decl->type);
                 if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-                    bool result = try_size_type(resolver, decl->type);
+#ifndef NDEBUG
+                    bool result =
+#endif
+                        try_size_type(resolver, decl->type);
                     assert(result);
                 }
                 decl->flags |= AST_NODE_FLAG_SIZED;
@@ -2308,7 +2347,10 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: {
                 assert(decl->type);
                 if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-                    bool result = try_size_type(resolver, decl->type);
+#ifndef NDEBUG
+                    bool result =
+#endif
+                        try_size_type(resolver, decl->type);
                     assert(result);
                 }
                 decl->flags |= AST_NODE_FLAG_SIZED;
@@ -2318,7 +2360,10 @@ namespace Zodiac
             case AST_Declaration_Kind::ENUM: {
                 assert(decl->type);
                 if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-                    bool result = try_size_type(resolver, decl->type);
+#ifndef NDEBUG
+                    bool result =
+#endif
+                        try_size_type(resolver, decl->type);
                     assert(result);
                 }
                 decl->flags |= AST_NODE_FLAG_SIZED;
@@ -2365,11 +2410,13 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::ASSIGNMENT: {
+#ifndef NDEBUG
                 AST_Expression *ident_expr = statement->assignment.identifier_expression;
                 assert(ident_expr->flags & AST_NODE_FLAG_SIZED);
 
                 AST_Expression *rhs_expr = statement->assignment.rhs_expression;
                 assert(rhs_expr->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2394,9 +2441,11 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::DECLARATION: {
+#ifndef NDEBUG
                 AST_Declaration *decl = statement->declaration;
                 assert(decl->type);
                 assert(decl->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2404,9 +2453,11 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::EXPRESSION: {
+#ifndef NDEBUG
                 AST_Expression *expr = statement->expression;
                 assert(expr->type);
                 assert(expr->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2414,11 +2465,13 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::WHILE: {
+#ifndef NDEBUG
                 AST_Expression *cond_expr = statement->while_stmt.cond_expr;
                 assert(cond_expr->flags & AST_NODE_FLAG_SIZED);
 
                 AST_Statement *body = statement->while_stmt.body;
                 assert(body->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2426,11 +2479,11 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::FOR: {
+#ifndef NDEBUG
                 for (int64_t i = 0; i < statement->for_stmt.init_statements.count; i++) {
                     AST_Statement *init_stmt = statement->for_stmt.init_statements[i];
                     assert(init_stmt->flags & AST_NODE_FLAG_SIZED);
                 }
-
                 AST_Expression *cond_expr = statement->for_stmt.cond_expr;
                 assert(cond_expr->flags & AST_NODE_FLAG_SIZED);
 
@@ -2441,6 +2494,7 @@ namespace Zodiac
 
                 AST_Statement *body_stmt = statement->for_stmt.body_stmt;
                 assert(body_stmt->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2448,6 +2502,7 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::IF: {
+#ifndef NDEBUG
                 AST_Expression *cond_expr = statement->if_stmt.cond_expr;
                 assert(cond_expr->flags & AST_NODE_FLAG_SIZED);
 
@@ -2458,6 +2513,7 @@ namespace Zodiac
                 if (else_stmt) {
                     assert(else_stmt->flags & AST_NODE_FLAG_SIZED);
                 }
+#endif
 
                 statement->flags |= AST_NODE_FLAG_SIZED;
                 return true;
@@ -2465,8 +2521,10 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::SWITCH: {
+#ifndef NDEBUG
                 AST_Expression *switch_expr = statement->switch_stmt.expression;
                 assert(switch_expr->flags & AST_NODE_FLAG_SIZED);
+#endif
 
                 for (int64_t i = 0; i < statement->switch_stmt.cases.count; i++) {
                     AST_Switch_Case *switch_case = statement->switch_stmt.cases[i];
@@ -2723,9 +2781,11 @@ namespace Zodiac
 
             case AST_Type_Spec_Kind::IDENTIFIER: {
 
+#ifndef NDEBUG
                 AST_Declaration *decl = type_spec->identifier->declaration;
                 assert(decl);
                 assert(decl->type);
+#endif
 
                 assert(type_spec->type == decl->type);
 

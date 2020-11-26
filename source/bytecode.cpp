@@ -245,22 +245,26 @@ namespace Zodiac
         //
         // Emit pre_main() so stdout, etc. are setup
         //
-        assert(builder->build_data->entry_module);
-        Scope *entry_scope = builder->build_data->entry_module->scope;
-        assert(entry_scope);
-        AST_Declaration *pre_main_decl = scope_find_declaration(entry_scope,
-                                                                Builtin::atom_pre_main);
-        assert(pre_main_decl);
-        assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        Bytecode_Function *pre_main_func = bytecode_find_function(builder, pre_main_decl);
-        assert(pre_main_func);
+        if (!builder->build_data->options->link_c) {
+            assert(builder->build_data->entry_module);
+            Scope *entry_scope = builder->build_data->entry_module->scope;
+            assert(entry_scope);
+            AST_Declaration *pre_main_decl = scope_find_declaration(entry_scope,
+                                                                    Builtin::atom_pre_main);
+            assert(pre_main_decl);
+            assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        Bytecode_Value *func_val = bytecode_function_value_new(builder, pre_main_func);
-        Bytecode_Value *arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
-                                                                     { .s64 = 0 });
+            Bytecode_Function *pre_main_func = bytecode_find_function(builder, pre_main_decl);
+            assert(pre_main_func);
 
-        bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, nullptr);
+            Bytecode_Value *func_val = bytecode_function_value_new(builder, pre_main_func);
+            Bytecode_Value *arg_count_val = bytecode_integer_literal_new(builder,
+                                                                         Builtin::type_s64,
+                                                                         { .s64 = 0 });
+
+            bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, nullptr);
+        }
 
         //
         // Emit the actual expression after #run

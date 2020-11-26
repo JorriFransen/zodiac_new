@@ -22,6 +22,7 @@ namespace Zodiac {
         hash_table_init(allocator, &result.functions, hash_table_strings_equal);
 
         DLLib *this_exe_lib = dlLoadLibrary(nullptr);
+        assert(this_exe_lib);
         array_append(&result.libs, this_exe_lib);
 
 #if _WIN32
@@ -58,6 +59,7 @@ namespace Zodiac {
         }
 
         if (symbol) {
+            printf("Loaded symbol '%s': %p\n", name.data, symbol);
             hash_table_add(&ffi->functions, name, symbol);
             return true;
         }
@@ -70,6 +72,12 @@ namespace Zodiac {
         DCpointer func_ptr = nullptr;
         bool found = hash_table_find(&ffi->functions, name, &func_ptr);
         assert(found);
+        if (!found) {
+            fprintf(stderr, "Failed to find foreign function: '%s'\n", name.data);
+            return;
+        }
+
+        // printf("Calling function '%s': %p\n", name.data, func_ptr);
 
         assert(return_val_ptr);
 
