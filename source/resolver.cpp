@@ -106,6 +106,11 @@ namespace Zodiac
 
                     Parsed_Module &pm = resolver->parsed_modules[job.parsed_module_index];
 
+                    if (job.insert_entry_module) {
+                        assert(!resolver->build_data->entry_module);
+                        resolver->build_data->entry_module = pm.ast;
+                    }
+
                     assert(pm.ast->kind == AST_Node_Kind::MODULE);
                     AST_Module *ast_module = pm.ast;
 
