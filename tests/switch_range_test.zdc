@@ -43,9 +43,8 @@ Digit : u64 : enum
     ONE   :: 1,
     TWO   :: 2,
     THREE :: 3,
-    FOUR  :: 4,
-    FIVE  :: 5,
-    SIX,
+    FOUR,
+    SIX   :: 6,
     SEVEN,
     EIGHT,
     NINE,
@@ -71,9 +70,9 @@ print_digit :: func(d : Digit)
         case Digit.FOUR: {
             std.print("FOUR");
         }
-        case Digit.FIVE: {
-            std.print("FIVE");
-        }
+        // case Digit.FIVE: {
+        //     std.print("FIVE");
+        // }
         case Digit.SIX: {
             std.print("SIX");
         }

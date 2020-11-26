@@ -3337,24 +3337,29 @@ namespace Zodiac
                         auto member_decl = ast_find_enum_member(enum_type,
                                                                 { .type = enum_type,
                                                                   .integer={.u64=val}});
-                        assert(member_decl);
+                        if (member_decl) {
 
-                        auto child_name = member_decl->identifier->atom;
-                        AST_Identifier *child_ident =
-                            ast_identifier_new(resolver->allocator, child_name,
-                                               switch_scope,
-                                               begin_fp, end_fp);
+                            auto child_name = member_decl->identifier->atom;
+                            AST_Identifier *child_ident =
+                                ast_identifier_new(resolver->allocator, child_name,
+                                                   switch_scope,
+                                                   begin_fp, end_fp);
 
-                        new_expr = ast_dot_expression_new(resolver->allocator,
-                                                          parent_expr, child_ident,
-                                                          switch_scope,
-                                                          begin_fp, end_fp);
+                            new_expr = ast_dot_expression_new(resolver->allocator,
+                                                              parent_expr, child_ident,
+                                                              switch_scope,
+                                                              begin_fp, end_fp);
 
+                        } else {
+                            new_expr = nullptr;
+                        }
                     }
 
-                    ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
+                    if (new_expr) {
+                        ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
 
-                    array_append(&temp_case_exprs, new_expr);
+                        array_append(&temp_case_exprs, new_expr);
+                    }
 
                     val += 1;
                     stmt->switch_stmt.case_expr_count += 1;
