@@ -24,7 +24,7 @@ jobs:
   
     - name: Install dependencies
       shell: bash
-      run: sudo apt install Ninja
+      run: sudo apt install ninja-build
       
     - name: Configure Dependencies
       shell: bash
