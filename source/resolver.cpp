@@ -528,10 +528,7 @@ namespace Zodiac
 
         if (resolver->build_data->options->print_parse_tree) parsed_file_print(&parsed_file);
 
-        AST_Builder ast_builder = { resolver->allocator, resolver->build_data };
-        stack_init(resolver->allocator, &ast_builder.break_stack);
-
-        AST_Module *module_ast = ast_create_from_parsed_file(&ast_builder, &parsed_file,
+        AST_Module *module_ast = ast_create_from_parsed_file(&resolver->ast_builder, &parsed_file,
                                                              resolver->global_scope);
         //
         // @CLEANUP: @TODO: @FIXME: This should only check for redeclarations
