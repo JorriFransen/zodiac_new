@@ -6,19 +6,45 @@ _main :: func() { main(); return; }
 
 main :: func() -> s64
 {
-    std.print("switch range test\n");
+    std.print("switch range test\n\n");
+
+    // print_digit(Digit.ZERO);
+    // print_digit(Digit.ONE);
+    // print_digit(Digit.TWO);
+    // print_digit(Digit.THREE);
+    // print_digit(Digit.FOUR);
+    // print_digit(Digit.FIVE);
+    // print_digit(Digit.SIX);
+    // print_digit(Digit.SEVEN);
+    // print_digit(Digit.EIGHT);
+    // print_digit(Digit.NINE);
+
+    d := Digit.ZERO;
+    while (d <= Digit.NINE) {
+        print_digit(d);
+        std.print("\n");
+        d += 1;
+    }
+
+    std.print("\n");
+
+    d = Digit.ZERO;
+    while (d <= Digit.NINE) {
+        print_digit_range(d);
+        d += 1;
+    }
 
     return 0;
 }
 
-Digit :: enum
+Digit : u64 : enum
 {
-    ZERO :: 0,
-    ONE  :: 1,
-    TWO  :: 2,
-    TRHEE:: 3,
-    FOUR :: 4,
-    FIVE :: 5,
+    ZERO  :: 0,
+    ONE   :: 1,
+    TWO   :: 2,
+    THREE :: 3,
+    FOUR  :: 4,
+    FIVE  :: 5,
     SIX,
     SEVEN,
     EIGHT,
@@ -65,6 +91,27 @@ print_digit :: func(d : Digit)
         }
     }
 
-    std.print("\n");
+    return;
+}
+
+print_digit_range :: func(d : Digit)
+{
+    print_digit(d);
+    std.print(" is in the ");
+
+    switch (d) {
+        case Digit.ZERO .. Digit.THREE: {
+            std.print("LOW");
+        }
+        case Digit.FOUR .. Digit.SIX: {
+            std.print("MID");
+        }
+        case Digit.SEVEN .. Digit.NINE: {
+            std.print("HIGH");
+        }
+        default: std.print("UNKNOWN");
+    }
+
+    std.print(" range\n");
     return;
 }

@@ -1062,6 +1062,7 @@ namespace Zodiac
                         next_value = nv.integer.s64 + 1;
                         current_value = nv.integer.s64;
                         mem_decl->type = enum_type;
+                        mem_decl->constant.init_expression->type = enum_type;
                     } else if (mem_decl->decl_flags & AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT) {
 
                         assert(mem_decl->kind == AST_Declaration_Kind::CONSTANT);
@@ -1538,7 +1539,7 @@ namespace Zodiac
                         if (child_ident->declaration) child_decl = child_ident->declaration;
                         else child_decl = scope_find_declaration(enum_scope, child_ident);
 
-                        // The parent should be fully resolved (the enum declaration), 
+                        // The parent should be fully resolved (the enum declaration),
                         //  so we know that scope_find_declaration can only fail with
                         //  an actual undeclared identifier.
                         if (!child_decl) {
