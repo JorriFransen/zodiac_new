@@ -49,7 +49,7 @@ void hash_table_init(Allocator *allocator, Hash_Table<Key_Type, Value_Type> *has
 
     hash_table->hashes = (uint64_t*)mem;
     hash_table->keys = (Key_Type*)(&mem[hashes_size]);
-    hash_table->values = (Value_Type*)(&mem[hashes_size + values_size]);
+    hash_table->values = (Value_Type*)(&mem[hashes_size + keys_size]);
 
     memset(hash_table->hashes, 0, hashes_size);
 
