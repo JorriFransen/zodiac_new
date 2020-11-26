@@ -30,18 +30,21 @@ namespace Zodiac {
         assert(kernel32_lib);
         array_append(&result.libs, kernel32_lib);
 
-        // DLLib *user32_lib = dlLoadLibrary("user32.dll");
-        // assert(user32_lib);
-        // array_append(&result.libs, user32_lib);
-
-        // DLLib *msvcr100_lib = dlLoadLibrary("msvcr100.dll");
-        // assert(msvcr100_lib);
-        // array_append(&result.libs, msvcr100_lib);
-
         if (build_data->options->link_c) {
             DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
             assert(ucrtbase_lib);
             array_append(&result.libs, ucrtbase_lib);
+
+            // DLLib *vcruntime_lib = dlLoadLibrary("vcruntime140.dll");
+            // assert(vcruntime_lib);
+            // array_append(&result.libs, vcruntime_lib);
+
+            DLLib* msvcrt_lib = dlLoadLibrary("msvcrt.dll");
+            assert(msvcrt_lib);
+            array_append(&result.libs, msvcrt_lib);
+
+            // auto printf_sym = dlFindSymbol(msvcrt_lib, "printf");
+            // assert(printf_sym);
         }
 #endif
 

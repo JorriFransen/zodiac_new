@@ -76,7 +76,7 @@ if(MSVC)
 
     # add_definitions(-D_DEBUG)
     # add_definitions(-D_ITERATOR_DEBUG_LEVEL=2)
-    # set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
 else()
    target_link_libraries(zodiac dyncall_s dynload_s)
 

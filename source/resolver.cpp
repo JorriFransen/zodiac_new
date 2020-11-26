@@ -199,10 +199,7 @@ namespace Zodiac
 
                 if (job.decl->kind == AST_Declaration_Kind::FUNCTION) {
 
-                    bool on_windows = resolver->llvm_builder.target_platform ==
-                                      Zodiac_Target_Platform::WINDOWS;
-
-                    if (!on_windows && resolver->build_data->options->link_c &&
+                    if (resolver->build_data->options->link_c &&
                         (job.decl->decl_flags & AST_DECL_FLAG_IS_ENTRY)) {
                         continue;
                     }
@@ -3211,7 +3208,7 @@ namespace Zodiac
     bool is_bytecode_entry_decl(Resolver *resolver, AST_Declaration *decl)
     {
         if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-            decl->identifier->atom == Builtin::atom_call_main_and_exit) {
+            decl->identifier->atom == Builtin::atom_main) {
             return true;
         }
 

@@ -1136,17 +1136,31 @@ namespace Zodiac
 
         string_builder_append(sb, linker_path.data);
 
-        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
+        // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLe ");
         string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
 
         string_builder_append(sb, " kernel32.lib");
-        string_builder_append(sb, " msvcrtd.lib");
-
-        if (options->link_c) {
-            string_builder_append(sb, " ucrt.lib");
-        }
+        string_builder_append(sb, " msvcrt.lib");
 
         string_builder_appendf(sb, " %s.o", output_file_name);
+
+        if (options->link_c) {
+            // string_builder_append(sb, " msvcprt.lib");
+            string_builder_append(sb, " libcmt.lib");
+            string_builder_append(sb, " libvcruntime.lib");
+            string_builder_append(sb, " libucrt.lib");
+            // string_builder_append(sb, " ucrt.lib");
+            // string_builder_append(sb, " kernel32.lib");
+            // string_builder_append(sb, " msvcrt.lib");
+            // string_builder_append(sb, " shlwapi.lib");
+            // string_builder_append(sb, " advapi32.lib");
+            // string_builder_append(sb, " shell32.lib");
+            // string_builder_append(sb, " user32.lib");
+            // string_builder_append(sb, " winmm.lib");
+            // string_builder_append(sb, " Ntdll.lib");
+            string_builder_append(sb, " legacy_stdio_definitions.lib");
+            string_builder_append(sb, " legacy_stdio_wide_specifiers.lib");
+        }
 
         auto arg_str = string_builder_to_string(builder->allocator, sb);
         if (print_command) printf("Running link command: %s\n", arg_str.data);
