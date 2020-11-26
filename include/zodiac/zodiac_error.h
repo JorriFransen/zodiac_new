@@ -41,9 +41,9 @@ namespace Zodiac
         {
             struct
             {
-                File_Pos begin_file_pos = {};
-                File_Pos end_file_pos = {};
-            };
+                File_Pos begin = {};
+                File_Pos end = {};
+            } range;
 
             AST_Node *ast_node;
         };

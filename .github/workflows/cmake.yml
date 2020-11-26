@@ -44,8 +44,8 @@ jobs:
       # Execute the build.  You can specify a specific target with "--target <NAME>"
       run: cmake --build .
 
-      #- name: Build gcc debug
-      #  working-directory: ${{runner.workspace}}/zodiac_new/build_gcc/debug
-      #  shell: bash
-      #  # Execute the build.  You can specify a specific target with "--target <NAME>"
-      #  run: cmake --build .
+    - name: Build gcc debug
+      working-directory: ${{runner.workspace}}/zodiac_new/build_gcc/debug
+      shell: bash
+      # Execute the build.  You can specify a specific target with "--target <NAME>"
+      run: cmake --build .

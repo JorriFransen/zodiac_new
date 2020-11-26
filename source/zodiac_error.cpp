@@ -58,8 +58,8 @@ namespace Zodiac
             }
             else if (ex_err.site.is_ast_node == false && site.is_ast_node == false)
             {
-                if (ex_err.site.begin_file_pos == site.begin_file_pos &&
-                    ex_err.site.end_file_pos == site.end_file_pos)
+                if (ex_err.site.range.begin == site.range.begin &&
+                    ex_err.site.range.end == site.range.end)
                 {
                     duplicate = true;
                     break;
@@ -121,7 +121,7 @@ namespace Zodiac
                 }
                 else
                 {
-                    bfp = msg.site.begin_file_pos;
+                    bfp = msg.site.range.begin;
                 }
 
 

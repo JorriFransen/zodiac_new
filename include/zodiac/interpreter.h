@@ -75,7 +75,7 @@ namespace Zodiac
     template <typename T>
     uint8_t *interp_stack_push(Interpreter *interp, T value)
     {
-        auto size = sizeof(T);
+        int64_t size = sizeof(T);
 
         assert(interp->sp + size <= interp->stack_size);
 
@@ -91,7 +91,7 @@ namespace Zodiac
     template <typename T>
     T interp_stack_pop(Interpreter *interp)
     {
-        auto size = sizeof(T);
+        int64_t size = sizeof(T);
 
         assert(interp->sp >= size);
 

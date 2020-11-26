@@ -462,13 +462,13 @@ namespace Zodiac
                 Array<llvm::Value *> _llvm_args = {};
                 array_init(builder->allocator, &_llvm_args, arg_count);
 
-                for (int64_t i = 0; i < arg_count; i++) {
+                for (uint64_t i = 0; i < arg_count; i++) {
                     int64_t offset = (arg_count - 1) - i;
                     llvm::Value *arg = stack_peek(&builder->arg_stack, offset);
                     array_append(&_llvm_args, arg);
                 }
 
-                for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
+                for (uint64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
 
                 llvm::ArrayRef<llvm::Value *> llvm_args(_llvm_args.data, arg_count);
 
@@ -934,7 +934,7 @@ namespace Zodiac
         Array<llvm::Value *> llvm_args = {};
         array_init(builder->allocator, &llvm_args, arg_count);
 
-        for (int64_t i = 0 ; i < arg_count; i++) {
+        for (uint64_t i = 0 ; i < arg_count; i++) {
             llvm::Value *arg_val = stack_peek(&builder->arg_stack, (arg_count - 1) - i);
 
             llvm::Type *arg_type = arg_val->getType();
@@ -952,7 +952,7 @@ namespace Zodiac
             array_append(&llvm_args, arg_val);
         }
 
-        for (int64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
+        for (uint64_t i = 0; i < arg_count; i++) stack_pop(&builder->arg_stack);
 
         auto constraint_str = string_builder_to_string(builder->allocator, &sb);
 

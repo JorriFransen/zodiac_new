@@ -64,7 +64,7 @@ namespace Zodiac
             auto allocl_type = allocl->type->pointer.base;
 
             assert(allocl_type->bit_size % 8 == 0);
-            auto size = allocl_type->bit_size / 8;
+            int64_t size = allocl_type->bit_size / 8;
             assert(interp->sp + size <= interp->stack_size);
 
             allocl->allocl.byte_offset_from_fp = interp->sp;
@@ -77,7 +77,7 @@ namespace Zodiac
             auto temp = entry_func->temps[i];
 
             assert(temp->type->bit_size % 8 == 0);
-            auto size = temp->type->bit_size / 8;
+            int64_t size = temp->type->bit_size / 8;
             assert(interp->sp + size <= interp->stack_size);
 
             temp->temp.byte_offset_from_fp = interp->sp;
@@ -343,7 +343,7 @@ namespace Zodiac
                     }
 
                     assert(arg_val.type->bit_size % 8 == 0);
-                    auto size = arg_val.type->bit_size / 8;
+                    int64_t size = arg_val.type->bit_size / 8;
                     assert(interp->sp + size <= interp->stack_size);
 
                     uint8_t *arg_ptr = &interp->stack[interp->sp];
@@ -407,7 +407,7 @@ namespace Zodiac
                         auto allocl_type = allocl->type->pointer.base;
 
                         assert(allocl_type->bit_size % 8 == 0);
-                        auto size = allocl_type->bit_size / 8;
+                        int64_t size = allocl_type->bit_size / 8;
                         assert(interp->sp + size <= interp->stack_size);
 
                         auto offset = interp->sp - new_fp;
@@ -420,7 +420,7 @@ namespace Zodiac
                         auto temp = func->temps[i];
 
                         assert(temp->type->bit_size % 8 == 0);
-                        auto size = temp->type->bit_size / 8;
+                        int64_t size = temp->type->bit_size / 8;
                         assert(interp->sp + size <= interp->stack_size);
 
                         auto offset = interp->sp - new_fp;

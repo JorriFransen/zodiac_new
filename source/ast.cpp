@@ -3205,7 +3205,8 @@ namespace Zodiac
                 ast_print_expression(ast_stmt->assignment.identifier_expression, 0);
                 printf(" = ");
                 ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
-                if (newline) printf("\n"); break;
+                if (newline) printf("\n");
+		break;
             }
 
             case AST_Statement_Kind::RETURN: {

@@ -1195,6 +1195,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_resolve_statement(Resolver *resolver, AST_Statement *statement)
@@ -1431,6 +1434,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
@@ -2312,6 +2318,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
@@ -2591,6 +2600,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_size_expression(Resolver *resolver, AST_Expression *expression)
@@ -2761,6 +2773,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_size_type(Resolver *resolver, AST_Type *type)
@@ -2816,6 +2831,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec)
@@ -2912,6 +2930,9 @@ namespace Zodiac
                 break;
             }
         }
+
+	assert(false);
+	return false;
     }
 
     AST_Type *infer_type(AST_Node *ast_node)
