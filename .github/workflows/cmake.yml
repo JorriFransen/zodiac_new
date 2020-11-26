@@ -22,9 +22,11 @@ jobs:
       # We'll use this as our working directory for all subsequent commands
       #run: cmake -E make_directory ${{runner.workspace}}/build
   
-    - name: Install dependencies
-      shell: bash
+    - name: Install ninja
       run: sudo apt install ninja-build
+      
+    - name: Install llvm-10-dev
+      run: sudo apt install llvm-10-dev
       
     - name: Configure Dependencies
       shell: bash
