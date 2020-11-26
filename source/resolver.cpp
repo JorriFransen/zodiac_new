@@ -1785,7 +1785,7 @@ namespace Zodiac
         assert(arg_expr->type); \
         assert(arg_expr->flags |= AST_NODE_FLAG_RESOLVED_ID); \
         assert(arg_expr->flags |= AST_NODE_FLAG_TYPED); \
-    } 
+    }
 #endif
                 Atom name = expression->builtin_call.identifier->atom;
 
