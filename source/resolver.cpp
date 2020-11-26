@@ -80,6 +80,8 @@ namespace Zodiac
     {
         bool done = false;
 
+        auto bd = resolver->build_data;
+
         Resolve_Result result = {};
 
         bool progressed = false;
@@ -227,9 +229,35 @@ namespace Zodiac
                 } else if (job.decl->kind == AST_Declaration_Kind::CONSTANT) {
                     // Dont do anything
                 } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
-                    Bytecode_Function *wrapper =
-                        bytecode_emit_run_wrapper(&resolver->bytecode_builder, job.decl);
-                    queue_run_job(resolver, job.decl, wrapper);
+                    Bytecode_Function *pre_main_func = nullptr;
+
+                    if (bd->pre_main_func) {
+                        pre_main_func = bd->pre_main_func;
+                    } else {
+                        assert(bd->entry_module);
+                        Scope *entry_scope = bd->entry_module->module_scope;
+                        assert(entry_scope);
+                        assert(entry_scope->kind == Scope_Kind::MODULE);
+                        AST_Declaration *pre_main_decl =
+                            scope_find_declaration(entry_scope, Builtin::atom_pre_main);
+                        assert(pre_main_decl);
+                        assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
+
+                        pre_main_func = bytecode_find_function(&resolver->bytecode_builder,
+                                                               pre_main_decl);
+                        if (pre_main_func) {
+                            bd->pre_main_func = pre_main_func;
+                        }
+                    }
+
+                    if (pre_main_func) {
+                        Bytecode_Function *wrapper =
+                            bytecode_emit_run_wrapper(&resolver->bytecode_builder, job.decl,
+                                                      pre_main_func);
+                        queue_run_job(resolver, job.decl, wrapper);
+                    } else {
+                        queue_enqueue(&resolver->bytecode_jobs, job);
+                    }
                 } else {
                     assert(false);
                 }

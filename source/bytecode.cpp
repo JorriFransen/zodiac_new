@@ -210,7 +210,8 @@ namespace Zodiac
         return global_info;
     }
 
-    Bytecode_Function *bytecode_emit_run_wrapper(Bytecode_Builder *builder, AST_Declaration *decl)
+    Bytecode_Function *bytecode_emit_run_wrapper(Bytecode_Builder *builder, AST_Declaration *decl,
+                                                 Bytecode_Function *pre_main_func)
     {
         assert(decl->kind == AST_Declaration_Kind::RUN);
 
@@ -247,15 +248,15 @@ namespace Zodiac
         //
 
         if (!builder->build_data->options->link_c) {
-            assert(builder->build_data->entry_module);
-            Scope *entry_scope = builder->build_data->entry_module->scope;
-            assert(entry_scope);
-            AST_Declaration *pre_main_decl = scope_find_declaration(entry_scope,
-                                                                    Builtin::atom_pre_main);
-            assert(pre_main_decl);
-            assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
+            // assert(builder->build_data->entry_module);
+            // Scope *entry_scope = builder->build_data->entry_module->scope;
+            // assert(entry_scope);
+            // AST_Declaration *pre_main_decl = scope_find_declaration(entry_scope,
+            //                                                         Builtin::atom_pre_main);
+            // assert(pre_main_decl);
+            // assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-            Bytecode_Function *pre_main_func = bytecode_find_function(builder, pre_main_decl);
+            // Bytecode_Function *pre_main_func = bytecode_find_function(builder, pre_main_decl);
             assert(pre_main_func);
 
             Bytecode_Value *func_val = bytecode_function_value_new(builder, pre_main_func);

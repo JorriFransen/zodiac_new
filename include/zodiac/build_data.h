@@ -21,6 +21,7 @@ namespace Zodiac
 
         Bytecode_Function *bc_entry_function = nullptr;
         Bytecode_Function *bc_bytecode_entry_function = nullptr;
+        Bytecode_Function *pre_main_func = nullptr;
 
         Allocator *err_allocator = nullptr;
 

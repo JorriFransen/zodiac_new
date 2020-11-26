@@ -25,6 +25,7 @@ namespace Zodiac
 
         build_data->bc_entry_function = nullptr;
         build_data->bc_bytecode_entry_function = nullptr;
+        build_data->pre_main_func = nullptr;
 
         build_data->err_allocator = err_allocator;
         array_init(err_allocator, &build_data->errors);
