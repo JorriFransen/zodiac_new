@@ -64,13 +64,16 @@ Windows build
            Make sure to use linux compatible paths for the compiler path
            Make sure to use the 64 bit version of clang-cl
            Choose between Debug and Release for -DCMAKE_BUILD_TYPE=
+
+           (cmake .. -G Ninja  -DCMAKE_C_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_CXX_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_ASSERTIONS=OFF -DLLVM_BUILD_DOCS=ON -DLLVM_ENABLE_DOXYGEN=OFF)
+
      - Build zodiac
        - Start msvc 64 bit dev shell
        - Invoke cmake with -G ninja and the path to clang-cl like with the llvm build
        - Match the -DCMAKE_BUILD_TYPE= option with the llvm build
          (check if mismatch is possible like on linux)
 
-  (cmake .. -G Ninja -DCMAKE_C_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_CXX_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_PREFIX_PATH=C:\Users\jorri\Desktop\llvm_install_debug\ -DCMAKE_BUILD_TYPE=Debug)
+         (cmake .. -G Ninja -DCMAKE_C_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_CXX_COMPILER='C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/x64/bin/clang-cl.exe' -DCMAKE_PREFIX_PATH=C:\Users\jorri\Desktop\llvm_install_debug\ -DCMAKE_BUILD_TYPE=Debug)
 
 UNREACHABLE instruction in our own bytecode.
 Dont't store File Positions on ast nodes.
