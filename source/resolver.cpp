@@ -1538,7 +1538,25 @@ namespace Zodiac
                         if (child_ident->declaration) child_decl = child_ident->declaration;
                         else child_decl = scope_find_declaration(enum_scope, child_ident);
 
-                        assert(child_decl);
+                        // The parent should be fully resolved (the enum declaration), 
+                        //  so we know that scope_find_declaration can only fail with
+                        //  an actual undeclared identifier.
+                        if (!child_decl) {
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                                child_ident,
+                                                "Reference to undeclared identifier: '%s'",
+                                                child_ident->atom.data);
+                            zodiac_report_info(resolver->build_data, child_ident,
+                                               "'%s' is not a member of enum '%s'",
+                                               child_ident->atom.data,
+                                               parent_decl->identifier->atom.data);
+                            zodiac_report_info(resolver->build_data, parent_decl,
+                                               "See declaration of enum '%s'",
+                                               parent_decl->identifier->atom.data);
+                            return false;
+                        }
+
                         if (!(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID)) return false;
                         assert(child_decl->type);
                         assert(child_decl->flags & AST_NODE_FLAG_TYPED);

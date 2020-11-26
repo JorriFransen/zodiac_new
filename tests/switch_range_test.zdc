@@ -1,0 +1,70 @@
+
+std :: import std;
+
+_main :: func() { main(); return; }
+#run _main();
+
+main :: func() -> s64
+{
+    std.print("switch range test\n");
+
+    return 0;
+}
+
+Digit :: enum
+{
+    ZERO :: 0,
+    ONE  :: 1,
+    TWO  :: 2,
+    TRHEE:: 3,
+    FOUR :: 4,
+    FIVE :: 5,
+    SIX,
+    SEVEN,
+    EIGHT,
+    NINE,
+}
+
+print_digit :: func(d : Digit)
+{
+    std.print("Digit.");
+
+    switch (d) {
+        case Digit.ZERO: {
+            std.print("ZERO");
+        }
+        case Digit.ONE: {
+            std.print("ONE");
+        }
+        case Digit.TWO: {
+            std.print("TWO");
+        }
+        case Digit.THREE: {
+            std.print("THREE");
+        }
+        case Digit.FOUR: {
+            std.print("FOUR");
+        }
+        case Digit.FIVE: {
+            std.print("FIVE");
+        }
+        case Digit.SIX: {
+            std.print("SIX");
+        }
+        case Digit.SEVEN: {
+            std.print("SEVEN");
+        }
+        case Digit.EIGHT: {
+            std.print("EIGHT");
+        }
+        case Digit.NINE: {
+            std.print("NINE");
+        }
+        default: {
+            std.print("UNKNOWN");
+        }
+    }
+
+    std.print("\n");
+    return;
+}
