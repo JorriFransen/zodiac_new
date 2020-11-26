@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(zodiac)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 10 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message("LLVM_INCLUDE_DIRS=${LLVM_INCLUDE_DIRS}")
