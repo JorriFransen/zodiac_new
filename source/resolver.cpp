@@ -3271,6 +3271,12 @@ namespace Zodiac
         return false;
     }
 
+    bool case_range_valid(bool signed_type, Integer_Literal val, Integer_Literal end_val)
+    {
+        if (signed_type) return val.s64 < end_val.s64;
+        else             return val.u64 < end_val.u64;
+    }
+
     void resolver_expand_switch_case_ranges(Resolver *resolver,
                                             AST_Statement *stmt,
                                             AST_Switch_Case *switch_case,
@@ -3310,11 +3316,23 @@ namespace Zodiac
                     const_interpret_expression(end_expr);
 
                 assert(begin_val.type == end_val.type);
-                assert(begin_val.type->kind == AST_Type_Kind::INTEGER ||
-                       begin_val.type->kind == AST_Type_Kind::ENUM);
-                assert(begin_val.type->integer.sign == false);
 
-                assert(begin_val.integer.u64 < end_val.integer.u64);
+                bool signed_type = false;
+
+                if (begin_val.type->kind == AST_Type_Kind::INTEGER) {
+                    if (begin_val.type->integer.sign) signed_type = true;
+                } else {
+                    assert(begin_val.type->kind == AST_Type_Kind::ENUM);
+                    AST_Type *base_type = begin_val.type->enum_type.base_type;
+                    assert(base_type->kind == AST_Type_Kind::INTEGER);
+                    if (base_type->integer.sign) signed_type = true;
+                }
+
+                if (signed_type) {
+                    assert(begin_val.integer.s64 < end_val.integer.s64);
+                } else {
+                    assert(begin_val.integer.u64 < end_val.integer.u64);
+                }
 
                 File_Pos begin_fp = begin_expr->begin_file_pos;
                 begin_fp.file_name =
@@ -3324,12 +3342,29 @@ namespace Zodiac
 
                 auto end_fp = begin_fp;
 
-                uint64_t val = begin_val.integer.u64 + 1;
-                while (val < end_val.integer.u64) {
-                    AST_Expression *new_expr =
-                        ast_integer_literal_expression_new(resolver->allocator,
-                                                           val, switch_scope,
-                                                           begin_fp, end_fp);
+                Integer_Literal val;
+                if (signed_type) val.s64 = begin_val.integer.s64 + 1;
+                else val.u64 = begin_val.integer.u64 + 1;
+
+                // while (val < end_val.integer.u64) {
+                while (case_range_valid(signed_type, val, end_val.integer)) {
+                    AST_Expression *new_expr = nullptr;
+                    // AST_Expression *new_expr =
+                    //     ast_integer_literal_expression_new(resolver->allocator,
+                    //                                        val, switch_scope,
+                    //                                        begin_fp, end_fp);
+
+                    if (signed_type) {
+                        new_expr = ast_integer_literal_expression_new(resolver->allocator,
+                                                                      val.s64, switch_scope,
+                                                                      begin_fp, end_fp);
+                    } else {
+                        new_expr = ast_integer_literal_expression_new(resolver->allocator,
+                                                                      val.u64, switch_scope,
+                                                                      begin_fp, end_fp);
+                    }
+
+                    assert(new_expr);
 
                     if (begin_expr->type->kind == AST_Type_Kind::ENUM) {
                         auto enum_type = begin_expr->type;
@@ -3348,7 +3383,7 @@ namespace Zodiac
 
                         auto member_decl = ast_find_enum_member(enum_type,
                                                                 { .type = enum_type,
-                                                                  .integer={.u64=val}});
+                                                                  .integer = val });
                         if (member_decl) {
 
                             auto child_name = member_decl->identifier->atom;
@@ -3373,7 +3408,9 @@ namespace Zodiac
                         array_append(&temp_case_exprs, new_expr);
                     }
 
-                    val += 1;
+                    if (signed_type) val.s64 += 1;
+                    else val.u64 += 1;
+
                     stmt->switch_stmt.case_expr_count += 1;
                 }
 
