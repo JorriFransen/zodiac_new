@@ -50,12 +50,31 @@ namespace Zodiac
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
+        int64_t ret_val;
+        void *ret_val_ptr = nullptr;
+
+        AST_Type *ret_type = entry_func->type->function.return_type;
+
+        if (ret_type != Builtin::type_void) {
+            if (ret_type->bit_size <= 64) {
+                ret_val_ptr = &ret_val;
+            } else {
+                assert(false);
+                // allocated_ret_val = true;
+                // assert(ret_type->bit_size % 8 == 0);
+                // auto size = ret_type->bit_size / 8;
+                // ret_val_ptr = alloc(interp->allocator, size);
+            }
+        }
+
+        assert(ret_val_ptr || ret_type == Builtin::type_void);
+
         interp_stack_push(interp, (int64_t)0); // total_arg_size
         interp->frame_pointer += sizeof(int64_t);
         interp_stack_push(interp, (int64_t)-1); // fp
         Instruction_Pointer empty_ip = {};
         interp_stack_push(interp, empty_ip);
-        interp_stack_push(interp, nullptr); // ret_val_ptr
+        interp_stack_push(interp, ret_val_ptr); // ret_val_ptr
 
         for (int64_t i = 0; i < entry_func->locals.count; i++)
         {
@@ -447,19 +466,29 @@ namespace Zodiac
                     int64_t offset = 0;
                     int64_t old_fp = *(int64_t*)(&interp->stack[interp->frame_pointer]);
 
-                    offset += sizeof(old_fp);
-                    interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer + offset]);
+                    if (old_fp != -1) {
+                        offset += sizeof(old_fp);
+                        interp->ip =
+                            *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer +
+                                                                   offset]);
 
-                    offset += sizeof(Instruction_Pointer);
-                    uint8_t *ret_val_ptr = *(uint8_t**)(&interp->stack[interp->frame_pointer + offset]);
+                        offset += sizeof(Instruction_Pointer);
+                        uint8_t *ret_val_ptr =
+                            *(uint8_t**)(&interp->stack[interp->frame_pointer + offset]);
 
-                    interp_store_value(ret_val_ptr, ret_val);
+                        interp_store_value(ret_val_ptr, ret_val);
 
-                    interp->sp = interp->frame_pointer;
-                    interp->frame_pointer = old_fp;
+                        interp->sp = interp->frame_pointer;
+                        interp->frame_pointer = old_fp;
 
-                    int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
-                    interp->sp -= total_arg_size;
+                        int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
+                        interp->sp -= total_arg_size;
+                    } else {
+                        interp->running = false;
+                        advance_ip = false;
+
+                        interp_store_value((uint8_t*)ret_val_ptr, ret_val);
+                    }
                     break;
                 }
 
@@ -469,7 +498,8 @@ namespace Zodiac
 
                     if (old_fp != -1) {
                         offset += sizeof(old_fp);
-                        interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer + offset]);
+                        interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer +
+                                                                            offset]);
                         interp->sp = interp->frame_pointer;
                         interp->frame_pointer = old_fp;
 
@@ -887,6 +917,10 @@ namespace Zodiac
             }
 
             if (advance_ip) interpreter_advance_ip(interp);
+        }
+
+        if (ret_val_ptr && ret_type->kind == AST_Type_Kind::INTEGER) {
+            interp->exit_code = *(int64_t*)ret_val_ptr;
         }
     }
 
