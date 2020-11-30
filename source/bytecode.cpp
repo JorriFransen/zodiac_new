@@ -1300,7 +1300,7 @@ namespace Zodiac
                     if (extend) {
                         bytecode_emit_instruction(builder, ZEXT, operand_value, nullptr, result);
                     } else {
-                        assert(false);
+                        bytecode_emit_instruction(builder, TRUNC, operand_value, nullptr, result);
                     }
                 }
                 break;

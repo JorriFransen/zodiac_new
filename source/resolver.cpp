@@ -1448,19 +1448,37 @@ namespace Zodiac
                     return false;
                 }
 
+                bool recursive = false;
+
                 if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
-                    return false;
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                        AST_Declaration *current_function = enclosing_function(resolver,
+                                                                               expression);
+                        if (current_function && current_function == decl) {
+                            // Recursive call or reference
+                            recursive = true;
+                            expression->expr_flags |= AST_EXPR_FLAG_RECURSIVE_IDENT;
+                        } else {
+                            return false;
+                        }
+                    }
                 }
 
-                if (!(decl->flags & AST_NODE_FLAG_TYPED)) {
+                if (!recursive && !(decl->flags & AST_NODE_FLAG_TYPED)) {
                     return false;
                 }
 
                 if (decl->kind == AST_Declaration_Kind::IMPORT) {
                     allow_null_type = true;
-                } else {
+                } else if (!recursive){
                     assert(decl->type);
                     expression->type = decl->type;
+                } else {
+                    if (decl->function.type_spec->type) {
+                        expression->type = decl->function.type_spec->type;
+                    } else {
+                        assert(false);
+                    }
                 }
 
                 expression->identifier->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1764,9 +1782,26 @@ namespace Zodiac
                     callee_decl = ident_expr->dot.child_decl;
                 }
                 assert(callee_decl);
-                assert(callee_decl->type);
-                assert(callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(callee_decl->flags & AST_NODE_FLAG_TYPED);
+
+                bool recursive = true;
+
+                AST_Type *func_type = callee_decl->type;
+                if (!func_type) {
+                    assert(ident_expr->expr_flags & AST_EXPR_FLAG_RECURSIVE_IDENT);
+                    recursive = true;
+                    assert(callee_decl->function.type_spec->type);
+                    func_type = callee_decl->function.type_spec->type;
+                }
+                assert(func_type);
+
+                assert(recursive || (callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID));
+                assert(recursive || (callee_decl->flags & AST_NODE_FLAG_TYPED));
+
+                if (recursive) {
+                    auto ts = callee_decl->function.type_spec;
+                    assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(ts->flags & AST_NODE_FLAG_TYPED);
+                }
 
                 expression->call.callee_declaration = callee_decl;
 
@@ -1799,12 +1834,25 @@ namespace Zodiac
                             assert(cast_res);
                             arg_expr = args[i];
                         } else {
-                            assert(false);
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                arg_expr,
+                                                "Mismatching types for argument %d", i);
+                            auto err_allocator = resolver->build_data->err_allocator;
+                            zodiac_report_info(resolver->build_data, params[i],
+                                               "Expected type: %s",
+                                               ast_type_to_string(err_allocator,
+                                                                  params[i]->type));
+                            zodiac_report_info(resolver->build_data, arg_expr,
+                                               "Given type: %s",
+                                               ast_type_to_string(err_allocator,
+                                                                  arg_expr->type));
+                            return false;
                         }
                     }
                 }
 
-                expression->type = callee_decl->type->function.return_type;
+                expression->type = func_type->function.return_type;
                 expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 expression->flags |= AST_NODE_FLAG_TYPED;
                 break;
@@ -2958,6 +3006,27 @@ namespace Zodiac
 
         assert(result_type);
         return result_type;
+    }
+
+    AST_Declaration *enclosing_function(Resolver *resolver, AST_Expression *expr)
+    {
+        Scope *scope = expr->scope;
+        assert(scope->kind != Scope_Kind::PARAMETER);
+
+        while (scope->kind != Scope_Kind::MODULE) {
+
+            Scope *parent_scope = scope->parent;
+            assert(parent_scope);
+
+            if (parent_scope->kind == Scope_Kind::PARAMETER) {
+                assert(parent_scope->function_declaration);
+                return parent_scope->function_declaration;
+            }
+
+            scope = parent_scope;
+        }
+
+        return nullptr;
     }
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr)

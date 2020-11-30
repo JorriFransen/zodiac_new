@@ -284,6 +284,7 @@ namespace Zodiac
                                                       parent_scope,
                                                       param_scope,
                                                       begin_fp, end_fp);
+                param_scope->function_declaration = result;
                 ast_type->function.from_declaration = result;
                 break;
             }
@@ -3206,7 +3207,7 @@ namespace Zodiac
                 printf(" = ");
                 ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
                 if (newline) printf("\n");
-		break;
+                break;
             }
 
             case AST_Statement_Kind::RETURN: {

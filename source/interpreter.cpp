@@ -698,7 +698,7 @@ namespace Zodiac
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
 
                     auto result_type = inst->result->type;
-                    assert(result_type->bit_size < operand_val.type->bit_size);
+                    assert(result_type->bit_size <= operand_val.type->bit_size);
 
                     switch (result_type->bit_size) {
                         default: assert(false);
@@ -724,7 +724,15 @@ namespace Zodiac
                             break;
                         }
 
-                        case 64: assert(false);
+                        case 64: {
+                            uint64_t new_val;
+                            switch (operand_val.type->bit_size) {
+                                default: assert(false);
+                                case 64: new_val = operand_val.integer_literal.u64; break;
+                            }
+                            interp_store(result_addr, new_val);
+                            break;
+                        }
                     }
 
                     break;

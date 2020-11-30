@@ -137,6 +137,8 @@ namespace Zodiac
 
     AST_Type *infer_type(AST_Node *ast_node);
 
+    AST_Declaration *enclosing_function(Resolver *resolver, AST_Expression *expr);
+
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
     void resolver_inherit_const(AST_Expression *expr);
 

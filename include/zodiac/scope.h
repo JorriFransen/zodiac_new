@@ -34,6 +34,8 @@ namespace Zodiac
         Scope *parent = nullptr;
 
         Allocator *allocator = nullptr;
+
+        AST_Declaration *function_declaration = nullptr;
     };
 
     AST_Declaration *scope_find_declaration(Scope *scope, Atom atom);

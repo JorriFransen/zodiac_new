@@ -1,0 +1,56 @@
+
+std :: import std;
+
+#run main();
+
+main :: func() -> s64 {
+
+    std.print("Recursive functions test\n");
+
+    for (i : u64 = 0; i < 13; i += 1) {
+        fi := fib_iterative(i);
+        fr := fib_recursive(i);
+
+        std.print("fib("); std.print_num(@cast(s64, i)); std.print(") = (");
+        std.print_num(@cast(s64, fi)); std.print(" == ");
+        std.print_num(@cast(s64, fr)); std.print(")");
+
+        if (fi != fr) {
+            std.print(" <---- ERROR iteative and recursive do not match");
+        }
+
+        std.print("\n");
+    }
+
+    return 0;
+}
+
+fib_recursive :: func (n: u64) -> u64 {
+
+    if (n == 0) return 0;
+    if (n <= 2) return 1;
+
+    return fib_recursive(n - 1) + fib_recursive(n - 2);
+}
+
+fib_iterative :: func (n: u64) -> u64 {
+
+    if (n == 0) return 0;
+    if (n <= 2) return 1;
+
+    n_m1 : u64 = 1;
+    n_m2 : u64 = 1;
+
+    f : u64;
+
+    while (n > 2) {
+
+        f = n_m1 + n_m2;
+        n_m2 = n_m1;
+        n_m1 = f;
+
+        n -= 1;
+    }
+
+    return f;
+}

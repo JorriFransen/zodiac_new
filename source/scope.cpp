@@ -13,7 +13,7 @@ namespace Zodiac
     {
         assert(scope);
 
-        auto scope_block = &scope->first_block;                 
+        auto scope_block = &scope->first_block;
         while (scope_block) {
 
             for (int64_t i = 0; i < scope_block->decl_count; i++) {
@@ -66,7 +66,7 @@ namespace Zodiac
         assert(scope->current_block);
         assert(scope->current_block->next_block == nullptr);
 
-        auto new_cap = scope->current_block->decl_cap * 2; 
+        auto new_cap = scope->current_block->decl_cap * 2;
 
         auto mem = (uint8_t*)alloc(allocator, sizeof(Scope_Block) +
                                                      (new_cap  *sizeof(AST_Declaration*)));
@@ -83,7 +83,7 @@ namespace Zodiac
     }
 
     Scope *scope_new(Allocator *allocator, Scope_Kind kind, Scope *parent,
-                     int64_t initial_cap/*=4*/)
+                     int64_t initial_cap /*=4*/)
     {
         auto mem = (uint8_t*)alloc(allocator,
                                    sizeof(Scope) + (initial_cap * sizeof(AST_Declaration*)));
@@ -100,6 +100,7 @@ namespace Zodiac
         result->current_block = &result->first_block;
         result->parent = parent;
         result->allocator = allocator;
+        result->function_declaration = nullptr;
 
         return result;
     }
@@ -117,7 +118,7 @@ namespace Zodiac
         auto ta = temp_allocator_get();
 
         String_Builder sb = {};
-        string_builder_init(ta, &sb); 
+        string_builder_init(ta, &sb);
 
         scope_print(&sb, scope, 0);
 
@@ -195,7 +196,7 @@ namespace Zodiac
 
         if (scope->kind == Scope_Kind::GLOBAL)
         {
-            assert(false); // Print children 
+            assert(false); // Print children
         }
     }
 }
