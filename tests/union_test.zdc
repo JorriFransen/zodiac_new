@@ -15,8 +15,7 @@ Value :: union
     string  : String;
 }
 
-_main :: func() { main(); }
-#run _main();
+#run main();
 
 main :: func() -> s64
 {

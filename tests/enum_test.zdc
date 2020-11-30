@@ -33,8 +33,7 @@ Operator : u8 : enum
     Invalid :: 0,
 }
 
-_main :: func() { main(); }
-#run _main();
+#run main();
 
 main :: func() -> s64
 {

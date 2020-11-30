@@ -4,8 +4,7 @@ std :: import std;
 #foreign puts :: func(cstr: *u8) -> s32
 #foreign printf :: func(fmt: *u8) -> s32
 
-_main :: func() { main(); }
-#run _main();
+#run main();
 
 main :: func() -> s64
 {

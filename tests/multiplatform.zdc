@@ -1,8 +1,6 @@
 
 std :: import std;
 
-// _main :: func () { main(); }
-// #run _main();
 #run main();
 
 main :: func() -> s64

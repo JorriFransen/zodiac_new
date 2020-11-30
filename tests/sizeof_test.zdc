@@ -4,8 +4,7 @@ std :: import std;
 structs :: import structs;
 using structs;
 
-_main :: func() { main(); }
-#run _main();
+#run main();
 
 main :: func() -> s64
 {

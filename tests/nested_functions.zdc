@@ -1,9 +1,7 @@
 
 std :: import std;
 
-#run _main();
-
-_main :: func () { main(); }
+#run main();
 
 main :: func() -> s64
 {
