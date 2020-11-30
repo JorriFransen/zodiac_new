@@ -1798,7 +1798,9 @@ namespace Zodiac
                 assert(recursive || (callee_decl->flags & AST_NODE_FLAG_TYPED));
 
                 if (recursive) {
+#ifndef NDEBUG
                     auto ts = callee_decl->function.type_spec;
+#endif
                     assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(ts->flags & AST_NODE_FLAG_TYPED);
                 }
