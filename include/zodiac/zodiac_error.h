@@ -75,6 +75,8 @@ namespace Zodiac
 
     void zodiac_report_info(Build_Data *build_data, AST_Node *ast_node,
                             const char *fmt, ...);
+    void zodiac_report_info(Build_Data *build_data, File_Pos bfp, File_Pos efp,
+                            const char *fmt, ...);
     void zodiac_report_info(Build_Data *build_data, Zodiac_Error_Site site,
                             const char *fmt, va_list args);
 

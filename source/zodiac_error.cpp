@@ -90,6 +90,17 @@ namespace Zodiac
         va_end(args);
     }
 
+    void zodiac_report_info(Build_Data *build_data, File_Pos bfp, File_Pos efp,
+                            const char *fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        Zodiac_Error_Site site = { .is_ast_node = false, .range = { .begin = bfp, .end = efp } };
+        zodiac_report_info(build_data, site, fmt, args);
+        va_end(args);
+
+    }
+
     void zodiac_report_info(Build_Data *build_data, Zodiac_Error_Site site,
                             const char *fmt, va_list args)
     {

@@ -320,7 +320,8 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
         assert(false);
     }
 
-    assert(result);
+    if (!result) return nullptr;
+
     if (is_naked)
     {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
@@ -544,8 +545,33 @@ Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,
         Declaration_PTN  *decl = nullptr;
         if (parser_is_token(ts, TOK_COLON))
         {
-            decl = parser_parse_declaration(parser, ts, ident);
-            assert(decl->kind == Declaration_PTN_Kind::CONSTANT);
+            bool second_colon = false;
+            if (ts->peek_token(1).kind == TOK_COLON) {
+                second_colon = true;
+            }
+
+            if (second_colon) decl = parser_parse_declaration(parser, ts, ident);
+
+            if (!second_colon || decl->kind != Declaration_PTN_Kind::CONSTANT) {
+
+                File_Pos bfp, efp;
+                if (decl) {
+                    bfp = decl->self.begin_file_pos;
+                    efp = decl->self.end_file_pos;
+                } else {
+                    bfp = ts->current_token().begin_file_pos;
+                    efp = bfp;
+                }
+
+                zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID,
+                                    bfp, efp,
+                                    "Enum member must be a constant declaration, or bare identifier");
+                if (!second_colon) {
+                    zodiac_report_info(parser->build_data, bfp, efp,
+                            "Did you forget to add the second colon for a constant declaration?");
+                }
+                return nullptr;
+            }
             assert(decl->constant.type_expression == nullptr);
 
             member = (PTN*)decl;
