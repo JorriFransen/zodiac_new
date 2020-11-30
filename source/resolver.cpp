@@ -298,15 +298,6 @@ namespace Zodiac
                         llvm_register_function(&resolver->llvm_builder, bc_func);
                         llvm_emit_function(&resolver->llvm_builder, bc_func);
 
-                        if (resolver->build_data->options->link_c &&
-                            (bc_func->flags & BC_FUNC_FLAG_BYTECODE_ENTRY)) {
-                            llvm_emit_binary(&resolver->llvm_builder,
-                                             resolver->build_data->options->exe_file_name.data);
-                        } else if (bc_func->flags & BC_FUNC_FLAG_CRT_ENTRY) {
-                            llvm_emit_binary(&resolver->llvm_builder,
-                                             resolver->build_data->options->exe_file_name.data);
-                        }
-
                         progressed = true;
                         break;
                     }
@@ -1196,8 +1187,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_resolve_statement(Resolver *resolver, AST_Statement *statement)
@@ -1435,8 +1426,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
@@ -2319,8 +2310,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
@@ -2601,8 +2592,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_size_expression(Resolver *resolver, AST_Expression *expression)
@@ -2774,8 +2765,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_size_type(Resolver *resolver, AST_Type *type)
@@ -2832,8 +2823,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec)
@@ -2931,8 +2922,8 @@ namespace Zodiac
             }
         }
 
-	assert(false);
-	return false;
+        assert(false);
+        return false;
     }
 
     AST_Type *infer_type(AST_Node *ast_node)

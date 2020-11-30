@@ -53,5 +53,7 @@ int main(int argc, char **argv)
         zodiac_report_errors(&build_data);
     }
 
+    llvm_emit_binary(&resolver.llvm_builder, build_data.options->exe_file_name.data);
+
     return 0;
 }
