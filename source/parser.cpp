@@ -1310,43 +1310,35 @@ Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
 {
     auto begin_fp = ts->current_token().begin_file_pos;
 
-    if (!parser_expect_token(parser, ts, TOK_KW_SWITCH))
-    {
+    if (!parser_expect_token(parser, ts, TOK_KW_SWITCH)) {
         return nullptr;
     }
 
-    if (!parser_expect_token(parser, ts, TOK_LPAREN))
-    {
+    if (!parser_expect_token(parser, ts, TOK_LPAREN)) {
         return nullptr;
     }
 
     Expression_PTN *expr = parser_parse_expression(parser, ts);
     assert(expr);
 
-    if (!parser_expect_token(parser, ts, TOK_RPAREN))
-    {
+    if (!parser_expect_token(parser, ts, TOK_RPAREN)) {
         return nullptr;
     }
 
     bool allow_incomplete = false;
 
-    if (parser_match_token(ts, TOK_POUND))
-    {
+    if (parser_match_token(ts, TOK_POUND)) {
         auto identifier = parser_parse_identifier(parser, ts);
         assert(identifier);
 
-        if (identifier->atom == Builtin::atom_allow_incomplete)
-        {
+        if (identifier->atom == Builtin::atom_allow_incomplete) {
             allow_incomplete = true;
-        }
-        else
-        {
+        } else {
             assert(false);
         }
     }
 
-    if (!parser_expect_token(parser, ts, TOK_LBRACE))
-    {
+    if (!parser_expect_token(parser, ts, TOK_LBRACE)) {
         return  nullptr;
     }
 
@@ -1356,17 +1348,14 @@ Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
     bool has_default_case = false;
 
     while (parser_is_token(ts, TOK_KW_CASE) ||
-           parser_is_token(ts, TOK_KW_DEFAULT))
-    {
+           parser_is_token(ts, TOK_KW_DEFAULT)) {
         auto case_ptn = parser_parse_switch_case(parser, ts);
 
-        if (case_ptn.parse_error)
-        {
+        if (case_ptn.parse_error) {
             return nullptr;
         }
 
-        if (case_ptn.is_default)
-        {
+        if (case_ptn.is_default) {
             assert(!has_default_case);
             has_default_case = true;
         }
@@ -1375,8 +1364,7 @@ Statement_PTN *parser_parse_switch_statement(Parser *parser, Token_Stream *ts)
 
     auto end_fp = ts->current_token().end_file_pos;
 
-    if (!parser_expect_token(parser, ts, TOK_RBRACE))
-    {
+    if (!parser_expect_token(parser, ts, TOK_RBRACE)) {
         return  nullptr;
     }
 
@@ -1395,19 +1383,15 @@ Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
 
     result.begin_fp = ts->current_token().begin_file_pos;
 
-    if (parser_match_token(ts, TOK_KW_CASE))
-    {
+    if (parser_match_token(ts, TOK_KW_CASE)) {
         result.expressions = parser_parse_case_expressions(parser, ts);
         assert(result.expressions.count);
 
-    }
-    else if (parser_match_token(ts, TOK_KW_DEFAULT))
-    {
+    } else if (parser_match_token(ts, TOK_KW_DEFAULT)) {
         result.is_default = true;
     }
 
-    if (!parser_expect_token(parser, ts, TOK_COLON))
-    {
+    if (!parser_expect_token(parser, ts, TOK_COLON)) {
         result.parse_error = true;
         return result;
     }
@@ -1417,32 +1401,30 @@ Switch_Case_PTN parser_parse_switch_case(Parser *parser, Token_Stream *ts)
 
     while (!parser_is_token(ts, TOK_KW_CASE) &&
            !parser_is_token(ts, TOK_KW_DEFAULT) &&
-           !parser_is_token(ts, TOK_RBRACE))
-    {
+           !parser_is_token(ts, TOK_RBRACE)) {
+
         Statement_PTN *stmt = parser_parse_statement(parser, ts);
         assert(stmt);
-        if (!(stmt->self.flags & PTN_FLAG_SEMICOLON))
-        {
-            if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-            {
+
+        if (!(stmt->self.flags & PTN_FLAG_SEMICOLON)) {
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) {
                 result.parse_error = true;
                 return result;
             }
         }
         array_append(&body_stmts, stmt);
+
+        if (stmt->kind == Statement_PTN_Kind::BLOCK) break;
     }
 
     assert(body_stmts.count);
 
     Statement_PTN *body_stmt = nullptr;
 
-    if (body_stmts.count == 1 && body_stmts[0]->kind == Statement_PTN_Kind::BLOCK)
-    {
+    if (body_stmts.count == 1 && body_stmts[0]->kind == Statement_PTN_Kind::BLOCK) {
         body_stmt = body_stmts[0];
         array_free(&body_stmts);
-    }
-    else
-    {
+    } else {
         auto begin_fp = body_stmts[0]->self.begin_file_pos;
         auto end_fp = body_stmts[body_stmts.count - 1]->self.end_file_pos;
         body_stmt = new_block_statement_ptn(parser->allocator, body_stmts, begin_fp,
