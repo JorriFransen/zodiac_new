@@ -163,6 +163,14 @@ namespace Zodiac
 
         bytecode_emit_statement(builder, decl->function.body);
 
+        Bytecode_Block *last_block = array_last(&func->blocks);
+        assert(last_block == builder->insert_block);
+
+        if (!bytecode_block_ends_with_terminator(last_block) &&
+            !(func->flags & BC_FUNC_FLAG_NORETURN)) {
+            bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+        }
+
         func->flags |= BC_FUNC_FLAG_EMITTED;
         return func;
     }

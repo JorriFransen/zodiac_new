@@ -441,8 +441,7 @@ namespace Zodiac
                     break;
                 }
 
-                case RETURN:
-                {
+                case RETURN: {
                     auto ret_val = interpreter_load_value(interp, inst->a);
 
                     int64_t offset = 0;
