@@ -26,7 +26,7 @@ glob_int_const : s64 : 5;
 // global_int := 4 + 1;
 global_int : s64;
 
-_main :: func () { main(); return; }
+_main :: func () { main(); }
 #run _main();
 
 main :: func () -> s64

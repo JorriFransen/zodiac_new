@@ -3,11 +3,7 @@ std :: import std;
 
 #run _main();
 
-_main :: func () 
-{
-    main();
-    return;
-}
+_main :: func () { main(); }
 
 main :: func() -> s64
 {
