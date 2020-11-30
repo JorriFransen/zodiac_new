@@ -48,12 +48,11 @@ int main(int argc, char **argv)
 
     if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
 
-    if (build_data.errors.count != 0)
-    {
+    if (build_data.errors.count == 0) {
+        llvm_emit_binary(&resolver.llvm_builder, build_data.options->exe_file_name.data);
+    } else {
         zodiac_report_errors(&build_data);
     }
-
-    llvm_emit_binary(&resolver.llvm_builder, build_data.options->exe_file_name.data);
 
     return 0;
 }
