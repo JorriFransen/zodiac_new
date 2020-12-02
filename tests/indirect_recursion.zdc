@@ -1,0 +1,32 @@
+
+std :: import std;
+
+#run main();
+
+main :: func() -> s64 {
+    std.println("Indirect recursion test");
+
+
+    n : s64 = 0;
+    inc1(*n, 10);
+
+    return 0;
+}
+
+inc1 :: func(n_ptr: *s64, max: s64) {
+    if (<n_ptr < max + 1) {
+        std.print_num(<n_ptr);
+        std.print("\n");
+        <n_ptr += 1;
+        inc2(n_ptr, max);
+    }
+}
+
+inc2 :: func(n_ptr: *s64, max: s64) {
+    if (<n_ptr < max + 1) {
+        std.print_num(<n_ptr);
+        std.print("\n");
+        <n_ptr += 1;
+        inc1(n_ptr, max);
+    }
+}
