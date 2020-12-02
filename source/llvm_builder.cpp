@@ -135,10 +135,27 @@ namespace Zodiac
             builder->llvm_builder->CreateStore(param_val, param_alloca);
         }
 
+        BC_Instruction_Bucket *bucket = bc_func->first_bucket;
+        int64_t index_in_bucket = 0;
+
         for (int64_t i = 0; i < bc_func->blocks.count; i++) {
             builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
 
-            llvm_emit_block(builder, bc_func->blocks[i]);
+            auto block = bc_func->blocks[i];
+
+            for (int64_t j = 0; j < block->instruction_count; j++) {
+                if (index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
+                    assert(bucket->next_bucket);
+                    bucket = bucket->next_bucket;
+                    index_in_bucket = 0;
+                }
+
+                Bytecode_Instruction *inst = &bucket->instructions[index_in_bucket];
+                index_in_bucket += 1;
+
+                llvm_emit_instruction(builder, inst);
+            }
+
             llvm_block_it++;
         }
 
@@ -190,15 +207,6 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
-    }
-
-    void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
-    {
-        for (int64_t i = 0; i < bc_block->instruction_count; i++) {
-            auto index = bc_block->first_instruction_index + i;
-            Bytecode_Instruction *inst = get_instruction_by_index(bc_block->function, index);
-            llvm_emit_instruction(builder, inst);
-        }
     }
 
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst)

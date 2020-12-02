@@ -1862,8 +1862,7 @@ namespace Zodiac
     {
         string_builder_appendf(sb, "%s(", func->name.data);
 
-        for (int64_t i = 0; i < func->parameters.count; i++)
-        {
+        for (int64_t i = 0; i < func->parameters.count; i++) {
             if (i > 0) string_builder_append(sb, ", ");
             auto param = func->parameters[i];
             bytecode_print_value(sb, param);
@@ -1874,12 +1873,10 @@ namespace Zodiac
 
         string_builder_append(sb, ")\n");
 
-
         BC_Instruction_Bucket *bucket = func->first_bucket;
         int64_t index_in_bucket = 0;
 
-        for (int64_t i = 0; i < func->blocks.count; i++)
-        {
+        for (int64_t i = 0; i < func->blocks.count; i++) {
             auto block = func->blocks[i];
             string_builder_appendf(sb, " %s:\n", block->name.data);
 

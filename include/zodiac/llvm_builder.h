@@ -58,7 +58,6 @@ namespace Zodiac
     void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global_Info global_info);
     llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Const_Value const_val);
 
-    void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block);
     void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst);
     llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value);
 
