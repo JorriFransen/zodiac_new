@@ -300,6 +300,8 @@ namespace Zodiac
         result->first_instruction_index = -1;
         result->instruction_count = -1;
 
+        result->last_instruction = nullptr;
+
         return result;
     }
 
@@ -1577,6 +1579,7 @@ namespace Zodiac
 
         func->instruction_count += 1;
         block->instruction_count += 1;
+        block->last_instruction = result;
         builder->build_data->bytecode_instruction_count += 1;
 
         return result;
@@ -1634,10 +1637,7 @@ namespace Zodiac
     {
         if (block->instruction_count <= 0) return false;
 
-        auto index = block->first_instruction_index + block->instruction_count - 1;
-
-        Bytecode_Instruction *last_instruction = get_instruction_by_index(block->function,
-                                                                          index);
+        auto last_instruction = block->last_instruction;
 
         return last_instruction->op == RETURN ||
                last_instruction->op == RETURN_VOID ||

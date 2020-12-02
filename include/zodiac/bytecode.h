@@ -204,6 +204,8 @@ namespace Zodiac
 
         int64_t first_instruction_index = -1;
         int64_t instruction_count = -1;
+
+        Bytecode_Instruction *last_instruction = nullptr;
     };
 
     const int64_t BC_INSTRUCTIONS_PER_BUCKET = 64;
