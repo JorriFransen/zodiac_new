@@ -1843,7 +1843,6 @@ namespace Zodiac
             auto block = func->blocks[i];
             string_builder_appendf(sb, " %s:\n", block->name.data);
 
-
             for (int64_t j = 0; j < block->instruction_count; j++) {
 
                 Bytecode_Instruction *inst = bucket_locator_get_ptr(inst_loc);
