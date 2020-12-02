@@ -297,9 +297,7 @@ namespace Zodiac
         result->name = atom_get(&builder->build_data->atom_table, name);
         result->function = nullptr;
 
-        result->first_instruction_bucket = nullptr;
-        result->first_instruction_index_in_bucket = -1;
-
+        result->first_instruction = {};
         result->last_instruction = nullptr;
 
         return result;
@@ -309,8 +307,6 @@ namespace Zodiac
                                Bytecode_Block *block)
     {
         assert(block->instruction_count  <= 0);
-        assert(block->first_instruction_bucket == nullptr);
-        assert(block->first_instruction_index_in_bucket == -1);
 
         assert(builder->current_function == function);
         assert(!block->function);
@@ -326,9 +322,7 @@ namespace Zodiac
 
         block->instruction_count = 0;
 
-        block->first_instruction_bucket = builder->current_function->last_bucket;
-        block->first_instruction_index_in_bucket = builder->current_function->last_bucket->count;
-
+        block->first_instruction = bucket_array_next_empty(&function->instructions);
         array_append(&function->blocks, block);
     }
 
@@ -382,9 +376,7 @@ namespace Zodiac
         array_init(builder->allocator, &result->temps);
         array_init(builder->allocator, &result->blocks, 4);
 
-        result->first_bucket = alloc_type<BC_Instruction_Bucket>(builder->allocator);
-        // result->instruction_count = 0;
-        result->last_bucket = result->first_bucket;
+        bucket_array_init(builder->allocator, &result->instructions);
 
         return result;
     }
@@ -1557,17 +1549,8 @@ namespace Zodiac
         Bytecode_Block *block = array_last(&func->blocks);
         assert(block == builder->insert_block);
 
-        BC_Instruction_Bucket *bucket = builder->current_function->last_bucket;
-
-        if (bucket->count >= BC_INSTRUCTIONS_PER_BUCKET) {
-            assert(!bucket->next_bucket);
-            bucket->next_bucket = alloc_type<BC_Instruction_Bucket>(builder->allocator);
-            bucket = bucket->next_bucket;
-            builder->current_function->last_bucket = bucket;
-        }
-
-        Bytecode_Instruction *result = &bucket->instructions[bucket->count];
-        bucket->count += 1;
+        Bytecode_Instruction *result =
+            bucket_array_add_uninitialized(&builder->current_function->instructions);
 
         assert(result);
         result->op = op;
@@ -1854,27 +1837,28 @@ namespace Zodiac
 
         string_builder_append(sb, ")\n");
 
-        BC_Instruction_Bucket *bucket = func->first_bucket;
-        int64_t index_in_bucket = 0;
+        assert(false);
+        // BC_Instruction_Bucket *bucket = func->first_bucket;
+        // int64_t index_in_bucket = 0;
 
-        for (int64_t i = 0; i < func->blocks.count; i++) {
-            auto block = func->blocks[i];
-            string_builder_appendf(sb, " %s:\n", block->name.data);
+        // for (int64_t i = 0; i < func->blocks.count; i++) {
+        //     auto block = func->blocks[i];
+        //     string_builder_appendf(sb, " %s:\n", block->name.data);
 
-            for (int64_t j = 0; j < block->instruction_count; j++) {
+        //     for (int64_t j = 0; j < block->instruction_count; j++) {
 
-                if (index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
-                    index_in_bucket = 0;
-                    assert(bucket->next_bucket);
-                    bucket = bucket->next_bucket;
-                }
+        //         if (index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
+        //             index_in_bucket = 0;
+        //             assert(bucket->next_bucket);
+        //             bucket = bucket->next_bucket;
+        //         }
 
-                auto inst = &bucket->instructions[index_in_bucket];
-                bytecode_print_instruction(sb, inst);
+        //         auto inst = &bucket->instructions[index_in_bucket];
+        //         bytecode_print_instruction(sb, inst);
 
-                index_in_bucket += 1;
-            }
-        }
+        //         index_in_bucket += 1;
+        //     }
+        // }
 
         string_builder_append(sb, "\n");
     }

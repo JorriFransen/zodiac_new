@@ -10,8 +10,7 @@ namespace Zodiac
 {
     struct Instruction_Pointer
     {
-        BC_Instruction_Bucket *bucket = nullptr;
-        int16_t index_in_bucket = 0;
+        Instruction_Locator instruction_locator = {};
     };
 
     struct Interpreter

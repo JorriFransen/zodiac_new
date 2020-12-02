@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allocator.h"
+#include "bucket_array.h"
 #include "build_data.h"
 #include "stack.h"
 
@@ -196,8 +197,10 @@ namespace Zodiac
         BC_FUNC_FLAG_NORETURN       = 0x10,
     };
 
+    const int16_t BC_INSTRUCTIONS_PER_BUCKET = 64;
+    typedef Bucket_Locator<Bytecode_Instruction, BC_INSTRUCTIONS_PER_BUCKET> Instruction_Locator;
+
     struct Bytecode_Function;
-    struct BC_Instruction_Bucket;
     struct Bytecode_Block
     {
         Atom name = {};
@@ -205,19 +208,10 @@ namespace Zodiac
 
         int64_t instruction_count = -1;
 
-        BC_Instruction_Bucket *first_instruction_bucket = nullptr;
-        int16_t first_instruction_index_in_bucket = -1;
-
+        Instruction_Locator first_instruction = {};
         Bytecode_Instruction *last_instruction = nullptr;
     };
 
-    const int64_t BC_INSTRUCTIONS_PER_BUCKET = 64;
-    struct BC_Instruction_Bucket
-    {
-        BC_Instruction_Bucket *next_bucket = nullptr;
-        Bytecode_Instruction instructions[BC_INSTRUCTIONS_PER_BUCKET];
-        int16_t count = 0;
-    };
 
     struct Bytecode_Function
     {
@@ -232,8 +226,7 @@ namespace Zodiac
         //@@TODO: @@CLEANUP: These might not need to be pointers
         Array<Bytecode_Block  *> blocks = {};
 
-        BC_Instruction_Bucket *first_bucket = nullptr;
-        BC_Instruction_Bucket *last_bucket = nullptr;
+        Bucket_Array<Bytecode_Instruction, BC_INSTRUCTIONS_PER_BUCKET> instructions = {};
     };
 
     struct Bytecode_Function_Info

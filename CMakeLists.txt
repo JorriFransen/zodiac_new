@@ -16,6 +16,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/ast.cpp
     source/allocator.cpp
     source/atom.cpp
+    source/bucket_array.cpp
     source/build_data.cpp
     source/builtin.cpp
     source/bytecode.cpp

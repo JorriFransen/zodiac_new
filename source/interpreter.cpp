@@ -41,9 +41,11 @@ namespace Zodiac
     {
         assert(entry_func->blocks.count);
 
+        auto first_bucket = entry_func->instructions.first_bucket;
+        Instruction_Locator initial_locator = { .bucket = first_bucket, .index = 0 };
+
         interp->ip = {
-            .bucket = entry_func->first_bucket,
-            .index_in_bucket = 0,
+            .instruction_locator = initial_locator,
         };
 
         interpreter_initialize_globals(interp, global_data_size, global_info);
@@ -107,8 +109,7 @@ namespace Zodiac
 
         while (interp->running)
         {
-            Bytecode_Instruction *inst =
-                &interp->ip.bucket->instructions[interp->ip.index_in_bucket];
+            Bytecode_Instruction *inst = bucket_locator_get_ptr(interp->ip.instruction_locator);
 
             bool advance_ip = true;
 
@@ -452,9 +453,12 @@ namespace Zodiac
                     assert(inst->a->kind == Bytecode_Value_Kind::FUNCTION);
 
                     interp->frame_pointer = new_fp;
+                    Instruction_Locator new_locator = {
+                        .bucket = inst->a->function->instructions.first_bucket,
+                        .index = 0,
+                    };
                     interp->ip = {
-                        .bucket = inst->a->function->first_bucket,
-                        .index_in_bucket = 0,
+                        .instruction_locator = new_locator,
                     };
 
                     break;
@@ -517,11 +521,7 @@ namespace Zodiac
                     advance_ip = false;
                     Bytecode_Block *target_block = inst->a->block;
 
-                    assert(target_block->first_instruction_bucket);
-                    assert(target_block->first_instruction_index_in_bucket >= 0);
-
-                    interp->ip.bucket = target_block->first_instruction_bucket;
-                    interp->ip.index_in_bucket = target_block->first_instruction_index_in_bucket;
+                    interp->ip.instruction_locator = target_block->first_instruction;
                     break;
                 }
 
@@ -541,11 +541,7 @@ namespace Zodiac
                     else target_block = else_block;
                     assert(target_block);
 
-                    assert(target_block->first_instruction_bucket);
-                    assert(target_block->first_instruction_index_in_bucket >= 0);
-
-                    interp->ip.bucket = target_block->first_instruction_bucket;
-                    interp->ip.index_in_bucket = target_block->first_instruction_index_in_bucket;
+                    interp->ip.instruction_locator = target_block->first_instruction;
                     break;
                 }
 
@@ -596,11 +592,7 @@ namespace Zodiac
                     if (!dest) dest = default_block;
                     assert(dest);
 
-                    assert(dest->first_instruction_bucket);
-                    assert(dest->first_instruction_index_in_bucket >= 0);
-
-                    interp->ip.bucket = dest->first_instruction_bucket;
-                    interp->ip.index_in_bucket = dest->first_instruction_index_in_bucket;
+                    interp->ip.instruction_locator = dest->first_instruction;
                     break;
                 }
 
@@ -938,13 +930,7 @@ namespace Zodiac
             }
 
             if (advance_ip) {
-                interp->ip.index_in_bucket += 1;
-
-                if (interp->ip.index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
-                    assert(interp->ip.bucket->next_bucket);
-                    interp->ip.bucket = interp->ip.bucket->next_bucket;
-                    interp->ip.index_in_bucket = 0;
-                }
+                bucket_locator_advance(&interp->ip.instruction_locator);
             }
 
         }
