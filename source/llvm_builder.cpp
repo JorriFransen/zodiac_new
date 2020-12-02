@@ -196,7 +196,7 @@ namespace Zodiac
     {
         for (int64_t i = 0; i < bc_block->instruction_count; i++) {
             auto index = bc_block->first_instruction_index + i;
-            Bytecode_Instruction *inst = bc_block->function->instructions[index];
+            Bytecode_Instruction *inst = get_instruction_by_index(bc_block->function, index);
             llvm_emit_instruction(builder, inst);
         }
     }

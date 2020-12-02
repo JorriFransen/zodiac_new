@@ -1181,7 +1181,8 @@ namespace Zodiac
 
     Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp)
     {
-        Bytecode_Instruction *result = interp->ip.function->instructions[interp->ip.index];
+        Bytecode_Instruction *result = get_instruction_by_index(interp->ip.function,
+                                                                interp->ip.index);
         return result;
     }
 
@@ -1191,7 +1192,7 @@ namespace Zodiac
         auto cf = interp->ip.function;
         auto index = interp->ip.index;
 
-        assert(index + 1 < cf->instructions.count);
+        assert(index + 1 < cf->instruction_count);
 #endif
 
         interp->ip.index += 1;

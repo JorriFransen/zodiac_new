@@ -29,6 +29,8 @@ namespace Zodiac
 
         bool redeclaration_error = true;
         bool link_error = false;
+
+        uint64_t bytecode_instruction_count = 0;
     };
 
     void build_data_init(Allocator *allocator, Build_Data *build_data,

@@ -381,7 +381,10 @@ namespace Zodiac
         array_init(builder->allocator, &result->locals, 4);
         array_init(builder->allocator, &result->temps);
         array_init(builder->allocator, &result->blocks, 4);
-        array_init(builder->allocator, &result->instructions);
+
+        result->first_bucket = alloc_type<BC_Instruction_Bucket>(builder->allocator);
+        result->instruction_count = 0;
+        result->last_bucket = result->first_bucket;
 
         return result;
     }
@@ -1545,38 +1548,54 @@ namespace Zodiac
 
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
-                                                    Bytecode_Value *result)
+                                                    Bytecode_Value *result_value)
     {
-        auto inst = alloc_type<Bytecode_Instruction>(builder->allocator);
-
-        inst->op = op;
-        inst->a = a;
-        inst->b = b;
-        inst->result = result;
-
         assert(builder->insert_block);
 
-// #ifndef NDEBUG
-//         auto old_count = builder->insert_block->instructions.capacity;
-// #endif
 
-        // array_append(&builder->insert_block->instructions, inst);
         Bytecode_Function *func = builder->current_function;
         Bytecode_Block *block = array_last(&func->blocks);
         assert(block == builder->insert_block);
-        array_append(&builder->current_function->instructions, inst);
+
+        BC_Instruction_Bucket *bucket = builder->current_function->last_bucket;
+
+        if (bucket->count >= BC_INSTRUCTIONS_PER_BUCKET) {
+            assert(!bucket->next_bucket);
+            bucket->next_bucket = alloc_type<BC_Instruction_Bucket>(builder->allocator);
+            bucket = bucket->next_bucket;
+            builder->current_function->last_bucket = bucket;
+        }
+
+        Bytecode_Instruction *result = &bucket->instructions[bucket->count];
+        bucket->count += 1;
+
+        assert(result);
+        result->op = op;
+        result->a = a;
+        result->b = b;
+        result->result = result_value;
+
+        func->instruction_count += 1;
         block->instruction_count += 1;
+        builder->build_data->bytecode_instruction_count += 1;
 
+        return result;
+    }
 
-// #ifndef NDEBUG
-//         auto new_count = builder->insert_block->instructions.capacity;
-//         if (new_count >= 64 && old_count != new_count) {
-//             printf("Grew bytecode instruction array from %ld to %ld\n",
-//                     old_count, new_count);
-//         }
-// #endif
+    Bytecode_Instruction *get_instruction_by_index(Bytecode_Function *func, int64_t index)
+    {
+        BC_Instruction_Bucket *bucket = func->first_bucket;
 
-        return inst;
+        while (bucket) {
+            if (index < bucket->count) {
+                return &bucket->instructions[index];
+            }
+            bucket = bucket->next_bucket;
+            index -= BC_INSTRUCTIONS_PER_BUCKET;
+        }
+
+        assert(false);
+        return nullptr;
     }
 
     void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block)
@@ -1616,7 +1635,9 @@ namespace Zodiac
         if (block->instruction_count <= 0) return false;
 
         auto index = block->first_instruction_index + block->instruction_count - 1;
-        Bytecode_Instruction *last_instruction = block->function->instructions[index];
+
+        Bytecode_Instruction *last_instruction = get_instruction_by_index(block->function,
+                                                                          index);
 
         return last_instruction->op == RETURN ||
                last_instruction->op == RETURN_VOID ||
@@ -1867,7 +1888,8 @@ namespace Zodiac
 
         for (int64_t i = 0; i < block->instruction_count; i++) {
             auto index = block->first_instruction_index + i;
-            bytecode_print_instruction(sb, block->function->instructions[index]);
+            Bytecode_Instruction *inst = get_instruction_by_index(block->function, index);
+            bytecode_print_instruction(sb, inst);
         }
     }
 

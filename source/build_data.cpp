@@ -32,6 +32,8 @@ namespace Zodiac
 
         build_data->redeclaration_error = false;
         build_data->link_error = false;
+
+        build_data->bytecode_instruction_count = 0;
     }
 
     AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator,

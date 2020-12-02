@@ -206,6 +206,14 @@ namespace Zodiac
         int64_t instruction_count = -1;
     };
 
+    const int64_t BC_INSTRUCTIONS_PER_BUCKET = 64;
+    struct BC_Instruction_Bucket
+    {
+        BC_Instruction_Bucket *next_bucket = nullptr;
+        Bytecode_Instruction instructions[BC_INSTRUCTIONS_PER_BUCKET];
+        int16_t count = 0;
+    };
+
     struct Bytecode_Function
     {
         Bytecode_Function_Flags flags = BC_FUNC_FLAG_NONE;
@@ -218,7 +226,12 @@ namespace Zodiac
 
         //@@TODO: @@CLEANUP: These might not need to be pointers
         Array<Bytecode_Block  *> blocks = {};
-        Array<Bytecode_Instruction *> instructions = {};
+
+        BC_Instruction_Bucket *first_bucket = nullptr;
+        BC_Instruction_Bucket *last_bucket = nullptr;
+        int64_t instruction_count = 0;
+        
+        // Array<Bytecode_Instruction *> instructions = {};
     };
 
     struct Bytecode_Function_Info
@@ -323,7 +336,9 @@ namespace Zodiac
 
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
-                                                    Bytecode_Value *result);
+                                                    Bytecode_Value *result_value);
+
+    Bytecode_Instruction *get_instruction_by_index(Bytecode_Function *func, int64_t index);
 
     void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block);
     void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value,
