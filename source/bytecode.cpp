@@ -383,7 +383,7 @@ namespace Zodiac
         array_init(builder->allocator, &result->blocks, 4);
 
         result->first_bucket = alloc_type<BC_Instruction_Bucket>(builder->allocator);
-        result->instruction_count = 0;
+        // result->instruction_count = 0;
         result->last_bucket = result->first_bucket;
 
         return result;
@@ -1575,7 +1575,6 @@ namespace Zodiac
         result->b = b;
         result->result = result_value;
 
-        func->instruction_count += 1;
         block->instruction_count += 1;
         block->last_instruction = result;
         builder->build_data->bytecode_instruction_count += 1;

@@ -55,8 +55,6 @@ namespace Zodiac
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);
 
-    void interpreter_advance_ip(Interpreter *interp);
-
     void interpreter_free(Interpreter *interp);
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val);

@@ -937,7 +937,16 @@ namespace Zodiac
                 }
             }
 
-            if (advance_ip) interpreter_advance_ip(interp);
+            if (advance_ip) {
+                interp->ip.index_in_bucket += 1;
+
+                if (interp->ip.index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
+                    assert(interp->ip.bucket->next_bucket);
+                    interp->ip.bucket = interp->ip.bucket->next_bucket;
+                    interp->ip.index_in_bucket = 0;
+                }
+            }
+
         }
 
         if (ret_val_ptr && ret_type->kind == AST_Type_Kind::INTEGER) {
@@ -1192,17 +1201,6 @@ namespace Zodiac
 
         assert(false);
         return nullptr;
-    }
-
-    void interpreter_advance_ip(Interpreter *interp)
-    {
-        interp->ip.index_in_bucket += 1;
-
-        if (interp->ip.index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
-            assert(interp->ip.bucket->next_bucket);
-            interp->ip.bucket = interp->ip.bucket->next_bucket;
-            interp->ip.index_in_bucket = 0;
-        }
     }
 
     void interpreter_free(Interpreter *interp)

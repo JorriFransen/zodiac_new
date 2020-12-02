@@ -234,9 +234,6 @@ namespace Zodiac
 
         BC_Instruction_Bucket *first_bucket = nullptr;
         BC_Instruction_Bucket *last_bucket = nullptr;
-        int64_t instruction_count = 0;
-        
-        // Array<Bytecode_Instruction *> instructions = {};
     };
 
     struct Bytecode_Function_Info
