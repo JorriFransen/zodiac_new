@@ -43,7 +43,6 @@ namespace Zodiac
 
         interp->ip = {
             .function = entry_func,
-            .block = entry_func->blocks[0],
             .index = 0,
         };
 
@@ -453,7 +452,6 @@ namespace Zodiac
                     interp->frame_pointer = new_fp;
                     interp->ip = {
                         .function = inst->a->function,
-                        .block = inst->a->function->blocks[0],
                         .index = 0,
                     };
 
@@ -516,8 +514,7 @@ namespace Zodiac
                 case JUMP: {
                     advance_ip = false;
                     Bytecode_Block *target_block = inst->a->block;
-                    interp->ip.block = target_block;
-                    interp->ip.index = 0;
+                    interp->ip.index = target_block->first_instruction_index;
                     break;
                 }
 
@@ -531,11 +528,13 @@ namespace Zodiac
 
                     Bytecode_Block *then_block = inst->b->block;
                     Bytecode_Block *else_block = inst->result->block;
+                    Bytecode_Block *target_block = nullptr;
 
-                    if (cond_val.integer_literal.u8) interp->ip.block = then_block;
-                    else interp->ip.block = else_block;
+                    if (cond_val.integer_literal.u8) target_block = then_block;
+                    else target_block = else_block;
+                    assert(target_block);
 
-                    interp->ip.index = 0;
+                    interp->ip.index = target_block->first_instruction_index;
                     break;
                 }
 
@@ -586,8 +585,7 @@ namespace Zodiac
                     if (!dest) dest = default_block;
                     assert(dest);
 
-                    interp->ip.block = dest;
-                    interp->ip.index = 0;
+                    interp->ip.index = dest->first_instruction_index;
                     break;
                 }
 
@@ -1183,17 +1181,17 @@ namespace Zodiac
 
     Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp)
     {
-        Bytecode_Instruction *result = interp->ip.block->instructions[interp->ip.index];
+        Bytecode_Instruction *result = interp->ip.function->instructions[interp->ip.index];
         return result;
     }
 
     void interpreter_advance_ip(Interpreter *interp)
     {
 #ifndef NDEBUG
-        auto cb = interp->ip.block;
+        auto cf = interp->ip.function;
         auto index = interp->ip.index;
 
-        assert(index + 1 < cb->instructions.count);
+        assert(index + 1 < cf->instructions.count);
 #endif
 
         interp->ip.index += 1;

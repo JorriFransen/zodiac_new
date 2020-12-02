@@ -194,9 +194,9 @@ namespace Zodiac
 
     void llvm_emit_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
     {
-        for (int64_t i = 0; i < bc_block->instructions.count; i++) {
-            Bytecode_Instruction *inst = bc_block->instructions[i];
-
+        for (int64_t i = 0; i < bc_block->instruction_count; i++) {
+            auto index = bc_block->first_instruction_index + i;
+            Bytecode_Instruction *inst = bc_block->function->instructions[index];
             llvm_emit_instruction(builder, inst);
         }
     }

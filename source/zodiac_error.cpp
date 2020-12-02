@@ -106,10 +106,10 @@ namespace Zodiac
     {
         assert(build_data->errors.count);
 
-        auto &last_err = array_last(build_data->errors);
+        auto last_err = array_last_ptr(build_data->errors);
 
         String message = string_print_format(build_data->err_allocator, fmt, args);
-        array_append(&last_err.messages, { message, site });
+        array_append(&last_err->messages, { message, site });
     }
 
     void zodiac_report_errors(Build_Data *build_data)

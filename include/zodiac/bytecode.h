@@ -179,9 +179,9 @@ namespace Zodiac
     {
         Bytecode_Opcode op = NOP;
 
-            Bytecode_Value *a = nullptr;
-            Bytecode_Value *b = nullptr;
-            Bytecode_Value *result = nullptr;
+        Bytecode_Value *a = nullptr;
+        Bytecode_Value *b = nullptr;
+        Bytecode_Value *result = nullptr;
     };
 
     typedef uint64_t Bytecode_Function_Flags;
@@ -202,8 +202,8 @@ namespace Zodiac
         Atom name = {};
         Bytecode_Function *function = nullptr;
 
-        //@@TODO: @@CLEANUP: These might not need to be pointers
-        Array<Bytecode_Instruction *> instructions = {};
+        int64_t first_instruction_index = -1;
+        int64_t instruction_count = -1;
     };
 
     struct Bytecode_Function
@@ -216,7 +216,9 @@ namespace Zodiac
         Array<Bytecode_Value *> locals = {};
         Array<Bytecode_Value *> temps = {};
 
+        //@@TODO: @@CLEANUP: These might not need to be pointers
         Array<Bytecode_Block  *> blocks = {};
+        Array<Bytecode_Instruction *> instructions = {};
     };
 
     struct Bytecode_Function_Info

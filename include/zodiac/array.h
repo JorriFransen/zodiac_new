@@ -134,16 +134,40 @@ Element_Type array_first(Array<Element_Type> *array)
 }
 
 template <typename Element_Type>
-Element_Type &array_last(Array<Element_Type> *array)
+Element_Type *array_last_ptr(Array<Element_Type> *array)
+{
+    return array_last_ptr(*array);
+}
+
+template <typename Element_Type>
+Element_Type *array_last_ptr(Array<Element_Type> &array)
+{
+    if (array.count < 1) {
+        return nullptr;
+    } else {
+        return &array.data[array.count - 1];
+    }
+}
+
+template <typename Element_Type>
+Element_Type array_last(Array<Element_Type> *array)
 {
     return array_last(*array);
 }
 
 template <typename Element_Type>
-Element_Type &array_last(const Array<Element_Type> &array)
+Element_Type array_last(const Array<Element_Type> &array)
 {
-    assert(array.count >= 1);
-    return array.data[array.count - 1];
+    Element_Type result = {};
+    if (array.count < 1) {
+        assert(array.count == 0);
+        // Return the zeroed result;
+    } else {
+        assert(array.count >= 1);
+        result = array.data[array.count - 1];
+    }
+
+    return result;
 }
 
 }

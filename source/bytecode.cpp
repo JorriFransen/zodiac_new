@@ -256,15 +256,6 @@ namespace Zodiac
         //
 
         if (!builder->build_data->options->link_c) {
-            // assert(builder->build_data->entry_module);
-            // Scope *entry_scope = builder->build_data->entry_module->scope;
-            // assert(entry_scope);
-            // AST_Declaration *pre_main_decl = scope_find_declaration(entry_scope,
-            //                                                         Builtin::atom_pre_main);
-            // assert(pre_main_decl);
-            // assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
-
-            // Bytecode_Function *pre_main_func = bytecode_find_function(builder, pre_main_decl);
             assert(pre_main_func);
 
             Bytecode_Value *func_val = bytecode_function_value_new(builder, pre_main_func);
@@ -288,7 +279,6 @@ namespace Zodiac
         if (run_expr->type->kind == AST_Type_Kind::VOID) {
             bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
         } else {
-            // assert(false && "returning a value from run is not supported yet, interperter_start() needs to allocate memory for the return value, and push the address after fp and ip.");
             assert(return_value);
             bytecode_emit_instruction(builder, RETURN, return_value, nullptr, nullptr);
         }
@@ -306,20 +296,40 @@ namespace Zodiac
         Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
         result->name = atom_get(&builder->build_data->atom_table, name);
         result->function = nullptr;
-        array_init(builder->allocator, &result->instructions);
+
+        result->first_instruction_index = -1;
+        result->instruction_count = -1;
+
         return result;
     }
 
     void bytecode_append_block(Bytecode_Builder *builder, Bytecode_Function *function,
                                Bytecode_Block *block)
     {
+        assert(block->instruction_count  <= 0);
+        assert(block->first_instruction_index <= 0);
+
         assert(builder->current_function == function);
         assert(!block->function);
 
         block->name = bytecode_get_unique_block_name(builder, block->name);
 
-        array_append(&function->blocks, block);
         block->function = function;
+
+        Bytecode_Block *last_block = array_last(&function->blocks);
+        if (last_block) {
+            assert(last_block->instruction_count);
+            assert(last_block->first_instruction_index >= 0);
+
+            block->first_instruction_index = last_block->first_instruction_index +
+                                             last_block->instruction_count;
+
+        } else {
+            block->first_instruction_index = 0;
+        }
+
+        block->instruction_count = 0;
+        array_append(&function->blocks, block);
     }
 
     Atom bytecode_get_unique_block_name(Bytecode_Builder *builder, Atom name)
@@ -371,6 +381,7 @@ namespace Zodiac
         array_init(builder->allocator, &result->locals, 4);
         array_init(builder->allocator, &result->temps);
         array_init(builder->allocator, &result->blocks, 4);
+        array_init(builder->allocator, &result->instructions);
 
         return result;
     }
@@ -475,9 +486,9 @@ namespace Zodiac
                 auto body_block = bytecode_new_block(builder, "while_body");
                 auto post_while_block = bytecode_new_block(builder, "post_while");
 
-                bytecode_append_block(builder, builder->current_function, cond_block);
-
                 bytecode_emit_jump(builder, cond_block);
+
+                bytecode_append_block(builder, builder->current_function, cond_block);
                 bytecode_set_insert_point(builder, cond_block);
 
                 auto cond_val = bytecode_emit_expression(builder, stmt->while_stmt.cond_expr);
@@ -652,7 +663,6 @@ namespace Zodiac
         assert(cond_val->type->kind == AST_Type_Kind::BOOL);
 
         Bytecode_Block *then_block = bytecode_new_block(builder, "then");
-        bytecode_append_block(builder, builder->current_function, then_block);
 
         Bytecode_Block *else_block = nullptr;
         if (else_stmt) {
@@ -663,6 +673,7 @@ namespace Zodiac
         bytecode_emit_jump_if(builder, cond_val, then_block,
                               else_block ? else_block : post_if_block);
 
+        bytecode_append_block(builder, builder->current_function, then_block);
         bytecode_set_insert_point(builder, then_block);
         bytecode_emit_statement(builder, then_stmt);
         then_block = builder->insert_block;
@@ -1544,7 +1555,27 @@ namespace Zodiac
         inst->result = result;
 
         assert(builder->insert_block);
-        array_append(&builder->insert_block->instructions, inst);
+
+// #ifndef NDEBUG
+//         auto old_count = builder->insert_block->instructions.capacity;
+// #endif
+
+        // array_append(&builder->insert_block->instructions, inst);
+        Bytecode_Function *func = builder->current_function;
+        Bytecode_Block *block = array_last(&func->blocks);
+        assert(block == builder->insert_block);
+        array_append(&builder->current_function->instructions, inst);
+        block->instruction_count += 1;
+
+
+// #ifndef NDEBUG
+//         auto new_count = builder->insert_block->instructions.capacity;
+//         if (new_count >= 64 && old_count != new_count) {
+//             printf("Grew bytecode instruction array from %ld to %ld\n",
+//                     old_count, new_count);
+//         }
+// #endif
+
         return inst;
     }
 
@@ -1580,11 +1611,12 @@ namespace Zodiac
         stack_pop(&builder->break_block_stack);
     }
 
-    bool bytecode_block_ends_with_terminator(Bytecode_Block *block) {
+    bool bytecode_block_ends_with_terminator(Bytecode_Block *block)
+    {
+        if (block->instruction_count <= 0) return false;
 
-        if (!block->instructions.count) return false;
-
-        Bytecode_Instruction *last_instruction = array_last(&block->instructions);
+        auto index = block->first_instruction_index + block->instruction_count - 1;
+        Bytecode_Instruction *last_instruction = block->function->instructions[index];
 
         return last_instruction->op == RETURN ||
                last_instruction->op == RETURN_VOID ||
@@ -1833,9 +1865,9 @@ namespace Zodiac
     {
         string_builder_appendf(sb, "  %s:\n", block->name.data);
 
-        for (int64_t i = 0; i < block->instructions.count; i++)
-        {
-            bytecode_print_instruction(sb, block->instructions[i]);
+        for (int64_t i = 0; i < block->instruction_count; i++) {
+            auto index = block->first_instruction_index + i;
+            bytecode_print_instruction(sb, block->function->instructions[index]);
         }
     }
 

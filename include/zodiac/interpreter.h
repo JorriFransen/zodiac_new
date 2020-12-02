@@ -11,8 +11,6 @@ namespace Zodiac
     struct Instruction_Pointer
     {
         Bytecode_Function *function = nullptr;
-        Bytecode_Block *block = nullptr;
-
         int64_t index = 0;
     };
 
