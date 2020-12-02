@@ -42,8 +42,8 @@ namespace Zodiac
         assert(entry_func->blocks.count);
 
         interp->ip = {
-            .function = entry_func,
-            .index = 0,
+            .bucket = entry_func->first_bucket,
+            .index_in_bucket = 0,
         };
 
         interpreter_initialize_globals(interp, global_data_size, global_info);
@@ -107,7 +107,8 @@ namespace Zodiac
 
         while (interp->running)
         {
-            Bytecode_Instruction *inst = interpreter_fetch_instruction(interp);
+            Bytecode_Instruction *inst =
+                &interp->ip.bucket->instructions[interp->ip.index_in_bucket];
 
             bool advance_ip = true;
 
@@ -383,7 +384,8 @@ namespace Zodiac
                     auto arg_count = arg_count_val->integer_literal.s64;
 
                     if (func->flags & BC_FUNC_FLAG_FOREIGN) {
-                        interpreter_execute_foreign_function(interp, func, arg_count, inst->result);
+                        interpreter_execute_foreign_function(interp, func, arg_count,
+                                                             inst->result);
                         break;
                     }
 
@@ -451,8 +453,8 @@ namespace Zodiac
 
                     interp->frame_pointer = new_fp;
                     interp->ip = {
-                        .function = inst->a->function,
-                        .index = 0,
+                        .bucket = inst->a->function->first_bucket,
+                        .index_in_bucket = 0,
                     };
 
                     break;
@@ -514,7 +516,12 @@ namespace Zodiac
                 case JUMP: {
                     advance_ip = false;
                     Bytecode_Block *target_block = inst->a->block;
-                    interp->ip.index = target_block->first_instruction_index;
+
+                    assert(target_block->first_instruction_bucket);
+                    assert(target_block->first_instruction_index_in_bucket >= 0);
+
+                    interp->ip.bucket = target_block->first_instruction_bucket;
+                    interp->ip.index_in_bucket = target_block->first_instruction_index_in_bucket;
                     break;
                 }
 
@@ -534,7 +541,11 @@ namespace Zodiac
                     else target_block = else_block;
                     assert(target_block);
 
-                    interp->ip.index = target_block->first_instruction_index;
+                    assert(target_block->first_instruction_bucket);
+                    assert(target_block->first_instruction_index_in_bucket >= 0);
+
+                    interp->ip.bucket = target_block->first_instruction_bucket;
+                    interp->ip.index_in_bucket = target_block->first_instruction_index_in_bucket;
                     break;
                 }
 
@@ -585,7 +596,11 @@ namespace Zodiac
                     if (!dest) dest = default_block;
                     assert(dest);
 
-                    interp->ip.index = dest->first_instruction_index;
+                    assert(dest->first_instruction_bucket);
+                    assert(dest->first_instruction_index_in_bucket >= 0);
+
+                    interp->ip.bucket = dest->first_instruction_bucket;
+                    interp->ip.index_in_bucket = dest->first_instruction_index_in_bucket;
                     break;
                 }
 
@@ -1179,23 +1194,15 @@ namespace Zodiac
         return nullptr;
     }
 
-    Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp)
-    {
-        Bytecode_Instruction *result = get_instruction_by_index(interp->ip.function,
-                                                                interp->ip.index);
-        return result;
-    }
-
     void interpreter_advance_ip(Interpreter *interp)
     {
-#ifndef NDEBUG
-        auto cf = interp->ip.function;
-        auto index = interp->ip.index;
+        interp->ip.index_in_bucket += 1;
 
-        assert(index + 1 < cf->instruction_count);
-#endif
-
-        interp->ip.index += 1;
+        if (interp->ip.index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
+            assert(interp->ip.bucket->next_bucket);
+            interp->ip.bucket = interp->ip.bucket->next_bucket;
+            interp->ip.index_in_bucket = 0;
+        }
     }
 
     void interpreter_free(Interpreter *interp)

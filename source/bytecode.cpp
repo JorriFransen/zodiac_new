@@ -297,8 +297,8 @@ namespace Zodiac
         result->name = atom_get(&builder->build_data->atom_table, name);
         result->function = nullptr;
 
-        result->first_instruction_index = -1;
-        result->instruction_count = -1;
+        result->first_instruction_bucket = nullptr;
+        result->first_instruction_index_in_bucket = -1;
 
         result->last_instruction = nullptr;
 
@@ -309,7 +309,8 @@ namespace Zodiac
                                Bytecode_Block *block)
     {
         assert(block->instruction_count  <= 0);
-        assert(block->first_instruction_index <= 0);
+        assert(block->first_instruction_bucket == nullptr);
+        assert(block->first_instruction_index_in_bucket == -1);
 
         assert(builder->current_function == function);
         assert(!block->function);
@@ -321,16 +322,13 @@ namespace Zodiac
         Bytecode_Block *last_block = array_last(&function->blocks);
         if (last_block) {
             assert(last_block->instruction_count);
-            assert(last_block->first_instruction_index >= 0);
-
-            block->first_instruction_index = last_block->first_instruction_index +
-                                             last_block->instruction_count;
-
-        } else {
-            block->first_instruction_index = 0;
         }
 
         block->instruction_count = 0;
+
+        block->first_instruction_bucket = builder->current_function->last_bucket;
+        block->first_instruction_index_in_bucket = builder->current_function->last_bucket->count;
+
         array_append(&function->blocks, block);
     }
 
@@ -1583,22 +1581,6 @@ namespace Zodiac
         builder->build_data->bytecode_instruction_count += 1;
 
         return result;
-    }
-
-    Bytecode_Instruction *get_instruction_by_index(Bytecode_Function *func, int64_t index)
-    {
-        BC_Instruction_Bucket *bucket = func->first_bucket;
-
-        while (bucket) {
-            if (index < bucket->count) {
-                return &bucket->instructions[index];
-            }
-            bucket = bucket->next_bucket;
-            index -= BC_INSTRUCTIONS_PER_BUCKET;
-        }
-
-        assert(false);
-        return nullptr;
     }
 
     void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block)

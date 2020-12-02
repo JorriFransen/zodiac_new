@@ -281,8 +281,9 @@ namespace Zodiac
                                   resolver->bytecode_builder.globals,
                                   resolver->bytecode_builder.foreign_functions);
 
-                printf("Interpreter exited with code: %" PRId64 " after run directive\n",
-                       interp.exit_code);
+                if (interp.build_data->options->verbose)
+                    printf("Interpreter exited with code: %" PRId64 " after run directive\n",
+                           interp.exit_code);
 
                 progressed = true;
             }

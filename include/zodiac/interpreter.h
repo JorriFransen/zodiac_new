@@ -10,8 +10,8 @@ namespace Zodiac
 {
     struct Instruction_Pointer
     {
-        Bytecode_Function *function = nullptr;
-        int64_t index = 0;
+        BC_Instruction_Bucket *bucket = nullptr;
+        int16_t index_in_bucket = 0;
     };
 
     struct Interpreter
@@ -54,8 +54,6 @@ namespace Zodiac
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);
-
-    Bytecode_Instruction *interpreter_fetch_instruction(Interpreter *interp);
 
     void interpreter_advance_ip(Interpreter *interp);
 

@@ -197,13 +197,16 @@ namespace Zodiac
     };
 
     struct Bytecode_Function;
+    struct BC_Instruction_Bucket;
     struct Bytecode_Block
     {
         Atom name = {};
         Bytecode_Function *function = nullptr;
 
-        int64_t first_instruction_index = -1;
         int64_t instruction_count = -1;
+
+        BC_Instruction_Bucket *first_instruction_bucket = nullptr;
+        int16_t first_instruction_index_in_bucket = -1;
 
         Bytecode_Instruction *last_instruction = nullptr;
     };
@@ -339,8 +342,6 @@ namespace Zodiac
     Bytecode_Instruction *bytecode_emit_instruction(Bytecode_Builder *builder, Bytecode_Opcode op,
                                                     Bytecode_Value *a, Bytecode_Value *b,
                                                     Bytecode_Value *result_value);
-
-    Bytecode_Instruction *get_instruction_by_index(Bytecode_Function *func, int64_t index);
 
     void bytecode_add_default_switch_case(Bytecode_Instruction *inst, Bytecode_Block *block);
     void bytecode_add_switch_case(Bytecode_Instruction *inst, Bytecode_Value *case_value,
