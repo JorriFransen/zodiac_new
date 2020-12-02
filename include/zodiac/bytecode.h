@@ -374,7 +374,6 @@ namespace Zodiac
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);
-    void bytecode_print_block(String_Builder *sb, Bytecode_Block *block);
     void bytecode_print_instruction(String_Builder *sb, Bytecode_Instruction *inst);
     void bytecode_print_value(String_Builder *sb, Bytecode_Value *value);
 
