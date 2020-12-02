@@ -1837,28 +1837,20 @@ namespace Zodiac
 
         string_builder_append(sb, ")\n");
 
-        assert(false);
-        // BC_Instruction_Bucket *bucket = func->first_bucket;
-        // int64_t index_in_bucket = 0;
+        auto inst_loc = bucket_array_first(&func->instructions);
 
-        // for (int64_t i = 0; i < func->blocks.count; i++) {
-        //     auto block = func->blocks[i];
-        //     string_builder_appendf(sb, " %s:\n", block->name.data);
+        for (int64_t i = 0; i < func->blocks.count; i++) {
+            auto block = func->blocks[i];
+            string_builder_appendf(sb, " %s:\n", block->name.data);
 
-        //     for (int64_t j = 0; j < block->instruction_count; j++) {
 
-        //         if (index_in_bucket >= BC_INSTRUCTIONS_PER_BUCKET) {
-        //             index_in_bucket = 0;
-        //             assert(bucket->next_bucket);
-        //             bucket = bucket->next_bucket;
-        //         }
+            for (int64_t j = 0; j < block->instruction_count; j++) {
 
-        //         auto inst = &bucket->instructions[index_in_bucket];
-        //         bytecode_print_instruction(sb, inst);
-
-        //         index_in_bucket += 1;
-        //     }
-        // }
+                Bytecode_Instruction *inst = bucket_locator_get_ptr(inst_loc);
+                bytecode_print_instruction(sb, inst);
+                bucket_locator_advance(&inst_loc);
+            }
+        }
 
         string_builder_append(sb, "\n");
     }

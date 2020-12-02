@@ -92,7 +92,7 @@ namespace Zodiac
     bucket_array_add(Bucket_Array<Element_Type, bucket_capacity> *ba, Element_Type element)
     {
         if (ba->last_bucket->count >= bucket_capacity) {
-            add_bucket(ba); 
+            add_bucket(ba);
         }
 
         ba->last_bucket->data[ba->last_bucket->count] = element;
@@ -127,6 +127,22 @@ namespace Zodiac
         Bucket_Locator<Element_Type, bucket_capacity> result = {
             .bucket = ba->last_bucket,
             .index = (int16_t)(ba->last_bucket->count),
+        };
+
+        return result;
+    }
+
+    template <typename Element_Type, int16_t bucket_capacity>
+    Bucket_Locator<Element_Type, bucket_capacity>
+    bucket_array_first(Bucket_Array<Element_Type, bucket_capacity> *ba) {
+        assert(ba->first_bucket);
+        assert(ba->first_bucket->count > 0);
+        assert(ba->last_bucket);
+        assert(ba->last_bucket->count > 0);
+
+        Bucket_Locator<Element_Type, bucket_capacity> result = {
+            .bucket = ba->first_bucket,
+            .index = 0,
         };
 
         return result;
