@@ -98,14 +98,15 @@ namespace Zodiac
 
         while (ci < index) {
 
-            if (ci < cap) {
-                assert(false);
+            if ((index - ci) < cap) {
+                ci = index - ci;
+                assert(false && "Untested path...!!");
+                break;
             } else {
-                assert(false);
+                ci += cap;
+                assert(current_bucket->next_bucket);
+                current_bucket = current_bucket->next_bucket;
             }
-
-            // assert(current_bucket->next_bucket);
-            // current_bucket = current_bucket->next_bucket;
         }
 
         assert(current_bucket);
