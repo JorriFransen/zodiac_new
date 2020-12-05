@@ -8,10 +8,7 @@
 
 namespace Zodiac
 {
-    struct Instruction_Pointer
-    {
-        Instruction_Locator instruction_locator = {};
-    };
+    typedef Instruction_Locator Instruction_Pointer;
 
     struct Interpreter
     {

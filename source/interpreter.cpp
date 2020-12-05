@@ -44,9 +44,7 @@ namespace Zodiac
         auto first_bucket = entry_func->instructions.first_bucket;
         Instruction_Locator initial_locator = { .bucket = first_bucket, .index = 0 };
 
-        interp->ip = {
-            .instruction_locator = initial_locator,
-        };
+        interp->ip = initial_locator;
 
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
@@ -109,7 +107,7 @@ namespace Zodiac
 
         while (interp->running)
         {
-            Bytecode_Instruction *inst = bucket_locator_get_ptr(interp->ip.instruction_locator);
+            Bytecode_Instruction *inst = bucket_locator_get_ptr(interp->ip);
 
             bool advance_ip = true;
 
@@ -453,12 +451,9 @@ namespace Zodiac
                     assert(inst->a->kind == Bytecode_Value_Kind::FUNCTION);
 
                     interp->frame_pointer = new_fp;
-                    Instruction_Locator new_locator = {
+                    interp->ip = {
                         .bucket = inst->a->function->instructions.first_bucket,
                         .index = 0,
-                    };
-                    interp->ip = {
-                        .instruction_locator = new_locator,
                     };
 
                     break;
@@ -521,7 +516,7 @@ namespace Zodiac
                     advance_ip = false;
                     Bytecode_Block *target_block = inst->a->block;
 
-                    interp->ip.instruction_locator = target_block->first_instruction;
+                    interp->ip = target_block->first_instruction;
                     break;
                 }
 
@@ -541,7 +536,7 @@ namespace Zodiac
                     else target_block = else_block;
                     assert(target_block);
 
-                    interp->ip.instruction_locator = target_block->first_instruction;
+                    interp->ip = target_block->first_instruction;
                     break;
                 }
 
@@ -592,7 +587,7 @@ namespace Zodiac
                     if (!dest) dest = default_block;
                     assert(dest);
 
-                    interp->ip.instruction_locator = dest->first_instruction;
+                    interp->ip = dest->first_instruction;
                     break;
                 }
 
@@ -930,7 +925,7 @@ namespace Zodiac
             }
 
             if (advance_ip) {
-                bucket_locator_advance(&interp->ip.instruction_locator);
+                bucket_locator_advance(&interp->ip);
             }
 
         }
