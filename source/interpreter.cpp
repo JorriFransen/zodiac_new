@@ -41,10 +41,7 @@ namespace Zodiac
     {
         assert(entry_func->blocks.count);
 
-        auto first_bucket = entry_func->instructions.first_bucket;
-        Instruction_Locator initial_locator = { .bucket = first_bucket, .index = 0 };
-
-        interp->ip = initial_locator;
+        interp->ip = bucket_array_locator_by_index(&entry_func->instructions, 0);
 
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
@@ -451,10 +448,8 @@ namespace Zodiac
                     assert(inst->a->kind == Bytecode_Value_Kind::FUNCTION);
 
                     interp->frame_pointer = new_fp;
-                    interp->ip = {
-                        .bucket = inst->a->function->instructions.first_bucket,
-                        .index = 0,
-                    };
+                    interp->ip =
+                        bucket_array_locator_by_index(&inst->a->function->instructions, 0);
 
                     break;
                 }

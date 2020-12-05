@@ -87,6 +87,33 @@ namespace Zodiac
         ba->last_bucket = ba->first_bucket;
     }
 
+    template <typename Element_Type, int16_t cap>
+    Bucket_Locator<Element_Type, cap>
+    bucket_array_locator_by_index(Bucket_Array<Element_Type, cap> *ba, int64_t index)
+    {
+        int64_t ci = 0;
+
+        Bucket_Array_Bucket<Element_Type, cap> *current_bucket = ba->first_bucket;
+        assert(current_bucket);
+
+        while (ci < index) {
+
+            if (ci < cap) {
+                assert(false);
+            } else {
+                assert(false);
+            }
+
+            // assert(current_bucket->next_bucket);
+            // current_bucket = current_bucket->next_bucket;
+        }
+
+        assert(current_bucket);
+        assert(ci >= 0);
+        assert(ci < cap);
+        return { .bucket = current_bucket, .index = (int16_t)ci };
+    }
+
     template <typename Element_Type, int16_t bucket_capacity>
     Bucket_Locator<Element_Type, bucket_capacity>
     bucket_array_add(Bucket_Array<Element_Type, bucket_capacity> *ba, Element_Type element)
