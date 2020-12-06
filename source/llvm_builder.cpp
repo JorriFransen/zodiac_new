@@ -1092,8 +1092,9 @@ namespace Zodiac
             string_builder_append(sb, "ld ");
             string_builder_append(sb, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
 
-            // crt_path = string_ref("/usr/lib/x86_64-linux-gnu");
-            crt_path = find_crt_path();
+            bool crt_found = find_crt_path(&crt_path);
+            assert(crt_found);
+            if (!crt_found) return false;
 
             string_builder_append(sb, crt_path.data);
             string_builder_append(sb, "Scrt1.o ");

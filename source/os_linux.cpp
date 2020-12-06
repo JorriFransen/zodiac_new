@@ -171,8 +171,12 @@ int64_t os_syscall(Array<int64_t> args)
     return 0;
 }
 
-String os_find_crt_path()
+bool os_find_crt_path(String *result_ptr)
 {
+    assert(result_ptr);
+    assert(result_ptr->data == nullptr);
+    assert(result_ptr->length == 0);
+
     const char *paths[] = {
         "/usr/lib64/",
         "/usr/lib/x86_64-linux-gnu/",
@@ -188,13 +192,15 @@ String os_find_crt_path()
             auto scrt1_path = string_append(ta, path, "Scrt1.o");
 
             if (os_is_regular_file(scrt1_path)) {
-                return path;    
+                *result_ptr = path;
+                return true;
             }
 
         }
     }
 
     assert(false && "Failed to find srt path, required for --link_c option!!!");
+    return false;
 }
 
 }
