@@ -1,7 +1,7 @@
 
 std :: import std;
 
-#run main();
+// #run main();
 
 main :: func() -> s64 {
     std.println("Indirect recursion test");

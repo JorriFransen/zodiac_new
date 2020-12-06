@@ -323,6 +323,9 @@ namespace Zodiac
             }
 
             if (fatal_error_reported(resolver) || (!progressed && !resolver->progressed)) {
+
+                if (resolver->build_data->errors.count == 0)
+                    resolver_check_circular_dependencies(resolver);
                 done = true;
             } else {
                 zodiac_clear_errors(resolver->build_data);
@@ -612,7 +615,9 @@ namespace Zodiac
             }
 
             if (!result) {
-                waiting_on = node;
+                if (node->waiting_on) waiting_on = node->waiting_on;
+                else waiting_on = node;
+
                 decl->flat->waiting_on = i;
 
                 if (i > was_waiting_on) resolver->progressed = true;
@@ -623,8 +628,14 @@ namespace Zodiac
         if (!result && resolver->build_data->options->verbose) {
             assert(waiting_on);
             auto bfp = waiting_on->begin_file_pos;
-            printf("           ..Failed! (waiting on: '%s:%" PRIu64 ":%" PRIu64 "')\n",
-                    bfp.file_name.data, bfp.line, bfp.column);
+
+            Atom name = { .data = "", .length = 0 };
+            if (waiting_on->kind == AST_Node_Kind::DECLARATION) {
+                name = static_cast<AST_Declaration *>(waiting_on)->identifier->atom;
+            }
+
+            printf("           ..Failed! (waiting on: '%s' '%s:%" PRIu64 ":%" PRIu64 "')\n",
+                    name.data, bfp.file_name.data, bfp.line, bfp.column);
         }
 
         return result;
@@ -1460,6 +1471,7 @@ namespace Zodiac
                             recursive = true;
                             expression->expr_flags |= AST_EXPR_FLAG_RECURSIVE_IDENT;
                         } else {
+                            expression->waiting_on = decl;
                             return false;
                         }
                     }
@@ -3646,6 +3658,11 @@ namespace Zodiac
 
         assert(enum_type);
         return enum_type;
+    }
+
+    void resolver_check_circular_dependencies(Resolver *resolver)
+    {
+        assert(false);
     }
 
     bool fatal_error_reported(Resolver *resolver)

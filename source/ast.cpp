@@ -30,6 +30,7 @@ namespace Zodiac
         assert(ast_node);
         ast_node->kind = kind;
         ast_node->scope = scope;
+        ast_node->waiting_on = nullptr;
         ast_node->begin_file_pos = begin_fp;
         ast_node->end_file_pos = end_fp;
     }

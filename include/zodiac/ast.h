@@ -41,6 +41,8 @@ namespace Zodiac
 
         Scope *scope = nullptr;
 
+        AST_Node *waiting_on = nullptr;
+
         File_Pos begin_file_pos = {};
         File_Pos end_file_pos = {};
     };
