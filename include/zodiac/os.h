@@ -30,4 +30,6 @@ Process_Info execute_process(Allocator *allocator, const String &command, const 
 
 int64_t os_syscall(Array<int64_t> args);
 
+String find_crt_path();
+
 }

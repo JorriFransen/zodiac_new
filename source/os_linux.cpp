@@ -15,19 +15,42 @@
 namespace Zodiac
 {
 
-bool os_is_relative_path(const String& path)
+bool os_is_path(const String &path)
+{
+    struct stat statbuf;
+    auto stat_res = stat(path.data, &statbuf);
+
+    if (stat_res != 0) {
+        return false;
+    }
+
+    return S_ISDIR(statbuf.st_mode);
+}
+
+bool os_is_absolute_path(const String &path)
+{
+    struct stat statbuf;
+    auto stat_res = stat(path.data, &statbuf);
+
+    if (stat_res != 0) {
+        return false;
+    }
+
+    return (!S_ISLNK(statbuf.st_mode)) && S_ISDIR(statbuf.st_mode);
+}
+
+bool os_is_relative_path(const String &path)
 {
     assert(path.data);
 
     return path[0] != '/' || string_contains(path, "../") || string_contains(path, "./");
 }
 
-bool os_is_regular_file(const String& path)
+bool os_is_regular_file(const String &path)
 {
     struct stat statbuf;
     auto stat_res = stat(path.data, &statbuf);
-    if (stat_res != 0)
-    {
+    if (stat_res != 0) {
         return false;
     }
 
@@ -123,7 +146,7 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
 {
     assert(allocator);
     assert(command.length);
-    assert(args.length); 
+    assert(args.length);
     assert(false);
 
     return {};
@@ -146,6 +169,32 @@ int64_t os_syscall(Array<int64_t> args)
 
     assert(false);
     return 0;
+}
+
+String os_find_crt_path()
+{
+    const char *paths[] = {
+        "/usr/lib64/",
+        "/usr/lib/x86_64-linux-gnu/",
+    };
+
+    auto ta = temp_allocator_get();
+
+    for (int64_t i = 0; i < STATIC_ARRAY_LENGTH(paths); i++) {
+        auto path = string_ref(paths[i]);
+
+        if (os_is_absolute_path(path)) {
+
+            auto scrt1_path = string_append(ta, path, "Scrt1.o");
+
+            if (os_is_regular_file(scrt1_path)) {
+                return path;    
+            }
+
+        }
+    }
+
+    assert(false && "Failed to find srt path, required for --link_c option!!!");
 }
 
 }

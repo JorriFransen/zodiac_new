@@ -1085,22 +1085,32 @@ namespace Zodiac
         bool print_command = options->print_link_command || options->verbose;
 
 #if linux
-        if (options->link_c)
-        {
+
+        String crt_path;
+
+        if (options->link_c) {
             string_builder_append(sb, "ld ");
             string_builder_append(sb, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
-            string_builder_append(sb, "/usr/lib64/Scrt1.o /usr/lib64/crti.o -lc ");
-        }
-        else
-        {
+
+            // crt_path = string_ref("/usr/lib/x86_64-linux-gnu");
+            crt_path = find_crt_path();
+
+            string_builder_append(sb, crt_path.data);
+            string_builder_append(sb, "Scrt1.o ");
+            string_builder_append(sb, crt_path.data);
+            string_builder_appendf(sb, "crti.o ");
+
+            string_builder_append(sb, "-lc ");
+        } else {
+
             string_builder_appendf(sb, "ld -static -nostdlib ");
         }
 
-        string_builder_appendf(sb, " %s.o -o %s", output_file_name, output_file_name);
+        string_builder_appendf(sb, " %s.o -o %s ", output_file_name, output_file_name);
 
-        if (options->link_c)
-        {
-            string_builder_append(sb, " /usr/lib64/crtn.o");
+        if (options->link_c) {
+            string_builder_append(sb, crt_path.data);
+            string_builder_append(sb, "crtn.o ");
         }
 
         auto link_cmd = string_builder_to_string(builder->allocator, sb);
@@ -1111,8 +1121,7 @@ namespace Zodiac
         assert(link_process_handle);
 
         bool result = true;
-        while (fgets(out_buf, sizeof(out_buf), link_process_handle) != nullptr)
-        {
+        while (fgets(out_buf, sizeof(out_buf), link_process_handle) != nullptr) {
             fprintf(stderr, "%s", out_buf);
         }
         assert(feof(link_process_handle));
@@ -1121,8 +1130,7 @@ namespace Zodiac
         close_ret = WEXITSTATUS(close_ret);
         assert(close_ret >= 0);
 
-        if (close_ret != 0)
-        {
+        if (close_ret != 0) {
             result = false;
             fprintf(stderr, "Link command failed with exit code: %d\n", close_ret);
             builder->build_data->link_error = true;
