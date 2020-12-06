@@ -170,4 +170,22 @@ Element_Type array_last(const Array<Element_Type> &array)
     return result;
 }
 
+template <typename Element_Type>
+bool array_contains(const Array<Element_Type> *array, Element_Type element)
+{
+    for (int64_t i = 0; i < array->count; i++) {
+        if (array->data[i] == element) return true;
+    }
+    return false;
+}
+
+template <typename Element_Type>
+int64_t array_index_of(const Array<Element_Type> *array, Element_Type element)
+{
+    for (int64_t i = 0; i < array->count; i++) {
+        if (array->data[i] == element) return i;
+    }
+    return -1;
+}
+
 }

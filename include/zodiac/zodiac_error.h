@@ -11,7 +11,7 @@ namespace Zodiac
     enum class Zodiac_Error_Kind
     {
         INVALID,
-        
+
         // Parse errors
         UNEXPECTED_TOKEN,
         INVALID_DIRECTIVE,
@@ -28,6 +28,7 @@ namespace Zodiac
         INCOMPLETE_SWITCH,
         INVALID_DEREF,
         STATIC_ASSERTION_FAILED,
+        CIRCULAR_DEPENDENCY,
 
         // Iterp errors
         FOREIGN_FUNCTION_NOT_FOUND,

@@ -636,6 +636,12 @@ namespace Zodiac
 
             printf("           ..Failed! (waiting on: '%s' '%s:%" PRIu64 ":%" PRIu64 "')\n",
                     name.data, bfp.file_name.data, bfp.line, bfp.column);
+
+        }
+
+        if (!result) {
+            assert(waiting_on);
+            job->ast_node->waiting_on = waiting_on;
         }
 
         return result;
@@ -650,19 +656,6 @@ namespace Zodiac
                decl->kind == AST_Declaration_Kind::USING);
         assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(decl->flags & AST_NODE_FLAG_TYPED);
-
-        // if (resolver->build_data->options->verbose) {
-        //     if (decl->identifier) {
-        //     printf("[RESOLVER] Trying to size declaration: '%s'\n",
-        //            decl->identifier->atom.data);
-        //     } else if (decl->kind == AST_Declaration_Kind::RUN) {
-        //         printf("[RESOLVER] Trying to size #run: '");
-        //         ast_print_expression(decl->run.expression, 0);
-        //         printf("'\n");
-        //     } else {
-        //         assert(false);
-        //     }
-        // }
 
         bool result = true;
 
@@ -3662,7 +3655,59 @@ namespace Zodiac
 
     void resolver_check_circular_dependencies(Resolver *resolver)
     {
-        assert(false);
+        assert(queue_count(&resolver->resolve_jobs));
+
+        auto ta = temp_allocator_get();
+        temp_allocator_reset(ta);
+
+        auto queue = &resolver->resolve_jobs;
+
+        for (int64_t i = 0; i < queue->used; i++) {
+            auto index = queue->front + i;
+            if (index >= queue->capacity) index -= queue->capacity;
+
+            Resolve_Job *job = &queue->buffer[index];
+            AST_Node *ast_node = job->ast_node;
+
+            auto nodes_in_chain = array_create<AST_Node *>(ta, 4);
+            array_append(&nodes_in_chain, ast_node);
+
+            AST_Node *waiting_on = ast_node->waiting_on;
+            int64_t dup_index = -1;
+
+            while (waiting_on) {
+                auto idx = array_index_of(&nodes_in_chain, waiting_on);
+                if (idx != -1) {
+                    dup_index = idx;
+                    // array_append(&nodes_in_chain, waiting_on);
+                    break;
+                } else {
+                    array_append(&nodes_in_chain, waiting_on);
+                }
+
+                waiting_on = waiting_on->waiting_on;
+            }
+
+            if (dup_index != -1) {
+                AST_Node *first_err_node = nodes_in_chain[dup_index];
+                zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::CIRCULAR_DEPENDENCY,
+                                    first_err_node, "Circular dependency detected");
+
+                for (int64_t i = dup_index; i < nodes_in_chain.count; i++) {
+                    AST_Node *w = nodes_in_chain[i];
+                    // zodiac_report_info(resolver->build_data, w, "...");
+                    auto waiter = static_cast<AST_Declaration *>(w);
+                    auto wait_on = static_cast<AST_Declaration *>(waiter->waiting_on);
+                    zodiac_report_info(resolver->build_data, waiter,
+                                       "Declaration '%s' is waiting on declaration '%s'",
+                                       waiter->identifier->atom.data,
+                                       wait_on->identifier->atom.data);
+                }
+
+                break;
+            }
+        }
+
     }
 
     bool fatal_error_reported(Resolver *resolver)
