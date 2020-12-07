@@ -2310,8 +2310,20 @@ namespace Zodiac
                     return false;
                 }
 
-                if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) return false;
-                assert(decl->flags & AST_NODE_FLAG_TYPED);
+                if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+                    if (decl->kind == AST_Declaration_Kind::STRUCTURE) {
+                        assert(decl->type);
+                        assert(decl->type->kind == AST_Type_Kind::STRUCTURE);
+                        if (!(type_spec->ts_flags & AST_TS_FLAG_CHILD_OF_POINTER_TS)) {
+                            return false;
+                        }
+                    } else {
+                        return false;
+                    }
+                } else {
+                    assert(decl->flags & AST_NODE_FLAG_TYPED);
+                }
+
                 assert(decl->type);
 
                 type_spec->type = decl->type;

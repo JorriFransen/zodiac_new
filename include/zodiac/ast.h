@@ -471,6 +471,14 @@ namespace Zodiac
         FROM_TYPE,
     };
 
+    typedef uint64_t AST_Type_Spec_Flags;
+
+    enum AST_Type_Spec_Flags_ : AST_Type_Spec_Flags
+    {
+        AST_TS_FLAG_NONE                = 0x0,
+        AST_TS_FLAG_CHILD_OF_POINTER_TS = 0x01,
+    };
+
     struct AST_Type_Spec : public AST_Node
     {
         AST_Type_Spec() {}
@@ -478,6 +486,7 @@ namespace Zodiac
         static AST_Node_Kind _kind;
 
         AST_Type_Spec_Kind kind = AST_Type_Spec_Kind::INVALID;
+        AST_Type_Spec_Flags ts_flags = AST_TS_FLAG_NONE;
         AST_Type *type = nullptr;
 
         union

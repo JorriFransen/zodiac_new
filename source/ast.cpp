@@ -1449,6 +1449,7 @@ namespace Zodiac
                 auto ast_base_ts = ast_create_type_spec_from_expression_ptn(ast_builder,
                                                                             ptn_base_expr, scope);
                 assert(ast_base_ts);
+                ast_base_ts->ts_flags |= AST_TS_FLAG_CHILD_OF_POINTER_TS;
 
                 return ast_pointer_type_spec_new(ast_builder->allocator, ast_base_ts,
                                                  scope, begin_fp, end_fp);

@@ -1,11 +1,12 @@
 
 std :: import std;
 
-// #run main();
+#run main();
 
 Int_List :: struct
 {
     value : s64;
+    // next  : Int_List;
     next  : *Int_List;
 }
 
@@ -15,7 +16,6 @@ main :: func() -> s64
 
     first_element : Int_List;
     first_element.value = 5;
-
 
     return 0;
 }
