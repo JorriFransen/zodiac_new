@@ -101,6 +101,12 @@ void array_append(Array<Element_Type> *array, const Element_Type& element)
 }
 
 template <typename Element_Type>
+void array_append_unique(Array<Element_Type> *array, const Element_Type& element)
+{
+    if (!array_contains(array, element)) array_append(array, element);
+}
+
+template <typename Element_Type>
 void array_unordered_remove(Array<Element_Type> *array, int64_t index)
 {
     assert(index < array->count);

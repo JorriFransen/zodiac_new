@@ -285,22 +285,34 @@ namespace Zodiac
             while (run_job_count--) {
                 auto job = queue_dequeue(&resolver->run_jobs);
 
-                assert(job.wrapper);
-                assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
+                auto run_decl = job.run_decl;
+                assert(run_decl->kind == AST_Declaration_Kind::RUN);
+                auto call_expr = run_decl->run.expression;
+                assert(call_expr->kind == AST_Expression_Kind::CALL);
+                auto callee_decl = call_expr->call.callee_declaration;
+                assert(callee_decl);
+                assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-                Interpreter interp = interpreter_create(resolver->allocator,
-                                                        resolver->build_data);
+                if (all_dependencies_emitted(resolver, callee_decl)) {
+                    assert(job.wrapper);
+                    assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
 
-                interpreter_start(&interp, job.wrapper,
-                                  resolver->bytecode_builder.global_data_size,
-                                  resolver->bytecode_builder.globals,
-                                  resolver->bytecode_builder.foreign_functions);
+                    Interpreter interp = interpreter_create(resolver->allocator,
+                                                            resolver->build_data);
 
-                if (interp.build_data->options->verbose)
-                    printf("Interpreter exited with code: %" PRId64 " after run directive\n",
-                           interp.exit_code);
+                    interpreter_start(&interp, job.wrapper,
+                                      resolver->bytecode_builder.global_data_size,
+                                      resolver->bytecode_builder.globals,
+                                      resolver->bytecode_builder.foreign_functions);
 
-                progressed = true;
+                    if (interp.build_data->options->verbose)
+                        printf("Interpreter exited with code: %" PRId64 " after run directive\n",
+                               interp.exit_code);
+                    progressed = true;
+                } else {
+                    queue_enqueue(&resolver->run_jobs, job);
+                }
+
             }
 
             auto llvm_job_count = queue_count(&resolver->llvm_jobs);
@@ -622,6 +634,14 @@ namespace Zodiac
                 case AST_Node_Kind::EXPRESSION: {
                     auto expr = static_cast<AST_Expression *>(node);
                     result = try_resolve_expression(resolver, expr);
+
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+                        result &&
+                        expr->kind == AST_Expression_Kind::CALL) {
+                        auto callee = expr->call.callee_declaration;
+                        assert(callee);
+                        array_append_unique(&decl->function.called_functions, callee);
+                    }
                     break;
                 }
 
@@ -3738,6 +3758,50 @@ namespace Zodiac
 
         assert(enum_type);
         return enum_type;
+    }
+
+    bool all_dependencies_emitted(Resolver *resolver, AST_Declaration *decl)
+    {
+        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+
+        assert(!(decl->decl_flags & AST_DECL_FLAG_CHECKING_DEPENDECIES));
+
+        decl->decl_flags |= AST_DECL_FLAG_CHECKING_DEPENDECIES;
+
+
+        if (!(decl->decl_flags & AST_DECL_FLAG_EMITTED_BYTECODE)) {
+            decl->decl_flags &= ~AST_DECL_FLAG_CHECKING_DEPENDECIES;
+            return false;
+        }
+
+        bool result = true;
+
+        for (int64_t i = 0; i < decl->function.called_functions.count; i++) {
+            AST_Declaration *called_func = decl->function.called_functions[i];
+
+            if (!(called_func->decl_flags & AST_DECL_FLAG_EMITTED_BYTECODE)) {
+                result = false;
+                break;
+            }
+        }
+
+        if (result) {
+            for (int64_t i = 0; i < decl->function.called_functions.count; i++) {
+                AST_Declaration *called_func = decl->function.called_functions[i];
+
+                if (called_func->decl_flags & AST_DECL_FLAG_CHECKING_DEPENDECIES) {
+                    continue;
+                }
+
+                if (!all_dependencies_emitted(resolver, called_func)) {
+                    result = false;
+                    break;
+                }
+            }
+        }
+
+        decl->decl_flags &= ~AST_DECL_FLAG_CHECKING_DEPENDECIES;
+        return result;
     }
 
     void resolver_check_circular_dependencies(Resolver *resolver)

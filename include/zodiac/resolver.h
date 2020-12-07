@@ -159,6 +159,8 @@ namespace Zodiac
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
                                        AST_Type *base_type, Scope *mem_scope, Scope *current_scope);
 
+    bool all_dependencies_emitted(Resolver *resolver, AST_Declaration *decl);
+
     void resolver_check_circular_dependencies(Resolver *resolver);
 
     bool fatal_error_reported(Resolver *resolver);

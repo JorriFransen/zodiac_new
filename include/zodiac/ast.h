@@ -92,20 +92,21 @@ namespace Zodiac
 
     enum AST_Declaration_Flag__ : AST_Declaration_Flag
     {
-        AST_DECL_FLAG_NONE                    = 0x0000,
-        AST_DECL_FLAG_IS_NAKED                = 0x0001,
-        AST_DECL_FLAG_IS_ENTRY                = 0x0002,
-        AST_DECL_FLAG_IS_BYTECODE_ENTRY       = 0x0004,
-        AST_DECL_FLAG_NORETURN                = 0x0008,
-        AST_DECL_FLAG_FOREIGN                 = 0x0010,
-        AST_DECL_FLAG_GLOBAL                  = 0x0020,
-        AST_DECL_FLAG_IS_ENUM_MEMBER          = 0x0040,
-        AST_DECL_FLAG_ENUM_MEMBER_INTINIT     = 0x0080,
-        AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT   = 0x0100,
-        AST_DECL_FLAG_QUEUED_BYTECODE         = 0x0200,
-        AST_DECL_FLAG_REGISTERED_BYTECODE     = 0x0400,
-        AST_DECL_FLAG_EMITTED_BYTECODE        = 0x0800,
-        AST_DECL_FLAG_IS_STRUCT_MEMBER        = 0x1000,
+        AST_DECL_FLAG_NONE                     = 0x0000,
+        AST_DECL_FLAG_IS_NAKED                 = 0x0001,
+        AST_DECL_FLAG_IS_ENTRY                 = 0x0002,
+        AST_DECL_FLAG_IS_BYTECODE_ENTRY        = 0x0004,
+        AST_DECL_FLAG_NORETURN                 = 0x0008,
+        AST_DECL_FLAG_FOREIGN                  = 0x0010,
+        AST_DECL_FLAG_GLOBAL                   = 0x0020,
+        AST_DECL_FLAG_IS_ENUM_MEMBER           = 0x0040,
+        AST_DECL_FLAG_ENUM_MEMBER_INTINIT      = 0x0080,
+        AST_DECL_FLAG_ENUM_MEMBER_IDENTINIT    = 0x0100,
+        AST_DECL_FLAG_QUEUED_BYTECODE          = 0x0200,
+        AST_DECL_FLAG_REGISTERED_BYTECODE      = 0x0400,
+        AST_DECL_FLAG_EMITTED_BYTECODE         = 0x0800,
+        AST_DECL_FLAG_IS_STRUCT_MEMBER         = 0x1000,
+        AST_DECL_FLAG_CHECKING_DEPENDECIES     = 0x2000,
     };
 
     struct AST_Flat_Declaration
@@ -160,6 +161,8 @@ namespace Zodiac
                 AST_Statement *body;
 
                 Scope *parameter_scope;
+
+                Array<AST_Declaration *> called_functions;
             } function;
 
             struct

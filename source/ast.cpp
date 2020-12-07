@@ -2047,18 +2047,17 @@ namespace Zodiac
         result->function.body = body;
         result->function.parameter_scope = param_scope;
 
-        if (is_naked)
-        {
+        array_init(allocator, &result->function.called_functions);
+
+        if (is_naked) {
             result->decl_flags |= AST_DECL_FLAG_IS_NAKED;
         }
 
-        if (is_noreturn)
-        {
+        if (is_noreturn) {
             result->decl_flags |= AST_DECL_FLAG_NORETURN;
         }
 
-        if (is_foreign)
-        {
+        if (is_foreign) {
             result->decl_flags |= AST_DECL_FLAG_FOREIGN;
         }
 
