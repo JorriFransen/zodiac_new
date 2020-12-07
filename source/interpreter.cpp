@@ -1098,6 +1098,10 @@ namespace Zodiac
             case AST_Type_Kind::STRUCTURE: {
                 if (value->kind == Bytecode_Value_Kind::ALLOCL) {
                     result.pointer = source_ptr;
+                } else if (value->kind == Bytecode_Value_Kind::TEMP) {
+                    assert(false);
+                    result.pointer = source_ptr;
+                    result.pointer = *(void**)source_ptr;
                 } else {
                     assert(false);
                 }

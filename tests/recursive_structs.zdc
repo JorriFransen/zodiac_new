@@ -5,17 +5,52 @@ std :: import std;
 
 Int_List :: struct
 {
-    value : s64;
-    // next  : Int_List;
-    next  : *Int_List;
+    test  : s64;
+    first : *Int_List_Element;
+    last  : *Int_List_Element;
 }
+
+Int_List_Element :: struct
+{
+    value : s64;
+    next  : *Int_List_Element;
+}
+
+create_int_list :: func () -> Int_List
+{
+    result : Int_List;
+    result.test = 4;
+    result.first = null;
+    result.last = null;
+    return result;
+}
+
+// Dummy :: struct
+// {
+//     val : s64;
+// }
+
+// create_dummy :: func() -> Dummy
+// {
+//     result: Dummy;
+//     result.val = 42;
+//     return result;
+// }
+
 
 main :: func() -> s64
 {
     std.println("Recursive struct test...");
 
-    first_element : Int_List;
-    first_element.value = 5;
+    // d := create_dummy();
+    // std.print_numln(d.val);
+
+    // list := create_int_list();
+    list : Int_List;
+    // list.test = 4;
+    // list.first = null;
+    // list.last = null;
+    // std.print_numln(list.test);
 
     return 0;
 }

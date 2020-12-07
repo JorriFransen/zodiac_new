@@ -1014,7 +1014,9 @@ namespace Zodiac
                                                                            Builtin::type_u32,
                                                                            il);
 
-                AST_Type *result_type = expr->type->pointer_to;
+                AST_Type *result_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                               builder->build_data,
+                                                                               expr->type);
                 assert(result_type);
 
                 result = bytecode_temporary_new(builder, result_type);

@@ -2254,7 +2254,9 @@ namespace Zodiac
 
                     result_type = infer_type(infer_type_from);
                 } else {
-                    result_type = Builtin::type_void->pointer_to;
+                    result_type = build_data_find_or_create_pointer_type(resolver->allocator,
+                                                                         resolver->build_data,
+                                                                         Builtin::type_void);
                 }
 
                 assert(result_type);
@@ -3121,7 +3123,13 @@ namespace Zodiac
             case AST_Node_Kind::DECLARATION: assert(false);
             case AST_Node_Kind::SWITCH_CASE: assert(false);
             case AST_Node_Kind::STATEMENT: assert(false);
-            case AST_Node_Kind::EXPRESSION: assert(false);
+
+            case AST_Node_Kind::EXPRESSION: {
+                auto expr = static_cast<AST_Expression *>(ast_node);
+                assert(expr->type);
+                result_type = expr->type;
+                break;
+            }
 
             case AST_Node_Kind::TYPE_SPEC: {
                 auto ts = static_cast<AST_Type_Spec *>(ast_node);
