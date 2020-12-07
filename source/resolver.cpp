@@ -1685,6 +1685,10 @@ namespace Zodiac
                         }
 
                         assert(parent_type);
+                        if (!(parent_type->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+                            return false;
+                        }
+                        assert(parent_type->flags & AST_NODE_FLAG_TYPED);
 
                         assert(parent_type->structure.member_scope);
                         auto mem_scope = parent_type->structure.member_scope;
@@ -2312,7 +2316,9 @@ namespace Zodiac
 
                 if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
                     if (decl->kind == AST_Declaration_Kind::STRUCTURE) {
-                        assert(decl->type);
+                        if (!decl->type) {
+                            return false;
+                        }
                         assert(decl->type->kind == AST_Type_Kind::STRUCTURE);
                         if (!(type_spec->ts_flags & AST_TS_FLAG_CHILD_OF_POINTER_TS)) {
                             return false;
