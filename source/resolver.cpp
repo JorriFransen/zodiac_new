@@ -177,8 +177,11 @@ namespace Zodiac
 
                         } else if (decl->kind == AST_Declaration_Kind::CONSTANT ||
                                    decl->kind == AST_Declaration_Kind::VARIABLE) {
-                            assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
-                            queue_bytecode_job(resolver, decl);
+                            if (decl->decl_flags & AST_DECL_FLAG_GLOBAL) {
+                                queue_bytecode_job(resolver, decl);
+                            } else {
+                                assert(decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER);
+                            }
                         } else {
                             assert(decl->kind == AST_Declaration_Kind::IMPORT ||
                                    decl->kind == AST_Declaration_Kind::USING ||
@@ -973,35 +976,7 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::STRUCTURE: {
-                assert(declaration->structure.parameters.count == 0);
-
-                Array<AST_Type *> member_types = {};
-                array_init(resolver->allocator, &member_types,
-                           declaration->structure.member_declarations.count);
-
-                for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
-                    AST_Declaration *mem_decl = declaration->structure.member_declarations[i];
-                    assert(mem_decl->type);
-                    assert(mem_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-                    assert(mem_decl->flags & AST_NODE_FLAG_TYPED);
-
-                    array_append(&member_types, mem_decl->type);
-                }
-
-                AST_Type *struct_type =
-                    ast_structure_type_new(resolver->allocator, declaration, member_types,
-                                           declaration->structure.member_scope);
-                assert(struct_type);
-
-                struct_type->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                struct_type->flags |= AST_NODE_FLAG_TYPED;
-                array_append(&resolver->build_data->type_table, struct_type);
-
-
-                declaration->type = struct_type;
-                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                declaration->flags |= AST_NODE_FLAG_TYPED;
-                return true;
+                return try_resolve_struct_declaration(resolver, declaration);
                 break;
             }
 
@@ -1214,6 +1189,56 @@ namespace Zodiac
 
         assert(false);
         return false;
+    }
+
+    bool try_resolve_struct_declaration(Resolver *resolver, AST_Declaration *declaration)
+    {
+        assert(declaration->kind == AST_Declaration_Kind::STRUCTURE);
+        assert(declaration->structure.parameters.count == 0);
+
+        if (!declaration->type) {
+            declaration->type = ast_structure_type_new(resolver->allocator, declaration,
+                                                       declaration->structure.member_scope);
+            array_append(&resolver->build_data->type_table, declaration->type);
+        } else {
+            assert(declaration->type->kind == AST_Type_Kind::STRUCTURE);
+        }
+
+        bool all_members_resolved = true;
+
+        for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
+            AST_Declaration *member_decl = declaration->structure.member_declarations[i];
+
+            if (!member_decl->flat) {
+                ast_flatten_declaration(&resolver->ast_builder, member_decl);
+                queue_resolve_job(resolver, member_decl);
+                all_members_resolved = false;
+
+            } else if (!((member_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
+                         (member_decl->flags & AST_NODE_FLAG_TYPED))) {
+                all_members_resolved = false;
+                break;
+            }
+
+        }
+
+        if (!all_members_resolved) return false;
+
+        for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
+            AST_Declaration *member_decl = declaration->structure.member_declarations[i];
+
+            assert(member_decl->type);
+            assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
+
+            array_append(&declaration->type->structure.member_types, member_decl->type);
+        }
+
+        declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        declaration->flags |= AST_NODE_FLAG_TYPED;
+
+        declaration->type->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        declaration->type->flags |= AST_NODE_FLAG_TYPED;
+        return true;
     }
 
     bool try_resolve_statement(Resolver *resolver, AST_Statement *statement)

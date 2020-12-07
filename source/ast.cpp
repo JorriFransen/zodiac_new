@@ -314,6 +314,7 @@ namespace Zodiac
                                                                             nullptr,
                                                                             mem_scope);
                         assert(ast_mem_decl);
+                        ast_mem_decl->decl_flags |= AST_DECL_FLAG_IS_STRUCT_MEMBER;
 
                         array_append(&ast_member_decls, ast_mem_decl);
                     }
@@ -1578,10 +1579,14 @@ namespace Zodiac
             case AST_Declaration_Kind::STRUCTURE: {
                 assert(decl->structure.parameters.count == 0);
 
-                for (int64_t i = 0; i < decl->structure.member_declarations.count; i++) {
-                    ast_flatten_declaration(builder, decl->structure.member_declarations[i],
-                                            nodes);
-                }
+                // We don't flatten member declarations, to be able to handle
+                //  pointers to structs (hopfully indirectly too). We iterate all
+                //  members when resolving the enum declaration pushed below.
+
+                // for (int64_t i = 0; i < decl->structure.member_declarations.count; i++) {
+                //     ast_flatten_declaration(builder, decl->structure.member_declarations[i],
+                //                             nodes);
+                // }
 
                 array_append(nodes, static_cast<AST_Node*>(decl));
                 break;
@@ -2825,13 +2830,12 @@ namespace Zodiac
     }
 
     AST_Type *ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
-                                     Array<AST_Type*> member_types,
                                      Scope *member_scope)
     {
         auto result = ast_type_new(allocator, AST_Type_Kind::STRUCTURE, 0);
-        result->structure.member_types = member_types;
         result->structure.member_scope = member_scope;
         result->structure.declaration = declaration;
+        result->structure.member_types = array_create<AST_Type *>(allocator, 4);
 
         return result;
     }

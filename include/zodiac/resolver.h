@@ -125,6 +125,7 @@ namespace Zodiac
     bool try_size_job(Resolver *resolver, Size_Job *job);
 
     bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration);
+    bool try_resolve_struct_declaration(Resolver *resolver, AST_Declaration *declaration);
     bool try_resolve_statement(Resolver *resolver, AST_Statement *statement);
     bool try_resolve_expression(Resolver *resolver, AST_Expression *expression);
     bool try_resolve_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
