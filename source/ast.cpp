@@ -694,7 +694,7 @@ namespace Zodiac
 
                 auto ast_rhs_expr =
                     ast_create_expression_from_ptn(ast_builder, ptn->assignment.rhs_expression,
-                                                   parent_scope);
+                                                   parent_scope, ast_ident_expr);
                 assert(ast_rhs_expr);
 
                 return ast_assignment_statement_new(ast_builder->allocator, ast_ident_expr,
