@@ -56,10 +56,9 @@ namespace Zodiac
 
         auto ex_func = bytecode_find_function(builder, decl);
 
-        if (ex_func)
-        {
+        if (ex_func) {
             assert(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE);
-            assert(false);
+            return ex_func;
         }
 
         assert(!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE));

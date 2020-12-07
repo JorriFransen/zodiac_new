@@ -373,6 +373,7 @@ namespace Zodiac
                     auto func_val = inst->a;
                     assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
                     auto func = func_val->function;
+                    assert(func->flags & BC_FUNC_FLAG_EMITTED);
 
                     auto arg_count_val = inst->b;
                     assert(arg_count_val->type == Builtin::type_s64);

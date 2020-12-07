@@ -189,12 +189,13 @@ namespace Zodiac
 
     enum Bytecode_Function_Flags_ : Bytecode_Function_Flags
     {
-        BC_FUNC_FLAG_NONE           = 0x00,
-        BC_FUNC_FLAG_CRT_ENTRY      = 0x01,
-        BC_FUNC_FLAG_BYTECODE_ENTRY = 0x02,
-        BC_FUNC_FLAG_FOREIGN        = 0x04,
-        BC_FUNC_FLAG_EMITTED        = 0x08,
-        BC_FUNC_FLAG_NORETURN       = 0x10,
+        BC_FUNC_FLAG_NONE            = 0x000,
+        BC_FUNC_FLAG_CRT_ENTRY       = 0x001,
+        BC_FUNC_FLAG_BYTECODE_ENTRY  = 0x002,
+        BC_FUNC_FLAG_FOREIGN         = 0x004,
+        BC_FUNC_FLAG_EMITTED         = 0x008,
+        BC_FUNC_FLAG_NORETURN        = 0x010,
+        BC_FUNC_FLAG_LLVM_REGISTERED = 0x020,
     };
 
     const int16_t BC_INSTRUCTIONS_PER_BUCKET = 64;

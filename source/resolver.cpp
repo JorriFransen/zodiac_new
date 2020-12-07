@@ -244,11 +244,22 @@ namespace Zodiac
                         assert(pre_main_decl);
                         assert(pre_main_decl->kind == AST_Declaration_Kind::FUNCTION);
 
-                        pre_main_func = bytecode_find_function(&resolver->bytecode_builder,
-                                                               pre_main_decl);
-                        if (pre_main_func) {
-                            bd->pre_main_func = pre_main_func;
+                        if ((pre_main_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
+                            (pre_main_decl->flags & AST_NODE_FLAG_TYPED)) {
+
+                            pre_main_func = bytecode_find_function(&resolver->bytecode_builder,
+                                                                   pre_main_decl);
+                            if (pre_main_func) {
+                                if (!(pre_main_func->flags & BC_FUNC_FLAG_EMITTED)) {
+                                    bytecode_emit_function_declaration(
+                                            &resolver->bytecode_builder,
+                                            pre_main_decl);
+                                }
+
+                                bd->pre_main_func = pre_main_func;
+                            }
                         }
+
                     }
 
                     if (pre_main_func) {
@@ -1463,6 +1474,7 @@ namespace Zodiac
                 }
 
                 bool recursive = false;
+                bool use_fn_ts = false;
 
                 if (!(decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
                     if (decl->kind == AST_Declaration_Kind::FUNCTION) {
@@ -1472,6 +1484,12 @@ namespace Zodiac
                             // Recursive call or reference
                             recursive = true;
                             expression->expr_flags |= AST_EXPR_FLAG_RECURSIVE_IDENT;
+                        } else if (decl->function.type_spec->type) {
+                            auto ts = decl->function.type_spec;
+                            assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
+                            assert(ts->flags & AST_NODE_FLAG_TYPED);
+                            use_fn_ts = true;
+                            expression->expr_flags |= AST_EXPR_FLAG_IDENT_USES_FN_TS;
                         } else {
                             expression->waiting_on = decl;
                             return false;
@@ -1479,21 +1497,21 @@ namespace Zodiac
                     }
                 }
 
-                if (!recursive && !(decl->flags & AST_NODE_FLAG_TYPED)) {
+                if (!recursive && !use_fn_ts && !(decl->flags & AST_NODE_FLAG_TYPED)) {
                     return false;
                 }
 
                 if (decl->kind == AST_Declaration_Kind::IMPORT) {
                     allow_null_type = true;
-                } else if (!recursive){
-                    assert(decl->type);
-                    expression->type = decl->type;
-                } else {
+                } else if (recursive || use_fn_ts) {
                     if (decl->function.type_spec->type) {
                         expression->type = decl->function.type_spec->type;
                     } else {
                         assert(false);
                     }
+                } else {
+                    assert(decl->type);
+                    expression->type = decl->type;
                 }
 
                 expression->identifier->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1798,19 +1816,25 @@ namespace Zodiac
                 }
                 assert(callee_decl);
 
-                bool recursive = true;
+                bool recursive = false;
+                bool use_fn_ts = false;
 
                 AST_Type *func_type = callee_decl->type;
                 if (!func_type) {
-                    assert(ident_expr->expr_flags & AST_EXPR_FLAG_RECURSIVE_IDENT);
-                    recursive = true;
+                    if (ident_expr->expr_flags & AST_EXPR_FLAG_RECURSIVE_IDENT) {
+                        recursive = true;
+                    } else if (ident_expr->expr_flags & AST_EXPR_FLAG_IDENT_USES_FN_TS) {
+                        use_fn_ts = true;
+                    } else {
+                        assert(false);
+                    }
                     assert(callee_decl->function.type_spec->type);
                     func_type = callee_decl->function.type_spec->type;
                 }
                 assert(func_type);
 
-                assert(recursive || (callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID));
-                assert(recursive || (callee_decl->flags & AST_NODE_FLAG_TYPED));
+                assert(recursive || use_fn_ts ||(callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID));
+                assert(recursive || use_fn_ts ||(callee_decl->flags & AST_NODE_FLAG_TYPED));
 
                 if (recursive) {
 #ifndef NDEBUG
@@ -1818,6 +1842,10 @@ namespace Zodiac
 #endif
                     assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(ts->flags & AST_NODE_FLAG_TYPED);
+                }
+
+                if (!(callee_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE)) {
+                    bytecode_register_function(&resolver->bytecode_builder, callee_decl);
                 }
 
                 expression->call.callee_declaration = callee_decl;
@@ -2680,6 +2708,13 @@ namespace Zodiac
 
             case AST_Expression_Kind::IDENTIFIER: {
                 if (expression->type) {
+
+                    if (!(expression->type->flags & AST_NODE_FLAG_SIZED)) {
+                        if (!try_size_type(resolver, expression->type)) {
+                            return false;
+                        }
+                    }
+
                     assert(expression->type->flags & AST_NODE_FLAG_SIZED);
                 } else {
                     assert(expression->identifier->declaration);
@@ -2727,6 +2762,12 @@ namespace Zodiac
                 assert(expression->type->flags & AST_NODE_FLAG_SIZED);
 
                 expression->flags |= AST_NODE_FLAG_SIZED;
+
+                AST_Declaration *callee = expression->call.callee_declaration;
+                assert(callee);
+
+                auto bc_func = bytecode_find_function(&resolver->bytecode_builder, callee);
+                llvm_register_function(&resolver->llvm_builder, bc_func);
                 return true;
                 break;
             }

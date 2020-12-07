@@ -337,10 +337,11 @@ namespace Zodiac
 
     enum AST_Expression_Flags_ : AST_Expression_Flags
     {
-        AST_EXPR_FLAG_NONE            = 0x00,
-        AST_EXPR_FLAG_CONST           = 0x01,
-        AST_EXPR_FLAG_DOT_COUNT       = 0x02,
-        AST_EXPR_FLAG_RECURSIVE_IDENT = 0x04,
+        AST_EXPR_FLAG_NONE             = 0x00,
+        AST_EXPR_FLAG_CONST            = 0x01,
+        AST_EXPR_FLAG_DOT_COUNT        = 0x02,
+        AST_EXPR_FLAG_RECURSIVE_IDENT  = 0x04,
+        AST_EXPR_FLAG_IDENT_USES_FN_TS = 0x08,
     };
 
     struct AST_Expression : public AST_Node

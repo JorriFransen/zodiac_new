@@ -69,6 +69,8 @@ namespace Zodiac
 
     void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
     {
+        if (bc_func->flags & BC_FUNC_FLAG_LLVM_REGISTERED) return;
+
         assert(!llvm_find_function(builder, bc_func));
 
         if (builder->build_data->options->verbose)
@@ -83,6 +85,7 @@ namespace Zodiac
                 builder->llvm_module);
 
         array_append(&builder->registered_functions, { bc_func, llvm_func });
+        bc_func->flags |= BC_FUNC_FLAG_LLVM_REGISTERED;
     }
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
@@ -463,6 +466,7 @@ namespace Zodiac
             case CALL: {
                 Bytecode_Function *bc_func = inst->a->function;
                 llvm::Function *callee = llvm_find_function(builder, bc_func);
+                assert(callee);
 
                 auto bc_arg_count = inst->b;
                 assert(bc_arg_count->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
