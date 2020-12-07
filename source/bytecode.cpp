@@ -1824,6 +1824,9 @@ namespace Zodiac
 
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func)
     {
+        bool is_foreign = func->flags & BC_FUNC_FLAG_FOREIGN;
+
+        if (is_foreign) string_builder_append(sb, "#foreign ");
         string_builder_appendf(sb, "%s(", func->name.data);
 
         for (int64_t i = 0; i < func->parameters.count; i++) {
@@ -1836,6 +1839,8 @@ namespace Zodiac
         }
 
         string_builder_append(sb, ")\n");
+
+        if (is_foreign) return;
 
         auto inst_loc = bucket_array_first(&func->instructions);
 

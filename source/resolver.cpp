@@ -206,7 +206,8 @@ namespace Zodiac
                         continue;
                     }
 
-                    bytecode_register_function(&resolver->bytecode_builder, job.decl);
+                    // The function should have been registered at this point
+                    //  (after the type spec is resolved).
                     auto bc_func =
                         bytecode_emit_function_declaration(&resolver->bytecode_builder,
                                                            job.decl);
@@ -296,7 +297,7 @@ namespace Zodiac
                     case LLVM_Job_Kind::FUNCTION: {
                         auto bc_func = job.bc_func;
 
-                        llvm_register_function(&resolver->llvm_builder, bc_func);
+                        // Should have been registered at the same time as the bytecode
                         llvm_emit_function(&resolver->llvm_builder, bc_func);
 
                         progressed = true;
@@ -336,6 +337,9 @@ namespace Zodiac
             cycle_count++;
         }
 
+        if (resolver->build_data->options->verbose) {
+            printf("Resolver done after %lu cycles\n", cycle_count);
+        }
         return result;
     }
 
@@ -444,6 +448,11 @@ namespace Zodiac
                decl->kind == AST_Declaration_Kind::CONSTANT);
 
         assert(!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE));
+
+        if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+            resolver->build_data->options->verbose) {
+            printf("Queueing bytecode job for function: %s\n", decl->identifier->atom.data);
+        }
 
         Bytecode_Job job = { .decl = decl };
         queue_enqueue(&resolver->bytecode_jobs, job);
@@ -2318,6 +2327,7 @@ namespace Zodiac
                 type_spec->type = function_type;
                 type_spec->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 type_spec->flags |= AST_NODE_FLAG_TYPED;
+
                 return true;
                 break;
             }
@@ -2423,9 +2433,18 @@ namespace Zodiac
                 assert(decl->type->flags & AST_NODE_FLAG_SIZED);
                 decl->flags |= AST_NODE_FLAG_SIZED;
 
-                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
-                    queue_bytecode_job(resolver, decl);
+                    // Don't emit the entry (_start) if we're linking with libc
+                if (!(resolver->build_data->options->link_c &&
+                    (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY))) {
+
+                    auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
+                    llvm_register_function(&resolver->llvm_builder, bc_func);
+
+                    if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
+                        queue_bytecode_job(resolver, decl);
+                    }
                 }
+
                 return true;
             }
 
