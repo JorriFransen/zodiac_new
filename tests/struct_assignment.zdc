@@ -1,0 +1,30 @@
+
+std :: import std;
+
+#run main();
+
+Dummy :: struct
+{
+    val : s64;
+}
+
+main :: func() -> s64
+{
+    std.print("Struct assignment test\n");
+
+    a : Dummy;
+    a.val = 42;
+
+    b : Dummy;
+    // b = a;
+    // b := a;
+
+    std.print("a.val = ");
+    std.print_numln(a.val);
+
+    std.print("b.val = ");
+    std.print_numln(b.val);
+    
+
+    return 0;
+}
