@@ -1020,10 +1020,8 @@ namespace Zodiac
                     continue;
                 }
 
-                if (builder->build_data->options->verbose) {
-                    printf("Trying to emit binary, but bytecode for function %s has not been emitted!!!\n",
+                printf("Trying to emit binary, but bytecode for function '%s' has not been emitted!!!\n",
                                 func->name.data);
-                }
                 return false;
             }
         }
