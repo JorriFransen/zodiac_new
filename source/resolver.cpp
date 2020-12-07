@@ -1485,7 +1485,9 @@ namespace Zodiac
                             recursive = true;
                             expression->expr_flags |= AST_EXPR_FLAG_RECURSIVE_IDENT;
                         } else if (decl->function.type_spec->type) {
+#ifndef NDEBUG
                             auto ts = decl->function.type_spec;
+#endif
                             assert(ts->flags & AST_NODE_FLAG_RESOLVED_ID);
                             assert(ts->flags & AST_NODE_FLAG_TYPED);
                             use_fn_ts = true;
