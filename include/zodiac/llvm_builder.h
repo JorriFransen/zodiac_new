@@ -27,6 +27,12 @@ namespace Zodiac
         llvm::BasicBlock *llvm_block = nullptr;
     };
 
+    struct LLVM_Struct_Type_Info
+    {
+        AST_Type *ast_type = nullptr;
+        llvm::StructType *llvm_type = nullptr;
+    };
+
     struct LLVM_Builder
     {
         Allocator *allocator = nullptr;
@@ -38,6 +44,8 @@ namespace Zodiac
         llvm::Module *llvm_module = nullptr;
         llvm::IRBuilder<> *llvm_builder = nullptr;
         llvm::DataLayout *llvm_datalayout = nullptr;
+
+        Array<LLVM_Struct_Type_Info> struct_types_to_finalize = {};
 
         Array<LLVM_Function_Info> registered_functions = {};
         Array<llvm::GlobalVariable *> globals = {};
@@ -83,6 +91,9 @@ namespace Zodiac
     {
         return static_cast<T *>(llvm_type_from_ast(builder, ast_type));
     }
+
+    void llvm_finalize_struct_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
+                                   AST_Type *ast_type);
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 

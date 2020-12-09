@@ -57,6 +57,7 @@ namespace Zodiac
 
         stack_init(allocator, &result.arg_stack);
 
+        array_init(allocator, &result.struct_types_to_finalize);
         array_init(allocator, &result.registered_functions);
         array_init(allocator, &result.globals);
         array_init(allocator, &result.blocks);
@@ -1223,10 +1224,21 @@ namespace Zodiac
     llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type)
     {
         assert(ast_type);
-        assert(ast_type->flags & AST_NODE_FLAG_RESOLVED_ID);
-        assert(ast_type->flags & AST_NODE_FLAG_TYPED);
-        assert(ast_type->flags & AST_NODE_FLAG_SIZED ||
-               ast_type->kind == AST_Type_Kind::FUNCTION);
+
+        bool is_resolved = true;
+
+        if (!(ast_type->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+            is_resolved = false;
+            if (ast_type->kind != AST_Type_Kind::STRUCTURE) {
+                assert(false && "Cannot create a LLVM type from an unresolved ast type");
+            }
+        }
+
+        if (is_resolved) assert(ast_type->flags & AST_NODE_FLAG_TYPED);
+        if (is_resolved)
+            assert(ast_type->flags & AST_NODE_FLAG_SIZED ||
+                   ast_type->kind == AST_Type_Kind::FUNCTION);
+
         auto &c = *builder->llvm_context;
 
         switch (ast_type->kind)
@@ -1310,23 +1322,25 @@ namespace Zodiac
                 auto name = ast_type->structure.declaration->identifier->atom;
                 llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
 
-                if (result)
-                {
+                bool just_created = false;
+                if (result) {
                     assert(result->isStructTy());
-                }
-                else
-                {
+                } else {
                     result = llvm::StructType::create(c, name.data);
-                    auto ast_mem_types = ast_type->structure.member_types;
-                    assert(ast_mem_types.count);
-                    Array<llvm::Type *> mem_types = {};
-                    array_init(builder->allocator, &mem_types, ast_mem_types.count);
-                    for (int64_t i = 0; i < ast_mem_types.count; i++)
-                    {
-                        array_append(&mem_types, llvm_type_from_ast(builder, ast_mem_types[i]));
-                    }
-                    result->setBody({ mem_types.data, (size_t)mem_types.count }, false);
+                    just_created = true;
                 }
+
+                if (is_resolved) {
+
+                    if (just_created) {
+                        llvm_finalize_struct_type(builder, result, ast_type);
+                    }
+
+                } else {
+                    LLVM_Struct_Type_Info sti = { ast_type, result };
+                    array_append(&builder->struct_types_to_finalize, sti);
+                }
+
                 return result;
                 break;
             }
@@ -1349,6 +1363,25 @@ namespace Zodiac
 
         assert(false);
         return {};
+    }
+
+    void llvm_finalize_struct_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
+                                   AST_Type *ast_type)
+    {
+        assert(ast_type->kind == AST_Type_Kind::STRUCTURE);
+
+        auto ast_mem_types = ast_type->structure.member_types;
+        assert(ast_mem_types.count);
+        Array<llvm::Type *> mem_types = {};
+
+        // @FIXME @LEAK: LLVM might need this memory, but i'm not sure atm...
+        array_init(builder->allocator, &mem_types, ast_mem_types.count);
+
+        for (int64_t i = 0; i < ast_mem_types.count; i++) {
+            array_append(&mem_types, llvm_type_from_ast(builder,
+                                                        ast_mem_types[i]));
+        }
+        llvm_type->setBody({ mem_types.data, (size_t)mem_types.count }, false);
     }
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)

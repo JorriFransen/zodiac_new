@@ -342,11 +342,26 @@ namespace Zodiac
                 }
             }
 
+            for (int64_t i = resolver->llvm_builder.struct_types_to_finalize.count - 1; 
+                 i >= 0;
+                 i --) {
+                
+                auto &to_finalize = resolver->llvm_builder.struct_types_to_finalize[i];
+                if (to_finalize.ast_type->flags & AST_NODE_FLAG_RESOLVED_ID) {
+                    progressed = true;
+                    llvm_finalize_struct_type(&resolver->llvm_builder, to_finalize.llvm_type,
+                                              to_finalize.ast_type);
+                    array_unordered_remove(&resolver->llvm_builder.struct_types_to_finalize,
+                                           i);
+                }
+            }
+
             if (queue_count(&resolver->parse_jobs)    == 0 &&
                 queue_count(&resolver->resolve_jobs)  == 0 &&
                 queue_count(&resolver->size_jobs)     == 0 &&
                 queue_count(&resolver->bytecode_jobs) == 0 &&
-                queue_count(&resolver->llvm_jobs)     == 0) {
+                queue_count(&resolver->llvm_jobs)     == 0 &&
+                resolver->llvm_builder.struct_types_to_finalize.count == 0) {
                 done = true;
             }
 
@@ -2536,7 +2551,9 @@ namespace Zodiac
                     (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY))) {
 
                     auto bc_func = bytecode_register_function(&resolver->bytecode_builder, decl);
-                    llvm_register_function(&resolver->llvm_builder, bc_func);
+
+                    if (!resolver->build_data->options->dont_emit_llvm)
+                        llvm_register_function(&resolver->llvm_builder, bc_func);
 
                     if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
                         queue_bytecode_job(resolver, decl);
@@ -2837,7 +2854,10 @@ namespace Zodiac
                 assert(callee);
 
                 auto bc_func = bytecode_find_function(&resolver->bytecode_builder, callee);
-                llvm_register_function(&resolver->llvm_builder, bc_func);
+
+                if (!resolver->build_data->options->dont_emit_llvm)
+                    llvm_register_function(&resolver->llvm_builder, bc_func);
+
                 return true;
                 break;
             }

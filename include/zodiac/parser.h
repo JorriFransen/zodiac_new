@@ -76,7 +76,8 @@ Expression_PTN *parser_parse_character_literal_expression(Parser *parser, Token_
 Expression_PTN *parser_parse_boolean_literal_expression(Parser *parser, Token_Stream *ts);
 
 Expression_PTN *parser_parse_array_type_expression(Parser *parser, Token_Stream *ts);
-Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Stream *ts);
+Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Stream *ts,
+                                                     bool is_type = false);
 Expression_PTN *parser_parse_poly_type_expression(Parser *parser, Token_Stream *ts);
 
 Expression_List_PTN *parser_parse_expression_list(Parser *parser, Token_Stream *ts);

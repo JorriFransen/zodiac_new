@@ -1586,10 +1586,8 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
 
     switch (ct.kind)
     {
-        case TOK_IDENTIFIER:
-        {
-            if (ts->peek_token(1).kind == TOK_LPAREN)
-            {
+        case TOK_IDENTIFIER: {
+            if (ts->peek_token(1).kind == TOK_LPAREN) {
                 auto call_expr = parser_parse_call_expression(parser, ts);
                 assert(call_expr);
                 result = call_expr;
@@ -1615,9 +1613,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
                 //{
                     //result = call_expr;
                 //}
-            }
-            else if (!is_type && ts->peek_token(1).kind == TOK_LBRACE)
-            {
+            } else if (!is_type && ts->peek_token(1).kind == TOK_LBRACE) {
                 auto type_ident = parser_parse_identifier(parser, ts);
                 auto end_fp = type_ident->self.end_file_pos;
                 auto type_expr = new_identifier_expression_ptn(parser->allocator, type_ident,
@@ -1633,9 +1629,7 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
 
                 result = new_compound_expression_ptn(parser->allocator, expr_list, type_expr,
                                                      begin_fp, end_fp);
-            }
-            else
-            {
+            } else {
                 auto identifier = parser_parse_identifier(parser, ts);
                 auto end_fp = identifier->self.end_file_pos;
                 result = new_identifier_expression_ptn(parser->allocator, identifier, begin_fp,
@@ -1644,33 +1638,28 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         }
 
-        case TOK_AT:
-        {
+        case TOK_AT: {
             ts->next_token();
             result = parser_parse_call_expression(parser, ts, true);
             break;
         }
 
-        case TOK_NUMBER_LITERAL:
-        {
+        case TOK_NUMBER_LITERAL: {
             result = parser_parse_number_literal_expression(parser, ts);
             break;
         }
 
-        case TOK_STRING_LITERAL:
-        {
+        case TOK_STRING_LITERAL: {
             result = parser_parse_string_literal_expression(parser, ts);
             break;
         }
 
-        case TOK_CHAR_LITERAL:
-        {
+        case TOK_CHAR_LITERAL: {
             result = parser_parse_character_literal_expression(parser, ts);
             break;
         }
 
-        case TOK_KW_NULL:
-        {
+        case TOK_KW_NULL: {
             auto null_tok = ts->current_token();
             ts->next_token();
 
@@ -1681,32 +1670,27 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         };
 
-        case TOK_KW_TRUE:
-        {
+        case TOK_KW_TRUE: {
             result = parser_parse_boolean_literal_expression(parser, ts);
             break;
         };
 
-        case TOK_KW_FALSE:
-        {
+        case TOK_KW_FALSE: {
             result = parser_parse_boolean_literal_expression(parser, ts);
             break;
         };
 
-        case TOK_LBRACK:
-        {
+        case TOK_LBRACK: {
             result = parser_parse_array_type_expression(parser, ts);
             break;
         }
 
-        case TOK_LBRACE:
-        {
+        case TOK_LBRACE: {
             ts->next_token();
             auto expr_list= parser_parse_expression_list(parser, ts);
             assert(expr_list);
             auto end_fp = ts->current_token().end_file_pos;
-            if (!parser_expect_token(parser, ts, TOK_RBRACE))
-            {
+            if (!parser_expect_token(parser, ts, TOK_RBRACE)) {
                 assert(false);
             }
             result = new_compound_expression_ptn(parser->allocator, expr_list, nullptr,
@@ -1714,37 +1698,31 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         }
 
-        case TOK_STAR:
-        {
-            result = parser_parse_pointer_type_expression(parser, ts);
+        case TOK_STAR: {
+            result = parser_parse_pointer_type_expression(parser, ts, is_type);
             break;
         }
 
-        case TOK_DOLLAR:
-        {
+        case TOK_DOLLAR: {
             result = parser_parse_poly_type_expression(parser, ts);
             break;
         }
 
-        case TOK_MINUS:
-        {
+        case TOK_MINUS: {
             assert(false);
             break;
         }
 
-        case TOK_LPAREN:
-        {
+        case TOK_LPAREN: {
             ts->next_token();
             result = parser_parse_expression(parser, ts);
-            if (!parser_expect_token(parser, ts, TOK_RPAREN))
-            {
+            if (!parser_expect_token(parser, ts, TOK_RPAREN)) {
                 return nullptr;
             }
             break;
         }
 
-        default:
-        {
+        default: {
             auto ct = ts->current_token();
             parser_report_unexpected_token(parser, ts, ct);
             return nullptr;
@@ -1754,33 +1732,26 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
 
     assert(result);
 
-    while (true)
-    {
-        if (parser_match_token(ts, TOK_DOT))
-        {
+    while (true) {
+        if (parser_match_token(ts, TOK_DOT)) {
             auto parent = result;
             Identifier_PTN *child_ident = parser_parse_identifier(parser, ts);
             auto end_fp = child_ident->self.end_file_pos;
             result = new_dot_expression_ptn(parser->allocator, parent, child_ident, begin_fp,
                                             end_fp);
-        }
-        else if (parser_is_token(ts, TOK_LPAREN))
-        {
+
+        } else if (parser_is_token(ts, TOK_LPAREN)) {
             result = parser_parse_call_expression(parser, ts, result, false);
-        }
-        else if (parser_match_token(ts, TOK_LBRACK))
-        {
+
+        } else if (parser_match_token(ts, TOK_LBRACK)) {
             Expression_PTN *index_expr = parser_parse_expression(parser, ts);
             auto end_fp = ts->current_token().end_file_pos;
-            if (parser_expect_token(parser, ts, TOK_RBRACK))
-            {
+            if (parser_expect_token(parser, ts, TOK_RBRACK)) {
                 result = new_subscript_expression_ptn(parser->allocator, result, index_expr,
                                                       begin_fp, end_fp);
             }
             else assert(false);
-        }
-        else
-        {
+        } else {
             break;
         }
     }
@@ -1905,7 +1876,8 @@ Expression_PTN *parser_parse_array_type_expression(Parser *parser, Token_Stream 
                                          end_fp);
 }
 
-Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Stream *ts)
+Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Stream *ts,
+                                                     bool is_type/*=false*/)
 {
     auto begin_fp = ts->current_token().begin_file_pos;
 
@@ -1914,7 +1886,7 @@ Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Strea
         assert(false);
     }
 
-    Expression_PTN *pointee_type_expression = parser_parse_expression(parser, ts);
+    Expression_PTN *pointee_type_expression = parser_parse_expression(parser, ts, is_type);
     assert(pointee_type_expression);
 
     auto end_fp = pointee_type_expression->self.end_file_pos;

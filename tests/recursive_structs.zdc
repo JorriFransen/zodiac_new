@@ -3,6 +3,19 @@ std :: import std;
 
 #run main();
 
+main :: func() -> s64
+{
+    std.println("Recursive struct test...");
+
+    list := create_int_list();
+
+    for (i := 0; i < 10; i += 1) {
+        list_append(*list, i);
+    }
+
+    return 0;
+}
+
 Int_List :: struct
 {
     test  : s64;
@@ -25,33 +38,15 @@ create_int_list :: func () -> Int_List
     return result;
 }
 
-// Dummy :: struct
-// {
-//     val : s64;
-// }
-
-// create_dummy :: func() -> Dummy
-// {
-//     result: Dummy;
-//     result.val = 42;
-//     return result;
-// }
-
-
-main :: func() -> s64
+list_append :: func (list: *Int_List, value: s64)
 {
-    std.println("Recursive struct test...");
+    element := new_element(value); 
 
-    // d := create_dummy();
-    // std.print_numln(d.val);
-
-    // list := create_int_list();
-    list : Int_List;
-    // list.test = 4;
-    // list.first = null;
-    // list.last = null;
-    // std.print_numln(list.test);
-
-    return 0;
+    return;
 }
 
+new_element :: func (value: s64) -> *Int_List_Element
+{
+    result : *Int_List_Element = null;
+    return result;
+}
