@@ -1,7 +1,7 @@
 
 std :: import std;
 
-#run main();
+// #run main();
 
 main :: func() -> s64
 {
@@ -29,6 +29,10 @@ Int_List_Element :: struct
     next  : *Int_List_Element;
 }
 
+_INT_LIST_ELEMENT_COUNT_ :: 16;
+_int_list_elements_ : [_INT_LIST_ELEMENT_COUNT_]Int_List_Element;
+_next_int_list_index_ := 0;
+
 create_int_list :: func () -> Int_List
 {
     result : Int_List;
@@ -41,6 +45,8 @@ create_int_list :: func () -> Int_List
 list_append :: func (list: *Int_List, value: s64)
 {
     element := new_element(value); 
+    // if (element != bool) {
+    // }
 
     return;
 }
@@ -48,5 +54,13 @@ list_append :: func (list: *Int_List, value: s64)
 new_element :: func (value: s64) -> *Int_List_Element
 {
     result : *Int_List_Element = null;
+    
+    if (_next_int_list_index_ < _INT_LIST_ELEMENT_COUNT_) {
+        result = *_int_list_elements_[_next_int_list_index_];
+        _next_int_list_index_ += 1;
+
+        result.value = value;
+    }
+
     return result;
 }

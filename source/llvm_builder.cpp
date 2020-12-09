@@ -585,6 +585,7 @@ namespace Zodiac
                     indices[0] = offset_val;
                 }
 
+                // ptr_val->dump();
                 result = builder->llvm_builder->CreateGEP(ptr_val, { indices, index_count }, "");
                 break;
             }

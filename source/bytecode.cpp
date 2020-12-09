@@ -1046,7 +1046,8 @@ namespace Zodiac
                 auto index_expr = expr->subscript.index_expression;
 
                 auto ptr_val = bytecode_emit_lvalue(builder, ptr_expr);
-                if (ptr_val->kind != Bytecode_Value_Kind::ALLOCL) {
+                if (ptr_val->kind != Bytecode_Value_Kind::ALLOCL &&
+                    ptr_val->kind != Bytecode_Value_Kind::GLOBAL) {
                     ptr_val = bytecode_emit_load(builder, ptr_val);
                 }
 
