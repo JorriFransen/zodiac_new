@@ -73,8 +73,8 @@ namespace Zodiac
 
         assert(!llvm_find_function(builder, bc_func));
 
-        if (builder->build_data->options->verbose)
-            printf("LLVM Registering function: %s\n", bc_func->name.data);
+        // if (builder->build_data->options->verbose)
+        //     printf("LLVM Registering function: %s\n", bc_func->name.data);
 
         auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, bc_func->type);
 
@@ -90,8 +90,8 @@ namespace Zodiac
 
     void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
     {
-        if (builder->build_data->options->verbose)
-            printf("LLVM Emitting function: %s\n", bc_func->name.data);
+        // if (builder->build_data->options->verbose)
+        //     printf("LLVM Emitting function: %s\n", bc_func->name.data);
 
         auto llvm_func = llvm_find_function(builder, bc_func);
 
@@ -1003,9 +1003,9 @@ namespace Zodiac
 
         auto options = builder->build_data->options;
 
-        if (options->verbose) {
-            printf("Emitting binary: %s\n", output_file_name);
-        }
+        // if (options->verbose) {
+        //     printf("Emitting binary: %s\n", output_file_name);
+        // }
 
         // @TODO: @CLEANUP: This could be done by comparing a count I think?
         for (int64_t i = 0; i < builder->registered_functions.count; i++)

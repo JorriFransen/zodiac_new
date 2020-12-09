@@ -401,8 +401,8 @@ namespace Zodiac
             }
         }
 
-        if (resolver->build_data->options->verbose)
-            printf("[RESOLVER] Queueing parse job for file: '%s'\n", module_path.data);
+        // if (resolver->build_data->options->verbose)
+        //     printf("[RESOLVER] Queueing parse job for file: '%s'\n", module_path.data);
 
         Parse_Job job = { .module_name = string_copy(resolver->allocator, module_name),
                           .module_path = string_copy(resolver->allocator, module_path),
@@ -418,27 +418,27 @@ namespace Zodiac
     {
         assert(ast_node->kind == AST_Node_Kind::DECLARATION);
 
-        if (resolver->build_data->options->verbose) {
-            auto decl = static_cast<AST_Declaration *>(ast_node);
-            if (decl->identifier) {
-                printf("[RESOLVER] Queueing resolve job for declaration: '%s'\n",
-                       decl->identifier->atom.data);
-            } else if (decl->kind == AST_Declaration_Kind::USING) {
-                printf("[RESOLVER] Queueing resolve job for using: '");
-                ast_print_expression(decl->using_decl.ident_expr, 0);
-                printf("'\n");
-            } else if (decl->kind == AST_Declaration_Kind::RUN) {
-                printf("[RESOLVER] Queueing resolve job for #run: '");
-                ast_print_expression(decl->run.expression, 0);
-                printf("'\n");
-            } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
-                printf("[RESOLVER] Queueing resolve job for static_if: '");
-                ast_print_expression(decl->static_if.cond_expression, 0);
-                printf("'\n");
-            } else {
-                assert(false);
-            }
-        }
+        // if (resolver->build_data->options->verbose) {
+        //     auto decl = static_cast<AST_Declaration *>(ast_node);
+        //     if (decl->identifier) {
+        //         printf("[RESOLVER] Queueing resolve job for declaration: '%s'\n",
+        //                decl->identifier->atom.data);
+        //     } else if (decl->kind == AST_Declaration_Kind::USING) {
+        //         printf("[RESOLVER] Queueing resolve job for using: '");
+        //         ast_print_expression(decl->using_decl.ident_expr, 0);
+        //         printf("'\n");
+        //     } else if (decl->kind == AST_Declaration_Kind::RUN) {
+        //         printf("[RESOLVER] Queueing resolve job for #run: '");
+        //         ast_print_expression(decl->run.expression, 0);
+        //         printf("'\n");
+        //     } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
+        //         printf("[RESOLVER] Queueing resolve job for static_if: '");
+        //         ast_print_expression(decl->static_if.cond_expression, 0);
+        //         printf("'\n");
+        //     } else {
+        //         assert(false);
+        //     }
+        // }
 
         Resolve_Job job = { .ast_node = ast_node, };
         queue_enqueue(&resolver->resolve_jobs, job);
@@ -475,10 +475,10 @@ namespace Zodiac
 
         assert(!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE));
 
-        if (decl->kind == AST_Declaration_Kind::FUNCTION &&
-            resolver->build_data->options->verbose) {
-            printf("Queueing bytecode job for function: %s\n", decl->identifier->atom.data);
-        }
+        // if (decl->kind == AST_Declaration_Kind::FUNCTION &&
+        //     resolver->build_data->options->verbose) {
+        //     printf("Queueing bytecode job for function: %s\n", decl->identifier->atom.data);
+        // }
 
         Bytecode_Job job = { .decl = decl };
         queue_enqueue(&resolver->bytecode_jobs, job);
@@ -584,26 +584,26 @@ namespace Zodiac
         assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
         AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
 
-        if (resolver->build_data->options->verbose) {
-            if (decl->identifier) {
-            printf("[RESOLVER] Trying to resolve declaration: '%s'\n",
-                   decl->identifier->atom.data);
-            } else if (decl->kind == AST_Declaration_Kind::USING) {
-                printf("[RESOLVER] Trying to resolve using: '");
-                ast_print_expression(decl->using_decl.ident_expr, 0);
-                printf("'\n");
-            } else if (decl->kind == AST_Declaration_Kind::RUN) {
-                printf("[RESOLVER] Trying to resolve #run: '");
-                ast_print_expression(decl->run.expression, 0);
-                printf("'\n");
-            } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
-                printf("[RESOLVER] Trying to resolve static_if: '");
-                ast_print_expression(decl->static_if.cond_expression, 0);
-                printf("'\n");
-            } else {
-                assert(false);
-            }
-        }
+        // if (resolver->build_data->options->verbose) {
+        //     if (decl->identifier) {
+        //     printf("[RESOLVER] Trying to resolve declaration: '%s'\n",
+        //            decl->identifier->atom.data);
+        //     } else if (decl->kind == AST_Declaration_Kind::USING) {
+        //         printf("[RESOLVER] Trying to resolve using: '");
+        //         ast_print_expression(decl->using_decl.ident_expr, 0);
+        //         printf("'\n");
+        //     } else if (decl->kind == AST_Declaration_Kind::RUN) {
+        //         printf("[RESOLVER] Trying to resolve #run: '");
+        //         ast_print_expression(decl->run.expression, 0);
+        //         printf("'\n");
+        //     } else if (decl->kind == AST_Declaration_Kind::STATIC_IF) {
+        //         printf("[RESOLVER] Trying to resolve static_if: '");
+        //         ast_print_expression(decl->static_if.cond_expression, 0);
+        //         printf("'\n");
+        //     } else {
+        //         assert(false);
+        //     }
+        // }
 
         assert(decl->flat);
 

@@ -127,7 +127,14 @@ namespace Zodiac
                     } else {
                         Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
 
-                        interp_store_value(dest_ptr, source_val);
+                        if (source_val.type->kind == AST_Type_Kind::STRUCTURE) {
+                            assert(source_val.type->bit_size % 8 == 0);
+                            auto byte_size = source_val.type->bit_size / 8;
+                            assert(source_val.pointer);
+                            memcpy(dest_ptr, source_val.pointer, byte_size);
+                        } else {
+                            interp_store_value(dest_ptr, source_val);
+                        }
                     }
                     break;
                 }
@@ -610,9 +617,17 @@ namespace Zodiac
                     auto index_val = interpreter_load_value(interp, inst->b);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
 
-                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
-                    assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
-                    AST_Type *struct_type = ptr_val.type->pointer.base;
+                    assert(ptr_val.pointer);
+
+                    AST_Type *struct_type = nullptr;
+                    if (ptr_val.type->kind == AST_Type_Kind::STRUCTURE) {
+                        struct_type = ptr_val.type;
+                    } else {
+                        assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                        assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                        struct_type = ptr_val.type->pointer.base;
+                    }
+                    assert(struct_type);
 
                     assert(index_val.type == Builtin::type_u32);
                     assert(index_val.kind == Bytecode_Value_Kind::INTEGER_LITERAL);
@@ -1036,6 +1051,7 @@ namespace Zodiac
         uint8_t *source_ptr = interpreter_load_lvalue(interp, value);
 
         Bytecode_Value result = {};
+        result.kind = Bytecode_Value_Kind::TEMP;
 
         if (value->kind == Bytecode_Value_Kind::ALLOCL ||
             value->kind == Bytecode_Value_Kind::PARAM) {
@@ -1099,14 +1115,14 @@ namespace Zodiac
                 if (value->kind == Bytecode_Value_Kind::ALLOCL) {
                     result.pointer = source_ptr;
                 } else if (value->kind == Bytecode_Value_Kind::TEMP) {
-                    assert(false);
-                    result.pointer = source_ptr;
+                    // assert(false);
+                    // result.pointer = source_ptr;
                     result.pointer = *(void**)source_ptr;
                 } else {
                     assert(false);
                 }
-                assert(result.type->pointer_to);
-                result.type = result.type->pointer_to;
+                // assert(result.type->pointer_to);
+                // result.type = result.type->pointer_to;
                 break;
             }
             default: assert(false);
@@ -1232,6 +1248,11 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::POINTER: {
+                interp_store(dest, val.pointer);
+                break;
+            }
+
+            case AST_Type_Kind::STRUCTURE: {
                 interp_store(dest, val.pointer);
                 break;
             }

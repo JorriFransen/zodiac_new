@@ -8,23 +8,48 @@ Dummy :: struct
     val : s64;
 }
 
+Vec2 :: struct
+{
+    x : float;
+    y : float;
+}
+
 main :: func() -> s64
 {
     std.print("Struct assignment test\n");
 
-    a : Dummy;
-    a.val = 42;
+    a : Vec2;
+    a.x = 1.1;
+    a.y = 2.2;
 
-    b : Dummy;
-    // b = a;
-    // b := a;
+    b := a;
 
-    std.print("a.val = ");
-    std.print_numln(a.val);
+    b.x *= 2;
+    b.y *= 2;
 
-    std.print("b.val = ");
-    std.print_numln(b.val);
-    
+    c : Vec2;
+    c.x = 1234.5678;
+    c.y = 8765.4321;
+
+    c = b;
+
+    std.print("a: ");
+    print_vec2(*a);
+
+    std.print("b: ");
+    print_vec2(*b);
+
+    std.print("c: ");
+    print_vec2(*c);
 
     return 0;
+}
+
+print_vec2 :: func(v : *Vec2) 
+{
+    std.print("x: ");
+    std.print_float(v.x);
+    std.print(", y: ");
+    std.print_float(v.y);
+    std.print("\n");
 }
