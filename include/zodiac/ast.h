@@ -592,7 +592,6 @@ namespace Zodiac
 
     struct AST_Builder
     {
-        bool test = false;
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
 

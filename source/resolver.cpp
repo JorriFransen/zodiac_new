@@ -15,9 +15,10 @@ namespace Zodiac
         resolver->build_data = build_data;
 
         resolver->lexer = lexer_create(allocator, build_data);
-        resolver->ast_builder = { .allocator = allocator,
-                                  .build_data = build_data,
-                                  .break_stack = {}
+        resolver->ast_builder = {
+            .allocator = allocator,
+            .build_data = build_data,
+            .break_stack = {},
         };
 
         stack_init(allocator, &resolver->ast_builder.break_stack);
@@ -496,13 +497,15 @@ namespace Zodiac
 
     void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
     {
-        LLVM_Job job = { .kind = LLVM_Job_Kind::FUNCTION, .bc_func = bc_func };
+        LLVM_Job job = { .kind = LLVM_Job_Kind::FUNCTION };
+        job.bc_func = bc_func;
         queue_enqueue(&resolver->llvm_jobs, job);
     }
 
     void queue_llvm_job(Resolver *resolver, Bytecode_Global_Info bc_global)
     {
-        LLVM_Job job = { .kind = LLVM_Job_Kind::GLOBAL, .bc_global = bc_global };
+        LLVM_Job job = { .kind = LLVM_Job_Kind::GLOBAL };
+        job.bc_global = bc_global;
         queue_enqueue(&resolver->llvm_jobs, job);
     }
 
@@ -3591,9 +3594,8 @@ namespace Zodiac
                                                           parent_ident, switch_scope,
                                                           begin_fp, end_fp);;
 
-                        auto member_decl = ast_find_enum_member(enum_type,
-                                                                { .type = enum_type,
-                                                                  .integer = val });
+                        auto cv = create_const_value(enum_type, val);
+                        auto member_decl = ast_find_enum_member(enum_type, cv);
                         if (member_decl) {
 
                             auto child_name = member_decl->identifier->atom;
@@ -3717,7 +3719,7 @@ namespace Zodiac
             int64_t report_count = min(unhandled_umvs.count, 3);
             for (int64_t i = 0; i < report_count; i++)
             {
-                Const_Value cv = { .type = enum_type, .integer = unhandled_umvs[i] };
+                auto cv = create_const_value(enum_type, unhandled_umvs[i]);
                 auto emem = ast_find_enum_member(enum_type, cv);
 
                 zodiac_report_error(resolver->build_data,

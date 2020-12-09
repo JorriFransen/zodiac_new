@@ -1480,8 +1480,9 @@ Array<Switch_Case_Expression_PTN> parser_parse_case_expressions(Parser *parser, 
             range_end_expr = parser_parse_expression(parser, ts);
         }
 
-        Switch_Case_Expression_PTN sce = { .expression = expr,
-                                           .range_end_expr = range_end_expr};
+        Switch_Case_Expression_PTN sce = create_switch_case_expression_ptn(expr,
+                                                                           range_end_expr);
+
         array_append(&result, sce);
 
         if (!parser_match_token(ts, TOK_COMMA))

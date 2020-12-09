@@ -67,5 +67,7 @@ namespace Zodiac
         };
     };
 
+    Const_Value create_const_value(AST_Type *type, Integer_Literal integer);
+
 }
 

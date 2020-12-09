@@ -43,6 +43,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/scope.cpp
     source/stack.cpp
     source/string_builder.cpp
+    source/struct_predecls.cpp
     source/zodiac_error.cpp
     source/zodiac_string.cpp
 )

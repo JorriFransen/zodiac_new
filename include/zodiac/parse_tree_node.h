@@ -606,6 +606,9 @@ Parameter_PTN *new_parameter_ptn(Allocator *allocator, Identifier_PTN *identifie
                                  Expression_PTN *type_expression,
                                  const File_Pos &begin_file_pos, const File_Pos &end_file_pos);
 
+Switch_Case_Expression_PTN create_switch_case_expression_ptn(Expression_PTN *range_begin_expr,
+                                                             Expression_PTN *range_end_expr);
+
 typedef uint64_t PTN_Copy_Flags;
 enum PTN_Copy_Flag__ : PTN_Copy_Flags
 {

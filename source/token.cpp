@@ -18,7 +18,9 @@ Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, Atom ato
 
 Token token_create(File_Pos begin_fp, File_Pos end_fp, Token_Kind kind, char c)
 {
-    return { kind, begin_fp, end_fp, { .c = c }  };
+    Token result =  { kind, begin_fp, end_fp };
+    result.c = c;
+    return result;
 }
 
 bool token_equal(const Token& a, const Token& b)

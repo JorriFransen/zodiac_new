@@ -184,7 +184,7 @@ bool os_find_crt_path(String *result_ptr)
 
     auto ta = temp_allocator_get();
 
-    for (int64_t i = 0; i < STATIC_ARRAY_LENGTH(paths); i++) {
+    for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(paths); i++) {
         auto path = string_ref(paths[i]);
 
         if (os_is_absolute_path(path)) {

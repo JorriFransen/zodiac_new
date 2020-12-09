@@ -13,7 +13,30 @@ namespace Zodiac
         Zodiac_Error result = { kind, site, {} };
         array_init(build_data->err_allocator, &result.messages, 1);
         array_append(&result.messages, { message, site });
-        return result; 
+        return result;
+    }
+
+    Zodiac_Error_Site create_error_site(AST_Node *ast_node)
+    {
+        Zodiac_Error_Site result = {
+            .is_ast_node = true,
+        };
+
+        result.ast_node = ast_node;
+
+        return  result;
+    }
+
+    Zodiac_Error_Site create_error_site(File_Pos begin_fp, File_Pos end_fp)
+    {
+        Zodiac_Error_Site result = {
+            .is_ast_node = false,
+        };
+
+        result.range.begin = begin_fp;
+        result.range.end = end_fp;
+
+        return result;
     }
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
@@ -21,8 +44,10 @@ namespace Zodiac
     {
         va_list args;
         va_start(args, fmt);
-        Zodiac_Error_Site site = { .is_ast_node = true, .ast_node = ast_node };
+
+        auto site = create_error_site(ast_node);
         zodiac_report_error(build_data, kind, site, fmt, args);
+
         va_end(args);
     }
 
@@ -85,8 +110,10 @@ namespace Zodiac
     {
         va_list args;
         va_start(args, fmt);
-        Zodiac_Error_Site site = { .is_ast_node = true, .ast_node = ast_node };
+
+        auto site = create_error_site(ast_node);
         zodiac_report_info(build_data, site, fmt, args);
+
         va_end(args);
     }
 
@@ -95,8 +122,10 @@ namespace Zodiac
     {
         va_list args;
         va_start(args, fmt);
-        Zodiac_Error_Site site = { .is_ast_node = false, .range = { .begin = bfp, .end = efp } };
+
+        auto site = create_error_site(bfp, efp);
         zodiac_report_info(build_data, site, fmt, args);
+
         va_end(args);
 
     }
@@ -136,12 +165,9 @@ namespace Zodiac
                 }
 
 
-                if (m_i == 0)
-                {
+                if (m_i == 0) {
                     fprintf(stderr, "Error: ");
-                }
-                else 
-                {
+                } else {
                     fprintf(stderr, "       ");
                 }
 

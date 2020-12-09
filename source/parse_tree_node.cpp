@@ -907,6 +907,15 @@ void print_indent(uint64_t indent)
     }
 }
 
+Switch_Case_Expression_PTN create_switch_case_expression_ptn(Expression_PTN *range_begin_expr,
+                                                             Expression_PTN *range_end_expr)
+{
+    Switch_Case_Expression_PTN result;
+    result.range_begin_expr = range_begin_expr;
+    result.range_end_expr = range_end_expr;
+    return result;
+}
+
 Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *decl,
                                       PTN_Copy_Flags flags/*= PTNC_FLAG_NONE*/)
 {

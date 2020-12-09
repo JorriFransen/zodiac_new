@@ -67,6 +67,9 @@ namespace Zodiac
     Zodiac_Error zodiac_make_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                                    String message, Zodiac_Error_Site site);
 
+    Zodiac_Error_Site create_error_site(AST_Node *ast_node);
+    Zodiac_Error_Site create_error_site(File_Pos begin_fp, File_Pos end_fp);
+
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                              AST_Node *ast_node, const char *fmt, ...);
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
