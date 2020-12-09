@@ -10,8 +10,8 @@ Dummy :: struct
 
 Vec2 :: struct
 {
-    x : float;
-    y : float;
+    x : s64;
+    y : s64;
 }
 
 main :: func() -> s64
@@ -19,8 +19,8 @@ main :: func() -> s64
     std.print("Struct assignment test\n");
 
     a : Vec2;
-    a.x = 1.1;
-    a.y = 2.2;
+    a.x = 11;
+    a.y = 22;
 
     b := a;
 
@@ -28,28 +28,28 @@ main :: func() -> s64
     b.y *= 2;
 
     c : Vec2;
-    c.x = 1234.5678;
-    c.y = 8765.4321;
+    c.x = 12345678;
+    c.y = 87654321;
 
     c = b;
 
     std.print("a: ");
-    print_vec2(*a);
+    print_vec2(a);
 
     std.print("b: ");
-    print_vec2(*b);
+    print_vec2(b);
 
     std.print("c: ");
-    print_vec2(*c);
+    print_vec2(c);
 
+    std.print("\n");
     return 0;
 }
 
-print_vec2 :: func(v : *Vec2) 
+print_vec2 :: func(v : Vec2)
 {
     std.print("x: ");
-    std.print_float(v.x);
+    std.print_num(v.x);
     std.print(", y: ");
-    std.print_float(v.y);
-    std.print("\n");
+    std.print_numln(v.y);
 }

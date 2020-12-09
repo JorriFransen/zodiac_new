@@ -371,7 +371,12 @@ namespace Zodiac
                     uint8_t *arg_ptr = &interp->stack[interp->sp];
                     interp->sp += size;
 
-                    interp_store_value(arg_ptr, arg_val);
+                    if (arg_val.type->kind == AST_Type_Kind::STRUCTURE) {
+                        assert(arg_val.pointer);
+                        memcpy(arg_ptr, arg_val.pointer, size);
+                    } else {
+                        interp_store_value(arg_ptr, arg_val);
+                    }
 
                     break;
                 }
@@ -1112,17 +1117,14 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::STRUCTURE: {
-                if (value->kind == Bytecode_Value_Kind::ALLOCL) {
+                if (value->kind == Bytecode_Value_Kind::ALLOCL ||
+                    value->kind == Bytecode_Value_Kind::PARAM) {
                     result.pointer = source_ptr;
                 } else if (value->kind == Bytecode_Value_Kind::TEMP) {
-                    // assert(false);
-                    // result.pointer = source_ptr;
                     result.pointer = *(void**)source_ptr;
                 } else {
                     assert(false);
                 }
-                // assert(result.type->pointer_to);
-                // result.type = result.type->pointer_to;
                 break;
             }
             default: assert(false);
