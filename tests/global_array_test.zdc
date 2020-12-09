@@ -1,0 +1,39 @@
+
+
+std :: import std;
+
+#run main();
+
+global_array : [5]s64;
+
+main :: func() -> s64
+{
+
+    for (i := 0; i < global_array.count; i += 1) {
+        global_array[i] = i + 1;
+    }
+
+    for (i := 0; i < global_array.count; i += 1) {
+        std.print("global_array[");
+        std.print_num(i);
+        std.print("] = ");
+        std.print_numln(global_array[i]);
+    }
+
+    std.print("\n");
+
+    for (i := 0; i < global_array.count; i += 1) {
+        ptr := *global_array[i];
+        <ptr = i * 3;
+    }
+
+    for (i := 0; i < global_array.count; i += 1) {
+        std.print("global_array[");
+        std.print_num(i);
+        std.print("] = ");
+        std.print_numln(global_array[i]);
+    }
+
+    return 0;
+}
+

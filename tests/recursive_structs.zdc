@@ -1,7 +1,9 @@
 
 std :: import std;
 
-// #run main();
+#run main();
+
+global_array : [5]s64;
 
 main :: func() -> s64
 {
@@ -44,7 +46,7 @@ create_int_list :: func () -> Int_List
 
 list_append :: func (list: *Int_List, value: s64)
 {
-    element := new_element(value); 
+    element := new_element(value);
     // if (element != bool) {
     // }
 
@@ -54,7 +56,7 @@ list_append :: func (list: *Int_List, value: s64)
 new_element :: func (value: s64) -> *Int_List_Element
 {
     result : *Int_List_Element = null;
-    
+
     if (_next_int_list_index_ < _INT_LIST_ELEMENT_COUNT_) {
         result = *_int_list_elements_[_next_int_list_index_];
         _next_int_list_index_ += 1;

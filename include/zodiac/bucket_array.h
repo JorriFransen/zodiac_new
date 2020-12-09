@@ -53,10 +53,13 @@ namespace Zodiac
     void bucket_locator_advance(Bucket_Locator<Element_Type, bucket_capacity> *locator)
     {
         locator->index += 1;
-        if (locator->index >= bucket_capacity) {
-            assert(locator->bucket->next_bucket);
+        if (locator->index >= locator->bucket->count) {
             locator->index = 0;
-            locator->bucket = locator->bucket->next_bucket;
+            if (locator->bucket->next_bucket) {
+                locator->bucket = locator->bucket->next_bucket;
+            } else {
+                locator->bucket = nullptr;
+            }
         }
     }
 
