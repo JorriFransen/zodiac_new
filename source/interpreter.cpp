@@ -965,10 +965,6 @@ namespace Zodiac
 
             auto ptr = interpreter_load_lvalue(interp, info.global_value);
 
-            // printf("Global %s has address: 0x%p\n",
-            //        info.declaration->identifier->atom.data,
-            //        ptr);
-
             if (info.has_initializer) {
                 interp_store_constant(ptr, info.init_const_val);
             } else {
@@ -1075,7 +1071,6 @@ namespace Zodiac
             result.kind = Bytecode_Value_Kind::INTEGER_LITERAL;
         else if (value->kind == Bytecode_Value_Kind::NULL_LITERAL) {
             result.kind = Bytecode_Value_Kind::NULL_LITERAL;
-            // result.pointer = &interp->null_pointer;
             result.pointer = nullptr;
             return result;
         }
@@ -1111,12 +1106,11 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::ARRAY: {
-                if (value->kind == Bytecode_Value_Kind::ALLOCL) {
+                if (value->kind == Bytecode_Value_Kind::ALLOCL ||
+                    value->kind == Bytecode_Value_Kind::GLOBAL) {
                     result.pointer = source_ptr;
                 } else if (value->kind == Bytecode_Value_Kind::TEMP) {
                     result.pointer = *(void**)source_ptr;
-                } else if (value->kind == Bytecode_Value_Kind::GLOBAL) {
-                    result.pointer = source_ptr;
                 } else {
                     assert(false);
                 }
