@@ -1616,7 +1616,8 @@ namespace Zodiac
                 if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER) {
                     parent_decl = parent_expr->identifier->declaration;
                 } else if (parent_expr->kind == AST_Expression_Kind::DOT) {
-                    parent_decl = parent_expr->dot.parent_decl;
+                    parent_decl = parent_expr->dot.child_decl;
+                    // parent_decl = parent_expr->dot.parent_decl;
                 }
                 assert(parent_decl);
 

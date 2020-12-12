@@ -61,9 +61,7 @@ list_append :: func (list: *Int_List, value: s64)
     if (!list.first) {
         list.first = element;
     } else {
-        last := list.last;
-        last.next = element;
-        // list.last.next = element;
+        list.last.next = element;
     }
 
     list.last = element;

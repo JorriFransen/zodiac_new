@@ -2437,7 +2437,7 @@ namespace Zodiac
 
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
-        result->dot.parent_decl = nullptr;
+        // result->dot.parent_decl = nullptr;
         result->dot.child_decl = nullptr;
         result->dot.child_index = -1;
 
