@@ -812,6 +812,8 @@ namespace Zodiac
         } \
     } else if (type->kind == AST_Type_Kind::FLOAT) { \
         bytecode_emit_instruction(builder, float_op, lhs, rhs, result); \
+    } else if (type->kind == AST_Type_Kind::POINTER) { \
+        bytecode_emit_instruction(builder, int_unsigned_op, lhs, rhs, result); \
     } else {\
         assert(false && "Unsupported binop compare"); \
     } \
@@ -821,18 +823,18 @@ namespace Zodiac
                 switch (expr->binary.op) {
                     case BINOP_INVALID: assert(false);
 
-                    case BINOP_EQ:  _binop_compare(EQ_S, EQ_U, EQ_F);
+                    case BINOP_EQ:   _binop_compare(EQ_S, EQ_U, EQ_F);
                     case BINOP_NEQ:  _binop_compare(NEQ_S, NEQ_U, NEQ_F);
                     case BINOP_LT:   _binop_compare(LT_S, LT_U, LT_F);
                     case BINOP_LTEQ: _binop_compare(LTEQ_S, LTEQ_U, LTEQ_F);
                     case BINOP_GT:   _binop_compare(GT_S, GT_U, GT_F);
                     case BINOP_GTEQ: _binop_compare(GTEQ_S, GTEQ_U, GTEQ_F);
 
-                    case BINOP_ADD: _binop_arithmetic(ADD_S, ADD_U, ADD_F);
-                    case BINOP_SUB: _binop_arithmetic(SUB_S, SUB_U, SUB_F);
+                    case BINOP_ADD:       _binop_arithmetic(ADD_S, ADD_U, ADD_F);
+                    case BINOP_SUB:       _binop_arithmetic(SUB_S, SUB_U, SUB_F);
                     case BINOP_REMAINDER: _binop_arithmetic(REM_S, REM_U, NOP);
-                    case BINOP_MUL: _binop_arithmetic(MUL_S, MUL_U, MUL_F);
-                    case BINOP_DIV: _binop_arithmetic(DIV_S, DIV_U, DIV_F);
+                    case BINOP_MUL:       _binop_arithmetic(MUL_S, MUL_U, MUL_F);
+                    case BINOP_DIV:       _binop_arithmetic(DIV_S, DIV_U, DIV_F);
 
                 }
 

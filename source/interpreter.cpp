@@ -274,45 +274,58 @@ namespace Zodiac
     auto lhs = interpreter_load_value(interp, inst->a); \
     auto rhs = interpreter_load_value(interp, inst->b); \
     assert(lhs.type == rhs.type); \
-    assert(lhs.type->kind == AST_Type_Kind::INTEGER || lhs.type->kind == AST_Type_Kind::ENUM); \
     auto type = lhs.type; \
     if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
     auto result_addr = interpreter_load_lvalue(interp, inst->result); \
     bool result_value = false; \
-    if (type->integer.sign) { \
-        switch (type->bit_size) { \
-            case 8: result_value = lhs.integer_literal.s8 op rhs.integer_literal.s8; break; \
-            case 16: result_value = lhs.integer_literal.s16 op rhs.integer_literal.s16; break; \
-            case 32: result_value = lhs.integer_literal.s32 op rhs.integer_literal.s32; break; \
-            case 64: result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; break; \
-            default: assert(false); \
+    if (type->kind == AST_Type_Kind::INTEGER) { \
+        if (type->integer.sign) { \
+            switch (type->bit_size) { \
+                case 8:\
+                    result_value = lhs.integer_literal.s8 op rhs.integer_literal.s8; break; \
+                case 16: \
+                    result_value = lhs.integer_literal.s16 op rhs.integer_literal.s16; break; \
+                case 32: \
+                    result_value = lhs.integer_literal.s32 op rhs.integer_literal.s32; break; \
+                case 64: \
+                    result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; break; \
+                default: assert(false); \
+            } \
+        } else { \
+            switch (type->bit_size) { \
+                case 8: \
+                    result_value = lhs.integer_literal.u8 op rhs.integer_literal.u8; break; \
+                case 16: \
+                    result_value = lhs.integer_literal.u16 op rhs.integer_literal.u16; break; \
+                case 32: \
+                    result_value = lhs.integer_literal.u32 op rhs.integer_literal.u32; break; \
+                case 64: \
+                    result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; break; \
+                default: assert(false); \
+            } \
         } \
+    } else if (type->kind == AST_Type_Kind::POINTER) { \
+        result_value = lhs.pointer op rhs.pointer;\
     } else { \
-        switch (type->bit_size) { \
-            case 8: result_value = lhs.integer_literal.u8 op rhs.integer_literal.u8; break; \
-            case 16: result_value = lhs.integer_literal.u16 op rhs.integer_literal.u16; break; \
-            case 32: result_value = lhs.integer_literal.u32 op rhs.integer_literal.u32; break; \
-            case 64: result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; break; \
-            default: assert(false); \
-        } \
+        assert(false && "Unsupported binop compare"); \
     } \
     assert(sizeof(result_value) == (inst->result->type->bit_size / 8)); \
     interp_store(result_addr, result_value); \
     break; \
 }
 
-                case EQ_S: _binop_compare_int(==);
-                case NEQ_S: _binop_compare_int(!=);
-                case LT_S: _binop_compare_int(<);
+                case EQ_S:   _binop_compare_int(==);
+                case NEQ_S:  _binop_compare_int(!=);
+                case LT_S:   _binop_compare_int(<);
                 case LTEQ_S: _binop_compare_int(<=);
-                case GT_S: _binop_compare_int(>);
+                case GT_S:   _binop_compare_int(>);
                 case GTEQ_S: _binop_compare_int(>=);
 
-                case EQ_U: _binop_compare_int(==);
-                case NEQ_U: _binop_compare_int(!=);
-                case LT_U: _binop_compare_int(<);
+                case EQ_U:   _binop_compare_int(==);
+                case NEQ_U:  _binop_compare_int(!=);
+                case LT_U:   _binop_compare_int(<);
                 case LTEQ_U: _binop_compare_int(<=);
-                case GT_U: _binop_compare_int(>);
+                case GT_U:   _binop_compare_int(>);
                 case GTEQ_U: _binop_compare_int(>=);
 
 #undef _binop_compare_int

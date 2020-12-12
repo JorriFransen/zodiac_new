@@ -47,8 +47,20 @@ create_int_list :: func () -> Int_List
 list_append :: func (list: *Int_List, value: s64)
 {
     element := new_element(value);
-    // if (element != bool) {
-    // }
+
+    if (element != null) {
+        std.println("if (element != null)");
+    }
+
+    if (element == null) {
+        std.println("if (element == null)");
+    } else {
+        std.println("! if (element == null)");
+    }
+
+    if (element) {
+        std.println("if (element)");
+    }
 
     return;
 }

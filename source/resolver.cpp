@@ -192,7 +192,7 @@ namespace Zodiac
                                    decl->kind == AST_Declaration_Kind::STATIC_IF);
                         }
                     } else {
-                        assert(false);
+                        assert(node->kind == AST_Node_Kind::EXPRESSION);
                     }
 
                     progressed = true;
@@ -342,10 +342,10 @@ namespace Zodiac
                 }
             }
 
-            for (int64_t i = resolver->llvm_builder.struct_types_to_finalize.count - 1; 
+            for (int64_t i = resolver->llvm_builder.struct_types_to_finalize.count - 1;
                  i >= 0;
                  i --) {
-                
+
                 auto &to_finalize = resolver->llvm_builder.struct_types_to_finalize[i];
                 if (to_finalize.ast_type->flags & AST_NODE_FLAG_RESOLVED_ID) {
                     progressed = true;
@@ -462,7 +462,8 @@ namespace Zodiac
 
     void queue_size_job(Resolver *resolver, AST_Node *node)
     {
-        assert(node->kind == AST_Node_Kind::DECLARATION);
+        assert(node->kind == AST_Node_Kind::DECLARATION ||
+               node->kind == AST_Node_Kind::EXPRESSION);
 
         // if (resolver->build_data->options->verbose) {
         //     auto decl = static_cast<AST_Declaration *>(node);
@@ -710,6 +711,11 @@ namespace Zodiac
 
     bool try_size_job(Resolver *resolver, Size_Job *job)
     {
+        if (job->ast_node->kind == AST_Node_Kind::EXPRESSION) {
+            AST_Expression *expr = static_cast<AST_Expression *>(job->ast_node);
+            return try_size_expression(resolver, expr);
+        }
+
         assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
         AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
         assert(decl->type ||
@@ -1438,7 +1444,34 @@ namespace Zodiac
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
 
-                assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+                if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
+                    if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
+                        AST_Expression *null_lit =
+                            ast_null_literal_expression_new(resolver->allocator,
+                                                            cond_expr->scope,
+                                                            cond_expr->begin_file_pos,
+                                                            cond_expr->end_file_pos);
+
+                        null_lit->infer_type_from = cond_expr;
+
+                        statement->if_stmt.cond_expr =
+                            ast_binary_expression_new(resolver->allocator, BINOP_NEQ, cond_expr,
+                                                      null_lit,
+                                                      cond_expr->scope,
+                                                      cond_expr->begin_file_pos,
+                                                      cond_expr->end_file_pos);
+
+                        cond_expr = statement->if_stmt.cond_expr;
+
+                        if (!try_resolve_expression(resolver, null_lit)) assert(false);
+                        if (!try_resolve_expression(resolver, cond_expr)) assert(false);
+
+                        queue_size_job(resolver, cond_expr);
+
+                    } else {
+                        assert(false);
+                    }
+                }
 
                 AST_Statement *then_stmt = statement->if_stmt.then_stmt;
                 assert(then_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1812,6 +1845,7 @@ namespace Zodiac
                                                     rhs->end_file_pos);
                         rhs = expression->binary.rhs;
                         if (!try_resolve_expression(resolver, rhs)) assert(false);
+
                     } else if (lhs->type == Builtin::type_double &&
                                rhs->type == Builtin::type_float) {
                         if (rhs->kind == AST_Expression_Kind::FLOAT_LITERAL) {
@@ -1820,6 +1854,18 @@ namespace Zodiac
                         } else {
                             assert(false);
                         }
+
+                    } else if (lhs->type->kind == AST_Type_Kind::POINTER &&
+                               lhs->type->pointer.base->kind == AST_Type_Kind::VOID &&
+                               lhs->kind == AST_Expression_Kind::NULL_LITERAL &&
+                               rhs->type->kind == AST_Type_Kind::POINTER) {
+                        assert(false);
+                    } else if (rhs->type->kind == AST_Type_Kind::POINTER &&
+                               rhs->type->pointer.base->kind == AST_Type_Kind::VOID &&
+                               rhs->kind == AST_Expression_Kind::NULL_LITERAL &&
+                               lhs->type->kind == AST_Type_Kind::POINTER) {
+                        result_type = lhs->type;
+                        rhs->type = lhs->type;
                     } else {
                         assert(false);
                     }
@@ -3390,9 +3436,12 @@ namespace Zodiac
 
             case AST_Type_Kind::BOOL: assert(false);
 
-            case AST_Type_Kind::POINTER:
-            {
-                assert(false);
+            case AST_Type_Kind::POINTER: {
+                if (target_type->kind == AST_Type_Kind::BOOL) {
+                    return true;
+                } else {
+                    assert(false);
+                }
                 break;
             }
 
