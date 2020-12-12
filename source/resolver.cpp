@@ -806,9 +806,27 @@ namespace Zodiac
 
                 String module_name = string_ref(_module_name);
                 String file_name = string_append(ta, module_name, string_ref(".zdc"));
-                String file_path = string_append(ta, resolver->first_file_dir, file_name);
 
-                assert(is_regular_file(file_path));
+                String candidate_dirs[] = {
+                    resolver->first_file_dir,
+                    resolver->module_dir,
+                };
+
+                bool found = false;
+                String file_path = {};
+
+                for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(candidate_dirs); i++) {
+
+                    String candidate_file_path = string_append(ta, candidate_dirs[i], file_name);
+
+                    if (is_regular_file(candidate_file_path)) {
+                        found = true;
+                        file_path = candidate_file_path;
+                        break;
+                    }
+                }
+
+                assert(found);
 
                 AST_Module *ast_module = nullptr;
                 bool in_queue = queue_parse_job(resolver, module_name, file_path, &ast_module);

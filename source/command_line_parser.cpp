@@ -44,8 +44,11 @@ namespace Zodiac
             if (!result.valid) {
                 print_usage();
             } else {
-                auto exe_path = get_absolute_path(allocator, string_ref(argv[0]));
-                result.zodiac_exe_path = exe_path;
+                auto exe_path = string_ref(argv[0]);
+                if (is_relative_path(exe_path)) {
+                    exe_path = get_absolute_path(ta, exe_path);
+                }
+                result.zodiac_exe_path = string_copy(allocator, exe_path);
             }
 
             array_free(&option_tokens);
