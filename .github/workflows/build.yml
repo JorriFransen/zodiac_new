@@ -17,30 +17,30 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: find path
-      run: echo ${{github.workspace}}
+    # - name: find path
+    #   run: echo ${{github.workspace}}
 
-    # - name: Install ninja-build
-    #   run: sudo apt install ninja-build
+    - name: Install ninja-build
+      run: sudo apt install ninja-build
 
-    # - name: Install llvm-10-dev
-    #   run: sudo apt install llvm-10-dev
+    - name: Install llvm-10-dev
+      run: sudo apt install llvm-10-dev
 
-    # - name: Configure Dependencies
-    #   shell: bash
-    #   run: ./create_linux_build.sh
+    - name: Configure Dependencies
+      shell: bash
+      run: ./create_linux_build.sh
 
-    # - name: Build clang debug
-    #   working-directory: ${{github.workspace}}/zodiac_new/build_clang/debug
-    #   shell: bash
-    #   run: cmake --build .
+    - name: Build clang debug
+      working-directory: ${{github.workspace}}/build_clang/debug
+      shell: bash
+      run: cmake --build .
 
-    # - name: Build clang tracy
-    #   working-directory: ${{github.workspace}}/zodiac_new/build_clang/tracy
-    #   shell: bash
-    #   run: cmake --build .
+    - name: Build clang tracy
+      working-directory: ${{github.workspace}}/build_clang/tracy
+      shell: bash
+      run: cmake --build .
 
-    # - name: Build gcc debug
-    #   working-directory: ${{github.workspace}}/zodiac_new/build_gcc/debug
-    #   shell: bash
-    #   run: cmake --build .
+    - name: Build gcc debug
+      working-directory: ${{github.workspace}}/build_gcc/debug
+      shell: bash
+      run: cmake --build .
