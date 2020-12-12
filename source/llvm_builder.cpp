@@ -1412,8 +1412,10 @@ namespace Zodiac
 
     bool llvm_ready_to_emit(LLVM_Builder *builder)
     {
-        llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
-        if (!exitprocess_func) return false; 
+        if (builder->target_platform == Zodiac_Target_Platform::WINDOWS) {
+            llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
+            if (!exitprocess_func) return false; 
+        }
 
         return true;
     }
