@@ -1388,7 +1388,13 @@ namespace Zodiac
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
 
-                assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+                if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
+                    if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
+                        convert_condition_to_bool(resolver, &statement->while_stmt.cond_expr);
+                    } else {
+                        assert(false);
+                    }
+                }
 
                 AST_Statement *body = statement->while_stmt.body;
                 assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1446,28 +1452,7 @@ namespace Zodiac
 
                 if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
                     if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
-                        AST_Expression *null_lit =
-                            ast_null_literal_expression_new(resolver->allocator,
-                                                            cond_expr->scope,
-                                                            cond_expr->begin_file_pos,
-                                                            cond_expr->end_file_pos);
-
-                        null_lit->infer_type_from = cond_expr;
-
-                        statement->if_stmt.cond_expr =
-                            ast_binary_expression_new(resolver->allocator, BINOP_NEQ, cond_expr,
-                                                      null_lit,
-                                                      cond_expr->scope,
-                                                      cond_expr->begin_file_pos,
-                                                      cond_expr->end_file_pos);
-
-                        cond_expr = statement->if_stmt.cond_expr;
-
-                        if (!try_resolve_expression(resolver, null_lit)) assert(false);
-                        if (!try_resolve_expression(resolver, cond_expr)) assert(false);
-
-                        queue_size_job(resolver, cond_expr);
-
+                        convert_condition_to_bool(resolver, &statement->if_stmt.cond_expr);
                     } else {
                         assert(false);
                     }
@@ -3408,6 +3393,35 @@ namespace Zodiac
         if (is_const) {
             expr->expr_flags |= AST_EXPR_FLAG_CONST;
         }
+    }
+
+    void convert_condition_to_bool(Resolver *resolver, AST_Expression **expr_ptr)
+    {
+        AST_Expression *cond_expr = *expr_ptr;
+        assert(cond_expr);
+        assert(cond_expr->type != Builtin::type_bool);
+
+        AST_Expression *null_lit =
+            ast_null_literal_expression_new(resolver->allocator,
+                                            cond_expr->scope,
+                                            cond_expr->begin_file_pos,
+                                            cond_expr->end_file_pos);
+
+        null_lit->infer_type_from = cond_expr;
+
+        *expr_ptr =
+            ast_binary_expression_new(resolver->allocator, BINOP_NEQ, cond_expr,
+                                      null_lit,
+                                      cond_expr->scope,
+                                      cond_expr->begin_file_pos,
+                                      cond_expr->end_file_pos);
+
+        cond_expr = *expr_ptr;
+
+        if (!try_resolve_expression(resolver, null_lit)) assert(false);
+        if (!try_resolve_expression(resolver, cond_expr)) assert(false);
+
+        queue_size_job(resolver, cond_expr);
     }
 
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type)
