@@ -97,5 +97,7 @@ namespace Zodiac
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 
+    bool llvm_ready_to_emit(LLVM_Builder *builder);
+
 
 }

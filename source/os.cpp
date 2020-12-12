@@ -61,9 +61,4 @@ Process_Info execute_process(Allocator *allocator, const String &command, const 
     return os_execute_process(allocator, command, args);
 }
 
-bool find_crt_path(String *result_ptr)
-{
-    return os_find_crt_path(result_ptr);
-}
-
 }

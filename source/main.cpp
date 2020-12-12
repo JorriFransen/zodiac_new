@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
 
     if (options.verbose)
-        printf("Total bytecode instructions: %lu\n", build_data.bytecode_instruction_count);
+        printf("Total bytecode instructions: %" PRId64 "\n", build_data.bytecode_instruction_count);
 
     if (build_data.errors.count == 0) {
 

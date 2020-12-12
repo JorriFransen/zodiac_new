@@ -193,7 +193,7 @@ int64_t os_syscall(Array<int64_t> args)
     return 0;
 }
 
-bool os_find_crt_path(String *result_ptr)
+bool linux_find_crt_path(String *result_ptr)
 {
     assert(result_ptr);
     assert(result_ptr->data == nullptr);

@@ -21,7 +21,16 @@ bool os_is_relative_path(const String& path)
 bool os_is_regular_file(const String& path)
 {
     auto attrs = GetFileAttributesA(path.data);
-    bool result = attrs | FILE_ATTRIBUTE_NORMAL;
+    bool result = (attrs != INVALID_FILE_ATTRIBUTES) &&
+                  !(attrs & FILE_ATTRIBUTE_DIRECTORY);
+    return result;
+}
+
+bool os_is_directory(const String &path)
+{
+    auto attrs = GetFileAttributesA(path.data);
+    assert(attrs != INVALID_FILE_ATTRIBUTES);
+    bool result = attrs & FILE_ATTRIBUTE_DIRECTORY;
     return result;
 }
 
@@ -42,6 +51,17 @@ const String os_get_file_dir(Allocator *allocator, const String &path)
     return string_copy(allocator, path, 0, end_idx + 1);
 }
 
+const String os_get_dir_name(Allocator *allocator, const String &path)
+{
+    assert(is_directory(path));
+    assert(string_ends_with(path, "\\"));
+
+    auto _path = path;
+    _path.length -= 1;
+
+    return os_get_file_name(allocator, _path);
+}
+
 const String os_get_absolute_path(Allocator *allocator, const String& path)
 {
     auto size = GetFullPathNameA(path.data, 0, nullptr, nullptr);
@@ -52,11 +72,16 @@ const String os_get_absolute_path(Allocator *allocator, const String& path)
     return string_ref(buf, size - 1);
 }
 
-//const String os_normalize_path(Allocator *allocator, const String &path)
-//{
-    //assert(false);
-    //return {};
-//}
+const String os_normalize_path(Allocator *allocator, const String &path)
+{
+    assert(path.data[path.length] == '\0');
+    
+    char buffer[MAX_PATH];
+    BOOL result = PathCanonicalizeA(buffer, path.data);
+    assert(result);
+
+    return string_copy(allocator, buffer);
+}
 
 const char *os_get_cwd(Allocator *allocator)
 {

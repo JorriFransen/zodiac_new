@@ -1128,7 +1128,7 @@ namespace Zodiac
             string_builder_append(sb, "ld ");
             string_builder_append(sb, "-dynamic-linker /lib64/ld-linux-x86-64.so.2 ");
 
-            bool crt_found = find_crt_path(&crt_path);
+            bool crt_found = linux_find_crt_path(&crt_path);
             assert(crt_found);
             if (!crt_found) return false;
 
@@ -1408,5 +1408,13 @@ namespace Zodiac
         llvm::Type *param_types[7] = { ret_type, ret_type, ret_type, ret_type, ret_type, ret_type, ret_type };
         return llvm::FunctionType::get(ret_type, { param_types, (size_t)arg_count },
                                        false);;
+    }
+
+    bool llvm_ready_to_emit(LLVM_Builder *builder)
+    {
+        llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
+        if (!exitprocess_func) return false; 
+
+        return true;
     }
 }

@@ -75,6 +75,10 @@ namespace Zodiac
         if (!string_ends_with(module_dir, "/")) {
             module_dir = string_append(ta, module_dir, "/");
         }
+#elif WIN32
+        if (!string_ends_with(module_dir, "\\")) {
+            module_dir = string_append(ta, module_dir, "\\");
+        }
 #endif
         resolver->module_dir = string_copy(allocator, module_dir);
 
@@ -332,6 +336,9 @@ namespace Zodiac
             }
 
             auto llvm_job_count = queue_count(&resolver->llvm_jobs);
+            if (!llvm_ready_to_emit(&resolver->llvm_builder)) {
+                llvm_job_count = 0;
+            }
             while (llvm_job_count--) {
                 auto job = queue_dequeue(&resolver->llvm_jobs);
 
@@ -395,7 +402,7 @@ namespace Zodiac
         }
 
         if (resolver->build_data->options->verbose) {
-            printf("Resolver done after %lu cycles\n", cycle_count);
+            printf("Resolver done after %" PRId64 " cycles\n", cycle_count);
         }
         return result;
     }
@@ -3809,11 +3816,13 @@ namespace Zodiac
             }
 
             current_dir.length -= current_dir_name.length;
+
 #ifdef linux
             current_dir.length -= 1;
             assert(string_ends_with(current_dir, "/"));
 #elif WIN32
-            assert(false);
+            current_dir.length -= 1;
+            assert(string_ends_with(current_dir, "\\"));
 #else
             assert(false);
 #endif
