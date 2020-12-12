@@ -3824,7 +3824,9 @@ namespace Zodiac
         String result = string_copy(allocator, current_dir);
 
         String module_path = string_append(ta, result, "modules/");
-        assert(is_directory(module_path));
+        if (!is_directory(module_path)) {
+            assert(false && "Failed to find module path");
+        }
 
         return result;
     }
