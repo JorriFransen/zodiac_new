@@ -28,16 +28,16 @@ jobs:
       run: ./create_linux_build.sh
 
     - name: Build clang debug
-      working-directory: ${{runner.workspace}}/zodiac_new/build_clang/debug
+      working-directory: ${GITHUB_WORKSPACE}/zodiac_new/build_clang/debug
       shell: bash
       run: cmake --build .
 
     - name: Build clang tracy
-      working-directory: ${{runner.workspace}}/zodiac_new/build_clang/tracy
+      working-directory: ${GITHUB_WORKSPACE}/zodiac_new/build_clang/tracy
       shell: bash
       run: cmake --build .
 
     - name: Build gcc debug
-      working-directory: ${{runner.workspace}}/zodiac_new/build_gcc/debug
+      working-directory: ${GITHUB_WORKSPACE}/zodiac_new/build_gcc/debug
       shell: bash
       run: cmake --build .
