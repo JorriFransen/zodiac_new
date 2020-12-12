@@ -31,14 +31,12 @@ Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
 
     Lexed_File result = {};
 
-    if (!is_regular_file(file_path))
-    {
+    if (!is_regular_file(file_path)) {
         fprintf(stderr, "Error: Invalid file path: '%s'\n", file_path.data);
         return result;
     }
 
-    if (is_relative_path(file_path))
-    {
+    if (is_relative_path(file_path)) {
         file_path = get_absolute_path(temp_allocator_get(), file_path);
     }
 
@@ -55,12 +53,10 @@ Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
 
     ld.lexed_file = result;
 
-    while (current_char(&ld) != EOF && ld.file_index < ld.file_size)
-    {
+    while (current_char(&ld) != EOF && ld.file_index < ld.file_size) {
         Token t = next_token(&ld);
 
-        if (t.kind == TOK_INVALID)
-        {
+        if (t.kind == TOK_INVALID) {
             ld.lexed_file.valid = false;
             break;
         }
@@ -74,7 +70,7 @@ Lexed_File lexer_lex_file(Lexer *lexer, const String& _file_path)
 void lexer_free_lexed_file(Lexer *lexer, Lexed_File *lexed_file)
 {
     string_free(lexer->allocator, lexed_file->path);
-    array_free(&lexed_file->tokens);    
+    array_free(&lexed_file->tokens);
 }
 
 Lexer_Data lexer_data_create(Lexer *lexer, String file_path, String file_data, uint64_t file_size)
@@ -123,8 +119,7 @@ restart:
             return token_create(fp, kind, atom); \
         }
 
-    switch (c)
-    {
+    switch (c) {
         __1_CHAR_TOKEN_CASE('#', TOK_POUND);
         __1_CHAR_TOKEN_CASE(':', TOK_COLON);
         __1_CHAR_TOKEN_CASE(';', TOK_SEMICOLON);
@@ -150,15 +145,11 @@ restart:
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
         __2_CHAR_TOKEN_CASE('!', TOK_BANG, '=', TOK_NEQ);
 
-        case '/':
-        {
-            if (peek_char(ld, 1) == '/')
-            {
+        case '/': {
+            if (peek_char(ld, 1) == '/') {
                 while (!is_newline(current_char(ld))) advance(ld);
                 goto restart;
-            }
-            else 
-            {
+            } else {
                 auto fp = get_file_pos(ld);
                 auto ccp = current_char_ptr(ld);
                 advance(ld);
@@ -175,22 +166,14 @@ restart:
             break;
         }
 
-        default:
-        {
-            if (c == '"')
-            {
+        default: {
+            if (c == '"') {
                 return lex_string_literal(ld);
-            }
-            else if (c == '\'')
-            {
+            } else if (c == '\'') {
                 return lex_character_literal(ld);
-            }
-            else if (is_alpha(c) || c == '_')
-            {
+            } else if (is_alpha(c) || c == '_') {
                 return lex_keyword_or_identifier(ld);
-            }
-            else if (is_num(c) || c == '.')
-            {
+            } else if (is_num(c) || c == '.') {
                 return lex_number_literal(ld);
             }
 
@@ -380,8 +363,7 @@ const char *current_char_ptr(Lexer_Data *ld)
 
 void skip_whitespace(Lexer_Data *ld)
 {
-    while (is_whitespace(current_char(ld))) 
-    {
+    while (is_whitespace(current_char(ld))) {
         advance(ld);
     }
 }

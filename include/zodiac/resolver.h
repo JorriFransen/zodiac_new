@@ -94,8 +94,10 @@ namespace Zodiac
 
         AST_Declaration *entry_decl = nullptr;
 
-        String entry_module_path = {};
         String first_file_dir = {};
+        String zodiac_root_dir = {};
+        String module_dir = {};
+        String entry_module_path = {};
     };
 
     struct Resolve_Result
@@ -159,11 +161,14 @@ namespace Zodiac
     bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl, Scope *scope);
 
     AST_Type *find_or_create_enum_type(Resolver *resolver, AST_Declaration *enum_decl,
-                                       AST_Type *base_type, Scope *mem_scope, Scope *current_scope);
+                                       AST_Type *base_type, Scope *mem_scope,
+                                       Scope *current_scope);
 
     bool all_dependencies_emitted(Resolver *resolver, AST_Declaration *decl);
 
     void resolver_check_circular_dependencies(Resolver *resolver);
 
     bool fatal_error_reported(Resolver *resolver);
+
+    String find_zodiac_root(Allocator *allocator, Build_Data *build_data);
 }

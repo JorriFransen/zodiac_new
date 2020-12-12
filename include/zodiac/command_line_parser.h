@@ -46,7 +46,7 @@ struct Option_Template
     Option_Template_Kind kind = OT_Kind_invalid;
     const char *name = nullptr;
     const char *description = nullptr;
-    
+
     Default_Option_Value default_value;
     uint64_t option_offset = 0;
 };
@@ -55,6 +55,7 @@ struct Options
 {
     bool valid = true;
     String file_path = {};
+    String zodiac_exe_path = {};
 
 #define DEFINE_OPTION(type, name, default_value, desc) type name = (default_value);
     CMD_OPTION_LIST
@@ -62,8 +63,7 @@ struct Options
 };
 
 
-static const Option_Template option_templates[] = 
-{
+static const Option_Template option_templates[] = {
 
 #define OPTION_VALUE_bool(v) { ._bool = (v) }
 #define OPTION_VALUE_String(v) { ._String = (v) }
@@ -79,7 +79,7 @@ static const Option_Template option_templates[] =
 
 };
 
-Options parse_command_line(int argc, char **argv);
+Options parse_command_line(Allocator *allocator, int argc, char **argv);
 
 #undef EMPTY_STRING
 }

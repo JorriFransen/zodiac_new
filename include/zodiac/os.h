@@ -12,7 +12,10 @@ const String get_absolute_path(Allocator *allocator, const String &path);
 const String get_file_name(Allocator *allocator, const String &path);
 const String get_file_dir(Allocator *allocator, const String &path);
 
-bool is_regular_file(const String& file_path);
+const String get_dir_name(Allocator *allocator, const String &path);
+
+bool is_regular_file(const String &file_path);
+bool is_directory(const String &path);
 
 String read_file_string(Allocator *allocator, const String& file_path);
 

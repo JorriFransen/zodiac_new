@@ -22,49 +22,47 @@ namespace Zodiac
     static void advance(OPC *opc);
     static void print_usage();
 
-    Options parse_command_line(int argc, char **argv)
+    Options parse_command_line(Allocator *allocator, int argc, char **argv)
     {
 
         Options result = {};
-        if (argc < 2)
-        {
+        if (argc < 2) {
             fprintf(stderr, "zodiac: Expected FILE_PATH as first argument\n");
-            result.valid = false; 
+            result.valid = false;
             print_usage();
             return result;
         }
 
-        if (argc > 1)
-        {
+        if (argc > 1) {
             auto ta = temp_allocator_get();
             Array<String> option_tokens = {};
             array_init(ta, &option_tokens, argc - 1);
 
-            tokenize_command_line(argc - 1, argv + 1, &option_tokens); 
+            tokenize_command_line(argc - 1, argv + 1, &option_tokens);
             result.valid = parse_command_line(&result, option_tokens);
 
-            if (!result.valid)
-            {
+            if (!result.valid) {
                 print_usage();
+            } else {
+                auto exe_path = get_absolute_path(allocator, string_ref(argv[0]));
+                result.zodiac_exe_path = exe_path;
             }
 
             array_free(&option_tokens);
         }
-     
+
         return result;
     }
 
     static void tokenize_command_line(int argc, char **argv, Array<String> *tokens)
     {
-        for (int i = 0; i < argc; i++)
-        { 
+        for (int i = 0; i < argc; i++) {
             auto arg = string_ref(argv[i]);
 
             int64_t begin = 0;
-            int64_t length = 0;    
+            int64_t length = 0;
 
-            for (int64_t j = 0; j < arg.length; j++)
-            {
+            for (int64_t j = 0; j < arg.length; j++) {
                 auto c = arg[j];
 
                 if (c == '=')
@@ -135,10 +133,10 @@ namespace Zodiac
                 {
                     valid = false;
                     invalid_path = true;
-                    fprintf(stderr, "zodiac: Invalid FILE_PATH: '%s'\n", option.data); 
+                    fprintf(stderr, "zodiac: Invalid FILE_PATH: '%s'\n", option.data);
                 }
             }
-            else 
+            else
             {
                 valid = false;
                 invalid_path = true;
@@ -275,7 +273,7 @@ namespace Zodiac
     {
         if (opc->current_index < opc->tokens.count)
         {
-            opc->current_index++; 
+            opc->current_index++;
         }
     }
 

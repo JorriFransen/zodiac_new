@@ -4,6 +4,7 @@
 #include "const_interpreter.h"
 #include "interpreter.h"
 #include "os.h"
+#include "os_linux.h"
 #include "temp_allocator.h"
 
 namespace Zodiac
@@ -64,7 +65,21 @@ namespace Zodiac
         }
 
         resolver->first_file_dir = get_file_dir(allocator, first_file_path);
-        auto entry_file_path = string_append(allocator, resolver->first_file_dir, "entry.zdc");
+
+        resolver->zodiac_root_dir = find_zodiac_root(allocator, build_data);
+        auto module_dir = string_append(ta, resolver->zodiac_root_dir, "modules");
+        module_dir = os_normalize_path(ta, module_dir);
+        assert(is_directory(module_dir));
+
+#ifdef linux
+        if (!string_ends_with(module_dir, "/")) {
+            module_dir = string_append(ta, module_dir, "/");
+        }
+#endif
+        resolver->module_dir = string_copy(allocator, module_dir);
+
+        auto entry_file_path = string_append(allocator, resolver->module_dir,
+                                             "entry.zdc");
         assert(is_regular_file(entry_file_path));
 
         resolver->entry_module_path = entry_file_path;
@@ -543,7 +558,7 @@ namespace Zodiac
                 printf("           ..Inserting entry module\n");
             }
 
-            Lexed_File lf_entry = lexer_lex_file(&resolver->lexer,resolver->entry_module_path);
+            Lexed_File lf_entry = lexer_lex_file(&resolver->lexer, resolver->entry_module_path);
 
             if (!lf_entry.valid) return false;
 
@@ -3752,5 +3767,47 @@ namespace Zodiac
         }
 
         return false;
+    }
+
+    String find_zodiac_root(Allocator *allocator, Build_Data *build_data)
+    {
+        String exe_path = build_data->options->zodiac_exe_path;
+
+        assert(is_regular_file(exe_path));
+
+        auto ta = temp_allocator_get();
+
+        String current_dir = get_file_dir(ta, exe_path);
+
+        bool found = false;
+        while (true) {
+            assert(is_directory(current_dir));
+
+            String current_dir_name = get_dir_name(ta, current_dir);
+
+            if (string_equal(current_dir_name, "zodiac")) {
+                found = true;
+                break;
+            }
+
+            current_dir.length -= current_dir_name.length;
+#ifdef linux
+            current_dir.length -= 1;
+            assert(string_ends_with(current_dir, "/"));
+#elif WIN32
+            assert(false);
+#else
+            assert(false);
+#endif
+        }
+
+        assert(found);
+
+        String result = string_copy(allocator, current_dir);
+
+        String module_path = string_append(ta, result, "modules/");
+        assert(is_directory(module_path));
+
+        return result;
     }
 }

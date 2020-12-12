@@ -30,9 +30,19 @@ const String get_file_dir(Allocator *allocator, const String &path)
     return os_get_file_dir(allocator, path);
 }
 
+const String get_dir_name(Allocator *allocator, const String &path)
+{
+    return os_get_dir_name(allocator, path);
+}
+
 bool is_regular_file(const String& file_path)
 {
     return os_is_regular_file(file_path);
+}
+
+bool is_directory(const String &path)
+{
+    return os_is_directory(path);
 }
 
 String read_file_string(Allocator *allocator, const String& file_path)

@@ -57,6 +57,17 @@ bool os_is_regular_file(const String &path)
     return S_ISREG(statbuf.st_mode);
 }
 
+bool os_is_directory(const String &path)
+{
+    struct stat statbuf;
+    auto stat_res = stat(path.data, &statbuf);
+    if (stat_res != 0) {
+        return false;
+    }
+
+    return S_ISDIR(statbuf.st_mode);
+}
+
 const String os_get_file_name(Allocator *allocator, const String &path)
 {
     auto start_idx = string_last_index_of(path, '/');
@@ -72,6 +83,17 @@ const String os_get_file_dir(Allocator *allocator, const String &path)
     if (end_idx == -1) assert(false);
 
     return string_copy(allocator, path, 0, end_idx + 1);
+}
+
+const String os_get_dir_name(Allocator *allocator, const String &path)
+{
+    assert(os_is_directory(path));
+    assert(string_ends_with(path, "/"));
+
+    auto _path = path;
+    _path.length -= 1;
+
+    return os_get_file_name(allocator, _path);
 }
 
 const String os_get_absolute_path(Allocator *allocator, const String& path)
