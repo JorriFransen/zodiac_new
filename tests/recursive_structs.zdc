@@ -15,6 +15,9 @@ main :: func() -> s64
         list_append(*list, i);
     }
 
+    list_print(*list);
+
+
     return 0;
 }
 
@@ -73,9 +76,10 @@ list_print :: func (list: *Int_List)
     element := list.first;
 
     // while (element) {
-    // while (element != null) {
-
-    // }
+    while (element != null) {
+        std.print_numln(element.value);
+        element = element.next;
+    }
 }
 
 new_element :: func (value: s64) -> *Int_List_Element
