@@ -33,4 +33,7 @@ Process_Info execute_process(Allocator *allocator, const String &command, const 
 
 int64_t os_syscall(Array<int64_t> args);
 
+#ifdef linux
+bool linux_find_crt_path(String *result_ptr);
+#endif
 }
