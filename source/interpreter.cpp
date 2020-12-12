@@ -357,6 +357,24 @@ namespace Zodiac
 
 #undef _binop_compare_float
 
+                case NEG_LOG: {
+                    auto operand = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    bool result_value = false;
+
+                    if (operand.type->kind == AST_Type_Kind::BOOL) {
+                        assert(false);
+                    } else if (operand.type->kind == AST_Type_Kind::INTEGER) {
+                        assert(false);
+                    } else if (operand.type->kind == AST_Type_Kind::POINTER) {
+                        result_value = operand.pointer == nullptr;
+                    }
+
+                    assert(inst->result->type->bit_size == 8);
+                    interp_store(result_addr, (uint8_t)result_value);
+                }
+
                 case PUSH_ARG:
                 {
                     Bytecode_Value arg_val = {};

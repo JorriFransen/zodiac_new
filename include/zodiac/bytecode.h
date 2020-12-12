@@ -63,32 +63,34 @@ namespace Zodiac
         GT_F         = 0x28,
         GTEQ_F       = 0x29,
 
-        PUSH_ARG     = 0x2a,
-        CALL         = 0x2b,
-        RETURN       = 0x2c,
-        RETURN_VOID  = 0x2d,
+        NEG_LOG      = 0x2a,
 
-        JUMP         = 0x2e,
-        JUMP_IF      = 0x2f,
-        SWITCH       = 0x30,
+        PUSH_ARG     = 0x2b,
+        CALL         = 0x2c,
+        RETURN       = 0x2d,
+        RETURN_VOID  = 0x2e,
 
-        PTR_OFFSET   = 0x31,
-        AGG_OFFSET   = 0x32,
+        JUMP         = 0x2f,
+        JUMP_IF      = 0x30,
+        SWITCH       = 0x31,
 
-        ZEXT         = 0x33,
-        SEXT         = 0x34,
-        TRUNC        = 0x35,
-        F_TO_S       = 0x36,
-        S_TO_F       = 0x37,
-        U_TO_F       = 0x38,
-        F_TO_F       = 0x39,
-        PTR_TO_INT   = 0x3a,
+        PTR_OFFSET   = 0x32,
+        AGG_OFFSET   = 0x33,
 
-        SIZEOF       = 0x3b,
-        OFFSETOF     = 0x3c,
+        ZEXT         = 0x34,
+        SEXT         = 0x35,
+        TRUNC        = 0x36,
+        F_TO_S       = 0x37,
+        S_TO_F       = 0x38,
+        U_TO_F       = 0x39,
+        F_TO_F       = 0x3a,
+        PTR_TO_INT   = 0x3b,
 
-        EXIT         = 0x3d,
-        SYSCALL      = 0x3e,
+        SIZEOF       = 0x3c,
+        OFFSETOF     = 0x3d,
+
+        EXIT         = 0x3e,
+        SYSCALL      = 0x3f,
     };
 
     enum class Bytecode_Value_Kind

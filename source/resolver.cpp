@@ -1907,6 +1907,15 @@ namespace Zodiac
                         result_type = op_expr->type;
                         break;
                     }
+
+                    case UNOP_NOT: {
+                        auto tk = op_expr->type->kind;
+                        assert(tk == AST_Type_Kind::BOOL ||
+                               tk == AST_Type_Kind::INTEGER ||
+                               tk == AST_Type_Kind::POINTER);
+                        result_type = Builtin::type_bool;;
+                        break;
+                    }
                 }
 
                 assert(result_type);

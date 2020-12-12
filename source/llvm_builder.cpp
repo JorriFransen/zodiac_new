@@ -458,6 +458,21 @@ namespace Zodiac
 
             case GTEQ_F: assert(false);
 
+            case NEG_LOG: {
+                llvm::Value *op_val = llvm_emit_value(builder, inst->a);
+                if (op_val->getType()->isPointerTy())  {
+                    llvm::Type *int_type = llvm::Type::getIntNTy(*builder->llvm_context,
+                                                                 Builtin::pointer_size);
+                    op_val = builder->llvm_builder->CreatePtrToInt(op_val, int_type);
+                    llvm::Value *zero_val = llvm::Constant::getNullValue(op_val->getType());
+                    result = builder->llvm_builder->CreateICmpEQ(op_val, zero_val);
+                } else {
+                    assert(false); // Untested
+                    result = builder->llvm_builder->CreateNot(op_val);
+                }
+                break;
+            }
+
             case PUSH_ARG: {
                 llvm::Value *arg_val = llvm_emit_value(builder, inst->a);
                 stack_push(&builder->arg_stack, arg_val);
@@ -585,7 +600,6 @@ namespace Zodiac
                     indices[0] = offset_val;
                 }
 
-                // ptr_val->dump();
                 result = builder->llvm_builder->CreateGEP(ptr_val, { indices, index_count }, "");
                 break;
             }

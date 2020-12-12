@@ -1142,25 +1142,23 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
             break;
         }
 
-        case TOK_KW_IF:
-        {
+        case TOK_KW_IF: {
             ts->next_token();
 
-            if (!parser_expect_token(parser, ts, TOK_LPAREN))
-            {
+            if (!parser_expect_token(parser, ts, TOK_LPAREN)) {
                 assert(false);
             }
 
             auto cond_expr = parser_parse_expression(parser, ts);
-            assert(cond_expr);
+            if (!cond_expr) return nullptr;
 
-            if (!parser_expect_token(parser, ts, TOK_RPAREN))
-            {
+            if (!parser_expect_token(parser, ts, TOK_RPAREN)) {
                 assert(false);
             }
 
             auto then_stmt = parser_parse_statement(parser, ts);
             if (!then_stmt) return nullptr;
+
             if (!(then_stmt->self.flags & PTN_FLAG_SEMICOLON)) {
                 if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) return nullptr;
                 then_stmt->self.flags |= PTN_FLAG_SEMICOLON;
@@ -1187,8 +1185,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
             break;
         }
 
-        case TOK_KW_SWITCH:
-        {
+        case TOK_KW_SWITCH: {
             return parser_parse_switch_statement(parser, ts);
             break;
         }
@@ -2129,25 +2126,26 @@ Unary_Operator parser_parse_unary_op(Token_Stream *ts)
 
     Unary_Operator result = UNOP_INVALID;
 
-    switch (ct.kind)
-    {
-        case TOK_LT:
-        {
+    switch (ct.kind) {
+        case TOK_LT: {
             result = UNOP_DEREF;
             break;
         }
 
-        case TOK_MINUS:
-        {
+        case TOK_MINUS: {
             result = UNOP_MINUS;
+            break;
+        }
+
+        case TOK_BANG: {
+            result = UNOP_NOT;
             break;
         }
 
         default: result = UNOP_INVALID;
     }
 
-    if (result != UNOP_INVALID)
-    {
+    if (result != UNOP_INVALID) {
         ts->next_token();
     }
 

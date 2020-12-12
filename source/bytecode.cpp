@@ -848,12 +848,10 @@ namespace Zodiac
                 auto operand_expr = expr->unary.operand_expression;
                 auto operand_type = operand_expr->type;
 
-                switch (expr->unary.op)
-                {
+                switch (expr->unary.op) {
                     case UNOP_INVALID: assert(false);
 
-                    case UNOP_DEREF:
-                    {
+                    case UNOP_DEREF: {
                         assert(operand_type->kind == AST_Type_Kind::POINTER);
                         assert(expr->type == operand_type->pointer.base);
 
@@ -867,11 +865,26 @@ namespace Zodiac
                         assert(operand_type->integer.sign);
 
                         Bytecode_Value *zero = bytecode_emit_zero_value(builder, operand_type);
-                        Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
+                        Bytecode_Value *operand_value = bytecode_emit_expression(builder,
+                                                                                 operand_expr);
 
                         result = bytecode_temporary_new(builder, operand_type);
                         bytecode_emit_instruction(builder, SUB_S, zero, operand_value, result);
 
+                        break;
+                    }
+
+                    case UNOP_NOT: {
+                        assert(operand_type->kind == AST_Type_Kind::BOOL ||
+                               operand_type->kind == AST_Type_Kind::INTEGER ||
+                               operand_type->kind == AST_Type_Kind::POINTER);
+
+                        Bytecode_Value *operand_value = bytecode_emit_expression(builder,
+                                                                                 operand_expr);
+
+                        result = bytecode_temporary_new(builder, Builtin::type_bool);
+                        bytecode_emit_instruction(builder, NEG_LOG, operand_value, nullptr,
+                                                  result);
                         break;
                     }
                 }
@@ -1937,6 +1950,8 @@ namespace Zodiac
             case LTEQ_F: string_builder_append(sb, "LTEQ_F "); break;
             case GT_F:   string_builder_append(sb, "GT_F "); break;
             case GTEQ_F: string_builder_append(sb, "GTEQ_F "); break;
+
+            case NEG_LOG: assert(false);
 
             case PUSH_ARG:
             {

@@ -1587,6 +1587,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
                 case UNOP_INVALID: assert(false); break;
                 case UNOP_DEREF:   printf("<");   break;
                 case UNOP_MINUS:   printf("-");   break;
+                case UNOP_NOT:     printf("!");   break;
             }
             print_expression_ptn(expression->unary.operand_expression, 0);
             printf(")");

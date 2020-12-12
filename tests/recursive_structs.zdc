@@ -48,21 +48,34 @@ list_append :: func (list: *Int_List, value: s64)
 {
     element := new_element(value);
 
-    if (element != null) {
-        std.println("if (element != null)");
+    if (!element) {
+        std.print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        std.print("!!! ERROR, new_element() returned null, out of memory !!!\n");
+        std.print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        return;
     }
 
-    if (element == null) {
-        std.println("if (element == null)");
+    if (!list.first) {
+        list.first = element;
     } else {
-        std.println("! if (element == null)");
+        last := list.last;
+        last.next = element;
+        // list.last.next = element;
     }
 
-    if (element) {
-        std.println("if (element)");
-    }
+    list.last = element;
 
     return;
+}
+
+list_print :: func (list: *Int_List)
+{
+    element := list.first;
+
+    // while (element) {
+    // while (element != null) {
+
+    // }
 }
 
 new_element :: func (value: s64) -> *Int_List_Element

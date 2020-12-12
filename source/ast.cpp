@@ -3504,6 +3504,7 @@ namespace Zodiac
                     case UNOP_INVALID: assert(false); break;
                     case UNOP_DEREF: printf("<"); break;
                     case UNOP_MINUS: printf("-"); break;
+                    case UNOP_NOT:   printf("!"); break;
                 }
 
                 ast_print_expression(ast_expr->unary.operand_expression, 0);
