@@ -2555,34 +2555,6 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::VARIABLE: {
-                assert(decl->type);
-                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Declaration_Kind::CONSTANT: {
-                assert(decl->type);
-                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-#ifndef NDEBUG
-                    bool result =
-#endif
-                        try_size_type(resolver, decl->type);
-                    assert(result);
-                }
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-            }
-
-            case AST_Declaration_Kind::PARAMETER: {
-                assert(decl->type);
-                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-            }
-
             case AST_Declaration_Kind::FUNCTION: {
                 assert(decl->type);
                 assert(decl->type->flags & AST_NODE_FLAG_SIZED);
@@ -2605,66 +2577,29 @@ namespace Zodiac
                 return true;
             }
 
-            case AST_Declaration_Kind::TYPE: assert(false);
-
-            case AST_Declaration_Kind::TYPEDEF: {
-                assert(decl->type);
-                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-#ifndef NDEBUG
-                    bool result =
-#endif
-                        try_size_type(resolver, decl->type);
-                    assert(result);
-                }
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-            }
-
-            case AST_Declaration_Kind::STRUCTURE: {
-                assert(decl->type);
-                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-#ifndef NDEBUG
-                    bool result =
-#endif
-                        try_size_type(resolver, decl->type);
-                    assert(result);
-                }
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-            }
-
-            case AST_Declaration_Kind::ENUM: {
-                assert(decl->type);
-                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
-#ifndef NDEBUG
-                    bool result =
-#endif
-                        try_size_type(resolver, decl->type);
-                    assert(result);
-                }
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Declaration_Kind::POLY_TYPE: assert(false);
-
-            case AST_Declaration_Kind::RUN: {
-                assert(decl->type);
-                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
+            case AST_Declaration_Kind::VARIABLE:
+            case AST_Declaration_Kind::CONSTANT:
+            case AST_Declaration_Kind::PARAMETER:
+            case AST_Declaration_Kind::TYPEDEF:
+            case AST_Declaration_Kind::STRUCTURE:
+            case AST_Declaration_Kind::ENUM:
+            case AST_Declaration_Kind::RUN:
             case AST_Declaration_Kind::STATIC_IF: {
                 assert(decl->type);
-                assert(decl->type->flags & AST_NODE_FLAG_SIZED);
+                if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
+#ifndef NDEBUG
+                    bool result =
+#endif
+                        try_size_type(resolver, decl->type);
+                    assert(result);
+                }
                 decl->flags |= AST_NODE_FLAG_SIZED;
                 return true;
                 break;
             }
 
+            case AST_Declaration_Kind::TYPE: assert(false);
+            case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
         }
 
@@ -2857,35 +2792,6 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
-
-            case AST_Expression_Kind::DOT: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::BINARY: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::UNARY: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
             case AST_Expression_Kind::CALL: {
                 assert(expression->type);
                 assert(expression->type->flags & AST_NODE_FLAG_SIZED);
@@ -2904,99 +2810,18 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Expression_Kind::BUILTIN_CALL: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::ADDROF: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::COMPOUND: assert(false);
-
-            case AST_Expression_Kind::SUBSCRIPT: {
-                assert(expression->type);
-                assert(expression->type->flags & AST_NODE_FLAG_SIZED);
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::CAST: assert(false);
-
+            case AST_Expression_Kind::DOT:
+            case AST_Expression_Kind::BINARY:
+            case AST_Expression_Kind::UNARY:
+            case AST_Expression_Kind::BUILTIN_CALL:
+            case AST_Expression_Kind::ADDROF:
+            case AST_Expression_Kind::SUBSCRIPT:
             case AST_Expression_Kind::INTEGER_LITERAL:
-            case AST_Expression_Kind::CHAR_LITERAL: {
-                AST_Type *type = expression->type;
-                assert(type);
-
-                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type)) {
-                        return false;
-                    }
-                }
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::FLOAT_LITERAL: {
-                AST_Type *type = expression->type;
-                assert(type);
-
-                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type)) {
-                        return false;
-                    }
-                }
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Expression_Kind::STRING_LITERAL: {
-                AST_Type *type = expression->type;
-                assert(type);
-
-                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type)) {
-                        return false;
-                    }
-                }
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
+            case AST_Expression_Kind::CHAR_LITERAL:
+            case AST_Expression_Kind::FLOAT_LITERAL:
+            case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
-            case AST_Expression_Kind::NULL_LITERAL: {
-                AST_Type *type = expression->type;
-                assert(type);
-
-                if (!(type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type)) {
-                        return false;
-                    }
-                }
-
-                expression->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
+            case AST_Expression_Kind::NULL_LITERAL:
             case AST_Expression_Kind::RANGE: {
                 AST_Type *type = expression->type;
                 assert(type);
@@ -3011,6 +2836,11 @@ namespace Zodiac
                 return true;
                 break;
             }
+
+            case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
+            case AST_Expression_Kind::COMPOUND: assert(false);
+            case AST_Expression_Kind::CAST: assert(false);
+
         }
 
         assert(false);
@@ -3077,101 +2907,29 @@ namespace Zodiac
 
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec)
     {
-        switch (type_spec->kind) {
-            case AST_Type_Spec_Kind::INVALID: assert(false);
+            assert(type_spec->type);
 
-            case AST_Type_Spec_Kind::IDENTIFIER: {
-
-#ifndef NDEBUG
-                AST_Declaration *decl = type_spec->identifier->declaration;
+            AST_Declaration *decl = nullptr;
+            if (type_spec->kind == AST_Type_Spec_Kind::IDENTIFIER) {
+                decl = type_spec->identifier->declaration;
                 assert(decl);
-                assert(decl->type);
-#endif
+            } else if (type_spec->kind == AST_Type_Spec_Kind::DOT) {
+                decl = resolver_get_declaration(type_spec->dot_expression);
+                assert(decl);
+            }
 
+            if (decl) {
                 assert(type_spec->type == decl->type);
-
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
-                }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
             }
 
-            case AST_Type_Spec_Kind::POINTER: {
-                assert(type_spec->type);
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
+            if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
+                if (!try_size_type(resolver, type_spec->type)) {
+                    return false;
                 }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
             }
 
-            case AST_Type_Spec_Kind::DOT: {
-                assert(type_spec->type);
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
-                }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Type_Spec_Kind::FUNCTION: {
-                assert(type_spec->type);
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
-                }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Type_Spec_Kind::ARRAY: {
-                assert(type_spec->type);
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
-                }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-
-            case AST_Type_Spec_Kind::TEMPLATED: assert(false);
-            case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
-
-            case AST_Type_Spec_Kind::FROM_TYPE: {
-                assert(type_spec->type);
-                if (!(type_spec->type->flags & AST_NODE_FLAG_SIZED)) {
-                    if (!try_size_type(resolver, type_spec->type)) {
-                        return false;
-                    }
-                }
-
-                type_spec->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
-        }
-
-        assert(false);
-        return false;
+            type_spec->flags |= AST_NODE_FLAG_SIZED;
+            return true;
     }
 
     AST_Type *infer_type(AST_Node *ast_node)
