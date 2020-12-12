@@ -374,7 +374,6 @@ namespace Zodiac
                 AST_Expression *parent_expression;
                 AST_Identifier *child_identifier;
 
-                // AST_Declaration *parent_decl;
                 AST_Declaration *child_decl;
                 int64_t child_index;
             } dot;
@@ -1026,7 +1025,7 @@ namespace Zodiac
     AST_Declaration *ast_find_enum_member(AST_Type *enum_type,
                                           Const_Value member_value);
 
-    void ast_scope_add_declaration(AST_Builder *ast_builder, Scope *scope, AST_Declaration *decl);
+    bool ast_scope_add_declaration(AST_Builder *ast_builder, Scope *scope, AST_Declaration *decl);
 
     void ast_print_indent(uint64_t indent);
     void ast_print(AST_Node *ast_node);

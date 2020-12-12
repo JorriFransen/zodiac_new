@@ -12,7 +12,7 @@ main :: func() -> s64
 
     y : float;
     {
-        y : float; // Shadowing is also illegal
+        y : float; // Shadowing is also illegal, this is not reported since we bail after the first error
     }
 
     func1();
@@ -23,3 +23,11 @@ main :: func() -> s64
 func1 :: func() -> void { return; }
 func1 :: func() -> void { return; }
 
+func2 :: func() -> void {
+
+    y : float;
+    {
+        y : float; // In this case we do report this
+    }
+    return;
+}
