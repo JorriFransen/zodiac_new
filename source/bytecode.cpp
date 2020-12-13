@@ -25,6 +25,7 @@ namespace Zodiac
         array_init(allocator, &result.functions);
         array_init(allocator, &result.foreign_functions);
         array_init(allocator, &result.globals);
+        array_init(allocator, &result.string_literals);
 
         result.global_data_size = 0;
         result.run_wrapper_count = 0;
@@ -946,7 +947,8 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::STRING_LITERAL: {
-                result = bytecode_string_literal_new(builder, expr->string_literal.atom);
+                // result = bytecode_string_literal_new(builder, expr->string_literal.atom);
+                result = bytecode_get_string_literal(builder, expr->string_literal.atom);
                 break;
             }
 
@@ -1820,6 +1822,21 @@ namespace Zodiac
     Bytecode_Value *bytecode_type_value_new(Bytecode_Builder *builder, AST_Type *type)
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TYPE, type);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom& atom)
+    {
+        for (int64_t i = 0; i < builder->string_literals.count; i++) {
+            Bytecode_Value *sl = builder->string_literals[i];
+
+            if (sl->string_literal == atom) {
+                return sl;
+            }
+        }
+
+        Bytecode_Value *result = bytecode_string_literal_new(builder, atom);
+        array_append(&builder->string_literals, result);
         return result;
     }
 

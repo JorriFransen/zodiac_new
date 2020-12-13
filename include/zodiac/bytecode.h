@@ -261,9 +261,12 @@ namespace Zodiac
 
         Bytecode_Block *insert_block = nullptr;
 
+        // @SPEED: @CLEANUP: We might want some or all of these arrays to be
+        //    hash tables for speed purposes.
         Array<Bytecode_Function_Info> functions = {};
         Array<Bytecode_Function *> foreign_functions = {};
         Array<Bytecode_Global_Info> globals = {};
+        Array<Bytecode_Value *> string_literals = {};
 
         int64_t global_data_size = 0;
         int64_t run_wrapper_count = 0;
@@ -367,6 +370,8 @@ namespace Zodiac
                                                 Bytecode_Function *func);
     Bytecode_Value *bytecode_block_value_new(Bytecode_Builder *builder, Bytecode_Block *block);
     Bytecode_Value *bytecode_type_value_new(Bytecode_Builder *builder, AST_Type *type);
+
+    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom& atom);
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);
