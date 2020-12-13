@@ -9,6 +9,9 @@
 #include "resolver.h"
 #include "interpreter.h"
 
+#define MICROSOFT_CRAZINESS_IMPLEMENTATION
+#include "microsoft_craziness.h"
+
 #include <tracy/TracyC.h>
 
 using namespace Zodiac;
@@ -16,6 +19,17 @@ using namespace Zodiac;
 int main(int argc, char **argv)
 {
     TracyCZoneN(tcz_init, "init", true);
+
+#ifdef WIN32
+    auto win_sdk_info = find_visual_studio_and_windows_sdk();
+    printf("windows_sdk_version: %d\n", win_sdk_info.windows_sdk_version);
+    printf("windows_sdk_root: %ls\n", win_sdk_info.windows_sdk_root);
+    printf("windows_sdk_um_library_path: %ls\n", win_sdk_info.windows_sdk_um_library_path);
+    printf("windows_sdk_ucrt_library_path: %ls\n", win_sdk_info.windows_sdk_ucrt_library_path);
+    printf("vs_exe_path: %ls\n", win_sdk_info.vs_exe_path);
+    printf("vs_library_path: %ls\n", win_sdk_info.vs_library_path);
+    free_resources(&win_sdk_info);
+#endif
 
     auto ca = c_allocator_get();
 
