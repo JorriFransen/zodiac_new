@@ -1,6 +1,7 @@
 
 #include "zodiac_string.h"
 
+#include <cwchar>
 #include <string.h>
 #include <stdio.h>
 
@@ -126,7 +127,7 @@ bool string_contains(const String &str, const String &sub_str)
 {
     if (sub_str.length > str.length) return false;
     if (str == sub_str) return true;
-    
+
     for (int64_t str_i = 0; str_i < str.length; str_i++)
     {
         auto remaining_length = str.length - str_i;

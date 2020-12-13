@@ -12,7 +12,7 @@ namespace Zodiac
 #ifdef WIN32
         assert(sdk_info);
         build_data->sdk_info = sdk_info;
-#elif
+#else
         assert(!sdk_info);
 #endif
         build_data->options = options;

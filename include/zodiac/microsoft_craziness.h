@@ -58,7 +58,6 @@ struct Find_Result {
     wchar_t *vs_library_path = NULL;
 };
 
-typedef Find_Result Windows_SDK_Info;
 
 Find_Result find_visual_studio_and_windows_sdk();
 void free_resources(Find_Result *result);
