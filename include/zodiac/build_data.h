@@ -6,7 +6,6 @@
 #include "array.h"
 #include "command_line_parser.h"
 #include "zodiac_error.h"
-#include "microsoft_craziness.h"
 
 namespace Zodiac
 {
@@ -41,8 +40,7 @@ namespace Zodiac
     };
 
     void build_data_init(Allocator *allocator, Build_Data *build_data,
-                         Allocator *err_allocator, Options *options,
-                         Windows_SDK_Info *sdk_info = nullptr);
+                         Allocator *err_allocator, Options *options);
 
     AST_Type *build_data_find_or_create_pointer_type(Allocator *allocator, Build_Data *build_data,
                                                      AST_Type *base_type);

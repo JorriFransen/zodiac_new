@@ -2,19 +2,21 @@
 #include "build_data.h"
 #include "token.h"
 
+#ifdef WIN32
+#define MICROSOFT_CRAZINESS_IMPLEMENTATION
+#include "microsoft_craziness.h"
+#endif // WIN32
+
 namespace Zodiac
+
 {
     void build_data_init(Allocator *allocator, Build_Data *build_data,
-                         Allocator *err_allocator, Options *options,
-                         Windows_SDK_Info *sdk_info/*= nullptr*/)
+                         Allocator *err_allocator, Options *options)
     {
 
 #ifdef WIN32
-        assert(sdk_info);
-        build_data->sdk_info = sdk_info;
-#else
-        assert(!sdk_info);
-#endif
+        build_data->sdk_info = find_visual_studio_and_windows_sdk();
+#endif // WIN32
         build_data->options = options;
 
         atom_table_init(allocator, &build_data->atom_table);

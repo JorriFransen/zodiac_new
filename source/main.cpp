@@ -9,9 +9,6 @@
 #include "resolver.h"
 #include "interpreter.h"
 
-#define MICROSOFT_CRAZINESS_IMPLEMENTATION
-#include "microsoft_craziness.h"
-
 #include <tracy/TracyC.h>
 
 using namespace Zodiac;
@@ -30,13 +27,7 @@ int main(int argc, char **argv)
 
     Build_Data build_data = {};
 
-#ifdef WIN32
-    auto win_sdk_info = find_visual_studio_and_windows_sdk();
-    build_data_init(ca, &build_data, ca, &options, &win_sdk_info);
-    // free_resources(&win_sdk_info);
-#else
     build_data_init(ca, &build_data, ca, &options);
-#endif
 
     builtin_initialize_atoms(&build_data.atom_table);
     builtin_initialize_types(ca, &build_data);

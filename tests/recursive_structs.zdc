@@ -21,6 +21,16 @@ main :: func() -> s64
     return 0;
 }
 
+A :: struct
+{
+    b : *B;
+}
+
+B :: struct
+{
+    a : *A;
+}
+
 Int_List :: struct
 {
     test  : s64;
