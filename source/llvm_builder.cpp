@@ -60,6 +60,7 @@ namespace Zodiac
         array_init(allocator, &result.struct_types_to_finalize);
         array_init(allocator, &result.registered_functions);
         array_init(allocator, &result.globals);
+        array_init(allocator, &result.string_literals);
         array_init(allocator, &result.blocks);
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
@@ -812,23 +813,37 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::STRING_LITERAL:
             {
-                Atom str = bc_value->string_literal;
+                llvm::GlobalValue *llvm_str_glob = nullptr;
 
-                llvm::Constant *llvm_str =
-                    llvm::ConstantDataArray::getString(*builder->llvm_context,
-                                                       { str.data, str.length },
-                                                       true);
+                for (int64_t i = 0; i < builder->string_literals.count; i++) {
+                    auto &sl_info = builder->string_literals[i];
 
-                llvm::GlobalValue *llvm_str_glob =
-                    new llvm::GlobalVariable(*builder->llvm_module, llvm_str->getType(),
-                                             true, // Constant
-                                             llvm::GlobalVariable::PrivateLinkage,
-                                             llvm_str,
-                                             "_string_const");
+                    if (sl_info.bc_value == bc_value) {
+                        llvm_str_glob = sl_info.llvm_global;
+                        break;
+                    }
+                }
 
-                llvm_str_glob->setUnnamedAddr(llvm::GlobalVariable::UnnamedAddr::Global);
-                auto alignment = llvm::MaybeAlign(1);
-                static_cast<llvm::GlobalObject*>(llvm_str_glob)->setAlignment(alignment);
+                if (!llvm_str_glob) {
+                    Atom str = bc_value->string_literal;
+                    llvm::Constant *llvm_str =
+                        llvm::ConstantDataArray::getString(*builder->llvm_context,
+                                                           { str.data, str.length },
+                                                           true);
+
+                    llvm_str_glob = new llvm::GlobalVariable(*builder->llvm_module,
+                                                             llvm_str->getType(),
+                                                             true, // Constant
+                                                             llvm::GlobalVariable::PrivateLinkage,
+                                                             llvm_str,
+                                                             "_string_const");
+
+                    llvm_str_glob->setUnnamedAddr(llvm::GlobalVariable::UnnamedAddr::Global);
+                    auto alignment = llvm::MaybeAlign(1);
+                    static_cast<llvm::GlobalObject*>(llvm_str_glob)->setAlignment(alignment);
+
+                    array_append(&builder->string_literals, { bc_value, llvm_str_glob });
+                }
 
                 llvm::Type *dest_type = llvm_type_from_ast(builder, Builtin::type_ptr_u8);
                 llvm::Value *llvm_str_ptr = llvm::ConstantExpr::getPointerCast(llvm_str_glob,

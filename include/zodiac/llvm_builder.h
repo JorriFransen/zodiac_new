@@ -33,6 +33,12 @@ namespace Zodiac
         llvm::StructType *llvm_type = nullptr;
     };
 
+    struct LLVM_String_Literal
+    {
+        Bytecode_Value *bc_value = nullptr;
+        llvm::GlobalValue *llvm_global = nullptr;
+    };
+
     struct LLVM_Builder
     {
         Allocator *allocator = nullptr;
@@ -49,6 +55,7 @@ namespace Zodiac
 
         Array<LLVM_Function_Info> registered_functions = {};
         Array<llvm::GlobalVariable *> globals = {};
+        Array<LLVM_String_Literal> string_literals = {};
 
         Stack<llvm::Value *> arg_stack = {};
 
