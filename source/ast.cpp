@@ -43,8 +43,8 @@ namespace Zodiac
 
         assert(parsed_file);
 
-        Array<AST_Declaration *> global_decls = {};
-        array_init(ast_builder->allocator, &global_decls);
+        Declarations global_decls = {};
+        bucket_array_init(ast_builder->allocator, &global_decls);
 
         Scope *module_scope = scope_new(ast_builder->allocator, Scope_Kind::MODULE,
                                         global_scope, parsed_file->declarations.count);
@@ -65,7 +65,7 @@ namespace Zodiac
 
             ast_decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
             assert(ast_decl);
-            array_append(&global_decls, ast_decl);
+            bucket_array_add(&global_decls, ast_decl);
 
             ast_flatten_declaration(ast_builder, ast_decl);
         }
@@ -74,8 +74,8 @@ namespace Zodiac
 
         assert(global_decls.count);
 
-        auto begin_fp = array_first(&global_decls)->begin_file_pos;
-        auto end_fp = array_last(&global_decls)->end_file_pos;
+        auto begin_fp = bucket_array_get_first(&global_decls)->begin_file_pos;
+        auto end_fp = bucket_array_get_last(&global_decls)->end_file_pos;
 
         AST_Module *ast_module = ast_module_new(ast_builder->allocator,
                                                 global_decls, module_scope,
@@ -1907,7 +1907,7 @@ namespace Zodiac
         return result;
     }
 
-    AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls,
+    AST_Module *ast_module_new(Allocator *allocator, Declarations decls,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -2936,11 +2936,17 @@ namespace Zodiac
             case AST_Node_Kind::MODULE:
             {
                 auto module = (AST_Module*)ast_node;
-                for (int64_t i = 0; i < module->declarations.count; i++)
-                {
-                    auto decl = module->declarations[i];
+
+                auto bl = bucket_array_first(&module->declarations);
+                while (bl.bucket) {
+
+                    auto p_decl = bucket_locator_get_ptr(bl);
+                    auto decl = *p_decl;
+
                     ast_print_declaration(decl, 0);
                     if (decl->kind == AST_Declaration_Kind::FUNCTION) printf("\n");
+
+                    bucket_locator_advance(&bl);
                 }
                 break;
             }

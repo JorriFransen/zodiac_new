@@ -2,6 +2,7 @@
 
 #include "array.h"
 #include "atom.h"
+#include "bucket_array.h"
 #include "file_pos.h"
 #include "stack.h"
 #include "struct_predecls.h"
@@ -55,13 +56,15 @@ namespace Zodiac
         AST_Declaration *declaration = nullptr;
     };
 
+    typedef Bucket_Array<AST_Declaration *, 16> Declarations;
+
     struct AST_Module : public AST_Node
     {
         static AST_Node_Kind _kind;
 
         Scope *module_scope = nullptr;
 
-        Array<AST_Declaration*> declarations = {};
+        Declarations declarations = {};
     };
 
     enum class AST_Declaration_Kind
@@ -661,7 +664,7 @@ namespace Zodiac
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom, Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
-    AST_Module *ast_module_new(Allocator *allocator, Array<AST_Declaration*> decls,
+    AST_Module *ast_module_new(Allocator *allocator, Declarations decls,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 

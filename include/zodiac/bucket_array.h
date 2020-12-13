@@ -32,6 +32,8 @@ namespace Zodiac
 
         Bucket *first_bucket = nullptr;
         Bucket *last_bucket = nullptr;
+
+        int64_t count = 0;
     };
 
     template <typename Element_Type, int16_t bucket_capacity>
@@ -90,6 +92,7 @@ namespace Zodiac
         ba->allocator = allocator;
         ba->first_bucket = new_bucket(ba);
         ba->last_bucket = ba->first_bucket;
+        ba->count = 0;
     }
 
     template <typename Element_Type, int16_t bucket_capacity>
@@ -148,6 +151,7 @@ namespace Zodiac
             .index = ba->last_bucket->count,
         };
         ba->last_bucket->count += 1;
+        ba->count += 1;
 
         return locator;
     }
@@ -209,5 +213,19 @@ namespace Zodiac
         };
 
         return result;
+    }
+
+    template <typename Element_Type, int16_t capacity>
+    Element_Type &bucket_array_get_first(Bucket_Array<Element_Type, capacity> *ba)
+    {
+        auto locator = bucket_array_first(ba);
+        return *bucket_locator_get_ptr(locator);
+    }
+
+    template <typename Element_Type, int16_t capacity>
+    Element_Type &bucket_array_get_last(Bucket_Array<Element_Type, capacity> *ba)
+    {
+        auto locator = bucket_array_last(ba);
+        return *bucket_locator_get_ptr(locator);
     }
 }

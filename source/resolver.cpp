@@ -136,9 +136,13 @@ namespace Zodiac
                     assert(pm.ast->kind == AST_Node_Kind::MODULE);
                     AST_Module *ast_module = pm.ast;
 
-                    for (int64_t i = 0; i < ast_module->declarations.count; i++) {
-                        AST_Declaration *decl = ast_module->declarations[i];
+                    auto bl = bucket_array_first(&ast_module->declarations);
+                    while (bl.bucket) {
+                        auto p_decl = bucket_locator_get_ptr(bl);
+                        auto decl = *p_decl;
                         queue_resolve_job(resolver, decl);
+
+                        bucket_locator_advance(&bl);
                     }
                 }
             }
