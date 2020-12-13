@@ -15,6 +15,8 @@ using namespace Zodiac;
 
 int main(int argc, char **argv)
 {
+    // bucket_array_test();
+
     TracyCZoneN(tcz_init, "init", true);
 
     auto ca = c_allocator_get();

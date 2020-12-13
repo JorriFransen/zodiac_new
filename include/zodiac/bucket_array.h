@@ -8,6 +8,8 @@
 namespace Zodiac
 {
 
+    void bucket_array_test();
+
     template <typename Element_Type, int16_t bucket_capacity>
     struct Bucket_Array_Bucket
     {
@@ -88,6 +90,20 @@ namespace Zodiac
         ba->allocator = allocator;
         ba->first_bucket = new_bucket(ba);
         ba->last_bucket = ba->first_bucket;
+    }
+
+    template <typename Element_Type, int16_t bucket_capacity>
+    void bucket_array_free(Bucket_Array<Element_Type, bucket_capacity> *ba)
+    {
+        auto bucket = ba->first_bucket;
+
+        while (bucket) {
+            auto next = bucket->next_bucket;
+
+            free(ba->allocator, bucket);
+
+            bucket = next;
+        }
     }
 
     template <typename Element_Type, int16_t cap>
