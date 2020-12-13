@@ -5,8 +5,16 @@
 namespace Zodiac
 {
     void build_data_init(Allocator *allocator, Build_Data *build_data,
-                         Allocator *err_allocator, Options *options)
+                         Allocator *err_allocator, Options *options,
+                         Windows_SDK_Info *sdk_info/*= nullptr*/)
     {
+
+#ifdef WIN32
+        assert(sdk_info);
+        build_data->sdk_info = sdk_info;
+#elif
+        assert(!sdk_info);
+#endif
         build_data->options = options;
 
         atom_table_init(allocator, &build_data->atom_table);

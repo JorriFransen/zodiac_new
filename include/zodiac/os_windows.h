@@ -24,6 +24,8 @@ String os_read_file_string(Allocator *allcoator, const String &path);
 Unicode_String widen(Allocator *allocator, const String &str);
 Unicode_String widen(Allocator *allocator, const char *cstr);
 
+String narrow(Allocator *allocator, const Unicode_String &wide_str);
+
 Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args);
 }
 

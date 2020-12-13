@@ -24,12 +24,15 @@ const char *get_cwd(Allocator *allocator);
 struct Process_Info
 {
     int64_t exit_code = 0;
-    bool success = false; 
+    bool success = false;
 
     String error_sring = {};
 };
 
 Process_Info execute_process(Allocator *allocator, const String &command, const String &args);
+
+
+String narrow(Allocator *allocator, const Unicode_String &wide_string);
 
 int64_t os_syscall(Array<int64_t> args);
 

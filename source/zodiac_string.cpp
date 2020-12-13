@@ -228,4 +228,31 @@ const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_c
     return result;
 }
 
+const Unicode_String unicode_string_ref(const wchar_t *utf16_str)
+{
+    return unicode_string_ref(utf16_str, wcslen(utf16_str));
+}
+
+const Unicode_String string_append(Allocator *allocator, const Unicode_String &lhs,
+                                   const Unicode_String &rhs)
+{
+    auto new_len = lhs.length + rhs.length;
+
+    Unicode_String new_str;
+    new_str.wchars = alloc_array<wchar_t>(allocator, new_len + 1);
+    new_str.length = new_len;
+
+    memcpy(new_str.wchars, lhs.wchars, lhs.length * sizeof(wchar_t));
+    memcpy(new_str.wchars + lhs.length, rhs.wchars, rhs.length * sizeof(wchar_t));
+    new_str.wchars[new_str.length] = L'\0';
+
+    return new_str;
+}
+
+const Unicode_String string_append(Allocator *allocator, const Unicode_String &lhs,
+                                   const wchar_t *utf16_str)
+{
+    return string_append(allocator, lhs, unicode_string_ref(utf16_str));
+}
+
 }

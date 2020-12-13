@@ -75,7 +75,7 @@ const String os_get_absolute_path(Allocator *allocator, const String& path)
 const String os_normalize_path(Allocator *allocator, const String &path)
 {
     assert(path.data[path.length] == '\0');
-    
+
     char buffer[MAX_PATH];
     BOOL result = PathCanonicalizeA(buffer, path.data);
     assert(result);
@@ -147,6 +147,28 @@ Unicode_String widen(Allocator *allocator, const char *cstr)
     return widen(allocator, string_ref(cstr));
 }
 
+String narrow(Allocator *allocator, const Unicode_String &wide_str)
+{
+    auto required_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                                             wide_str.wchars, wide_str.length,
+                                             nullptr, 0, nullptr, nullptr);
+
+    assert(required_size);
+
+    String result = { .length = required_size };
+    result.data = alloc_array<char>(allocator, required_size + 1);
+
+    auto written_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                                            wide_str.wchars, wide_str.length,
+                                            result.data, required_size + 1,
+                                            nullptr, nullptr);
+
+    assert(written_size == required_size);
+
+    result.data[result.length] = '\0';
+    return result;
+}
+
 Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args)
 {
     Process_Info result = {};
@@ -184,7 +206,7 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
     else
     {
         WaitForSingleObject(process_info.hProcess, INFINITE);
-        
+
         DWORD exit_code;
         GetExitCodeProcess(process_info.hProcess, &exit_code);
 

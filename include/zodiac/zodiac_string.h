@@ -83,4 +83,10 @@ bool string_equal(const String &a, const String &b);
 const String string_print_format(Allocator *allocator, const char *fmt, va_list args);
 
 const Unicode_String unicode_string_ref(const wchar_t *utf16_str, int64_t char_count);
+const Unicode_String unicode_string_ref(const wchar_t *utf16_str);
+
+const Unicode_String string_append(Allocator *allocator, const Unicode_String &lhs,
+                                   const Unicode_String &rhs);
+const Unicode_String string_append(Allocator *allocator, const Unicode_String &lhs,
+                                   const wchar_t *utf16_str);
 }

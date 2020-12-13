@@ -1178,12 +1178,43 @@ namespace Zodiac
 
 #elif _WIN32
 
-        auto linker_path = string_ref("C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/link.exe");
+        auto ta = temp_allocator_get();
+
+        auto sdk_info = builder->build_data->sdk_info;
+
+        auto vs_exe_path = unicode_string_ref(sdk_info->vs_exe_path);
+        auto wide_linker_path = string_append(ta, vs_exe_path, L"\\link.exe");
+        auto linker_path = narrow(ta, wide_linker_path);
 
         string_builder_append(sb, linker_path.data);
 
         // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
-        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /NODEFAULTLIB");
+        string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /nodefaultlib");
+
+        auto wide_um_lib_path = unicode_string_ref(sdk_info->windows_sdk_um_library_path);
+        auto um_lib_path = narrow(ta, wide_um_lib_path);
+
+        // printf("um_lib_path: %s\n", um_lib_path.data);
+        // printf("strlen(um_lib_path.data): %llu\n", strlen(um_lib_path.data));
+        // assert(um_lib_path.data[um_lib_path.length] == 0);
+        assert(um_lib_path.length == strlen(um_lib_path.data));
+
+        // @TODO: @FIXME: Find out why we crash when we don't pass a length here,
+        //  um_lib_path.data should be a null terminated cstring.
+        string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)um_lib_path.length,
+                               um_lib_path.data);
+
+        auto wide_ucrt_lib_path = unicode_string_ref(sdk_info->windows_sdk_ucrt_library_path);
+        auto ucrt_lib_path = narrow(ta, wide_ucrt_lib_path);
+        assert(ucrt_lib_path.length == strlen(ucrt_lib_path.data));
+        string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)ucrt_lib_path.length,
+                               ucrt_lib_path.data);
+
+        auto wide_vs_lib_path = unicode_string_ref(sdk_info->vs_library_path);
+        auto vs_lib_path = narrow(ta, wide_vs_lib_path);
+        assert(vs_lib_path.length == strlen(vs_lib_path.data));
+        string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)vs_lib_path.length,
+                               vs_lib_path.data);
 
         string_builder_append(sb, " kernel32.lib");
         string_builder_append(sb, " msvcrt.lib");
@@ -1414,7 +1445,7 @@ namespace Zodiac
     {
         if (builder->target_platform == Zodiac_Target_Platform::WINDOWS) {
             llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
-            if (!exitprocess_func) return false; 
+            if (!exitprocess_func) return false;
         }
 
         return true;

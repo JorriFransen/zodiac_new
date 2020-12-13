@@ -20,17 +20,6 @@ int main(int argc, char **argv)
 {
     TracyCZoneN(tcz_init, "init", true);
 
-#ifdef WIN32
-    auto win_sdk_info = find_visual_studio_and_windows_sdk();
-    printf("windows_sdk_version: %d\n", win_sdk_info.windows_sdk_version);
-    printf("windows_sdk_root: %ls\n", win_sdk_info.windows_sdk_root);
-    printf("windows_sdk_um_library_path: %ls\n", win_sdk_info.windows_sdk_um_library_path);
-    printf("windows_sdk_ucrt_library_path: %ls\n", win_sdk_info.windows_sdk_ucrt_library_path);
-    printf("vs_exe_path: %ls\n", win_sdk_info.vs_exe_path);
-    printf("vs_library_path: %ls\n", win_sdk_info.vs_library_path);
-    free_resources(&win_sdk_info);
-#endif
-
     auto ca = c_allocator_get();
 
     // The allocator is only used to allocate the full path for the zodiac exe
@@ -40,7 +29,15 @@ int main(int argc, char **argv)
 
 
     Build_Data build_data = {};
+
+#ifdef WIN32
+    auto win_sdk_info = find_visual_studio_and_windows_sdk();
+    build_data_init(ca, &build_data, ca, &options, &win_sdk_info);
+    // free_resources(&win_sdk_info);
+#else
     build_data_init(ca, &build_data, ca, &options);
+#endif
+
     builtin_initialize_atoms(&build_data.atom_table);
     builtin_initialize_types(ca, &build_data);
 
