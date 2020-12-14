@@ -1542,10 +1542,9 @@ namespace Zodiac
 
                     if (switch_case->is_default) continue;
 
-                    for (int64_t expr_i = 0;
-                         expr_i < switch_case->expressions.count;
-                         expr_i++) {
-                        AST_Expression *case_expr = switch_case->expressions[expr_i];
+                    auto el = bucket_array_first(&switch_case->expressions);
+                    while (el.bucket) {
+                        auto case_expr = *bucket_locator_get_ptr(el);
                         assert(case_expr->type);
                         assert(case_expr->type == switch_expr->type);
                         assert(case_expr->expr_flags & AST_EXPR_FLAG_CONST);
@@ -1555,6 +1554,8 @@ namespace Zodiac
                         if (case_expr->kind == AST_Expression_Kind::RANGE) {
                             range_count++;
                         }
+
+                        bucket_locator_advance(&el);
                     }
 
                     if (range_count) {
@@ -2788,14 +2789,16 @@ namespace Zodiac
 
                     if (switch_case->is_default) continue;
 
-                    for (int64_t expr_i = 0;
-                         expr_i < switch_case->expressions.count;
-                         expr_i++) {
-                        AST_Expression *case_expr = switch_case->expressions[expr_i];
+                    auto el = bucket_array_first(&switch_case->expressions);
+                    while (el.bucket) {
+                        auto case_expr = *bucket_locator_get_ptr(el);
+
                         if (!(case_expr->flags & AST_NODE_FLAG_SIZED)) {
                             try_size_expression(resolver, case_expr);
                             assert(case_expr->flags & AST_NODE_FLAG_SIZED);
                         }
+
+                        bucket_locator_advance(&el);
                     }
                 }
                 return true;
@@ -3401,11 +3404,10 @@ namespace Zodiac
         Array<AST_Node *> new_nodes = {};
         array_init(ta, &new_nodes,  temp_case_exprs.capacity * 2);
 
-        for (int64_t expr_i = 0;
-             expr_i < switch_case->expressions.count;
-             expr_i++) {
-
-            auto case_expr = switch_case->expressions[expr_i];
+        auto el = bucket_array_first(&switch_case->expressions);
+        int expr_i = 0;
+        while (el.bucket) {
+            auto case_expr = *bucket_locator_get_ptr(el);
 
             if (case_expr->kind == AST_Expression_Kind::RANGE) {
 
@@ -3455,13 +3457,8 @@ namespace Zodiac
                 if (signed_type) val.s64 = begin_val.integer.s64 + 1;
                 else val.u64 = begin_val.integer.u64 + 1;
 
-                // while (val < end_val.integer.u64) {
                 while (case_range_valid(signed_type, val, end_val.integer)) {
                     AST_Expression *new_expr = nullptr;
-                    // AST_Expression *new_expr =
-                    //     ast_integer_literal_expression_new(resolver->allocator,
-                    //                                        val, switch_scope,
-                    //                                        begin_fp, end_fp);
 
                     if (signed_type) {
                         new_expr = ast_integer_literal_expression_new(resolver->allocator,
@@ -3511,8 +3508,6 @@ namespace Zodiac
                     }
 
                     if (new_expr) {
-                        ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
-
                         array_append(&temp_case_exprs, new_expr);
                     }
 
@@ -3534,7 +3529,16 @@ namespace Zodiac
             } else if (first_range_index >= 0) {
                 array_append(&temp_case_exprs, case_expr);
             }
+
+            expr_i += 1;
+            bucket_locator_advance(&el);
         }
+
+        for (int64_t i = 0; i < temp_case_exprs.count; i++) {
+            auto new_expr = temp_case_exprs[i];
+            ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
+        }
+
 
         for (int64_t i = 0; i < new_nodes.count; i++) {
             assert(new_nodes[i]->kind == AST_Node_Kind::EXPRESSION);
@@ -3546,13 +3550,19 @@ namespace Zodiac
 
         assert(first_range_index >= 0);
 
-        switch_case->expressions.count = first_range_index;
+        el = bucket_array_locator_by_index(&switch_case->expressions, first_range_index);
 
         for (int64_t j = 0; j < temp_case_exprs.count; j++) {
-            array_append(&switch_case->expressions,
-                         temp_case_exprs[j]);
-        }
 
+            if (el.bucket) {
+                auto ptr = bucket_locator_get_ptr(el);
+                *ptr = temp_case_exprs[j];
+
+                bucket_locator_advance(&el);
+            } else {
+                bucket_array_add(&switch_case->expressions, temp_case_exprs[j]);
+            }
+        }
     }
 
     bool resolver_check_switch_completeness(Resolver *resolver, AST_Statement *ast_stmt)
@@ -3578,8 +3588,9 @@ namespace Zodiac
         for (int64_t i = 0; i < cases.count; i++) {
             AST_Switch_Case *switch_case = cases[i];
 
-            for (int64_t j = 0; j < switch_case->expressions.count; j++) {
-                auto case_expr = switch_case->expressions[j];
+            auto el = bucket_array_first(&switch_case->expressions);
+            while (el.bucket) {
+                auto case_expr = *bucket_locator_get_ptr(el);
 
                 Const_Value expr_val = const_interpret_expression(case_expr);
 
@@ -3598,6 +3609,8 @@ namespace Zodiac
                 }
 
                 if (unhandled_umvs.count <= 0) break;
+
+                bucket_locator_advance(&el);
             }
 
             if (unhandled_umvs.count <= 0) break;

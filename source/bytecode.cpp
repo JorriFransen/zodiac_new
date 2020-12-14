@@ -582,12 +582,15 @@ namespace Zodiac
                         continue;
                     }
 
-                    for (int64_t expr_i = 0; expr_i < switch_case->expressions.count; expr_i++) {
-                        AST_Expression *expr = switch_case->expressions[expr_i];
+                    auto el = bucket_array_first(&switch_case->expressions);
+                    while (el.bucket) {
+                        auto expr = *bucket_locator_get_ptr(el);
                         assert(expr->expr_flags & AST_EXPR_FLAG_CONST);
 
                         Bytecode_Value *expr_val = bytecode_emit_expression(builder, expr);
                         bytecode_add_switch_case(switch_inst, expr_val, case_block);
+
+                        bucket_locator_advance(&el);
                     }
                 }
 

@@ -958,13 +958,13 @@ namespace Zodiac
 
                     bool is_default = ptn_case.is_default;
 
-                    Array<AST_Expression *> case_expressions = {};
+                    Bucket_Array<AST_Expression *, 4> case_expressions ={};
 
                     if (is_default) {
                         assert(!ptn_case.expressions.count);
                     } else {
                         auto ptn_exprs = ptn_case.expressions;
-                        array_init(ast_builder->allocator, &case_expressions, ptn_exprs.count);
+                        bucket_array_init(ast_builder->allocator, &case_expressions);
 
                         assert(ptn_case.expressions.count);
                         for (int64_t expr_i = 0; expr_i < ptn_exprs.count; expr_i++) {
@@ -996,7 +996,7 @@ namespace Zodiac
                             }
 
                             assert(case_expr);
-                            array_append(&case_expressions, case_expr);
+                            bucket_array_add(&case_expressions, case_expr);
                         }
 
                         case_expr_count += ptn_exprs.count;
@@ -1719,11 +1719,12 @@ namespace Zodiac
                 for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++) {
                     auto switch_case = stmt->switch_stmt.cases[i];
                     if (!switch_case->is_default) {
-                        for (int64_t expr_idx = 0;
-                             expr_idx < switch_case->expressions.count;
-                             expr_idx++) {
-                            ast_flatten_expression(builder, switch_case->expressions[expr_idx],
-                                                   nodes);
+
+                        auto el = bucket_array_first(&switch_case->expressions);
+                        while (el.bucket) {
+                            auto p_expr = bucket_locator_get_ptr(el);
+                            ast_flatten_expression(builder, *p_expr, nodes);
+                            bucket_locator_advance(&el);
                         }
                     }
 
@@ -2190,7 +2191,7 @@ namespace Zodiac
     }
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
-                                         Array<AST_Expression *> case_exprs,
+                                         Bucket_Array<AST_Expression *, 4> case_exprs,
                                          bool is_default, AST_Statement *body,
                                          Scope *scope,
                                          const File_Pos &begin_fp,
@@ -3339,13 +3340,16 @@ namespace Zodiac
                     {
                         printf("case ");
 
-                        for (int64_t j = 0; j < switch_case->expressions.count; j++)
-                        {
-                            if (j > 0) printf(", ");
-
-                            AST_Expression *case_expr = switch_case->expressions[j];
+                        auto el = bucket_array_first(&switch_case->expressions);
+                        bool first = true;
+                        while (el.bucket) {
+                            auto case_expr = *bucket_locator_get_ptr(el);
+                            if (first) printf(", ");
 
                             ast_print_expression(case_expr, 0);
+
+                            first = false;
+                            bucket_locator_advance(&el);
                         }
 
                         printf(":");

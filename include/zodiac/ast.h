@@ -220,7 +220,7 @@ namespace Zodiac
     {
         static AST_Node_Kind _kind;
 
-        Array<AST_Expression *> expressions = {};
+        Bucket_Array<AST_Expression *, 4> expressions = {};
         bool is_default = false;
         AST_Statement *body = nullptr;
     };
@@ -775,7 +775,7 @@ namespace Zodiac
                                                         const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
-                                         Array<AST_Expression *> case_exprs,
+                                         Bucket_Array<AST_Expression *, 4> case_exprs,
                                          bool is_default, AST_Statement *body,
                                          Scope *scope,
                                          const File_Pos &begin_fp,
