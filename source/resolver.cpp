@@ -46,7 +46,7 @@ namespace Zodiac
         auto builtin_declarations = builtin_populate_scope(allocator, resolver->global_scope);
 
         for (int64_t i = 0; i < builtin_declarations.count; i++) {
-            ast_flatten_declaration(&resolver->ast_builder, builtin_declarations[i]);
+            ast_flatten_declaration(&resolver->ast_builder, &builtin_declarations[i]);
             queue_resolve_job(resolver, builtin_declarations[i]);
         }
 
@@ -658,7 +658,8 @@ namespace Zodiac
         int64_t was_waiting_on = decl->flat->waiting_on;
 
         for (int64_t i = decl->flat->waiting_on; i < decl->flat->nodes.count; i++) {
-            AST_Node *node = decl->flat->nodes[i];
+            AST_Node **p_node = decl->flat->nodes[i];
+            AST_Node *node = *p_node;
 
             switch (node->kind) {
                 case AST_Node_Kind::INVALID: assert(false);
@@ -753,7 +754,8 @@ namespace Zodiac
         bool result = true;
 
         for (int64_t i = 0; i < decl->flat->nodes.count; i++) {
-            AST_Node *node = decl->flat->nodes[i];
+            AST_Node **p_node = decl->flat->nodes[i];
+            AST_Node *node = *p_node;
 
             if (node->flags & AST_NODE_FLAG_SIZED) {
                 continue;
@@ -1235,13 +1237,13 @@ namespace Zodiac
 
                 if (decls_to_add) {
                     for (int64_t i = 0; i < decls_to_add->count; i++) {
-                        AST_Declaration *then_decl = (*decls_to_add)[i];
-                        bool imported = resolver_import_from_static_if(resolver, then_decl,
+                        AST_Declaration **then_decl = &(*decls_to_add)[i];
+                        bool imported = resolver_import_from_static_if(resolver, *then_decl,
                                                                      declaration->scope);
                         if (!imported) return false;
 
                         ast_flatten_declaration(&resolver->ast_builder, then_decl);
-                        queue_resolve_job(resolver, then_decl);
+                        queue_resolve_job(resolver, *then_decl);
                     }
                 }
 
@@ -1295,10 +1297,11 @@ namespace Zodiac
         bool all_members_resolved = true;
 
         for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
-            AST_Declaration *member_decl = declaration->structure.member_declarations[i];
+            AST_Declaration **p_member_decl = &declaration->structure.member_declarations[i];
+            auto member_decl = *p_member_decl;
 
             if (!member_decl->flat) {
-                ast_flatten_declaration(&resolver->ast_builder, member_decl);
+                ast_flatten_declaration(&resolver->ast_builder, p_member_decl);
                 queue_resolve_job(resolver, member_decl);
                 all_members_resolved = false;
 
@@ -2869,7 +2872,8 @@ namespace Zodiac
             case AST_Expression_Kind::STRING_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
             case AST_Expression_Kind::NULL_LITERAL:
-            case AST_Expression_Kind::RANGE: {
+            case AST_Expression_Kind::RANGE:
+            case AST_Expression_Kind::CAST: {
                 AST_Type *type = expression->type;
                 assert(type);
 
@@ -2886,7 +2890,6 @@ namespace Zodiac
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
             case AST_Expression_Kind::COMPOUND: assert(false);
-            case AST_Expression_Kind::CAST: assert(false);
 
         }
 
@@ -3401,7 +3404,7 @@ namespace Zodiac
 
         int64_t first_range_index = -1;
 
-        Array<AST_Node *> new_nodes = {};
+        Array<AST_Node **> new_nodes = {};
         array_init(ta, &new_nodes,  temp_case_exprs.capacity * 2);
 
         auto el = bucket_array_first(&switch_case->expressions);
@@ -3553,13 +3556,14 @@ namespace Zodiac
 
             assert(ptr);
 
-            ast_flatten_expression(&resolver->ast_builder, *ptr, &new_nodes);
+            ast_flatten_expression(&resolver->ast_builder, ptr, &new_nodes);
         }
 
         for (int64_t i = 0; i < new_nodes.count; i++) {
-            assert(new_nodes[i]->kind == AST_Node_Kind::EXPRESSION);
+            auto node = *new_nodes[i];
+            assert(node->kind == AST_Node_Kind::EXPRESSION);
             if (!try_resolve_expression(resolver,
-                                        static_cast<AST_Expression *>(new_nodes[i]))) {
+                                        static_cast<AST_Expression *>(node))) {
                 assert(false);
             }
         }

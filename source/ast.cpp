@@ -66,13 +66,20 @@ namespace Zodiac
             ast_decl->decl_flags |= AST_DECL_FLAG_GLOBAL;
             assert(ast_decl);
             bucket_array_add(&global_decls, ast_decl);
-
-            ast_flatten_declaration(ast_builder, ast_decl);
         }
 
         if (!valid) return nullptr;
 
         assert(global_decls.count);
+
+        auto dl = bucket_array_first(&global_decls);
+        while (dl.bucket) {
+            AST_Declaration **p_decl = bucket_locator_get_ptr(dl);
+
+            ast_flatten_declaration(ast_builder, p_decl);
+
+            bucket_locator_advance(&dl);
+        }
 
         auto begin_fp = bucket_array_get_first(&global_decls)->begin_file_pos;
         auto end_fp = bucket_array_get_last(&global_decls)->end_file_pos;
@@ -1479,94 +1486,99 @@ namespace Zodiac
         return nullptr;
     }
 
-    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl)
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration **p_decl)
     {
+        auto decl = *p_decl;
+
         assert(!decl->flat);
 
-        Array<AST_Node *> nodes = {};
+        Array<AST_Node **> nodes = {};
         array_init(builder->allocator, &nodes);
 
-        ast_flatten_declaration(builder, decl, &nodes);
+        ast_flatten_declaration(builder, p_decl, &nodes);
 
         if (!nodes.count) array_free(&nodes);
 
         decl->flat = ast_flat_declaration_new(builder->allocator, nodes);
     }
 
-    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl,
-                                 Array<AST_Node *> *nodes)
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration **p_decl,
+                                 Array<AST_Node **> *nodes)
     {
+        auto decl = *p_decl;
+        auto node = (AST_Node **)p_decl;
+
         switch (decl->kind) {
             case AST_Declaration_Kind::INVALID: assert(false);
 
             case AST_Declaration_Kind::IMPORT: {
-                array_append(nodes, static_cast<AST_Node *>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::USING: {
-                ast_flatten_expression(builder, decl->using_decl.ident_expr, nodes);
-                array_append(nodes, static_cast<AST_Node *>(decl));
+                ast_flatten_expression(builder, &decl->using_decl.ident_expr, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::VARIABLE: {
 
                 if (decl->variable.type_spec)
-                    ast_flatten_type_spec(builder, decl->variable.type_spec, nodes);
+                    ast_flatten_type_spec(builder, &decl->variable.type_spec, nodes);
 
                 if (decl->variable.init_expression)
-                    ast_flatten_expression(builder, decl->variable.init_expression, nodes);
+                    ast_flatten_expression(builder, &decl->variable.init_expression, nodes);
 
-                array_append(nodes, static_cast<AST_Node *>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::CONSTANT: {
 
                 if (decl->constant.type_spec)
-                    ast_flatten_type_spec(builder, decl->constant.type_spec, nodes);
+                    ast_flatten_type_spec(builder, &decl->constant.type_spec, nodes);
 
                 assert(decl->constant.init_expression ||
                        (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER));
 
                 if (decl->constant.init_expression)
-                    ast_flatten_expression(builder, decl->constant.init_expression, nodes);
+                    ast_flatten_expression(builder, &decl->constant.init_expression, nodes);
 
-                array_append(nodes, static_cast<AST_Node *>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::PARAMETER: {
-                ast_flatten_type_spec(builder, decl->parameter.type_spec, nodes);
-                array_append(nodes, static_cast<AST_Node *>(decl));
+                ast_flatten_type_spec(builder, &decl->parameter.type_spec, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::FUNCTION: {
 
                 for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++) {
-                    auto param_decl = decl->function.parameter_declarations[i];
+                    auto param_decl = &decl->function.parameter_declarations[i];
                     ast_flatten_declaration(builder, param_decl, nodes);
                 }
 
-                ast_flatten_type_spec(builder, decl->function.type_spec, nodes);
+                ast_flatten_type_spec(builder, &decl->function.type_spec, nodes);
 
                 if (decl->function.body) {
-                    ast_flatten_statement(builder, decl->function.body, nodes);
+                    ast_flatten_statement(builder, &decl->function.body, nodes);
                 } else {
                     assert(decl->decl_flags & AST_DECL_FLAG_FOREIGN);
                 }
 
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
 
             case AST_Declaration_Kind::TYPEDEF: {
-                ast_flatten_type_spec(builder, decl->typedef_decl.type_spec, nodes);
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                ast_flatten_type_spec(builder, &decl->typedef_decl.type_spec, nodes);
+                array_append(nodes, node);
                 break;
             }
 
@@ -1582,14 +1594,14 @@ namespace Zodiac
                 //                             nodes);
                 // }
 
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::ENUM: {
                 assert(decl->enum_decl.type_spec);
                 if (decl->enum_decl.type_spec)
-                    ast_flatten_type_spec(builder, decl->enum_decl.type_spec, nodes);
+                    ast_flatten_type_spec(builder, &decl->enum_decl.type_spec, nodes);
 
                 // We don't flatten member declarations, because then we might get stuck on
                 //  a reference to a later member. We iterate all members when resolving the
@@ -1600,121 +1612,124 @@ namespace Zodiac
                 //                             nodes);
                 // }
 
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
 
             case AST_Declaration_Kind::RUN: {
-                ast_flatten_expression(builder, decl->run.expression, nodes);
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                ast_flatten_expression(builder, &decl->run.expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::STATIC_IF: {
-                ast_flatten_expression(builder, decl->static_if.cond_expression, nodes);
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                ast_flatten_expression(builder, &decl->static_if.cond_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Declaration_Kind::STATIC_ASSERT: {
-                ast_flatten_expression(builder, decl->static_assert_decl.cond_expression, nodes);
-                array_append(nodes, static_cast<AST_Node*>(decl));
+                ast_flatten_expression(builder, &decl->static_assert_decl.cond_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
         }
     }
 
-    void ast_flatten_statement(AST_Builder *builder, AST_Statement *stmt,
-                               Array<AST_Node *> *nodes)
+    void ast_flatten_statement(AST_Builder *builder, AST_Statement **p_stmt,
+                               Array<AST_Node **> *nodes)
     {
+        auto stmt = *p_stmt;
+        auto node = (AST_Node **)p_stmt;
+
         switch (stmt->kind) {
             case AST_Statement_Kind::INVALID: assert(false);
 
             case AST_Statement_Kind::BLOCK: {
 
                 for (int64_t i = 0; i < stmt->block.statements.count; i++) {
-                    ast_flatten_statement(builder, stmt->block.statements[i], nodes);
+                    ast_flatten_statement(builder, &stmt->block.statements[i], nodes);
                 }
 
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::ASSIGNMENT: {
-                ast_flatten_expression(builder, stmt->assignment.identifier_expression, nodes);
-                ast_flatten_expression(builder, stmt->assignment.rhs_expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                ast_flatten_expression(builder, &stmt->assignment.identifier_expression, nodes);
+                ast_flatten_expression(builder, &stmt->assignment.rhs_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::RETURN: {
                 if (stmt->expression) {
-                    ast_flatten_expression(builder, stmt->expression, nodes);
+                    ast_flatten_expression(builder, &stmt->expression, nodes);
                 }
 
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::BREAK: {
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::DECLARATION: {
-                ast_flatten_declaration(builder, stmt->declaration, nodes);
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                ast_flatten_declaration(builder, &stmt->declaration, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::EXPRESSION: {
-                ast_flatten_expression(builder, stmt->expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                ast_flatten_expression(builder, &stmt->expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::WHILE: {
-                ast_flatten_expression(builder, stmt->while_stmt.cond_expr, nodes);
-                ast_flatten_statement(builder, stmt->while_stmt.body, nodes);
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                ast_flatten_expression(builder, &stmt->while_stmt.cond_expr, nodes);
+                ast_flatten_statement(builder, &stmt->while_stmt.body, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::FOR: {
                 for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++) {
-                    ast_flatten_statement(builder, stmt->for_stmt.init_statements[i], nodes);
+                    ast_flatten_statement(builder, &stmt->for_stmt.init_statements[i], nodes);
                 }
 
                 if (stmt->for_stmt.it_decl) {
-                    ast_flatten_declaration(builder, stmt->for_stmt.it_decl, nodes);
+                    ast_flatten_declaration(builder, &stmt->for_stmt.it_decl, nodes);
                 }
 
-                ast_flatten_expression(builder, stmt->for_stmt.cond_expr, nodes);
+                ast_flatten_expression(builder, &stmt->for_stmt.cond_expr, nodes);
 
                 for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++) {
-                    ast_flatten_statement(builder, stmt->for_stmt.step_statements[i], nodes);
+                    ast_flatten_statement(builder, &stmt->for_stmt.step_statements[i], nodes);
                 }
 
-                ast_flatten_statement(builder, stmt->for_stmt.body_stmt, nodes);
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                ast_flatten_statement(builder, &stmt->for_stmt.body_stmt, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::IF: {
-                ast_flatten_expression(builder, stmt->if_stmt.cond_expr, nodes);
-                ast_flatten_statement(builder, stmt->if_stmt.then_stmt, nodes);
+                ast_flatten_expression(builder, &stmt->if_stmt.cond_expr, nodes);
+                ast_flatten_statement(builder, &stmt->if_stmt.then_stmt, nodes);
 
                 if (stmt->if_stmt.else_stmt)
-                    ast_flatten_statement(builder, stmt->if_stmt.else_stmt, nodes);
+                    ast_flatten_statement(builder, &stmt->if_stmt.else_stmt, nodes);
 
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Statement_Kind::SWITCH: {
-                ast_flatten_expression(builder, stmt->switch_stmt.expression, nodes);
+                ast_flatten_expression(builder, &stmt->switch_stmt.expression, nodes);
 
                 for (int64_t i = 0; i < stmt->switch_stmt.cases.count; i++) {
                     auto switch_case = stmt->switch_stmt.cases[i];
@@ -1723,59 +1738,62 @@ namespace Zodiac
                         auto el = bucket_array_first(&switch_case->expressions);
                         while (el.bucket) {
                             auto p_expr = bucket_locator_get_ptr(el);
-                            ast_flatten_expression(builder, *p_expr, nodes);
+                            ast_flatten_expression(builder, p_expr, nodes);
                             bucket_locator_advance(&el);
                         }
                     }
 
-                    ast_flatten_statement(builder, switch_case->body, nodes);
+                    ast_flatten_statement(builder, &switch_case->body, nodes);
                 }
-                array_append(nodes, static_cast<AST_Node *>(stmt));
+                array_append(nodes, node);
                 break;
             }
         }
     }
 
-    void ast_flatten_expression(AST_Builder *builder, AST_Expression *expr,
-                                Array<AST_Node *> *nodes)
+    void ast_flatten_expression(AST_Builder *builder, AST_Expression **p_expr,
+                                Array<AST_Node **> *nodes)
     {
+        auto expr = *p_expr;
+        auto node = (AST_Node **)p_expr;
+
         switch (expr->kind) {
             case AST_Expression_Kind::INVALID: assert(false);
 
             case AST_Expression_Kind::IDENTIFIER: {
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
             case AST_Expression_Kind::DOT: {
-                ast_flatten_expression(builder, expr->dot.parent_expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->dot.parent_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::BINARY: {
-                ast_flatten_expression(builder, expr->binary.lhs, nodes);
-                ast_flatten_expression(builder, expr->binary.rhs, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->binary.lhs, nodes);
+                ast_flatten_expression(builder, &expr->binary.rhs, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::UNARY: {
-                ast_flatten_expression(builder, expr->unary.operand_expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->unary.operand_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::CALL: {
-                ast_flatten_expression(builder, expr->call.ident_expression, nodes);
+                ast_flatten_expression(builder, &expr->call.ident_expression, nodes);
 
                 for (int64_t i = 0; i < expr->call.arg_expressions.count; i++) {
-                    ast_flatten_expression(builder, expr->call.arg_expressions[i], nodes);
+                    ast_flatten_expression(builder, &expr->call.arg_expressions[i], nodes);
                 }
 
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                array_append(nodes, node);
                 break;
             }
 
@@ -1785,30 +1803,30 @@ namespace Zodiac
 
                 if (expr->builtin_call.identifier->atom == Builtin::atom_offsetof) {
                     assert(args.count == 2);
-                    ast_flatten_expression(builder, args[1], nodes);
+                    ast_flatten_expression(builder, &args[1], nodes);
 
                 } else {
                     for (int64_t i = 0; i < args.count; i++) {
-                        ast_flatten_expression(builder, args[i], nodes);
+                        ast_flatten_expression(builder, &args[i], nodes);
                     }
                 }
 
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::ADDROF: {
-                ast_flatten_expression(builder, expr->addrof.operand_expr, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->addrof.operand_expr, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::COMPOUND: assert(false);
 
             case AST_Expression_Kind::SUBSCRIPT: {
-                ast_flatten_expression(builder, expr->subscript.index_expression, nodes);
-                ast_flatten_expression(builder, expr->subscript.pointer_expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->subscript.index_expression, nodes);
+                ast_flatten_expression(builder, &expr->subscript.pointer_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
@@ -1820,60 +1838,63 @@ namespace Zodiac
             case AST_Expression_Kind::CHAR_LITERAL:
             case AST_Expression_Kind::BOOL_LITERAL:
             case AST_Expression_Kind::NULL_LITERAL: {
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Expression_Kind::RANGE: {
-                ast_flatten_expression(builder, expr->range.begin, nodes);
-                ast_flatten_expression(builder, expr->range.end, nodes);
-                array_append(nodes, static_cast<AST_Node *>(expr));
+                ast_flatten_expression(builder, &expr->range.begin, nodes);
+                ast_flatten_expression(builder, &expr->range.end, nodes);
+                array_append(nodes, node);
                 break;
             }
         }
     }
 
-    void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec *type_spec,
-                               Array<AST_Node *> *nodes)
+    void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec **p_type_spec,
+                               Array<AST_Node **> *nodes)
     {
+        auto type_spec = *p_type_spec;
+        auto node = (AST_Node **)p_type_spec;
+
         switch (type_spec->kind) {
             case AST_Type_Spec_Kind::INVALID: assert(false);
 
             case AST_Type_Spec_Kind::IDENTIFIER:
             {
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Type_Spec_Kind::POINTER: {
-                ast_flatten_type_spec(builder, type_spec->base_type_spec, nodes);
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                ast_flatten_type_spec(builder, &type_spec->base_type_spec, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Type_Spec_Kind::DOT: {
-                ast_flatten_expression(builder, type_spec->dot_expression, nodes);
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                ast_flatten_expression(builder, &type_spec->dot_expression, nodes);
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Type_Spec_Kind::FUNCTION: {
                 for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
-                    auto param_ts = type_spec->function.parameter_type_specs[i];
+                    auto param_ts = &type_spec->function.parameter_type_specs[i];
                     ast_flatten_type_spec(builder, param_ts, nodes);
                 }
 
                 if (type_spec->function.return_type_spec)
-                    ast_flatten_type_spec(builder, type_spec->function.return_type_spec, nodes);
+                    ast_flatten_type_spec(builder, &type_spec->function.return_type_spec, nodes);
 
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                array_append(nodes, node);
                 break;
             }
 
             case AST_Type_Spec_Kind::ARRAY: {
-                ast_flatten_expression(builder, type_spec->array.length_expression, nodes);
-                ast_flatten_type_spec(builder, type_spec->array.element_type_spec, nodes);
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                ast_flatten_expression(builder, &type_spec->array.length_expression, nodes);
+                ast_flatten_type_spec(builder, &type_spec->array.element_type_spec, nodes);
+                array_append(nodes, node);
                 break;
             }
 
@@ -1881,13 +1902,13 @@ namespace Zodiac
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: assert(false);
 
             case AST_Type_Spec_Kind::FROM_TYPE: {
-                array_append(nodes, static_cast<AST_Node *>(type_spec));
+                array_append(nodes, node);
                 break;
             }
         }
     }
 
-    AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node *> nodes)
+    AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node **> nodes)
     {
         auto result = alloc_type<AST_Flat_Declaration>(allocator);
 

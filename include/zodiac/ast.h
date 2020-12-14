@@ -114,7 +114,7 @@ namespace Zodiac
 
     struct AST_Flat_Declaration
     {
-        Array<AST_Node *> nodes = {};
+        Array<AST_Node **> nodes = {};
         int64_t waiting_on = 0;
     };
 
@@ -649,17 +649,17 @@ namespace Zodiac
     AST_Type_Spec *ast_create_type_spec_from_expression_ptn(AST_Builder *ast_builder,
                                                             Expression_PTN *ptn, Scope *scope);
 
-    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl);
-    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration *decl,
-                                 Array<AST_Node *> *nodes);
-    void ast_flatten_statement(AST_Builder *builder, AST_Statement *stmt,
-                               Array<AST_Node *> *nodes);
-    void ast_flatten_expression(AST_Builder *builder, AST_Expression *expr,
-                                Array<AST_Node *> *nodes);
-    void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec *type_spec,
-                               Array<AST_Node *> *nodes);
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration **decl);
+    void ast_flatten_declaration(AST_Builder *builder, AST_Declaration **decl,
+                                 Array<AST_Node **> *nodes);
+    void ast_flatten_statement(AST_Builder *builder, AST_Statement **stmt,
+                               Array<AST_Node **> *nodes);
+    void ast_flatten_expression(AST_Builder *builder, AST_Expression **expr,
+                                Array<AST_Node **> *nodes);
+    void ast_flatten_type_spec(AST_Builder *builder, AST_Type_Spec **type_spec,
+                               Array<AST_Node **> *nodes);
 
-    AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node *> nodes);
+    AST_Flat_Declaration *ast_flat_declaration_new(Allocator *allocator, Array<AST_Node **> nodes);
 
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom, Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
