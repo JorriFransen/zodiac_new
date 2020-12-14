@@ -3534,33 +3534,33 @@ namespace Zodiac
             bucket_locator_advance(&el);
         }
 
-        for (int64_t i = 0; i < temp_case_exprs.count; i++) {
-            auto new_expr = temp_case_exprs[i];
-            ast_flatten_expression(&resolver->ast_builder, new_expr, &new_nodes);
-        }
-
-
-        for (int64_t i = 0; i < new_nodes.count; i++) {
-            assert(new_nodes[i]->kind == AST_Node_Kind::EXPRESSION);
-            if (!try_resolve_expression(resolver,
-                                        static_cast<AST_Expression *>(new_nodes[i]))) {
-                assert(false);
-            }
-        }
-
         assert(first_range_index >= 0);
 
         el = bucket_array_locator_by_index(&switch_case->expressions, first_range_index);
 
         for (int64_t j = 0; j < temp_case_exprs.count; j++) {
 
+            AST_Expression ** ptr = nullptr;
             if (el.bucket) {
-                auto ptr = bucket_locator_get_ptr(el);
+                ptr = bucket_locator_get_ptr(el);
                 *ptr = temp_case_exprs[j];
 
                 bucket_locator_advance(&el);
             } else {
-                bucket_array_add(&switch_case->expressions, temp_case_exprs[j]);
+                auto nl = bucket_array_add(&switch_case->expressions, temp_case_exprs[j]);
+                ptr = bucket_locator_get_ptr(nl);
+            }
+
+            assert(ptr);
+
+            ast_flatten_expression(&resolver->ast_builder, *ptr, &new_nodes);
+        }
+
+        for (int64_t i = 0; i < new_nodes.count; i++) {
+            assert(new_nodes[i]->kind == AST_Node_Kind::EXPRESSION);
+            if (!try_resolve_expression(resolver,
+                                        static_cast<AST_Expression *>(new_nodes[i]))) {
+                assert(false);
             }
         }
     }
