@@ -65,7 +65,19 @@ namespace Zodiac
         assert(!(decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE));
 
         assert(decl->identifier);
-        auto name = decl->identifier->atom;
+
+        auto ta = temp_allocator_get();
+
+        String name = {};
+
+        if ((decl->decl_flags & AST_DECL_FLAG_IS_ENTRY) ||
+            (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY) ||
+            (decl->decl_flags & AST_DECL_FLAG_FOREIGN)) {
+            name = string_ref(decl->identifier->atom);
+        } else {
+            auto _name = string_append(ta, decl->function.module_name, ".");
+            name = string_append(builder->allocator, _name, string_ref(decl->identifier->atom));
+        }
 
         Bytecode_Function *result = bytecode_new_function(builder, func_type, name);
         if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
@@ -235,10 +247,9 @@ namespace Zodiac
         assert(wrapper_type);
 
         auto ta = temp_allocator_get();
-        String _wrapper_name = string_append(ta, string_ref("_run_wrapper_"),
-                                             string_from_int(ta, builder->run_wrapper_count));
+        String wrapper_name = string_append(builder->allocator, string_ref("_run_wrapper_"),
+                                            string_from_int(ta, builder->run_wrapper_count));
         builder->run_wrapper_count += 1;
-        Atom wrapper_name = atom_get(&builder->build_data->atom_table, _wrapper_name);
 
         Bytecode_Function *result = bytecode_new_function(builder, wrapper_type, wrapper_name);
 
@@ -362,7 +373,8 @@ namespace Zodiac
         return nullptr;
     }
 
-    Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Type *type, Atom name)
+    Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Type *type,
+                                             String name)
     {
         assert(type->kind == AST_Type_Kind::FUNCTION);
 

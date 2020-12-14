@@ -14,14 +14,16 @@ struct Parser
 {
     Allocator *allocator = nullptr;
     Build_Data *build_data = nullptr;
+
+    String current_module_name = {};
 };
 
 Parser parser_create(Allocator *allocator, Build_Data *build_data);
 void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data);
 
 void parsed_file_init(Parser *parser, Parsed_File *pf);
-Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts);
-void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf);
+Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, String module_name);
+void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, String module_name);
 void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file);
 
 Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts);

@@ -1013,7 +1013,7 @@ namespace Zodiac
     {
         for (int64_t i = 0; i < foreign_functions.count; i++) {
             auto func = foreign_functions[i];
-            bool found = ffi_load_function(&interp->ffi, string_ref(func->name));
+            bool found = ffi_load_function(&interp->ffi, func->name);
             if (!found) {
                 fprintf(stderr, "Did not find foreign function: '%s'\n", func->name.data);
             }
@@ -1079,7 +1079,7 @@ namespace Zodiac
         }
 
 
-        ffi_call(&interp->ffi, string_ref(func->name), return_val_ptr, return_type);
+        ffi_call(&interp->ffi, func->name, return_val_ptr, return_type);
     }
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)

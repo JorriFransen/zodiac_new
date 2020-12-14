@@ -575,7 +575,7 @@ namespace Zodiac
 
             Token_Stream *ets = lexer_new_token_stream(resolver->allocator, &lf_entry);
 
-            epf = parser_parse_file(&resolver->parser, ets);
+            epf = parser_parse_file(&resolver->parser, ets, string_ref("entry"));
 
             if (!epf.valid) return false;
 
@@ -597,7 +597,7 @@ namespace Zodiac
             parsed_file_init(&resolver->parser, &parsed_file);
         }
 
-        parser_parse_file(&resolver->parser, token_stream, &parsed_file);
+        parser_parse_file(&resolver->parser, token_stream, &parsed_file, job->module_name);
 
         if (!parsed_file.valid) return false;
 

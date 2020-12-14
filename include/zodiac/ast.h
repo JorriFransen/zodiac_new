@@ -165,6 +165,8 @@ namespace Zodiac
 
                 Scope *parameter_scope;
 
+                String module_name = {};
+
                 Array<AST_Declaration *> called_functions;
             } function;
 
@@ -710,6 +712,7 @@ namespace Zodiac
 
     AST_Declaration *ast_function_declaration_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
+                                                  String module_name,
                                                   AST_Type_Spec *type_spec,
                                                   Array<AST_Declaration*> param_decls,
                                                   Array<AST_Declaration*> var_decls,

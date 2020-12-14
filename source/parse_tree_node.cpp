@@ -532,7 +532,8 @@ Declaration_PTN *new_import_declaration_ptn(Allocator *allocator, Identifier_PTN
 }
 
 Declaration_PTN *new_function_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
-                                              Function_Proto_PTN *prototype, Statement_PTN *body,
+                                              String module_name, Function_Proto_PTN *prototype,
+                                              Statement_PTN *body,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {
     assert(prototype);
@@ -543,6 +544,7 @@ Declaration_PTN *new_function_declaration_ptn(Allocator *allocator, Identifier_P
 
     result->kind = Declaration_PTN_Kind::FUNCTION;
     result->identifier = identifier;
+    result->function.module_name = module_name;
     result->function.prototype = prototype;
     result->function.body = body;
 

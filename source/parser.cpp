@@ -24,6 +24,8 @@ void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data)
 {
     parser->allocator = allocator;
     parser->build_data = build_data;
+
+    parser->current_module_name = {};
 }
 
 void parsed_file_init(Parser *parser, Parsed_File *pf)
@@ -31,19 +33,24 @@ void parsed_file_init(Parser *parser, Parsed_File *pf)
     array_init(parser->allocator, &pf->declarations);
 }
 
-Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts)
+Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, String module_name)
 {
     Parsed_File result = {};
 
     parsed_file_init(parser, &result);
-    parser_parse_file(parser, ts, &result);
+    parser_parse_file(parser, ts, &result, module_name);
 
     return result;
 }
 
-void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf)
+void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, String module_name)
 {
     ZoneScoped
+
+    assert(parser->current_module_name.data == nullptr);
+    assert(parser->current_module_name.length == 0);
+
+    parser->current_module_name = module_name;
 
     while (ts->current_token().kind != TOK_EOF)
     {
@@ -72,6 +79,8 @@ void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf)
         }
         array_append(&pf->declarations, ptn);
     }
+
+    parser->current_module_name = {};
 }
 
 void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file)
@@ -243,6 +252,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
             }
 
             result = new_function_declaration_ptn(parser->allocator, identifier,
+                                                  parser->current_module_name,
                                                   function_proto,
                                                   function_body,
                                                   identifier->self.begin_file_pos,

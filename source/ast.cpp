@@ -279,6 +279,7 @@ namespace Zodiac
                 auto end_fp = ptn->self.end_file_pos;
 
                 result = ast_function_declaration_new(ast_builder->allocator, ast_ident,
+                                                      ptn->function.module_name,
                                                       ast_type,
                                                       ast_param_decls, ast_var_decls,
                                                       ast_body,
@@ -2038,6 +2039,7 @@ namespace Zodiac
 
     AST_Declaration *ast_function_declaration_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
+                                                  String module_name,
                                                   AST_Type_Spec *type_spec,
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,
@@ -2062,6 +2064,7 @@ namespace Zodiac
         result->function.variable_declarations = variable_declarations;
         result->function.body = body;
         result->function.parameter_scope = param_scope;
+        result->function.module_name = module_name;
 
         array_init(allocator, &result->function.called_functions);
 
