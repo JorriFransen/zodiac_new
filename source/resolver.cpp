@@ -1525,19 +1525,13 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::IF: {
+                AST_Expression **p_cond_expr = &statement->if_stmt.cond_expr;
+                auto cond_expr = *p_cond_expr;
+
 #ifndef NDEBUG
-                AST_Expression *cond_expr = statement->if_stmt.cond_expr;
                 assert(cond_expr->type);
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
-
-                if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
-                    if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
-                        convert_condition_to_bool(resolver, &statement->if_stmt.cond_expr);
-                    } else {
-                        assert(false);
-                    }
-                }
 
                 AST_Statement *then_stmt = statement->if_stmt.then_stmt;
                 assert(then_stmt->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -1549,6 +1543,19 @@ namespace Zodiac
                     assert(else_stmt->flags & AST_NODE_FLAG_TYPED);
                 }
 #endif
+
+                if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
+                    if (is_valid_type_conversion(cond_expr, Builtin::type_bool)) {
+                        do_type_conversion(resolver, p_cond_expr, Builtin::type_bool);
+                    } else {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                            cond_expr,
+                            "Conditional expression of if statement is not of boolean type, and cannot be converted to boolean type");
+                        return false;
+                    }
+                }
+
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -2291,8 +2298,6 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                         result = true;
                         result_type = target_type;
                     } else if (op_expr->type->kind == AST_Type_Kind::ENUM) {
-                        // assert(false); // We do want this cast to happen, look into why it
-                        //                //  doesn't always happen...
                         assert(is_valid_type_conversion(op_expr->type, target_type));
                         result = true;
                         result_type = target_type;
@@ -3260,21 +3265,43 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
         auto expr = *p_expr;
 
+        AST_Expression *new_expr = nullptr;
+
         if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
             expr->kind == AST_Expression_Kind::FLOAT_LITERAL) {
             expr->type = target_type;
 
-        } else {
-            auto new_expr = ast_cast_expression_new(resolver->allocator,
-                                                    expr, target_type,
-                                                    expr->scope,
-                                                    expr->begin_file_pos,
-                                                    expr->end_file_pos);
+        } else if (expr->type->kind == AST_Type_Kind::POINTER &&
+                   target_type->kind == AST_Type_Kind::BOOL) {
+            auto null_expr = ast_null_literal_expression_new(resolver->allocator, expr->scope,
+                                                             expr->begin_file_pos,
+                                                             expr->end_file_pos);
+            null_expr->infer_type_from = expr->type;
+            new_expr = ast_binary_expression_new(resolver->allocator, BINOP_NEQ,
+                                                 expr, null_expr, expr->scope,
+                                                 expr->begin_file_pos,
+                                                 expr->end_file_pos);
 #ifndef NDEBUG
-            bool cast_res =
+            bool null_expr_res =
+#endif
+                try_resolve_expression(resolver, null_expr);
+            assert(null_expr_res);
+
+        } else {
+            new_expr = ast_cast_expression_new(resolver->allocator,
+                                               expr, target_type,
+                                               expr->scope,
+                                               expr->begin_file_pos,
+                                               expr->end_file_pos);
+        }
+
+        if (new_expr) {
+
+#ifndef NDEBUG
+            bool new_res =
 #endif
                 try_resolve_expression(resolver, new_expr);
-            assert(cast_res);
+            assert(new_res);
             *p_expr = new_expr;
         }
 
