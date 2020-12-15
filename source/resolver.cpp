@@ -935,14 +935,14 @@ namespace Zodiac
                                                     Zodiac_Error_Kind::MISMATCHING_TYPES,
                                                     init_expr,
                                                     "Mismatching types in variable declaration");
-                                auto err_allocator = resolver->build_data->err_allocator;
+                                auto exp_str = ast_type_to_tstring(ts->type);
                                 zodiac_report_info(resolver->build_data, ts,
-                                                   "Expected type: %s",
-                                                   ast_type_to_string(err_allocator, ts->type));
+                                                   "Expected type: %.*s",
+                                                   (int)exp_str.length, exp_str.data);
+                                auto got_str = ast_type_to_tstring(ts->type);
                                 zodiac_report_info(resolver->build_data, init_expr,
-                                                   "Given type: %s",
-                                                   ast_type_to_string(err_allocator,
-                                                                      init_expr->type));
+                                                   "Given type: %.*s",
+                                                   (int)got_str.length, got_str.data);
                                 return false;
                             }
                         }
@@ -991,6 +991,15 @@ namespace Zodiac
                                                     Zodiac_Error_Kind::MISMATCHING_TYPES,
                                                     init_expr,
                                                 "Mismatching type in initializer for constant");
+                                auto exp_str = ast_type_to_tstring(ts->type);
+                                zodiac_report_info(resolver->build_data, ts,
+                                                   "Expected type: '%.*s'",
+                                                   (int)exp_str.length, exp_str.data);
+                                auto got_str = ast_type_to_tstring(init_expr->type);
+                                zodiac_report_info(resolver->build_data, init_expr,
+                                                   "Given type: '%.*s'",
+                                                   (int)got_str.length, got_str.data);
+                                return false;
                             }
                         }
                     }
@@ -1363,13 +1372,32 @@ namespace Zodiac
                 assert(ident_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(ident_expr->flags & AST_NODE_FLAG_TYPED);
 
-                AST_Expression *rhs_expr = statement->assignment.rhs_expression;
+                AST_Expression **p_rhs_expr = &statement->assignment.rhs_expression;
+                auto rhs_expr = *p_rhs_expr;
+
                 assert(rhs_expr->type);
                 assert(rhs_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(rhs_expr->flags & AST_NODE_FLAG_TYPED);
 #endif
 
-                assert(ident_expr->type == rhs_expr->type);
+                if (ident_expr->type != rhs_expr->type) {
+                    if (is_valid_type_conversion(rhs_expr, ident_expr->type)) {
+                        do_type_conversion(resolver, p_rhs_expr, ident_expr->type);
+                    } else {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES, rhs_expr,
+                                            "Mismatching types in assignment statement");
+                        auto exp_str = ast_type_to_tstring(ident_expr->type);
+                        zodiac_report_info(resolver->build_data, ident_expr,
+                                           "Expected type: '%.*s'",
+                                           (int)exp_str.length, exp_str.data);
+                        auto got_str = ast_type_to_tstring(rhs_expr->type);
+                        zodiac_report_info(resolver->build_data, rhs_expr,
+                                           "Given type: '%.*s'",
+                                           (int)got_str.length, got_str.data);
+                        return false;
+                    }
+                }
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -3404,6 +3432,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         zodiac_report_info(resolver->build_data, arg_expr, "Given type: %.*s",
                            (int)arg_type_str.length, arg_type_str.data);
     }
+
     void resolver_report_mismatching_call_arg(Resolver *resolver,  int64_t index,
                                               AST_Expression *arg_expr,
                                               AST_Type *expected_type, bool is_builtin)
