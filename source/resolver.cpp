@@ -2002,29 +2002,13 @@ namespace Zodiac
 
                 assert(args.count == params.count);
                 for (int64_t i = 0; i < args.count; i++) {
-                    AST_Expression *arg_expr = args[i];
+                    AST_Expression **p_arg_expr = &args[i];
+                    auto arg_expr = *p_arg_expr;
                     assert(arg_expr->type);
                     if (arg_expr->type != params[i]->type) {
 
-                        if (arg_expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
-                            integer_literal_fits_in_type(arg_expr->integer_literal,
-                                                         params[i]->type)) {
-                            arg_expr->type = params[i]->type;
-
-                        } else if (arg_expr->kind == AST_Expression_Kind::NULL_LITERAL) {
-                            assert(false);
-                        } else  if (is_valid_type_conversion(arg_expr->type, params[i]->type)) {
-                            args[i] = ast_cast_expression_new(resolver->allocator,
-                                                              arg_expr, params[i]->type,
-                                                              arg_expr->scope,
-                                                              arg_expr->begin_file_pos,
-                                                              arg_expr->end_file_pos);
-#ifndef NDEBUG
-                            bool cast_res =
-#endif
-                                try_resolve_expression(resolver, args[i]);
-                            assert(cast_res);
-                            arg_expr = args[i];
+                        if (is_valid_type_conversion(arg_expr, params[i]->type)) {
+                            do_type_conversion(resolver, p_arg_expr, params[i]->type);
                         } else {
                             zodiac_report_error(resolver->build_data,
                                                 Zodiac_Error_Kind::MISMATCHING_TYPES,
@@ -3218,6 +3202,41 @@ namespace Zodiac
         if (!try_resolve_expression(resolver, cond_expr)) assert(false);
 
         queue_size_job(resolver, cond_expr);
+    }
+
+    void do_type_conversion(Resolver *resolver, AST_Expression **p_expr, AST_Type *target_type)
+    {
+        assert(is_valid_type_conversion(*p_expr, target_type));
+
+        auto expr = *p_expr;
+
+
+        if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL) {
+            expr->type = target_type;
+
+        } else {
+            auto new_expr = ast_cast_expression_new(resolver->allocator,
+                                                    expr, target_type,
+                                                    expr->scope,
+                                                    expr->begin_file_pos,
+                                                    expr->end_file_pos);
+#ifndef NDEBUG
+            bool cast_res =
+#endif
+                try_resolve_expression(resolver, new_expr);
+            assert(cast_res);
+            *p_expr = new_expr;
+        }
+    }
+
+    bool is_valid_type_conversion(AST_Expression *expr, AST_Type *target_type)
+    {
+        if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
+            integer_literal_fits_in_type(expr->integer_literal, target_type)) {
+            return true;
+        }
+
+        return is_valid_type_conversion(expr->type, target_type);
     }
 
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type)

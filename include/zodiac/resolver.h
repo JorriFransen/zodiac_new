@@ -116,7 +116,7 @@ namespace Zodiac
     bool queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          AST_Module **ast_module, bool insert_entry_module = false);
     bool queue_parse_job(Resolver *resolver, String module_name, String module_path);
-                         
+
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
     void queue_size_job(Resolver *resolver, AST_Node *node);
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
@@ -147,8 +147,11 @@ namespace Zodiac
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
     void resolver_inherit_const(AST_Expression *expr);
 
-    void convert_condition_to_bool(Resolver *resolver, AST_Expression **expr_ptr);
+    void convert_condition_to_bool(Resolver *resolver, AST_Expression **p_expr);
 
+    void do_type_conversion(Resolver *resolver, AST_Expression **p_expr, AST_Type *target_type);
+
+    bool is_valid_type_conversion(AST_Expression *expr, AST_Type *target_type);
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type);
 
