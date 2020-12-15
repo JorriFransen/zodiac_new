@@ -914,7 +914,9 @@ namespace Zodiac
                     assert(ts->flags & AST_NODE_FLAG_TYPED);
                 }
 
-                AST_Expression *init_expr = declaration->variable.init_expression;
+                AST_Expression **p_init_expr = &declaration->variable.init_expression;
+                auto init_expr = *p_init_expr;
+
                 if (init_expr) {
                     assert(init_expr->type);
                     assert(init_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -926,19 +928,23 @@ namespace Zodiac
                 if (ts) {
                     if (init_expr) {
                         if (ts->type != init_expr->type) {
-                            zodiac_report_error(resolver->build_data,
-                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
-                                                init_expr,
-                                                "Mismatching types in variable declaration");
-                            auto err_allocator = resolver->build_data->err_allocator;
-                            zodiac_report_info(resolver->build_data, ts,
-                                               "Expected type: %s",
-                                               ast_type_to_string(err_allocator, ts->type));
-                            zodiac_report_info(resolver->build_data, init_expr,
-                                               "Given type: %s",
-                                               ast_type_to_string(err_allocator,
-                                                                  init_expr->type));
-                            return false;
+                            if (is_valid_type_conversion(init_expr, ts->type)) {
+                                do_type_conversion(resolver, p_init_expr, ts->type);
+                            } else {
+                                zodiac_report_error(resolver->build_data,
+                                                    Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                    init_expr,
+                                                    "Mismatching types in variable declaration");
+                                auto err_allocator = resolver->build_data->err_allocator;
+                                zodiac_report_info(resolver->build_data, ts,
+                                                   "Expected type: %s",
+                                                   ast_type_to_string(err_allocator, ts->type));
+                                zodiac_report_info(resolver->build_data, init_expr,
+                                                   "Given type: %s",
+                                                   ast_type_to_string(err_allocator,
+                                                                      init_expr->type));
+                                return false;
+                            }
                         }
                     }
 
