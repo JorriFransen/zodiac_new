@@ -981,7 +981,18 @@ namespace Zodiac
                     assert(init_expr->flags & AST_NODE_FLAG_TYPED);
 
                     if (ts) {
-                        assert(ts->type == init_expr->type);
+                        if (ts->type != init_expr->type) {
+                            if (is_valid_type_conversion(init_expr, ts->type)) {
+                                 // Can we do a regular conversion here or do we
+                                 //  need to do something special for constants?
+                                assert(false);
+                            } else {
+                                zodiac_report_error(resolver->build_data,
+                                                    Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                    init_expr,
+                                                "Mismatching type in initializer for constant");
+                            }
+                        }
                     }
 
                     type = init_expr->type;
