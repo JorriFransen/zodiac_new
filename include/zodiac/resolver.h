@@ -115,6 +115,8 @@ namespace Zodiac
 
     bool queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          AST_Module **ast_module, bool insert_entry_module = false);
+    bool queue_parse_job(Resolver *resolver, String module_name, String module_path);
+                         
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
     void queue_size_job(Resolver *resolver, AST_Node *node);
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
@@ -170,5 +172,6 @@ namespace Zodiac
 
     bool fatal_error_reported(Resolver *resolver);
 
+    String find_module_path(Resolver *resolver, String module_name);
     String find_zodiac_root(Allocator *allocator, Build_Data *build_data);
 }

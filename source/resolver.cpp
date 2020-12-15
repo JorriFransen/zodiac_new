@@ -24,7 +24,7 @@ namespace Zodiac
 
         stack_init(allocator, &resolver->ast_builder.break_stack);
 
-        resolver->parser = parser_create(allocator, build_data);
+        resolver->parser = parser_create(allocator, build_data, resolver);
         resolver->bytecode_builder = bytecode_builder_create(allocator, build_data);
         resolver->llvm_builder = llvm_builder_create(allocator, build_data);
 
@@ -456,6 +456,18 @@ namespace Zodiac
         return true;
     }
 
+    bool queue_parse_job(Resolver *resolver, String module_name, String module_path)
+    {
+        AST_Module *ex_module = nullptr;
+        bool in_queue = queue_parse_job(resolver, module_name, module_path, &ex_module, false);
+        if (in_queue) {
+            assert(!ex_module);
+        } else {
+            assert(ex_module);
+        }
+        return in_queue;
+    }
+
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node)
     {
         assert(ast_node->kind == AST_Node_Kind::DECLARATION);
@@ -809,43 +821,19 @@ namespace Zodiac
             case AST_Declaration_Kind::INVALID: assert(false);
 
             case AST_Declaration_Kind::IMPORT: {
+
                 assert(declaration->import.ast_module == nullptr);
                 AST_Expression *ident_expr = declaration->import.ident_expression;
                 assert(ident_expr->kind == AST_Expression_Kind::IDENTIFIER);
 
-                auto ta = temp_allocator_get();
-
                 Atom _module_name = ident_expr->identifier->atom;
 
                 String module_name = string_ref(_module_name);
-                String file_name = string_append(ta, module_name, string_ref(".zdc"));
-
-                String candidate_dirs[] = {
-                    resolver->first_file_dir,
-                    resolver->module_dir,
-                };
-
-                bool found = false;
-                String file_path = {};
-
-                for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(candidate_dirs); i++) {
-
-                    String candidate_file_path = string_append(ta, candidate_dirs[i], file_name);
-
-                    if (is_regular_file(candidate_file_path)) {
-                        found = true;
-                        file_path = candidate_file_path;
-                        break;
-                    }
-                }
-
-                assert(found);
+                String file_path = find_module_path(resolver, module_name);
 
                 AST_Module *ast_module = nullptr;
                 bool in_queue = queue_parse_job(resolver, module_name, file_path, &ast_module);
-                if (in_queue) {
-                    return false;
-                }
+                if (in_queue) return false;
 
                 assert(ast_module);
                 declaration->import.ast_module = ast_module;
@@ -3813,6 +3801,36 @@ namespace Zodiac
         }
 
         return false;
+    }
+
+    String find_module_path(Resolver *resolver, String module_name)
+    {
+        auto ta = temp_allocator_get();
+
+        String file_name = string_append(ta, module_name, string_ref(".zdc"));
+
+        String candidate_dirs[] = {
+            resolver->first_file_dir,
+            resolver->module_dir,
+        };
+
+        bool found = false;
+        String file_path = {};
+
+        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(candidate_dirs); i++) {
+
+            String candidate_file_path = string_append(ta, candidate_dirs[i], file_name);
+
+            if (is_regular_file(candidate_file_path)) {
+                found = true;
+                file_path = candidate_file_path;
+                break;
+            }
+        }
+
+        assert(found);
+
+        return file_path;
     }
 
     String find_zodiac_root(Allocator *allocator, Build_Data *build_data)

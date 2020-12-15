@@ -3,6 +3,7 @@
 #include "allocator.h"
 #include "temp_allocator.h"
 #include "builtin.h"
+#include "resolver.h"
 
 #include <stdio.h>
 #include <cstdarg>
@@ -13,19 +14,21 @@
 namespace Zodiac
 {
 
-Parser parser_create(Allocator *allocator, Build_Data *build_data)
+Parser parser_create(Allocator *allocator, Build_Data *build_data, Resolver *resolver)
 {
     Parser result = {};
-    parser_init(allocator, &result, build_data);
+    parser_init(allocator, &result, build_data, resolver);
     return result;
 }
 
-void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data)
+void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data, Resolver *resolver)
 {
     parser->allocator = allocator;
     parser->build_data = build_data;
+    parser->resolver = resolver;
 
     parser->current_module_name = {};
+    parser->static_if_depth = 0;
 }
 
 void parsed_file_init(Parser *parser, Parsed_File *pf)
@@ -91,6 +94,11 @@ void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file)
     }
 
     array_free(&parsed_file->declarations);
+}
+
+bool parser_inside_static_if(Parser *parser)
+{
+    return parser->static_if_depth > 0;
 }
 
 Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
@@ -610,8 +618,7 @@ Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,
 Declaration_PTN *parser_parse_import_declaration(Parser *parser, Token_Stream *ts,
                                                  Identifier_PTN *identifier)
 {
-    if (!parser_expect_token(parser, ts, TOK_KW_IMPORT))
-    {
+    if (!parser_expect_token(parser, ts, TOK_KW_IMPORT)) {
         assert(false);
     }
 
@@ -620,14 +627,19 @@ Declaration_PTN *parser_parse_import_declaration(Parser *parser, Token_Stream *t
 
     auto end_fp = ts->current_token().end_file_pos;
 
-    if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-    {
+    if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) {
         assert(false);
     }
 
     auto result = new_import_declaration_ptn(parser->allocator, identifier, ident_expr,
                                              identifier->self.begin_file_pos, end_fp);
     result->self.flags |= PTN_FLAG_SEMICOLON;
+
+    if (!parser_inside_static_if(parser)) {
+        auto module_name = string_ref(result->import.module_ident_expr->identifier->atom);
+        auto file_path = find_module_path(parser->resolver, module_name);
+        queue_parse_job(parser->resolver, module_name, file_path);
+    }
     return result;
 }
 
@@ -638,21 +650,24 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
 
     if (!parser_expect_token(parser, ts, TOK_POUND)) return nullptr;
 
-    if (elseif)
-    {
+    if (elseif) {
 #ifndef NDEBUG
         auto ft = ts->current_token();
         assert(ft.kind == TOK_IDENTIFIER);
         assert(ft.atom == Builtin::atom_elseif);
 #endif
         ts->next_token();
-    }
-    else
-    {
+
+    } else {
         if (!parser_expect_token(parser, ts, TOK_KW_IF)) return nullptr;
     }
 
     if (!parser_expect_token(parser, ts, TOK_LPAREN)) return nullptr;
+
+#ifndef NDEBUG
+        auto old_sif_depth = parser->static_if_depth;
+#endif
+    parser->static_if_depth += 1;
 
     auto cond_expr = parser_parse_expression(parser, ts);
     if (!cond_expr) return nullptr;
@@ -667,7 +682,10 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
     while (!parser_is_token(ts, TOK_RBRACE))
     {
         auto decl = parser_parse_declaration(parser, ts);
-        if (!decl) return nullptr;
+        if (!decl) {
+            parser->static_if_depth -= 1;
+            return nullptr;
+        }
         array_append(&then_decls, decl);
     }
 
@@ -681,7 +699,10 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
         ts->peek_token(1).atom == Builtin::atom_elseif)
     {
         auto else_if_decl = parser_parse_static_if_declaration(parser, ts, true);
-        if (!else_if_decl) return nullptr;
+        if (!else_if_decl) {
+            parser->static_if_depth -= 1;
+            return nullptr;
+        }
 
         array_init(parser->allocator, &else_decls, 1);
         array_append(&else_decls, else_if_decl);
@@ -690,6 +711,7 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
                                                     else_decls, begin_fp,
                                                     else_if_decl->self.end_file_pos);
         result->self.flags |= PTN_FLAG_SEMICOLON;
+        parser->static_if_depth -= 1;
         return result;
 
     }
@@ -702,12 +724,16 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
 
         if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
 
+        parser->static_if_depth += 1;
+
         while (!parser_is_token(ts, TOK_RBRACE))
         {
             auto decl = parser_parse_declaration(parser, ts);
             if (!decl) return nullptr;
             array_append(&else_decls, decl);
         }
+
+        parser->static_if_depth -= 1;
 
         end_fp = ts->current_token().end_file_pos;
         ts->next_token();
@@ -717,6 +743,8 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
                                                 then_decls, else_decls,
                                                 begin_fp, end_fp);
     result->self.flags |= PTN_FLAG_SEMICOLON;
+    parser->static_if_depth -= 1;
+    assert(parser->static_if_depth == old_sif_depth);
     return result;
 
 }

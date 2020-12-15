@@ -10,21 +10,28 @@
 namespace Zodiac
 {
 
+struct Resolver;
 struct Parser
 {
     Allocator *allocator = nullptr;
     Build_Data *build_data = nullptr;
 
+    Resolver *resolver = nullptr;
+
     String current_module_name = {};
+
+    uint32_t static_if_depth = 0;
 };
 
-Parser parser_create(Allocator *allocator, Build_Data *build_data);
-void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data);
+Parser parser_create(Allocator *allocator, Build_Data *build_data, Resolver *resolver);
+void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data, Resolver *resolver);
 
 void parsed_file_init(Parser *parser, Parsed_File *pf);
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, String module_name);
 void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, String module_name);
 void parser_free_parsed_file(Parser *parser, Parsed_File *parsed_file);
+
+bool parser_inside_static_if(Parser *parser);
 
 Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts);
 Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
