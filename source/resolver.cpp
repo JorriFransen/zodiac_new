@@ -1855,7 +1855,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                         MAYBE_CONVERT(p_rhs, lhs);
                     } else if (lhs_int_lit && rhs_int_lit) {
                         assert(false);
- 
+
                     // Float literal
                     } else if (lhs_float_lit && !rhs_float_lit) {
                         MAYBE_CONVERT(p_lhs, rhs);
@@ -2012,16 +2012,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                         if (is_valid_type_conversion(arg_expr, params[i]->type)) {
                             do_type_conversion(resolver, p_arg_expr, params[i]->type);
                         } else {
-                            zodiac_report_error(resolver->build_data,
-                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
-                                                arg_expr,
-                                                "Mismatching types for argument %d", i);
-                            zodiac_report_info(resolver->build_data, params[i],
-                                               "Expected type: %s",
-                                               ast_type_to_tstring(params[i]->type));
-                            zodiac_report_info(resolver->build_data, arg_expr,
-                                               "Given type: %s",
-                                               ast_type_to_tstring(arg_expr->type));
+                            resolver_report_mismatching_call_arg(resolver, i, arg_expr,
+                                                                 params[i]);
                             return false;
                         }
                     }
@@ -2053,7 +2045,15 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 if (name == Builtin::atom_exit) {
                     _ENSURE_ARGS_ARE_TYPED
                     assert(args.count == 1);
-                    assert(args[0]->type == Builtin::type_s64);
+                    if (args[0]->type != Builtin::type_s64) {
+                        if (is_valid_type_conversion(args[0], Builtin::type_s64)) {
+                            do_type_conversion(resolver, &args[0], Builtin::type_s64);
+                        } else  {
+                            resolver_report_mismatching_call_arg(resolver, 0, args[0],
+                                                                 Builtin::type_s64, true);
+                            return false;
+                        }
+                    }
 
                     expression->type = Builtin::type_void;
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2082,7 +2082,11 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                                 try_resolve_expression(resolver, args[i]);
                             assert(cast_res);
                         } else {
-                            assert(args[i]->type == Builtin::type_s64);
+                            if (args[i]->type != Builtin::type_s64) {
+                                resolver_report_mismatching_call_arg(resolver, i, args[i],
+                                                                     Builtin::type_s64, true);
+                                return false;
+                            }
                         }
                     }
 
@@ -3284,6 +3288,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Type_Kind::POINTER: {
                 if (target_type->kind == AST_Type_Kind::BOOL) {
                     return true;
+                } else if (target_type->kind == AST_Type_Kind::INTEGER) {
+                    return false;
                 } else {
                     assert(false);
                 }
@@ -3291,7 +3297,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             }
 
             case AST_Type_Kind::FUNCTION: assert(false);
-            case AST_Type_Kind::STRUCTURE: assert(false);
+
+            case AST_Type_Kind::STRUCTURE: return false;
 
             case AST_Type_Kind::ENUM: {
                 if (target_type->kind == AST_Type_Kind::INTEGER) {
@@ -3364,6 +3371,38 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
         assert(false);
         return false;
+    }
+
+    void resolver_report_mismatching_call_arg(Resolver *resolver,  int64_t index,
+                                              AST_Expression *arg_expr,
+                                              AST_Declaration *param_decl)
+    {
+        zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::MISMATCHING_TYPES,
+                            arg_expr,
+                            "Mismatching types for argument %d", index);
+        auto param_type_str = ast_type_to_tstring(param_decl->type);
+        zodiac_report_info(resolver->build_data, param_decl, "Expected type: %.*s",
+                           (int)param_type_str.length, param_type_str.data);
+        auto arg_type_str = ast_type_to_tstring(arg_expr->type);
+        zodiac_report_info(resolver->build_data, arg_expr, "Given type: %.*s",
+                           (int)arg_type_str.length, arg_type_str.data);
+    }
+    void resolver_report_mismatching_call_arg(Resolver *resolver,  int64_t index,
+                                              AST_Expression *arg_expr,
+                                              AST_Type *expected_type, bool is_builtin)
+    {
+        auto err_fmt = is_builtin ?
+            "Mismatching types for argument %d" :
+            "Mismatching types for argument %d of call to foreign function";
+
+        zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::MISMATCHING_TYPES,
+                            arg_expr, err_fmt, index);
+        auto param_type_str = ast_type_to_tstring(expected_type);
+        zodiac_report_info(resolver->build_data, arg_expr, "Expected type: %.*s",
+                           (int)param_type_str.length, param_type_str.data);
+        auto arg_type_str = ast_type_to_tstring(arg_expr->type);
+        zodiac_report_info(resolver->build_data, arg_expr, "Given type: %.*s",
+                           (int)arg_type_str.length, arg_type_str.data);
     }
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl)

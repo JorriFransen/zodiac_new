@@ -156,6 +156,13 @@ namespace Zodiac
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type);
     bool integer_literal_fits_in_type(Integer_Literal il, AST_Type *type);
 
+    void resolver_report_mismatching_call_arg(Resolver *resolver,  int64_t index,
+                                              AST_Expression *arg_expr,
+                                              AST_Declaration *param_decl);
+    void resolver_report_mismatching_call_arg(Resolver *resolver,  int64_t index,
+                                              AST_Expression *arg_expr,
+                                              AST_Type *expected_type, bool is_builtin);
+
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
     bool is_bytecode_entry_decl(Resolver *resolver, AST_Declaration *decl);
 
