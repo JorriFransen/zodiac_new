@@ -1366,14 +1366,15 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::ASSIGNMENT: {
-#ifndef NDEBUG
                 AST_Expression *ident_expr = statement->assignment.identifier_expression;
+
+                AST_Expression **p_rhs_expr = &statement->assignment.rhs_expression;
+                auto rhs_expr = *p_rhs_expr;
+#ifndef NDEBUG
                 assert(ident_expr->type);
                 assert(ident_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(ident_expr->flags & AST_NODE_FLAG_TYPED);
 
-                AST_Expression **p_rhs_expr = &statement->assignment.rhs_expression;
-                auto rhs_expr = *p_rhs_expr;
 
                 assert(rhs_expr->type);
                 assert(rhs_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
