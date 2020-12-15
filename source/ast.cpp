@@ -3889,4 +3889,10 @@ namespace Zodiac
 
         return result;
     }
+
+    String ast_type_to_tstring(AST_Type *type)
+    {
+        auto ta = temp_allocator_get();
+        return ast_type_to_string(ta, type);
+    }
 }

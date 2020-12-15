@@ -110,7 +110,7 @@ print_float :: func (f: float)
 
     it := 6;
 
-    rem := f - int_part;
+    rem := f - @cast(float, int_part);
     rem = rem * 10;
 
     while (rem > 0.001) {
@@ -120,7 +120,7 @@ print_float :: func (f: float)
         int_part = @cast(s32, rem);
         print_num(int_part);
 
-        rem = rem - int_part;
+        rem = rem - @cast(float, int_part);
         rem = rem * 10;
         it = it - 1;
     }
@@ -136,7 +136,7 @@ print_double :: func (d: double)
 
     it := 6;
 
-    rem := d - int_part;
+    rem := d - @cast(double, int_part);
     rem = rem * 10;
 
     while (rem > 0.001)
@@ -146,7 +146,7 @@ print_double :: func (d: double)
         int_part = @cast(s64, rem);
         print_num(int_part);
 
-        rem = rem - int_part;
+        rem = rem - @cast(double, int_part);
         rem = rem * 10;
         it = it - 1;
     }

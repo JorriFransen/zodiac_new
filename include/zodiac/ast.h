@@ -1051,5 +1051,6 @@ namespace Zodiac
     void ast_print_type(String_Builder *sb, AST_Type *type);
 
     String ast_type_to_string(Allocator *allocator, AST_Type *type);
+    String ast_type_to_tstring(AST_Type *type);
 
 }

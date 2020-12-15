@@ -1812,12 +1812,14 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::BINARY: {
-                AST_Expression *lhs = expression->binary.lhs;
+                AST_Expression **p_lhs = &expression->binary.lhs;
+                auto lhs = *p_lhs;
                 assert(lhs->type);
                 assert(lhs->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(lhs->flags & AST_NODE_FLAG_TYPED);
 
-                AST_Expression *rhs = expression->binary.rhs;
+                AST_Expression **p_rhs = &expression->binary.rhs;
+                auto rhs = *p_rhs;
                 assert(rhs->type);
                 assert(rhs->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(rhs->flags & AST_NODE_FLAG_TYPED);
@@ -1826,76 +1828,76 @@ namespace Zodiac
 
                 AST_Type *result_type = nullptr;
 
-                if (lhs->type != rhs->type) {
+                if (lhs->type == rhs->type) {
+                    if (!is_compare) result_type = lhs->type;
+                } else {
 
-                    if (lhs->kind != AST_Expression_Kind::INTEGER_LITERAL &&
-                        rhs->kind == AST_Expression_Kind::INTEGER_LITERAL &&
-                        integer_literal_fits_in_type(rhs->integer_literal, lhs->type)) {
+                    bool lhs_int_lit = lhs->kind == AST_Expression_Kind::INTEGER_LITERAL;
+                    bool rhs_int_lit = rhs->kind == AST_Expression_Kind::INTEGER_LITERAL;
 
-                                rhs->type = lhs->type;
+                    bool lhs_float_lit = lhs->kind == AST_Expression_Kind::FLOAT_LITERAL;
+                    bool rhs_float_lit = rhs->kind == AST_Expression_Kind::FLOAT_LITERAL;
 
-                    } else if (lhs->type->kind == AST_Type_Kind::INTEGER &&
-                               rhs->type->kind == AST_Type_Kind::INTEGER){
 
-                        if (lhs->type->bit_size == rhs->type->bit_size) {
-                            assert(false);
-                        } else if (lhs->type->bit_size > rhs->type->bit_size) {
-                            assert(false);
-                        } else if (rhs->type->bit_size > lhs->type->bit_size) {
-                            if (lhs->type->integer.sign) assert(rhs->type->integer.sign);
-                            result_type = rhs->type;
-                            expression->binary.lhs =
-                                ast_cast_expression_new(resolver->allocator, lhs,
-                                                        result_type, lhs->scope,
-                                                        lhs->begin_file_pos,
-                                                        lhs->begin_file_pos);
-                            lhs = expression->binary.lhs;
-                            if (!try_resolve_expression(resolver, lhs)) assert(false);
-                        } else {
-                            assert(false);
-                        }
 
-                    } else if (rhs->type->kind == AST_Type_Kind::INTEGER &&
-                               lhs->type->kind == AST_Type_Kind::FLOAT) {
-                        assert(lhs->type->bit_size >= rhs->type->bit_size);
-                        result_type = lhs->type;
-                        expression->binary.rhs =
-                            ast_cast_expression_new(resolver->allocator, rhs,
-                                                    result_type, rhs->scope,
-                                                    rhs->begin_file_pos,
-                                                    rhs->end_file_pos);
-                        rhs = expression->binary.rhs;
-                        if (!try_resolve_expression(resolver, rhs)) assert(false);
+                    bool valid = true;
 
-                    } else if (lhs->type == Builtin::type_double &&
-                               rhs->type == Builtin::type_float) {
-                        if (rhs->kind == AST_Expression_Kind::FLOAT_LITERAL) {
-                            result_type = Builtin::type_double;
-                            rhs->type = Builtin::type_double;
-                        } else {
-                            assert(false);
-                        }
+#define MAYBE_CONVERT(p_source, dest) \
+if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
+    result_type = do_type_conversion(resolver, (p_source), (dest)->type); \
+} else valid = false; \
 
-                    } else if (lhs->type->kind == AST_Type_Kind::POINTER &&
-                               lhs->type->pointer.base->kind == AST_Type_Kind::VOID &&
-                               lhs->kind == AST_Expression_Kind::NULL_LITERAL &&
-                               rhs->type->kind == AST_Type_Kind::POINTER) {
+
+                    // Integer literal
+                    if (lhs_int_lit && !rhs_int_lit) {
+                        MAYBE_CONVERT(p_lhs, rhs);
+                    } else if (rhs_int_lit && !lhs_int_lit) {
+                        MAYBE_CONVERT(p_rhs, lhs);
+                    } else if (lhs_int_lit && rhs_int_lit) {
                         assert(false);
-                    } else if (rhs->type->kind == AST_Type_Kind::POINTER &&
-                               rhs->type->pointer.base->kind == AST_Type_Kind::VOID &&
-                               rhs->kind == AST_Expression_Kind::NULL_LITERAL &&
-                               lhs->type->kind == AST_Type_Kind::POINTER) {
-                        result_type = lhs->type;
-                        rhs->type = lhs->type;
+ 
+                    // Float literal
+                    } else if (lhs_float_lit && !rhs_float_lit) {
+                        MAYBE_CONVERT(p_lhs, rhs);
+                    } else if (rhs_float_lit && !lhs_float_lit) {
+                        MAYBE_CONVERT(p_rhs, lhs);
+                    } else if (lhs_float_lit && rhs_float_lit)
+                        assert(false);
+
+                    if (!valid) {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES, expression,
+                                            "Mismatching types in binary expression:");
+                        auto lhs_type_str = ast_type_to_tstring(lhs->type);
+                        zodiac_report_info(resolver->build_data, lhs, "Left type: '%.*s'",
+                                           (int)lhs_type_str.length, lhs_type_str.data);
+                        auto rhs_type_str = ast_type_to_tstring(rhs->type);
+                        zodiac_report_info(resolver->build_data, rhs, "Right type: '%.*s'\n",
+                                           (int)rhs_type_str.length, rhs_type_str.data);
+                        return false;
                     } else {
-                        assert(false);
+                        assert(result_type);
                     }
                 }
 
+#undef MAYBE_CONVERT
+
+                lhs = *p_lhs;
+                rhs = *p_rhs;
+
+
                 if (is_compare) {
-                    result_type = Builtin::type_bool;
-                } else if (!result_type) {
-                    result_type = lhs->type;
+                    if (result_type) {
+                        assert(result_type == lhs->type || result_type == rhs->type);
+                        if (result_type->kind != AST_Type_Kind::BOOL) {
+                            result_type = Builtin::type_bool;
+                        }
+                    } else {
+                        result_type = Builtin::type_bool;
+                    }
+                } else {
+                    assert(result_type);
+                    assert(result_type == lhs->type || result_type == rhs->type);
                 }
                 assert(result_type);
 
@@ -2014,15 +2016,12 @@ namespace Zodiac
                                                 Zodiac_Error_Kind::MISMATCHING_TYPES,
                                                 arg_expr,
                                                 "Mismatching types for argument %d", i);
-                            auto err_allocator = resolver->build_data->err_allocator;
                             zodiac_report_info(resolver->build_data, params[i],
                                                "Expected type: %s",
-                                               ast_type_to_string(err_allocator,
-                                                                  params[i]->type));
+                                               ast_type_to_tstring(params[i]->type));
                             zodiac_report_info(resolver->build_data, arg_expr,
                                                "Given type: %s",
-                                               ast_type_to_string(err_allocator,
-                                                                  arg_expr->type));
+                                               ast_type_to_tstring(arg_expr->type));
                             return false;
                         }
                     }
@@ -3204,14 +3203,15 @@ namespace Zodiac
         queue_size_job(resolver, cond_expr);
     }
 
-    void do_type_conversion(Resolver *resolver, AST_Expression **p_expr, AST_Type *target_type)
+    AST_Type *do_type_conversion(Resolver *resolver, AST_Expression **p_expr,
+                                 AST_Type *target_type)
     {
         assert(is_valid_type_conversion(*p_expr, target_type));
 
         auto expr = *p_expr;
 
-
-        if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL) {
+        if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL ||
+            expr->kind == AST_Expression_Kind::FLOAT_LITERAL) {
             expr->type = target_type;
 
         } else {
@@ -3227,12 +3227,17 @@ namespace Zodiac
             assert(cast_res);
             *p_expr = new_expr;
         }
+
+        return (*p_expr)->type;
     }
 
     bool is_valid_type_conversion(AST_Expression *expr, AST_Type *target_type)
     {
         if (expr->kind == AST_Expression_Kind::INTEGER_LITERAL &&
             integer_literal_fits_in_type(expr->integer_literal, target_type)) {
+            return true;
+        } else if (expr->kind == AST_Expression_Kind::FLOAT_LITERAL) {
+            assert(target_type->bit_size  > expr->type->bit_size);
             return true;
         }
 

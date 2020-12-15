@@ -149,7 +149,8 @@ namespace Zodiac
 
     void convert_condition_to_bool(Resolver *resolver, AST_Expression **p_expr);
 
-    void do_type_conversion(Resolver *resolver, AST_Expression **p_expr, AST_Type *target_type);
+    AST_Type *do_type_conversion(Resolver *resolver, AST_Expression **p_expr,
+                                 AST_Type *target_type);
 
     bool is_valid_type_conversion(AST_Expression *expr, AST_Type *target_type);
     bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type);
