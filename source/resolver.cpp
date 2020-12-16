@@ -2373,6 +2373,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     assert(infer_type_from->flags & AST_NODE_FLAG_TYPED);
                     auto type = infer_type(infer_type_from);
                     assert(type);
+                    assert(integer_literal_fits_in_type(expression->integer_literal, type));
                     assert(type->kind == AST_Type_Kind::INTEGER);
                     expression->type = type;
                 }
