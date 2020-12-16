@@ -467,8 +467,11 @@ namespace Zodiac
                     op_val = builder->llvm_builder->CreatePtrToInt(op_val, int_type);
                     llvm::Value *zero_val = llvm::Constant::getNullValue(op_val->getType());
                     result = builder->llvm_builder->CreateICmpEQ(op_val, zero_val);
+                } else if (op_val->getType()->isIntegerTy()){
+                    llvm::Value *zero_val = llvm::Constant::getNullValue(op_val->getType());
+                    result = builder->llvm_builder->CreateICmpEQ(op_val, zero_val);
                 } else {
-                    assert(false); // Untested
+                    assert(false && !"untested...");
                     result = builder->llvm_builder->CreateNot(op_val);
                 }
                 break;
@@ -1063,8 +1066,7 @@ namespace Zodiac
 
         bool verify_error = llvm::verifyModule(*builder->llvm_module, &llvm::errs());
 
-        if (verify_error)
-        {
+        if (verify_error) {
             assert(false);
         }
 
@@ -1458,10 +1460,18 @@ namespace Zodiac
 
     bool llvm_ready_to_emit(LLVM_Builder *builder)
     {
+
+#define REQUIRE_LLVM_FUNC(name) { \
+    auto f = builder->llvm_module->getFunction(name); \
+    if (!f) return false; \
+}
+        REQUIRE_LLVM_FUNC("entry.default_assert_handler");
+
         if (builder->target_platform == Zodiac_Target_Platform::WINDOWS) {
-            llvm::Value *exitprocess_func = builder->llvm_module->getFunction("ExitProcess");
-            if (!exitprocess_func) return false;
+            REQUIRE_LLVM_FUNC("ExitProcess");
         }
+
+#undef REQUIRE_LLVM_FUNC
 
         return true;
     }

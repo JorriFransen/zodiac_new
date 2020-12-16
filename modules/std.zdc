@@ -7,37 +7,6 @@ strlen :: func (cstr: *u8) -> s64 {
     return i;
 }
 
-pid_t :: typedef s32;
-
-SYS_getpid :: 39;
-SYS_kill   :: 62;
-
-SIGABRT : s32 : 6;
-
-abort :: func () -> void
-{
-    pid := @syscall(SYS_getpid);
-    signal := @cast(s64, SIGABRT);
-    @syscall(SYS_kill, pid, signal);
-    return;
-}
-
-// raise :: func(signal : s32) {
-//     // @threadsafe:
-//     kill(getpid(), signal);
-//     return;
-// }
-
-// kill :: func(pid : pid_t, signal : s32) -> s32
-// {
-//     return @syscall(SYS_kill, @cast(s64, pid), @cast(s64, signal));
-// }
-
-// getpid :: func() -> pid_t
-// {
-//     return @syscall(SYS_getpid);
-// }
-
 #if (PLATFORM_WINDOWS) {
 
     windows :: import windows;

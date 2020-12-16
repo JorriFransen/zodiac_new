@@ -363,10 +363,10 @@ namespace Zodiac
 
                     bool result_value = false;
 
-                    if (operand.type->kind == AST_Type_Kind::BOOL) {
-                        assert(false);
-                    } else if (operand.type->kind == AST_Type_Kind::INTEGER) {
-                        assert(false);
+                    if (operand.type->kind == AST_Type_Kind::BOOL ||
+                        operand.type->kind == AST_Type_Kind::INTEGER) {
+                        // @TODO: @Cleanup: I think we should check all sizes and the sign here?
+                        result_value = operand.integer_literal.s64 == 0;
                     } else if (operand.type->kind == AST_Type_Kind::POINTER) {
                         result_value = operand.pointer == nullptr;
                     }
@@ -390,6 +390,7 @@ namespace Zodiac
                                kind == Bytecode_Value_Kind::INTEGER_LITERAL ||
                                kind == Bytecode_Value_Kind::FLOAT_LITERAL ||
                                kind == Bytecode_Value_Kind::STRING_LITERAL ||
+                               kind == Bytecode_Value_Kind::BOOL_LITERAL ||
                                kind == Bytecode_Value_Kind::NULL_LITERAL);
 #endif
                         arg_val = interpreter_load_value(interp, inst->a);

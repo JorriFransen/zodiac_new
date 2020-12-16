@@ -1,5 +1,6 @@
 
 _std_ :: import std;
+_os_  :: import os;
 
 pre_main :: func()
 {
@@ -32,3 +33,16 @@ pre_main :: func()
     @static_assert(false);
 }
 
+default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
+{
+    if (!cond) {
+        // @TODO: We should print to stdout and use lower level print functions here, so
+        //  we have the possibilty to assert from print itself.
+        std.print("Assertion failed: ");
+        std.print(file_name);
+        std.print(":");
+        std.print_numln(line);
+
+        os.abort();
+    }
+}

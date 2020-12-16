@@ -2241,6 +2241,41 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                     expression->flags |= AST_NODE_FLAG_TYPED;
                     break;
+                }else if (name == Builtin::atom_assert) {
+                    _ENSURE_ARGS_ARE_TYPED
+                    assert(args.count == 1);
+
+                    if (args[0]->type->kind != AST_Type_Kind::BOOL) {
+                        if (is_valid_type_conversion(args[0], Builtin::type_bool)) {
+                            do_type_conversion(resolver, &args[0], Builtin::type_bool);
+                        } else {
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                args[0],
+                                                "First argument of @assert must be of boolean type, or be able to convert to bool implicitly");
+                            return false;
+                        }
+                    }
+
+                    Scope *entry_scope = resolver->build_data->entry_module->module_scope;
+                    auto default_handler_decl =
+                        scope_find_declaration(entry_scope,
+                                               Builtin::atom_default_assert_handler);
+                    if (!default_handler_decl) {
+                        assert(false);
+                    } else {
+                        assert(default_handler_decl->kind == AST_Declaration_Kind::FUNCTION);
+                        if (!(default_handler_decl->decl_flags &
+                              AST_DECL_FLAG_REGISTERED_BYTECODE)) {
+                            bytecode_register_function(&resolver->bytecode_builder,
+                                                       default_handler_decl);
+                        }
+                    }
+
+                    expression->type = Builtin::type_void;
+                    expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                    expression->flags |= AST_NODE_FLAG_TYPED;
+                    break;
                 } else {
                     _ENSURE_ARGS_ARE_TYPED
                     zodiac_report_error(resolver->build_data,
@@ -3205,7 +3240,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 if (atom == Builtin::atom_exit) {
                     assert(expr->builtin_call.arg_expressions.count == 1);
                     auto op_expr = expr->builtin_call.arg_expressions[0];
-                    is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
+                    is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
 
                 } else if (atom == Builtin::atom_syscall) {
                     is_const = false;
@@ -3213,11 +3248,15 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 } else if (atom == Builtin::atom_cast) {
                     assert(expr->builtin_call.arg_expressions.count == 2);
                     auto op_expr = expr->builtin_call.arg_expressions[1];
-                    is_const = op_expr->flags & AST_EXPR_FLAG_CONST;
+                    is_const = op_expr->expr_flags & AST_EXPR_FLAG_CONST;
 
                 } else if (atom == Builtin::atom_sizeof ||
                            atom == Builtin::atom_offsetof) {
                     is_const = true;
+                } else if (atom == Builtin::atom_assert) {
+                    assert(expr->builtin_call.arg_expressions.count == 1);
+                    auto cond_expr = expr->builtin_call.arg_expressions[0];
+                    is_const = cond_expr->expr_flags & AST_EXPR_FLAG_CONST;
                 } else {
                     assert(false);
                 }

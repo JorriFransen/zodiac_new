@@ -1255,8 +1255,41 @@ namespace Zodiac
 
             bytecode_emit_instruction(builder, OFFSETOF, type_val, member_index_val, result);
             return result;
+
+        } else if (name == Builtin::atom_assert) {
+            assert(args.count == 1);
+
+            Scope *entry_scope = builder->build_data->entry_module->module_scope;
+            auto default_handler_decl =
+                scope_find_declaration(entry_scope,
+                                       Builtin::atom_default_assert_handler);
+            assert(default_handler_decl);
+            auto default_handler_func = bytecode_find_function(builder, default_handler_decl);
+            assert(default_handler_func);
+
+            auto fp = expr->begin_file_pos;
+
+            Bytecode_Value *cond_val = bytecode_emit_expression(builder, args[0]);
+            Bytecode_Value *file_name = bytecode_get_string_literal(builder, fp.file_name);
+
+            Integer_Literal il = { .s64 = (int64_t)fp.line };
+            Bytecode_Value *line_num = bytecode_integer_literal_new(builder, Builtin::type_s64,
+                                                                    il);
+
+            bytecode_emit_instruction(builder, PUSH_ARG, cond_val, nullptr, nullptr);
+            bytecode_emit_instruction(builder, PUSH_ARG, file_name, nullptr, nullptr);
+            bytecode_emit_instruction(builder, PUSH_ARG, line_num, nullptr, nullptr);
+
+            Bytecode_Value *func_val = bytecode_function_value_new(builder, default_handler_func);
+            Bytecode_Value *arg_count_val = bytecode_integer_literal_new(builder,
+                                                                         Builtin::type_s64,
+                                                                         { .s64 = 3 });
+
+            bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, nullptr);
+            return nullptr;
+        } else {
+            assert(false);
         }
-        else assert(false);
 
         assert(false);
         return nullptr;
@@ -1308,6 +1341,11 @@ namespace Zodiac
         }
 
         Bytecode_Value *operand_value = bytecode_emit_expression(builder, operand_expr);
+
+        if (operand_value->type == target_type) {
+            return operand_value;
+        }
+
         Bytecode_Value *result = bytecode_temporary_new(builder, target_type);
 
         switch (operand_type->kind) {
@@ -1326,7 +1364,12 @@ namespace Zodiac
                             assert(false);
                         }
                     } else {
-                        assert(false);
+                        if (operand_type->integer.sign) {
+                            bytecode_emit_instruction(builder, TRUNC, operand_value, nullptr,
+                                                      result);
+                        } else {
+                            assert(false);
+                        }
                     }
                 } else if (operand_type->integer.sign) {
                     // Signed --> Unsigned
@@ -1839,6 +1882,12 @@ namespace Zodiac
     {
         auto result = bytecode_value_new(builder, Bytecode_Value_Kind::TYPE, type);
         return result;
+    }
+
+    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const String &str)
+    {
+        auto atom = atom_get(&builder->build_data->atom_table, str);
+        return bytecode_get_string_literal(builder, atom);
     }
 
     Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom& atom)

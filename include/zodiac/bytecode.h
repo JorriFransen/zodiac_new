@@ -372,7 +372,8 @@ namespace Zodiac
     Bytecode_Value *bytecode_block_value_new(Bytecode_Builder *builder, Bytecode_Block *block);
     Bytecode_Value *bytecode_type_value_new(Bytecode_Builder *builder, AST_Type *type);
 
-    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom& atom);
+    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const String &str);
+    Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom &atom);
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);
