@@ -1464,16 +1464,22 @@ namespace Zodiac
 
             case AST_Statement_Kind::WHILE: {
 #ifndef NDEBUG
-                AST_Expression *cond_expr = statement->while_stmt.cond_expr;
+                AST_Expression **p_cond_expr = &statement->while_stmt.cond_expr;
+                auto cond_expr = *p_cond_expr;
+
                 assert(cond_expr->type);
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
 
                 if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
                     if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
-                        convert_condition_to_bool(resolver, &statement->while_stmt.cond_expr);
+                        do_type_conversion(resolver, p_cond_expr, Builtin::type_bool);
                     } else {
-                        assert(false);
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                            cond_expr,
+                            "Conditional expression of while statement is not of boolean type, and cannot be converted to boolean type");
+                        return false;
                     }
                 }
 
@@ -3231,6 +3237,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
     void convert_condition_to_bool(Resolver *resolver, AST_Expression **expr_ptr)
     {
+        assert(false);
         AST_Expression *cond_expr = *expr_ptr;
         assert(cond_expr);
         assert(cond_expr->type != Builtin::type_bool);
