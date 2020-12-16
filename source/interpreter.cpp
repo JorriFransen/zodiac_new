@@ -964,7 +964,12 @@ namespace Zodiac
                         array_append(&args, *param_ptr);
                     }
 
-                    os_syscall(args);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+                    assert(inst->result->type == Builtin::type_s64);
+
+                    int64_t result = os_syscall(args);
+                    interp_store(result_addr, result);
+
                     array_free(&args);
 
                     interp->sp -= arg_size;
