@@ -1509,10 +1509,25 @@ namespace Zodiac
                     assert(statement->for_stmt.it_decl->flags & AST_NODE_FLAG_TYPED);
                 }
 
-                assert(statement->for_stmt.cond_expr->type);
-                assert(statement->for_stmt.cond_expr->type == Builtin::type_bool);
-                assert(statement->for_stmt.cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(statement->for_stmt.cond_expr->flags & AST_NODE_FLAG_TYPED);
+                AST_Expression **p_cond_expr = &statement->for_stmt.cond_expr;
+                auto cond_expr = *p_cond_expr;
+
+                assert(cond_expr->type);
+                assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                if (cond_expr->type != Builtin::type_bool) {
+                    if (is_valid_type_conversion(cond_expr, Builtin::type_bool)) {
+                        do_type_conversion(resolver, p_cond_expr, Builtin::type_bool);
+                    } else {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                            cond_expr,
+                            "Conditional expression of for statement is not of boolean type, and cannot be converted to boolean type");
+                        return false;
+                    }
+
+                }
 
                 for (int64_t i = 0; i < statement->for_stmt.step_statements.count; i++) {
                     AST_Statement *step_stmt = statement->for_stmt.step_statements[i];
