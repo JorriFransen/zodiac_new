@@ -40,3 +40,24 @@ raise :: func(signal : s32) -> s32
     return @cast(s32, result);
 }
 
+#if (PLATFORM_WINDOWS) {
+
+    windows :: import windows;
+
+    stdout : windows.HANDLE;
+
+    _open_default_io_handles :: func() {
+        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
+        return;
+    }
+
+} #elseif (PLATFORM_LINUX) {
+
+    _open_default_io_handles :: func()
+    {
+        return;
+    }
+
+} #else {
+    @static_assert(false);
+}

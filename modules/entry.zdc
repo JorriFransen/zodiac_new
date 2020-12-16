@@ -4,7 +4,7 @@ _os_  :: import os;
 
 pre_main :: func()
 {
-    _std_._open_default_io_handles();
+    _os_._open_default_io_handles();
     return;
 }
 
@@ -38,11 +38,11 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
     if (!cond) {
         // @TODO: We should print to stdout and use lower level print functions here, so
         //  we have the possibilty to assert from print itself.
-        std.print("Assertion failed: ");
-        std.print(file_name);
-        std.print(":");
-        std.print_numln(line);
+        _std_.print("Assertion failed: ");
+        _std_.print(file_name);
+        _std_.print(":");
+        _std_.print_numln(line);
 
-        os.abort();
+        _os_.abort();
     }
 }

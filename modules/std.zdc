@@ -9,15 +9,6 @@ strlen :: func (cstr: *u8) -> s64 {
 
 #if (PLATFORM_WINDOWS) {
 
-    windows :: import windows;
-
-    stdout : windows.HANDLE;
-
-    _open_default_io_handles :: func() {
-        stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
-        return;
-    }
-
     print :: func(str: *u8) {
         written : windows.DWORD;
         len := @cast(windows.DWORD, strlen(str));
@@ -35,11 +26,6 @@ strlen :: func (cstr: *u8) -> s64 {
     }
 
 } #elseif (PLATFORM_LINUX) {
-
-    _open_default_io_handles :: func()
-    {
-        return;
-    }
 
     print :: func (cstr: *u8)
     {
