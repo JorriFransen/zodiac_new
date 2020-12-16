@@ -1269,10 +1269,24 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::STATIC_ASSERT: {
-                AST_Expression *cond_expr = declaration->static_assert_decl.cond_expression;
+                AST_Expression **p_cond_expr = &declaration->static_assert_decl.cond_expression;
+                auto cond_expr = *p_cond_expr;
+
                 assert(cond_expr->type);
                 assert(cond_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(cond_expr->flags & AST_NODE_FLAG_TYPED);
+
+                if (cond_expr->type->kind != AST_Type_Kind::BOOL) {
+                    if (is_valid_type_conversion(cond_expr, Builtin::type_bool)) {
+                        do_type_conversion(resolver, p_cond_expr, Builtin::type_bool);
+                    } else {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                            cond_expr,
+                            "Argument to  static iassert is not of boolean type, and cannot be converted to boolean type");
+                        return false;
+                    }
+                }
 
                 Const_Value cv = const_interpret_expression(cond_expr);
 
