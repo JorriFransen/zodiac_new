@@ -167,8 +167,8 @@ namespace Zodiac
                         if (!resolver->entry_decl && is_entry_decl(resolver, decl)) {
                             resolver->entry_decl = decl;
                             decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
-                        } else if (is_bytecode_entry_decl(resolver, decl)) {
-                            decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
+                        } else if (is_bytecode_entry_decl(decl)) {
+                            // decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
                         }
                     }
                 }
@@ -3538,7 +3538,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         return false;
     }
 
-    bool is_bytecode_entry_decl(Resolver *resolver, AST_Declaration *decl)
+    bool is_bytecode_entry_decl(AST_Declaration *decl)
     {
         if (decl->kind == AST_Declaration_Kind::FUNCTION &&
             decl->identifier->atom == Builtin::atom_main) {

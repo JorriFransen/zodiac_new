@@ -164,7 +164,7 @@ namespace Zodiac
                                               AST_Type *expected_type, bool is_builtin);
 
     bool is_entry_decl(Resolver *resolver, AST_Declaration *decl);
-    bool is_bytecode_entry_decl(Resolver *resolver, AST_Declaration *decl);
+    bool is_bytecode_entry_decl(AST_Declaration *decl);
 
     void resolver_expand_switch_case_ranges(Resolver *resolver, AST_Statement *stmt,
                                             AST_Switch_Case *switch_case, uint64_t range_count,

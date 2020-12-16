@@ -98,7 +98,7 @@ namespace Zodiac
         AST_DECL_FLAG_NONE                     = 0x0000,
         AST_DECL_FLAG_IS_NAKED                 = 0x0001,
         AST_DECL_FLAG_IS_ENTRY                 = 0x0002,
-        AST_DECL_FLAG_IS_BYTECODE_ENTRY        = 0x0004,
+        // AST_DECL_FLAG_IS_BYTECODE_ENTRY        = 0x0004,
         AST_DECL_FLAG_NORETURN                 = 0x0008,
         AST_DECL_FLAG_FOREIGN                  = 0x0010,
         AST_DECL_FLAG_GLOBAL                   = 0x0020,

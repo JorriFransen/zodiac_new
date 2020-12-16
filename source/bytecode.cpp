@@ -1,9 +1,10 @@
-#include "bytecode.h"
 
 #include "ast.h"
 #include "builtin.h"
+#include "bytecode.h"
 #include "const_interpreter.h"
 #include "parser.h"
+#include "resolver.h"
 #include "scope.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -71,7 +72,7 @@ namespace Zodiac
         String name = {};
 
         if ((decl->decl_flags & AST_DECL_FLAG_IS_ENTRY) ||
-            (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY) ||
+            (is_bytecode_entry_decl(decl)) ||
             (decl->decl_flags & AST_DECL_FLAG_FOREIGN)) {
             name = string_ref(decl->identifier->atom);
         } else {
@@ -118,7 +119,7 @@ namespace Zodiac
             func->flags |= BC_FUNC_FLAG_CRT_ENTRY;
         }
 
-        if (decl->decl_flags & AST_DECL_FLAG_IS_BYTECODE_ENTRY) {
+        if (is_bytecode_entry_decl(decl)) {
             assert(!bd->bc_bytecode_entry_function);
             bd->bc_bytecode_entry_function = func;
             func->flags |= BC_FUNC_FLAG_BYTECODE_ENTRY;

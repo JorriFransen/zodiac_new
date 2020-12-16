@@ -11,11 +11,16 @@
 
 #include <tracy/TracyC.h>
 
+// #include <syscall.h>
+
 using namespace Zodiac;
 
 int main(int argc, char **argv)
 {
     // bucket_array_test();
+
+    // printf("SYS_KILL: %d\n", SYS_kill);
+    // printf("SYS_getpid: %d\n", SYS_getpid);
 
     TracyCZoneN(tcz_init, "init", true);
 

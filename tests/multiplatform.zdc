@@ -7,6 +7,10 @@ main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
 
+    // std.abort();
+    // return 0;
+    // assert(false);
+
     // @syscall(1, 1, "Test!\n", 6);
 
     std.print_num(42);
