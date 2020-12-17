@@ -86,6 +86,10 @@ namespace Zodiac
             result->flags |= BC_FUNC_FLAG_NORETURN;
         }
 
+        if (decl->decl_flags & AST_DECL_FLAG_COMPILER_FUNC) {
+            result->flags |= BC_FUNC_FLAG_COMPILER_FUNC;
+        }
+
         for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
         {
             auto param_decl = decl->function.parameter_declarations[i];

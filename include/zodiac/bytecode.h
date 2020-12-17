@@ -198,6 +198,7 @@ namespace Zodiac
         BC_FUNC_FLAG_EMITTED         = 0x008,
         BC_FUNC_FLAG_NORETURN        = 0x010,
         BC_FUNC_FLAG_LLVM_REGISTERED = 0x020,
+        BC_FUNC_FLAG_COMPILER_FUNC   = 0x040,
     };
 
     const int16_t BC_INSTRUCTIONS_PER_BUCKET = 64;

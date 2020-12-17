@@ -10,6 +10,12 @@ namespace Zodiac
 {
     typedef Instruction_Locator Instruction_Pointer;
 
+    enum Interp_Flag : uint64_t
+    {
+        INTERP_FLAG_NONE    = 0x0,
+        INTERP_FLAG_ABORTED = 0x1,
+    };
+
     struct Interpreter
     {
         Allocator *allocator = nullptr;
@@ -30,6 +36,7 @@ namespace Zodiac
 
         void *null_pointer = nullptr;
 
+        uint64_t flags = INTERP_FLAG_NONE;
         int64_t exit_code = 0;
     };
 
@@ -47,6 +54,9 @@ namespace Zodiac
     void interpreter_execute_foreign_function(Interpreter *interp, Bytecode_Function *func,
                                               int64_t arg_count, Bytecode_Value *result_value);
     void interpreter_push_foreign_arg(Interpreter *interp, uint8_t *arg_ptr, AST_Type *type);
+
+    void interpreter_execute_compiler_function(Interpreter *interp, Bytecode_Function *func,
+                                               int64_t arg_count, Bytecode_Value *result_value);
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
     uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);

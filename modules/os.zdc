@@ -20,7 +20,7 @@ gettid :: func () -> pid_t
     return @cast(pid_t, @syscall(SYS_gettid));
 }
 
-abort :: func ()
+#compiler abort :: func ()
 {
     raise(SIGABRT);
 

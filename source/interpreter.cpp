@@ -431,6 +431,12 @@ namespace Zodiac
                         break;
                     }
 
+                    if (func->flags & BC_FUNC_FLAG_COMPILER_FUNC) {
+                        interpreter_execute_compiler_function(interp, func, arg_count,
+                                                              inst->result);
+                        break;
+                    }
+
                     advance_ip = false;
 
                     int64_t param_offset = -sizeof(int64_t);
@@ -984,8 +990,12 @@ namespace Zodiac
 
         }
 
-        if (ret_val_ptr && ret_type->kind == AST_Type_Kind::INTEGER) {
-            interp->exit_code = *(int64_t*)ret_val_ptr;
+        if (interp->flags & INTERP_FLAG_ABORTED) {
+            fprintf(stderr, "Bytecode aborted!\n");
+        } else {
+            if (ret_val_ptr && ret_type->kind == AST_Type_Kind::INTEGER) {
+                interp->exit_code = *(int64_t*)ret_val_ptr;
+            }
         }
     }
 
@@ -1086,6 +1096,22 @@ namespace Zodiac
 
 
         ffi_call(&interp->ffi, func->name, return_val_ptr, return_type);
+    }
+
+    void interpreter_execute_compiler_function(Interpreter *interp, Bytecode_Function *func,
+                                               int64_t arg_count, Bytecode_Value *result_value)
+    {
+        assert(func->flags & BC_FUNC_FLAG_COMPILER_FUNC);
+
+        assert(arg_count == 0);
+
+        if (func->name == Builtin::atom_abort) {
+            interp->flags |= INTERP_FLAG_ABORTED;
+            interp->running = false;
+            interp->exit_code = 134;
+        } else {
+            assert(false && !"Unimplemented compiler function!");
+        }
     }
 
     Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value)

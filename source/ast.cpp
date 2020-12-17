@@ -275,6 +275,7 @@ namespace Zodiac
                 bool is_naked = ptn->self.flags & PTN_FLAG_DECL_IS_NAKED;
                 bool is_noreturn = ptn->self.flags & PTN_FLAG_FUNC_NORETURN;
                 bool is_foreign = ptn->self.flags & PTN_FLAG_FUNC_FOREIGN;
+                bool is_compiler_func = ptn->self.flags & PTN_FLAG_FUNC_COMPILER_FUNC;
 
                 auto end_fp = ptn->self.end_file_pos;
 
@@ -284,6 +285,7 @@ namespace Zodiac
                                                       ast_param_decls, ast_var_decls,
                                                       ast_body,
                                                       is_naked, is_noreturn, is_foreign,
+                                                      is_compiler_func,
                                                       parent_scope,
                                                       param_scope,
                                                       begin_fp, end_fp);
@@ -2046,6 +2048,7 @@ namespace Zodiac
                                                   AST_Statement *body,
                                                   bool is_naked, bool is_noreturn,
                                                   bool is_foreign,
+                                                  bool is_compiler_func,
                                                   Scope *parent_scope,
                                                   Scope *param_scope,
                                                   const File_Pos &begin_fp,
@@ -2078,6 +2081,10 @@ namespace Zodiac
 
         if (is_foreign) {
             result->decl_flags |= AST_DECL_FLAG_FOREIGN;
+        }
+
+        if (is_compiler_func) {
+            result->decl_flags |= AST_DECL_FLAG_COMPILER_FUNC;
         }
 
         return result;

@@ -109,6 +109,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     bool is_naked = false;
     bool is_noreturn = false;
     bool is_foreign = false;
+    bool is_compiler_func = false;
 
     if (parser_is_token(ts, TOK_POUND)) {
         auto pt = ts->peek_token(1);
@@ -175,6 +176,8 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
             is_noreturn = true;
         } else if (directive_tok.atom == Builtin::atom_foreign) {
             is_foreign = true;
+        } else if (directive_tok.atom == Builtin::atom_compiler) {
+            is_compiler_func = true;
         } else {
             zodiac_report_error(parser->build_data, Zodiac_Error_Kind::INVALID_DIRECTIVE,
                                 directive_tok.begin_file_pos, directive_tok.end_file_pos,
@@ -206,14 +209,15 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     if (!identifier) return nullptr;
 
     return parser_parse_declaration(parser, ts, identifier, is_naked, is_noreturn,
-                                    is_foreign);
+                                    is_foreign, is_compiler_func);
 }
 
 Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
                                           Identifier_PTN *identifier,
                                           bool is_naked /*= false*/,
                                           bool is_noreturn /*= false*/,
-                                          bool is_foreign /*=false*/)
+                                          bool is_foreign /*=false*/,
+                                          bool is_compiler_func /*=false*/)
 {
     if (!parser_expect_token(parser, ts, TOK_COLON)) return nullptr;
 
@@ -340,20 +344,24 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
 
     if (!result) return nullptr;
 
-    if (is_naked)
-    {
+    if (is_naked) {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
         result->self.flags |= PTN_FLAG_DECL_IS_NAKED;
     }
-    if (is_noreturn)
-    {
+
+    if (is_noreturn) {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
         result->self.flags |= PTN_FLAG_FUNC_NORETURN;
     }
-    if (is_foreign)
-    {
+
+    if (is_foreign) {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
         result->self.flags |= PTN_FLAG_FUNC_FOREIGN;
+    }
+
+    if (is_compiler_func) {
+        assert(result->kind == Declaration_PTN_Kind::FUNCTION);
+        result->self.flags |= PTN_FLAG_FUNC_COMPILER_FUNC;
     }
     return result;
 }

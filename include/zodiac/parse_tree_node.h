@@ -37,11 +37,12 @@ typedef uint64_t PTN_Flag;
 
 enum PTN_FLAG : PTN_Flag
 {
-    PTN_FLAG_NONE      = 0x00,
-    PTN_FLAG_DECL_IS_NAKED  = 0x01,
-    PTN_FLAG_FUNC_NORETURN  = 0x02,
-    PTN_FLAG_FUNC_FOREIGN   = 0x04,
-    PTN_FLAG_SEMICOLON = 0x08,
+    PTN_FLAG_NONE                = 0x00,
+    PTN_FLAG_DECL_IS_NAKED      = 0x01,
+    PTN_FLAG_FUNC_NORETURN      = 0x02,
+    PTN_FLAG_FUNC_FOREIGN       = 0x04,
+    PTN_FLAG_SEMICOLON          = 0x08,
+    PTN_FLAG_FUNC_COMPILER_FUNC = 0x10,
 };
 
 struct PT_Node
