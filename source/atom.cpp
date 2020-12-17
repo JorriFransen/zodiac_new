@@ -131,12 +131,34 @@ double atom_to_double(const Atom &atom)
     }
 
     return result;
-       
 }
 
 String string_ref(const Atom &atom)
 {
     return string_ref(atom.data, atom.length);
+}
+
+uint64_t hash_key(const Atom &atom)
+{
+    // UInt64 MurmurHash3Mixer( UInt64 key )
+    // {
+    //     key ^= (key >> 33);
+    //     key *= 0xff51afd7ed558ccd;
+    //     key ^= (key >> 33);
+    //     key *= 0xc4ceb9fe1a85ec53;
+    //     key ^= (key >> 33);
+    //     return key;
+    // }
+
+    auto result = (int64_t)atom.data;
+    result ^= (result >> 33);
+    result *= 0xff51afd7ed558ccd;
+    result ^= (result >> 33);
+    result *= 0xc4ceb9fe1a85ec53;
+    result ^= (result >> 33);
+    return result;
+
+
 }
 
 }

@@ -36,4 +36,6 @@ double atom_to_double(const Atom &atom);
 
 String string_ref(const Atom &atom);
 
+uint64_t hash_key(const Atom &atom);
+
 }
