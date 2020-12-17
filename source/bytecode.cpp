@@ -884,15 +884,24 @@ namespace Zodiac
                     }
 
                     case UNOP_MINUS: {
-                        assert(operand_type->kind == AST_Type_Kind::INTEGER);
-                        assert(operand_type->integer.sign);
+                        Bytecode_Opcode op = NOP;
+
+                        if (operand_type->kind == AST_Type_Kind::INTEGER) {
+                            assert(operand_type->integer.sign);
+                            op = SUB_S;
+                        } else {
+                            assert(operand_type->kind == AST_Type_Kind::FLOAT);
+                            op = SUB_F;
+                        }
+
+                        assert(op != NOP);
 
                         Bytecode_Value *zero = bytecode_emit_zero_value(builder, operand_type);
                         Bytecode_Value *operand_value = bytecode_emit_expression(builder,
                                                                                  operand_expr);
 
                         result = bytecode_temporary_new(builder, operand_type);
-                        bytecode_emit_instruction(builder, SUB_S, zero, operand_value, result);
+                        bytecode_emit_instruction(builder, op, zero, operand_value, result);
 
                         break;
                     }
@@ -1367,14 +1376,16 @@ namespace Zodiac
                             bytecode_emit_instruction(builder, SEXT, operand_value, nullptr,
                                                       result);
                         } else {
-                            assert(false);
+                            bytecode_emit_instruction(builder, ZEXT, operand_value, nullptr,
+                                                      result);
                         }
                     } else {
                         if (operand_type->integer.sign) {
                             bytecode_emit_instruction(builder, TRUNC, operand_value, nullptr,
                                                       result);
                         } else {
-                            assert(false);
+                            bytecode_emit_instruction(builder, TRUNC, operand_value, nullptr,
+                                                      result);
                         }
                     }
                 } else if (operand_type->integer.sign) {
@@ -1609,7 +1620,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT:
+            {
+                return bytecode_float_literal_new(builder, type, 0.0, 0.0);
+                break;
+            }
+
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);

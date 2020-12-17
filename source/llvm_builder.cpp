@@ -441,14 +441,14 @@ namespace Zodiac
             case LTEQ_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
-                result = builder->llvm_builder->CreateICmpULE(lhs, rhs, "");
+                result = builder->llvm_builder->CreateICmpULE(lhs, rhs);
                 break;
             }
 
             case GT_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
-                result = builder->llvm_builder->CreateICmpUGT(lhs, rhs, "");
+                result = builder->llvm_builder->CreateICmpUGT(lhs, rhs);
                 break;
             }
 
@@ -456,13 +456,20 @@ namespace Zodiac
 
             case EQ_F: assert(false);
             case NEQ_F: assert(false);
-            case LT_F: assert(false);
+
+            case LT_F: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateFCmpOLT(lhs, rhs);
+                break;
+            }
+
             case LTEQ_F: assert(false);
 
             case GT_F: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
-                result = builder->llvm_builder->CreateFCmpOGT(lhs, rhs, "");
+                result = builder->llvm_builder->CreateFCmpOGT(lhs, rhs);
                 break;
             }
 

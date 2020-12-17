@@ -801,24 +801,44 @@ namespace Zodiac
 
                     assert(operand_val.type->kind == AST_Type_Kind::FLOAT);
                     assert(result_type->kind == AST_Type_Kind::INTEGER);
-                    assert(result_type->integer.sign);
 
-                    if (operand_val.type == Builtin::type_float) {
-                        switch (result_type->bit_size) {
-                            default: assert(false);
-                            case 8:  interp_store(result_addr, (int8_t)operand_val.float_literal.r32); break;
-                            case 16: interp_store(result_addr, (int16_t)operand_val.float_literal.r32); break;
-                            case 32: interp_store(result_addr, (int32_t)operand_val.float_literal.r32); break;
-                            case 64: interp_store(result_addr, (int64_t)operand_val.float_literal.r32); break;
+                    if (result_type->integer.sign) {
+                        if (operand_val.type == Builtin::type_float) {
+                            switch (result_type->bit_size) {
+                                default: assert(false);
+                                case 8: interp_store(result_addr,(int8_t)operand_val.float_literal.r32); break;
+                                case 16: interp_store(result_addr, (int16_t)operand_val.float_literal.r32); break;
+                                case 32: interp_store(result_addr, (int32_t)operand_val.float_literal.r32); break;
+                                case 64: interp_store(result_addr, (int64_t)operand_val.float_literal.r32); break;
+                            }
+                        } else {
+                            assert(operand_val.type == Builtin::type_double);
+                            switch (result_type->bit_size) {
+                                default: assert(false);
+                                case 8:  interp_store(result_addr, (int8_t)operand_val.float_literal.r64); break;
+                                case 16: interp_store(result_addr, (int16_t)operand_val.float_literal.r64); break;
+                                case 32: interp_store(result_addr, (int64_t)operand_val.float_literal.r64); break;
+                                case 64: interp_store(result_addr, (int64_t)operand_val.float_literal.r64); break;
+                            }
                         }
                     } else {
-                        assert(operand_val.type == Builtin::type_double);
-                        switch (result_type->bit_size) {
-                            default: assert(false);
-                            case 8:  interp_store(result_addr, (int8_t)operand_val.float_literal.r64); break;
-                            case 16: interp_store(result_addr, (int16_t)operand_val.float_literal.r64); break;
-                            case 32: interp_store(result_addr, (int64_t)operand_val.float_literal.r64); break;
-                            case 64: interp_store(result_addr, (int64_t)operand_val.float_literal.r64); break;
+                        if (operand_val.type == Builtin::type_float) {
+                            switch (result_type->bit_size) {
+                                default: assert(false);
+                                case 8: interp_store(result_addr, (uint8_t)operand_val.float_literal.r32); break;
+                                case 16: interp_store(result_addr, (uint16_t)operand_val.float_literal.r32); break;
+                                case 32: interp_store(result_addr, (uint32_t)operand_val.float_literal.r32); break;
+                                case 64: interp_store(result_addr, (uint64_t)operand_val.float_literal.r32); break;
+                            }
+                        } else {
+                            assert(operand_val.type == Builtin::type_double);
+                            switch (result_type->bit_size) {
+                                default: assert(false);
+                                case 8:  interp_store(result_addr, (uint8_t)operand_val.float_literal.r64); break;
+                                case 16: interp_store(result_addr, (uint16_t)operand_val.float_literal.r64); break;
+                                case 32: interp_store(result_addr, (uint64_t)operand_val.float_literal.r64); break;
+                                case 64: interp_store(result_addr, (uint64_t)operand_val.float_literal.r64); break;
+                            }
                         }
                     }
 
@@ -860,7 +880,41 @@ namespace Zodiac
                     break;
                 }
 
-                case U_TO_F: assert(false);
+                case U_TO_F: {
+                    Bytecode_Value operand_val = interpreter_load_value(interp, inst->a);
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    auto result_type = inst->result->type;
+
+                    assert(operand_val.type->kind == AST_Type_Kind::INTEGER);
+                    assert(!operand_val.type->integer.sign);
+                    assert(result_type->kind == AST_Type_Kind::FLOAT);
+
+                    if (result_type == Builtin::type_float) {
+                        float result_value;
+                        switch (operand_val.type->bit_size) {
+                            default: assert(false);
+                            case 8: result_value = operand_val.integer_literal.u8; break;
+                            case 16: result_value = operand_val.integer_literal.u16; break;
+                            case 32: result_value = operand_val.integer_literal.u32; break;
+                            case 64: result_value = operand_val.integer_literal.u64; break;
+                        }
+                        interp_store(result_addr, result_value);
+                    } else {
+                        double result_value;
+                        switch (operand_val.type->bit_size) {
+                            default: assert(false);
+                            case 8: result_value = operand_val.integer_literal.u8; break;
+                            case 16: result_value = operand_val.integer_literal.u16; break;
+                            case 32: result_value = operand_val.integer_literal.u32; break;
+                            case 64: result_value = operand_val.integer_literal.u64; break;
+                        }
+                        interp_store(result_addr, result_value);
+                    }
+
+                    break;
+                }
+
 
                 case F_TO_F: {
                      Bytecode_Value operand_val = interpreter_load_value(interp, inst->a);

@@ -2045,9 +2045,14 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     }
 
                     case UNOP_MINUS: {
-                        assert(op_expr->type->kind == AST_Type_Kind::INTEGER);
-                        assert(op_expr->type->integer.sign);
-                        result_type = op_expr->type;
+                        if (op_expr->type->kind == AST_Type_Kind::INTEGER) {
+                            assert(op_expr->type->integer.sign);
+                            result_type = op_expr->type;
+                        } else if (op_expr->type->kind == AST_Type_Kind::FLOAT) {
+                            result_type = op_expr->type;
+                        } else {
+                            assert(false);
+                        }
                         break;
                     }
 
