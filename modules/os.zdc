@@ -48,15 +48,11 @@ raise :: func(signal : s32) -> s32
 
     _open_default_io_handles :: func() {
         stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
-        return;
     }
 
 } #elseif (PLATFORM_LINUX) {
 
-    _open_default_io_handles :: func()
-    {
-        return;
-    }
+    _open_default_io_handles :: func() { }
 
 } #else {
     @static_assert(false);
