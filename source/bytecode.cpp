@@ -2039,16 +2039,14 @@ namespace Zodiac
             case GT_F:   string_builder_append(sb, "GT_F "); break;
             case GTEQ_F: string_builder_append(sb, "GTEQ_F "); break;
 
-            case NEG_LOG: assert(false);
+            case NEG_LOG: string_builder_append(sb, "NEG_LOG "); break;
 
-            case PUSH_ARG:
-            {
+            case PUSH_ARG: {
                 string_builder_append(sb, "PUSH_ARG ");
                 break;
             }
 
-            case CALL:
-            {
+            case CALL: {
                 print_args = false;
                 string_builder_append(sb, "CALL ");
                 bytecode_print_value(sb, inst->a);
