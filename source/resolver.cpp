@@ -1981,8 +1981,19 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                         MAYBE_CONVERT(p_lhs, rhs);
                     } else if (rhs_float_lit && !lhs_float_lit) {
                         MAYBE_CONVERT(p_rhs, lhs);
-                    } else if (lhs_float_lit && rhs_float_lit)
+                    } else if (lhs_float_lit && rhs_float_lit) {
                         assert(false);
+                    } else {
+
+                        // Anything else...
+                        if (is_valid_type_conversion(lhs, rhs->type)) {
+                            result_type = do_type_conversion(resolver, p_lhs, rhs->type);
+                        } else if (is_valid_type_conversion(rhs, lhs->type)) {
+                            result_type = do_type_conversion(resolver, p_rhs, lhs->type);
+                        } else {
+                            valid = false;
+                        }
+                    }
 
                     if (!valid) {
                         zodiac_report_error(resolver->build_data,
@@ -3462,8 +3473,12 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     }
                 } else if (target_type->kind == AST_Type_Kind::BOOL) {
                     return true;
+                } else if (target_type->kind == AST_Type_Kind::STRUCTURE || 
+                           target_type->kind == AST_Type_Kind::POINTER) {
+                    return false;
+                } else {
+                    assert(false);
                 }
-                else assert(false);
 
                 break;
             }
