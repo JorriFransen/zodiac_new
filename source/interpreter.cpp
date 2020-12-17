@@ -349,27 +349,7 @@ namespace Zodiac
     break; \
 }
 
-
-                case EQ_F: {
-                    auto lhs = interpreter_load_value(interp, inst->a);
-                    auto rhs = interpreter_load_value(interp, inst->b);
-                    assert(lhs.type == rhs.type);
-                    assert(lhs.type->kind == AST_Type_Kind::FLOAT);
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
-                    bool result_value = false;
-                    if (lhs.type == Builtin::type_float) {
-                        result_value = lhs.float_literal.r32 == rhs.float_literal.r32;
-                    } else if (lhs.type == Builtin::type_double) {
-                        result_value = lhs.float_literal.r64 == rhs.float_literal.r64;
-                    } else {
-                        assert(false);
-                    }
-                    assert(sizeof(result_value) == (inst->result->type->bit_size / 8));
-                    interp_store(result_addr, result_value);
-                    break;
-                }
-                // case EQ_F: _binop_compare_float(==);
-
+                case EQ_F: _binop_compare_float(==);
                 case NEQ_F: _binop_compare_float(!=);
                 case LT_F: _binop_compare_float(<);
                 case LTEQ_F: _binop_compare_float(<=);
