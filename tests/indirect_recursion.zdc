@@ -10,6 +10,8 @@ main :: func() -> s64 {
     n : s64 = 0;
     inc1(*n, 10);
 
+    @assert(n == 11);
+
     return 0;
 }
 

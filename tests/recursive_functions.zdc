@@ -17,6 +17,7 @@ main :: func() -> s64 {
 
         if (fi != fr) {
             std.print(" <---- ERROR iteative and recursive do not match");
+            @assert(fi == fr);
         }
 
         std.print("\n");

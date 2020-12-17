@@ -25,7 +25,10 @@ main :: func() -> s64
     std.print_char('\n');
 
     _48 := add(return_46(), 2);
-    return addone(sub(add(_48, 3), 9));
+    @assert(_48 == 48);
+    result := addone(sub(add(_48, 3), 9));
+    @assert(result == 43);
+    return result;
 }
 
 addone :: func (x: s64) -> s64

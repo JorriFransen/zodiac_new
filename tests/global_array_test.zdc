@@ -10,10 +10,13 @@ main :: func() -> s64
 {
 
     for (i := 0; i < global_array.count; i += 1) {
+        @assert(global_array[i] == 0);
         global_array[i] = i + 1;
+        @assert(global_array[i] == (i + 1));
     }
 
     for (i := 0; i < global_array.count; i += 1) {
+        @assert(global_array[i] == (i + 1));
         std.print("global_array[");
         std.print_num(i);
         std.print("] = ");
@@ -25,13 +28,19 @@ main :: func() -> s64
     for (i := 0; i < global_array.count; i += 1) {
         ptr := *global_array[i];
         <ptr = i * 3;
+        @assert(global_array[i] == i * 3);
     }
 
     for (i := 0; i < global_array.count; i += 1) {
+        @assert(global_array[i] == i * 3);
         std.print("global_array[");
         std.print_num(i);
         std.print("] = ");
         std.print_numln(global_array[i]);
+    }
+
+    for (global_array) {
+        @assert(it == it_index * 3);
     }
 
     return 0;

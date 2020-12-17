@@ -14,18 +14,34 @@ main :: func() -> s64
     v3d : Vec3d;
 
     std.print("\n@offsetof(x, Vec3) = ");
-    std.print_num(@offsetof(x, Vec3));
+    v3xo := @offsetof(x, Vec3);
+    @assert(v3xo == 0);
+    std.print_num(v3xo);
+
     std.print("\n@offsetof(y, Vec3) = ");
-    std.print_num(@offsetof(y, Vec3));
+    v3yo := @offsetof(y, Vec3);
+    @assert(v3yo == 4);
+    std.print_num(v3yo);
+
     std.print("\n@offsetof(z, Vec3) = ");
-    std.print_num(@offsetof(z, Vec3));
+    v3zo := @offsetof(z, Vec3);
+    @assert(v3zo == 8);
+    std.print_num(v3zo);
 
     std.print("\n\n@offsetof(x, Vec3d) = ");
-    std.print_num(@offsetof(x, Vec3d));
+    v3dxo := @offsetof(x, Vec3d);
+    @assert(v3dxo == 0);
+    std.print_num(v3dxo);
+
     std.print("\n@offsetof(y, Vec3d) = ");
-    std.print_num(@offsetof(y, Vec3d));
+    v3dyo := @offsetof(y, Vec3d);
+    @assert(v3dyo == 8);
+    std.print_num(v3dyo);
+
     std.print("\n@offsetof(z, Vec3d) = ");
-    std.print_num(@offsetof(z, Vec3d));
+    v3dzo := @offsetof(z, Vec3d);
+    @assert(v3dzo == 16);
+    std.print_num(v3dzo);
 
     std.print("\n");
     return 0;

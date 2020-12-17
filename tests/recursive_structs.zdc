@@ -17,6 +17,13 @@ main :: func() -> s64
 
     list_print(*list);
 
+    list_element := list.first;
+    for (i := 0; i < 10; i += 1) {
+        @assert(list_element);
+        @assert(list_element.value == i);
+        list_element = list_element.next;
+    }
+
     a : A;
     b : B;
 

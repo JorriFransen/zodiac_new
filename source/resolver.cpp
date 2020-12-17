@@ -3473,7 +3473,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     }
                 } else if (target_type->kind == AST_Type_Kind::BOOL) {
                     return true;
-                } else if (target_type->kind == AST_Type_Kind::STRUCTURE || 
+                } else if (target_type->kind == AST_Type_Kind::STRUCTURE ||
                            target_type->kind == AST_Type_Kind::POINTER) {
                     return false;
                 } else {

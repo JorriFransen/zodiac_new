@@ -21,22 +21,27 @@ test_opassign :: func ()
     std.println("\nx += 5;");
     x += 5;
     std.print_num(x);
+    @assert(x == 5);
 
     std.println("\nx -= 2;");
     x -= 2;
     std.print_num(x);
+    @assert(x == 3);
 
     std.println("\nx *= 4;");
     x *= 4;
     std.print_num(x);
+    @assert(x == 12);
 
     std.println("\nx /= 3;");
     x /= 3;
     std.print_num(x);
+    @assert(x == 4);
 
     std.println("\nx %= 3;");
     x %= 3;
     std.print_num(x);
+    @assert(x == 1);
 
     std.print("\n\n");
 

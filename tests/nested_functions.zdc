@@ -12,7 +12,7 @@ main :: func() -> s64
 
     print_n_times :: func (n: s64, str: *u8) -> void
     {
-        n2 := 4;
+        n2 := 5;
 
         std.print("n2 = ");
         std.print_num(n2);
@@ -23,10 +23,20 @@ main :: func() -> s64
             std.println(str);
             n -= 1;
         }
+
+        @assert(n == 0);
+        @assert(n2 == 5);
+
         return;
     }
 
+    @assert(n == 8);
+    @assert(n2 == 23);
+
     print_n_times(4, "test");
+
+    @assert(n == 8);
+    @assert(n2 == 23);
 
     test_scope();
 

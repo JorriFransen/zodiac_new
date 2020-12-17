@@ -12,82 +12,102 @@ main :: func() -> s64
 
     std.print("@sizeof(bool) = ");
     std.print_num(@sizeof(bool));
+    @assert(@sizeof(bool) == 1);
     std.print("\n");
 
     std.print("@sizeof(u8) = ");
     std.print_num(@sizeof(u8));
+    @assert(@sizeof(u8) == 1);
     std.print("\n");
 
     std.print("@sizeof(s8) = ");
     std.print_num(@sizeof(s8));
+    @assert(@sizeof(s8) == 1);
     std.print("\n");
 
     std.print("@sizeof(u16) = ");
     std.print_num(@sizeof(u16));
+    @assert(@sizeof(u16) == 2);
     std.print("\n");
 
     std.print("@sizeof(s16) = ");
     std.print_num(@sizeof(s16));
+    @assert(@sizeof(s16) == 2);
     std.print("\n");
 
     std.print("@sizeof(u32) = ");
     std.print_num(@sizeof(u32));
+    @assert(@sizeof(u32) == 4);
     std.print("\n");
 
     std.print("@sizeof(s32) = ");
     std.print_num(@sizeof(s32));
+    @assert(@sizeof(s32) == 4);
     std.print("\n");
 
     std.print("@sizeof(u64) = ");
     std.print_num(@sizeof(u64));
+    @assert(@sizeof(u64) == 8);
     std.print("\n");
 
     std.print("@sizeof(s64) = ");
     std.print_num(@sizeof(s64));
+    @assert(@sizeof(s64) == 8);
     std.print("\n");
 
     std.print("@sizeof(float) = ");
     std.print_num(@sizeof(float));
+    @assert(@sizeof(float) == 4);
     std.print("\n");
 
     std.print("@sizeof(double) = ");
     std.print_num(@sizeof(double));
+    @assert(@sizeof(double) == 8);
     std.print("\n\n");
 
     std.print("@sizeof(Vec2) = ");
     std.print_num(@sizeof(Vec2));
+    @assert(@sizeof(Vec2) == 8);
     std.print("\n");
 
     std.print("@sizeof(Vec2d) = ");
     std.print_num(@sizeof(Vec2d));
+    @assert(@sizeof(Vec2d) == 16);
     std.print("\n");
 
     std.print("@sizeof(Vec3) = ");
     std.print_num(@sizeof(Vec3));
+    @assert(@sizeof(Vec3) == 12);
     std.print("\n");
 
     std.print("@sizeof(Vec3d) = ");
     std.print_num(@sizeof(Vec3d));
+    @assert(@sizeof(Vec3d) == 24);
     std.print("\n");
 
     std.print("@sizeof(Aabb) = ");
     std.print_num(@sizeof(Aabb));
+    @assert(@sizeof(Aabb) == 16);
     std.print("\n");
 
     std.print("@sizeof(Aabb_alt) = ");
     std.print_num(@sizeof(Aabb_alt));
+    @assert(@sizeof(Aabb_alt) == 16);
     std.print("\n\n");
 
     std.print("@sizeof(*void) = ");
     std.print_num(@sizeof(*void));
+    @assert(@sizeof(*void) == 8);
     std.print("\n");
 
     std.print("@sizeof(*u8) = ");
     std.print_num(@sizeof(*u8));
+    @assert(@sizeof(*u8) == 8);
     std.print("\n");
 
     std.print("@sizeof(Entity) = ");
     std.print_num(@sizeof(Entity));
+    @assert(@sizeof(Entity) == 32);
     std.print("\n");
 
 

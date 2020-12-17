@@ -40,11 +40,15 @@ test_array_for :: func()
 
     for (i := 0; i < int_array.count; i = i + 1)
     {
-        int_array[i] = (i + 1) * 2;
+        new_val := (i + 1) * 2;
+        int_array[i] = new_val;
+        @assert(int_array[i] == new_val);
     }
 
     for (i := 0; i < int_array.count; i = i + 1)
     {
+        expected_value := (i + 1) * 2;
+        @assert(int_array[i] == expected_value);
         print_array_value("int_array", int_array[i], i);
 
         if (i == modify_index)
@@ -128,6 +132,13 @@ test_array_for :: func()
     {
         print_array_value("int_array", it, it_index);
     }
+
+    @assert(int_array[0] == 2);
+    @assert(int_array[1] == 8);
+    @assert(int_array[2] == 18);
+    @assert(int_array[3] == 16);
+    @assert(int_array[4] == 20);
+    @assert(int_array[5] == 23);
 
     return;
 }
