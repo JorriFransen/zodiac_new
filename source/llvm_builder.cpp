@@ -80,10 +80,19 @@ namespace Zodiac
 
         auto llvm_func_type = llvm_type_from_ast<llvm::FunctionType>(builder, bc_func->type);
 
+        String name;
+        if (bc_func->name_prefix.length) {
+            auto ta = temp_allocator_get();
+            name = string_append(ta, string_ref(bc_func->name_prefix), string_ref(bc_func->name));
+        } else {
+            name = string_ref(bc_func->name);
+        }
+
+
         llvm::Function *llvm_func = llvm::Function::Create(
                 llvm_func_type,
                 llvm::GlobalValue::ExternalLinkage,
-                bc_func->name.data,
+                name.data,
                 builder->llvm_module);
 
         array_append(&builder->registered_functions, { bc_func, llvm_func });

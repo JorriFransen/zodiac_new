@@ -19,7 +19,7 @@ namespace Zodiac {
         dcMode(result.dc_vm, DC_CALL_C_DEFAULT);
         dcReset(result.dc_vm);
 
-        hash_table_init(allocator, &result.functions, hash_table_strings_equal);
+        hash_table_init(allocator, &result.functions, operator==);
 
         DLLib *this_exe_lib = dlLoadLibrary(nullptr);
         assert(this_exe_lib);
@@ -45,7 +45,7 @@ namespace Zodiac {
         return result;
     }
 
-    bool ffi_load_function(FFI_Context *ffi, const String &name)
+    bool ffi_load_function(FFI_Context *ffi, const Atom &name)
     {
         DCpointer symbol = nullptr;
         for (int64_t i = 0; i < ffi->libs.count; i++) {
@@ -64,7 +64,7 @@ namespace Zodiac {
         return false;
     }
 
-    void ffi_call(FFI_Context *ffi, const String &name, uint8_t *return_val_ptr,
+    void ffi_call(FFI_Context *ffi, const Atom &name, uint8_t *return_val_ptr,
                   AST_Type *return_type)
     {
         DCpointer func_ptr = nullptr;

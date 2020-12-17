@@ -220,7 +220,9 @@ namespace Zodiac
     {
         Bytecode_Function_Flags flags = BC_FUNC_FLAG_NONE;
         AST_Type *type = nullptr;
-        String name = {};
+
+        Atom name_prefix = {};
+        Atom name = {};
 
         Array<Bytecode_Value *> parameters = {};
         Array<Bytecode_Value *> locals = {};
@@ -301,7 +303,7 @@ namespace Zodiac
 
     Bytecode_Function *bytecode_find_function(Bytecode_Builder *builder, AST_Declaration *decl);
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Type *type,
-                                             String name);
+                                             Atom name_prefix, Atom name);
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl);
     void bytecode_emit_statement(Bytecode_Builder *builder, AST_Statement *stmt);

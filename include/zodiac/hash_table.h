@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-namespace Zodiac 
+namespace Zodiac
 {
 
 template <typename Key_Type>

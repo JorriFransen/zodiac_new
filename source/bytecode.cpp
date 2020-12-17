@@ -69,20 +69,20 @@ namespace Zodiac
 
         auto ta = temp_allocator_get();
 
-        String name = {};
+        Atom name = decl->identifier->atom;
+        Atom prefix_name = {};
 
         if ((decl->decl_flags & AST_DECL_FLAG_IS_ENTRY) ||
             (is_bytecode_entry_decl(decl)) ||
             (decl->decl_flags & AST_DECL_FLAG_FOREIGN)) {
-            name = string_ref(decl->identifier->atom);
         } else {
-            auto _name = string_append(ta, decl->function.module_name, ".");
-            name = string_append(builder->allocator, _name, string_ref(decl->identifier->atom));
+            auto _prefix_name = string_append(ta, decl->function.module_name, ".");
+            prefix_name = atom_get(&builder->build_data->atom_table, _prefix_name);
         }
 
-        Bytecode_Function *result = bytecode_new_function(builder, func_type, name);
-        if (decl->decl_flags & AST_DECL_FLAG_NORETURN)
-        {
+        Bytecode_Function *result = bytecode_new_function(builder, func_type, prefix_name, name);
+
+        if (decl->decl_flags & AST_DECL_FLAG_NORETURN) {
             result->flags |= BC_FUNC_FLAG_NORETURN;
         }
 
@@ -248,11 +248,12 @@ namespace Zodiac
         assert(wrapper_type);
 
         auto ta = temp_allocator_get();
-        String wrapper_name = string_append(builder->allocator, string_ref("_run_wrapper_"),
-                                            string_from_int(ta, builder->run_wrapper_count));
+        String _wrapper_name = string_append(builder->allocator, string_ref("_run_wrapper_"),
+                                             string_from_int(ta, builder->run_wrapper_count));
         builder->run_wrapper_count += 1;
 
-        Bytecode_Function *result = bytecode_new_function(builder, wrapper_type, wrapper_name);
+        Atom name = atom_get(&builder->build_data->atom_table,  _wrapper_name);
+        Bytecode_Function *result = bytecode_new_function(builder, wrapper_type, {}, name);
 
         builder->current_function = result;
         builder->parameters.count = 0;
@@ -375,13 +376,14 @@ namespace Zodiac
     }
 
     Bytecode_Function *bytecode_new_function(Bytecode_Builder *builder, AST_Type *type,
-                                             String name)
+                                             Atom name_prefix, Atom name)
     {
         assert(type->kind == AST_Type_Kind::FUNCTION);
 
         Bytecode_Function *result = alloc_type<Bytecode_Function>(builder->allocator);
 
         result->type = type;
+        result->name_prefix = name_prefix;
         result->name = name;
 
         array_init(builder->allocator, &result->parameters);

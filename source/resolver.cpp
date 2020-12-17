@@ -3948,7 +3948,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
     void resolver_check_circular_dependencies(Resolver *resolver)
     {
-        assert(queue_count(&resolver->resolve_jobs));
+        if (!queue_count(&resolver->resolve_jobs)) return;
 
         auto ta = temp_allocator_get();
         temp_allocator_reset(ta);
