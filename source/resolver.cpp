@@ -1421,11 +1421,43 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::RETURN: {
-                AST_Expression *operand_expr = statement->expression;
+                AST_Expression **p_operand_expr = &statement->expression;
+                auto operand_expr = *p_operand_expr;
+
+                AST_Declaration *func = enclosing_function(resolver, statement);
+                AST_Type_Spec *func_ts = func->function.type_spec;
+                assert(func_ts);
+                AST_Type *func_type = func_ts->type;
+                assert(func_type);
+                AST_Type *ret_type = func_type->function.return_type;
+
                 if (operand_expr) {
                     assert(operand_expr->flags & AST_NODE_FLAG_RESOLVED_ID);
                     assert(operand_expr->flags & AST_NODE_FLAG_TYPED);
                     assert(operand_expr->type);
+
+                    if (operand_expr->type != ret_type) {
+                        if (is_valid_type_conversion(operand_expr, ret_type)) {
+                            do_type_conversion(resolver, p_operand_expr, ret_type);
+                        }  else {
+                            zodiac_report_error(resolver->build_data,
+                                                Zodiac_Error_Kind::MISMATCHING_TYPES,
+                                                operand_expr,
+                                                "Mismatching type in return statement");
+                            auto exp_str = ast_type_to_tstring(ret_type);
+                            zodiac_report_info(resolver->build_data,
+                                               func_ts->function.return_type_spec,
+                                               "Expected type: '%.*s'",
+                                               (int)exp_str.length, exp_str.data);
+                            auto given_str = ast_type_to_tstring(operand_expr->type);
+                            zodiac_report_info(resolver->build_data, operand_expr,
+                                               "Given type: '%.*s'",
+                                               (int)given_str.length, given_str.data);
+                            return false;
+                        }
+                    }
+                } else {
+                    assert(ret_type == Builtin::type_void);
                 }
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -3119,9 +3151,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         return result_type;
     }
 
-    AST_Declaration *enclosing_function(Resolver *resolver, AST_Expression *expr)
+    AST_Declaration *enclosing_function(Resolver *resolver, Scope *scope)
     {
-        Scope *scope = expr->scope;
         assert(scope->kind != Scope_Kind::PARAMETER);
 
         while (scope->kind != Scope_Kind::MODULE) {
@@ -3138,6 +3169,14 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         }
 
         return nullptr;
+
+    }
+
+    AST_Declaration *enclosing_function(Resolver *resolver, AST_Node *node)
+    {
+        auto scope = node->scope;
+        assert(scope);
+        return enclosing_function(resolver, scope);
     }
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr)
@@ -3530,10 +3569,10 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                             arg_expr,
                             "Mismatching types for argument %d", index);
         auto param_type_str = ast_type_to_tstring(param_decl->type);
-        zodiac_report_info(resolver->build_data, param_decl, "Expected type: %.*s",
+        zodiac_report_info(resolver->build_data, param_decl, "Expected type: '%.*s'",
                            (int)param_type_str.length, param_type_str.data);
         auto arg_type_str = ast_type_to_tstring(arg_expr->type);
-        zodiac_report_info(resolver->build_data, arg_expr, "Given type: %.*s",
+        zodiac_report_info(resolver->build_data, arg_expr, "Given type: '%.*s'",
                            (int)arg_type_str.length, arg_type_str.data);
     }
 
@@ -3548,10 +3587,10 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::MISMATCHING_TYPES,
                             arg_expr, err_fmt, index);
         auto param_type_str = ast_type_to_tstring(expected_type);
-        zodiac_report_info(resolver->build_data, arg_expr, "Expected type: %.*s",
+        zodiac_report_info(resolver->build_data, arg_expr, "Expected type: ''%.*s'",
                            (int)param_type_str.length, param_type_str.data);
         auto arg_type_str = ast_type_to_tstring(arg_expr->type);
-        zodiac_report_info(resolver->build_data, arg_expr, "Given type: %.*s",
+        zodiac_report_info(resolver->build_data, arg_expr, "Given type: '%.*s'",
                            (int)arg_type_str.length, arg_type_str.data);
     }
 
