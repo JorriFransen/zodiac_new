@@ -427,14 +427,14 @@ namespace Zodiac
             case NEQ_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
-                result = builder->llvm_builder->CreateICmpNE(lhs, rhs, "");
+                result = builder->llvm_builder->CreateICmpNE(lhs, rhs);
                 break;
             }
 
             case LT_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
-                result = builder->llvm_builder->CreateICmpULT(lhs, rhs, "");
+                result = builder->llvm_builder->CreateICmpULT(lhs, rhs);
                 break;
             }
 
@@ -454,7 +454,14 @@ namespace Zodiac
 
             case GTEQ_U: assert(false);
 
-            case EQ_F: assert(false);
+            case EQ_F:
+            {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+                result = builder->llvm_builder->CreateFCmpOEQ(lhs, rhs);
+                break;
+            }
+
             case NEQ_F: assert(false);
 
             case LT_F: {
