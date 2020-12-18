@@ -47,7 +47,7 @@
 
 #include <string.h>
 
-struct Win_SDK_Info {
+struct Windows_SDK_Info {
     int windows_sdk_version;   // Zero if no Windows SDK found.
 
     wchar_t *windows_sdk_root              = NULL;
@@ -59,8 +59,8 @@ struct Win_SDK_Info {
 };
 
 
-Win_SDK_Info find_visual_studio_and_windows_sdk();
-void free_resources(Find_Result *result);
+Windows_SDK_Info find_visual_studio_and_windows_sdk();
+void free_resources(Windows_SDK_Info *result);
 
 #endif  // MICROSOFT_CRAZINESS_HEADER_GUARD
 
@@ -332,7 +332,7 @@ void win8_best(wchar_t *short_name, wchar_t *full_name, Version_Data *data) {
     }
 }
 
-void find_windows_kit_root(Find_Result *result) {
+void find_windows_kit_root(Windows_SDK_Info *result) {
     // Information about the Windows 10 and Windows 8 development kits
     // is stored in the same place in the registry. We open a key
     // to that place, first checking preferntially for a Windows 10 kit,
@@ -384,7 +384,7 @@ void find_windows_kit_root(Find_Result *result) {
 }
 
 
-void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *result) {
+void find_visual_studio_by_fighting_through_microsoft_craziness(Windows_SDK_Info *result) {
     // The name of this procedure is kind of cryptic. Its purpose is
     // to fight through Microsoft craziness. The things that the fine
     // Visual Studio team want you to do, JUST TO FIND A SINGLE FOLDER
@@ -525,8 +525,8 @@ void find_visual_studio_by_fighting_through_microsoft_craziness(Find_Result *res
 }
 
 
-Find_Result find_visual_studio_and_windows_sdk() {
-    Find_Result result;
+Windows_SDK_Info find_visual_studio_and_windows_sdk() {
+    Windows_SDK_Info result;
 
     find_windows_kit_root(&result);
 
@@ -540,7 +540,7 @@ Find_Result find_visual_studio_and_windows_sdk() {
     return result;
 }
 
-void free_resources(Find_Result *result) {
+void free_resources(Windows_SDK_Info *result) {
     free(result->windows_sdk_root);
     free(result->windows_sdk_um_library_path);
     free(result->windows_sdk_ucrt_library_path);
