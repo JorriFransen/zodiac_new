@@ -541,9 +541,13 @@ Declaration_PTN *parser_parse_union_declaration(Parser *parser, Token_Stream *ts
         array_free(&member_decls);
     }
 
-    return new_union_declaration_ptn(parser->allocator, identifier, member_decls,
-                                     parameters,
-                                     identifier->self.begin_file_pos, end_fp);
+    auto result = new_union_declaration_ptn(parser->allocator, identifier, member_decls,
+                                            parameters,
+                                            identifier->self.begin_file_pos, end_fp);
+
+    result->self.flags |= PTN_FLAG_SEMICOLON;
+
+    return result;
 }
 
 Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,

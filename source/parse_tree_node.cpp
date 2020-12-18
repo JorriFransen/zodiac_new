@@ -91,6 +91,22 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
+        case Declaration_PTN_Kind::UNION: {
+
+            for (int64_t i = 0; i < ptn->union_decl.member_declarations.count; i++) {
+                free_ptn(allocator, ptn->union_decl.member_declarations[i]);
+            }
+
+            array_free(&ptn->union_decl.member_declarations);
+
+            for (int64_t i = 0; i < ptn->union_decl.parameters.count; i++) {
+                free_ptn(allocator, ptn->union_decl.parameters[i]);
+            }
+
+            array_free(&ptn->union_decl.parameters);
+            break;
+        }
+
         case Declaration_PTN_Kind::ENUM: {
 
             for (int64_t i = 0; i < ptn->enum_decl.members.count; i++) {
@@ -587,7 +603,7 @@ Declaration_PTN *new_union_declaration_ptn(Allocator *allocator,
                                             const File_Pos &end_fp)
 {
     auto result = new_ptn<Declaration_PTN>(allocator, begin_fp, end_fp);
-    result->kind = Declaration_PTN_Kind::STRUCT;
+    result->kind = Declaration_PTN_Kind::UNION;
     result->identifier = identifier;
     result->union_decl.member_declarations = members;
     result->union_decl.parameters = parameters;
@@ -966,6 +982,7 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
         case Declaration_PTN_Kind::CONSTANT: assert(false);
         case Declaration_PTN_Kind::FUNCTION: assert(false);
         case Declaration_PTN_Kind::STRUCT: assert(false);
+        case Declaration_PTN_Kind::UNION: assert(false);
         case Declaration_PTN_Kind::ENUM: assert(false);
 
         case Declaration_PTN_Kind::TYPEDEF:
@@ -1454,6 +1471,11 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_indent(indent);
             printf("\n}\n");
             if (newline) printf("\n");
+            break;
+        }
+
+        case Declaration_PTN_Kind::UNION: {
+            assert(false);
             break;
         }
 

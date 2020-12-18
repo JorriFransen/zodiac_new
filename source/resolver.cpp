@@ -204,12 +204,16 @@ namespace Zodiac
                             if (decl->decl_flags & AST_DECL_FLAG_GLOBAL) {
                                 queue_bytecode_job(resolver, decl);
                             } else {
-                                assert(decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER);
+                                // We queue jobs for these because we flatten them individually,
+                                //  but we don't need to generate bytecode for each seperate one.
+                                assert((decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER) ||
+                                       (decl->decl_flags & AST_DECL_FLAG_IS_UNION_MEMBER));
                             }
                         } else {
                             assert(decl->kind == AST_Declaration_Kind::IMPORT ||
                                    decl->kind == AST_Declaration_Kind::USING ||
                                    decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                                   decl->kind == AST_Declaration_Kind::UNION ||
                                    decl->kind == AST_Declaration_Kind::TYPEDEF ||
                                    decl->kind == AST_Declaration_Kind::ENUM ||
                                    decl->kind == AST_Declaration_Kind::STATIC_IF);
@@ -382,12 +386,27 @@ namespace Zodiac
                 }
             }
 
+            for (int64_t i = resolver->llvm_builder.union_types_to_finalize.count - 1;
+                 i >= 0;
+                 i --) {
+
+                auto &to_finalize = resolver->llvm_builder.union_types_to_finalize[i];
+                if (to_finalize.ast_type->flags & AST_NODE_FLAG_RESOLVED_ID) {
+                    progressed = true;
+                    llvm_finalize_union_type(&resolver->llvm_builder, to_finalize.llvm_type,
+                                             to_finalize.ast_type);
+                    array_unordered_remove(&resolver->llvm_builder.union_types_to_finalize,
+                                           i);
+                }
+            }
+
             if (queue_count(&resolver->parse_jobs)    == 0 &&
                 queue_count(&resolver->resolve_jobs)  == 0 &&
                 queue_count(&resolver->size_jobs)     == 0 &&
                 queue_count(&resolver->bytecode_jobs) == 0 &&
                 queue_count(&resolver->llvm_jobs)     == 0 &&
-                resolver->llvm_builder.struct_types_to_finalize.count == 0) {
+                resolver->llvm_builder.struct_types_to_finalize.count == 0 &&
+                resolver->llvm_builder.union_types_to_finalize.count  == 0) {
                 done = true;
             }
 
@@ -1084,6 +1103,12 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::UNION:
+            {
+                return try_resolve_union_declaration(resolver, declaration);
+                break;
+            }
+
             case AST_Declaration_Kind::ENUM: {
                 AST_Type_Spec *mem_ts = declaration->enum_decl.type_spec;
                 assert(mem_ts->type);
@@ -1350,6 +1375,57 @@ namespace Zodiac
             assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
 
             array_append(&declaration->type->structure.member_types, member_decl->type);
+        }
+
+        declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        declaration->flags |= AST_NODE_FLAG_TYPED;
+
+        declaration->type->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        declaration->type->flags |= AST_NODE_FLAG_TYPED;
+        return true;
+    }
+
+    bool try_resolve_union_declaration(Resolver *resolver, AST_Declaration *declaration)
+    {
+        assert(declaration->kind == AST_Declaration_Kind::UNION);
+        assert(declaration->union_decl.parameters.count == 0);
+
+        if (!declaration->type) {
+            declaration->type = ast_union_type_new(resolver->allocator, declaration,
+                                                   declaration->union_decl.member_scope);
+            array_append(&resolver->build_data->type_table, declaration->type);
+        } else {
+            assert(declaration->type->kind == AST_Type_Kind::UNION);
+        }
+
+        bool all_members_resolved = true;
+
+        for (int64_t i = 0; i < declaration->union_decl.member_declarations.count; i++) {
+            AST_Declaration **p_member_decl = &declaration->union_decl.member_declarations[i];
+            auto member_decl = *p_member_decl;
+
+            if (!member_decl->flat) {
+                ast_flatten_declaration(&resolver->ast_builder, p_member_decl);
+                queue_resolve_job(resolver, member_decl);
+                all_members_resolved = false;
+
+            } else if (!((member_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
+                         (member_decl->flags & AST_NODE_FLAG_TYPED))) {
+                all_members_resolved = false;
+                break;
+            }
+
+        }
+
+        if (!all_members_resolved) return false;
+
+        for (int64_t i = 0; i < declaration->union_decl.member_declarations.count; i++) {
+            AST_Declaration *member_decl = declaration->union_decl.member_declarations[i];
+
+            assert(member_decl->type);
+            assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
+
+            array_append(&declaration->type->union_type.member_types, member_decl->type);
         }
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1870,10 +1946,12 @@ namespace Zodiac
                         expression->flags |= AST_NODE_FLAG_TYPED;
                         break;
                     } else {
-                        if (parent_type->kind != AST_Type_Kind::STRUCTURE) {
+                        if (parent_type->kind != AST_Type_Kind::STRUCTURE &&
+                            parent_type->kind != AST_Type_Kind::UNION) {
                             assert(parent_type->kind == AST_Type_Kind::POINTER);
                             parent_type = parent_type->pointer.base;
-                            assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
+                            assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
+                                   parent_type->kind == AST_Type_Kind::UNION);
                         }
 
                         assert(parent_type);
@@ -1894,15 +1972,25 @@ namespace Zodiac
                             assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
                             assert(child_decl->flags & AST_NODE_FLAG_TYPED);
 
-                            auto struct_decl = parent_type->structure.declaration;
-                            assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+                            AST_Declaration *aggregate_decl = nullptr;
+                            Array<AST_Declaration *> member_decls = {};
+                            if (parent_type->kind == AST_Type_Kind::STRUCTURE) {
+                                aggregate_decl = parent_type->structure.declaration;
+                                member_decls = aggregate_decl->structure.member_declarations;
+                            } else {
+                                assert(parent_type->kind == AST_Type_Kind::UNION);
+                                aggregate_decl = parent_type->union_type.declaration;
+                                member_decls = aggregate_decl->union_decl.member_declarations;
+                            }
+                            assert(aggregate_decl);
+                            assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE ||
+                                   aggregate_decl->kind == AST_Declaration_Kind::UNION);
 
                             bool index_found = false;
                             int64_t index = -1;
-                            for (int64_t i = 0;
-                                 i < struct_decl->structure.member_declarations.count;
-                                 i++) {
-                                if (child_decl == struct_decl->structure.member_declarations[i]) {
+                            for (int64_t i = 0; i < member_decls.count; i++) {
+
+                                if (child_decl == member_decls[i]) {
                                     assert(!index_found);
                                     index_found = true;
                                     index = i;
@@ -2775,6 +2863,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::PARAMETER:
             case AST_Declaration_Kind::TYPEDEF:
             case AST_Declaration_Kind::STRUCTURE:
+            case AST_Declaration_Kind::UNION:
             case AST_Declaration_Kind::ENUM:
             case AST_Declaration_Kind::RUN:
             case AST_Declaration_Kind::STATIC_IF: {
@@ -3074,6 +3163,31 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 type->bit_size = bit_size;
                 type->flags |= AST_NODE_FLAG_SIZED;
                 return true;
+                break;
+            }
+
+            case AST_Type_Kind::UNION: {
+                assert(!type->union_type.biggest_member_type);
+                int64_t biggest_size = 0;
+                AST_Type *biggest_type = nullptr;
+                for (int64_t i = 0; i < type->union_type.member_types.count; i++) {
+                    AST_Type *mem_type = type->union_type.member_types[i];
+                    assert(mem_type->flags & AST_NODE_FLAG_SIZED);
+
+                    if (mem_type->bit_size > biggest_size) {
+                        biggest_size = mem_type->bit_size;
+                        biggest_type = mem_type;
+                    }
+                }
+
+                assert(biggest_size > 0);
+                assert(biggest_type);
+
+                type->bit_size = biggest_size;
+                type->union_type.biggest_member_type = biggest_type;
+                type->flags |= AST_NODE_FLAG_SIZED;
+                return true;
+                break;
                 break;
             }
 
@@ -3507,6 +3621,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Type_Kind::FUNCTION: assert(false);
 
             case AST_Type_Kind::STRUCTURE: return false;
+
+            case AST_Type_Kind::UNION: assert(false);
 
             case AST_Type_Kind::ENUM: {
                 if (target_type->kind == AST_Type_Kind::INTEGER) {

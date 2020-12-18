@@ -58,6 +58,7 @@ namespace Zodiac
         stack_init(allocator, &result.arg_stack);
 
         array_init(allocator, &result.struct_types_to_finalize);
+        array_init(allocator, &result.union_types_to_finalize);
         array_init(allocator, &result.registered_functions);
         array_init(allocator, &result.globals);
         array_init(allocator, &result.string_literals);
@@ -721,6 +722,17 @@ namespace Zodiac
                 break;
             }
 
+            case PTR_TO_PTR: {
+                llvm::Value *operand_value = llvm_emit_value(builder, inst->a);
+                llvm::Type *dest_type = llvm_type_from_ast(builder, inst->result->type);
+
+                assert(operand_value->getType()->isPointerTy());
+                assert(dest_type->isPointerTy());
+
+                result = builder->llvm_builder->CreatePointerCast(operand_value, dest_type);
+                break;
+            }
+
             case SIZEOF: {
                 assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
 
@@ -1327,24 +1339,20 @@ namespace Zodiac
 
         auto &c = *builder->llvm_context;
 
-        switch (ast_type->kind)
-        {
+        switch (ast_type->kind) {
             case AST_Type_Kind::INVALID: assert(false);
 
-            case AST_Type_Kind::VOID:
-            {
+            case AST_Type_Kind::VOID: {
                 return llvm::Type::getVoidTy(c);
                 break;
             }
 
-            case AST_Type_Kind::INTEGER:
-            {
+            case AST_Type_Kind::INTEGER: {
                 return llvm::Type::getIntNTy(c, ast_type->bit_size);
                 break;
             }
 
-            case AST_Type_Kind::FLOAT:
-            {
+            case AST_Type_Kind::FLOAT: {
                 if (ast_type->bit_size == 32)
                     return llvm::Type::getFloatTy(c);
                 else if (ast_type->bit_size == 64)
@@ -1352,37 +1360,30 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::BOOL:
-            {
+            case AST_Type_Kind::BOOL: {
                 return llvm::Type::getIntNTy(c, 1);
                 break;
             }
 
-            case AST_Type_Kind::POINTER:
-            {
-                if (ast_type->pointer.base == Builtin::type_void)
-                {
+            case AST_Type_Kind::POINTER: {
+                if (ast_type->pointer.base == Builtin::type_void) {
                     return llvm_type_from_ast(builder, Builtin::type_ptr_u8);
-                }
-                else
-                {
+                } else {
                     llvm::Type *base_type = llvm_type_from_ast(builder, ast_type->pointer.base);
                     return base_type->getPointerTo();
                 }
                 break;
             }
 
-            case AST_Type_Kind::FUNCTION:
-            {
+            case AST_Type_Kind::FUNCTION: {
                 llvm::Type *llvm_ret_type = llvm_type_from_ast(builder,
                                                                ast_type->function.return_type);
                 Array<llvm::Type *> llvm_arg_types = {};
-                if (ast_type->function.param_types.count)
-                {
+                if (ast_type->function.param_types.count) {
                     array_init(builder->allocator, &llvm_arg_types,
                                ast_type->function.param_types.count);
-                    for (int64_t i = 0; i < ast_type->function.param_types.count; i++)
-                    {
+
+                    for (int64_t i = 0; i < ast_type->function.param_types.count; i++) {
                         llvm::Type *arg_type =
                             llvm_type_from_ast(builder, ast_type->function.param_types[i]);
                         array_append(&llvm_arg_types, arg_type);
@@ -1395,16 +1396,14 @@ namespace Zodiac
                                             { llvm_arg_types.data,
                                               (size_t)llvm_arg_types.count },
                                             is_vararg);
-                if (llvm_arg_types.count)
-                {
+                if (llvm_arg_types.count) {
                     array_free(&llvm_arg_types);
                 }
                 return result;
                 break;
             }
 
-            case AST_Type_Kind::STRUCTURE:
-            {
+            case AST_Type_Kind::STRUCTURE: {
                 auto name = ast_type->structure.declaration->identifier->atom;
                 llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
 
@@ -1431,14 +1430,40 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::ENUM:
-            {
+            case AST_Type_Kind::UNION: {
+                auto name = ast_type->union_type.declaration->identifier->atom;
+                llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
+
+                bool just_created = false;
+                if (result) {
+                    assert(result->isStructTy());
+                } else {
+                    result = llvm::StructType::create(c, name.data);
+                    just_created = true;
+                }
+
+                if (is_resolved) {
+
+                    if (just_created) {
+                        llvm_finalize_union_type(builder, result, ast_type);
+                    }
+
+                } else {
+                    LLVM_Struct_Type_Info sti = { ast_type, result };
+                    array_append(&builder->union_types_to_finalize, sti);
+                }
+
+                return result;
+                break;
+                break;
+            }
+
+            case AST_Type_Kind::ENUM: {
                 return llvm_type_from_ast(builder, ast_type->enum_type.base_type);
                 break;
             }
 
-            case AST_Type_Kind::ARRAY:
-            {
+            case AST_Type_Kind::ARRAY: {
                 llvm::Type *llvm_elem_type = llvm_type_from_ast(builder,
                                                                 ast_type->array.element_type);
                 return llvm::ArrayType::get(llvm_elem_type,
@@ -1468,6 +1493,19 @@ namespace Zodiac
                                                         ast_mem_types[i]));
         }
         llvm_type->setBody({ mem_types.data, (size_t)mem_types.count }, false);
+    }
+
+    void llvm_finalize_union_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
+                                  AST_Type *ast_type)
+    {
+        assert(ast_type->kind == AST_Type_Kind::UNION);
+
+        assert(ast_type->union_type.biggest_member_type);
+
+        llvm::Type *llvm_mem_type =
+            llvm_type_from_ast(builder, ast_type->union_type.biggest_member_type);
+
+        llvm_type->setBody({ &llvm_mem_type, 1 }, false);
     }
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)

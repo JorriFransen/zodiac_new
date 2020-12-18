@@ -52,6 +52,7 @@ namespace Zodiac
         llvm::DataLayout *llvm_datalayout = nullptr;
 
         Array<LLVM_Struct_Type_Info> struct_types_to_finalize = {};
+        Array<LLVM_Struct_Type_Info> union_types_to_finalize = {};
 
         Array<LLVM_Function_Info> registered_functions = {};
         Array<llvm::GlobalVariable *> globals = {};
@@ -101,6 +102,8 @@ namespace Zodiac
 
     void llvm_finalize_struct_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
                                    AST_Type *ast_type);
+    void llvm_finalize_union_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
+                                  AST_Type *ast_type);
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 

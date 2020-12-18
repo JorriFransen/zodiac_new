@@ -85,12 +85,13 @@ namespace Zodiac
         U_TO_F       = 0x39,
         F_TO_F       = 0x3a,
         PTR_TO_INT   = 0x3b,
+        PTR_TO_PTR   = 0x3c,
 
-        SIZEOF       = 0x3c,
-        OFFSETOF     = 0x3d,
+        SIZEOF       = 0x3d,
+        OFFSETOF     = 0x3e,
 
-        EXIT         = 0x3e,
-        SYSCALL      = 0x3f,
+        EXIT         = 0x3f,
+        SYSCALL      = 0x40,
     };
 
     enum class Bytecode_Value_Kind

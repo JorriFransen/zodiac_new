@@ -194,7 +194,7 @@ enum class Declaration_PTN_Kind
 
     FUNCTION,
     STRUCT,
-    // UNION,
+    UNION,
     ENUM,
     TYPEDEF,
 

@@ -303,7 +303,7 @@ namespace Zodiac
                                            param_scope,
                                            ptn->structure.member_declarations.count);
 
-                Array<AST_Declaration*> ast_member_decls = {};
+                Array<AST_Declaration *> ast_member_decls = {};
                 if (ptn->structure.member_declarations.count) {
                     array_init(ast_builder->allocator, &ast_member_decls,
                                ptn->structure.member_declarations.count);
@@ -321,7 +321,7 @@ namespace Zodiac
                     }
                 }
 
-                Array<AST_Declaration*> ast_parameters = {};
+                Array<AST_Declaration *> ast_parameters = {};
                 if (ptn->structure.parameters.count) {
                     array_init(ast_builder->allocator, &ast_parameters,
                                ptn->structure.parameters.count);
@@ -349,13 +349,79 @@ namespace Zodiac
                     }
                 }
 
-                assert(ast_parameters.count >= 0);
+                assert(ast_parameters.count == 0);
                 auto end_fp = ptn->self.end_file_pos;
 
                 result = ast_structure_declaration_new(ast_builder->allocator, ast_ident,
                                                        ast_member_decls, ast_parameters,
                                                        parent_scope, param_scope, mem_scope,
                                                        begin_fp, end_fp);
+                break;
+            }
+
+            case Declaration_PTN_Kind::UNION: {
+                auto param_scope = scope_new(ast_builder->allocator, Scope_Kind::PARAMETER,
+                                             parent_scope,
+                                             ptn->union_decl.parameters.count);
+
+                auto mem_scope = scope_new(ast_builder->allocator, Scope_Kind::AGGREGATE,
+                                           param_scope,
+                                           ptn->union_decl.member_declarations.count);
+
+                Array<AST_Declaration *> ast_mem_decls = {};
+                if (ptn->union_decl.member_declarations.count) {
+                    array_init(ast_builder->allocator, &ast_mem_decls,
+                               ptn->union_decl.member_declarations.count);
+
+                    for (int64_t i = 0; i < ptn->union_decl.member_declarations.count; i++) {
+                        auto ptn_mem_decl = ptn->structure.member_declarations[i];
+                        auto ast_mem_decl = ast_create_declaration_from_ptn(ast_builder,
+                                                                            ptn_mem_decl,
+                                                                            nullptr,
+                                                                            mem_scope);
+
+                        assert(ast_mem_decl);
+                        ast_mem_decl->decl_flags |= AST_DECL_FLAG_IS_UNION_MEMBER;
+
+                        array_append(&ast_mem_decls, ast_mem_decl);
+                    }
+                }
+
+                Array<AST_Declaration *> ast_parameters = {};
+                if (ptn->union_decl.parameters.count) {
+                    array_init(ast_builder->allocator, &ast_parameters,
+                               ptn->union_decl.parameters.count);
+
+                    for (int64_t i = 0; i < ptn->union_decl.parameters.count; i++) {
+                        auto ptn_param = ptn->union_decl.parameters[i];
+                        AST_Type_Spec *ast_param_ts = nullptr;
+
+                        if (ptn_param->type_expression)
+                        {
+                            auto type_expr = ptn_param->type_expression;
+                            ast_param_ts =
+                                ast_create_type_spec_from_expression_ptn(ast_builder,
+                                                                         type_expr, param_scope);
+                        }
+
+
+                        auto ast_param_decl =
+                            ast_create_declaration_from_ptn(ast_builder, ptn_param,
+                                                            ast_param_ts, param_scope);
+
+                        assert(ast_param_decl);
+
+                        array_append(&ast_parameters, ast_param_decl);
+                    }
+                }
+
+                assert(ast_parameters.count == 0);
+                auto end_fp = ptn->self.end_file_pos;
+
+                result = ast_union_declaration_new(ast_builder->allocator, ast_ident,
+                                                   ast_mem_decls, ast_parameters,
+                                                   parent_scope, param_scope, mem_scope,
+                                                   begin_fp, end_fp);
                 break;
             }
 
@@ -1589,11 +1655,28 @@ namespace Zodiac
                 assert(decl->structure.parameters.count == 0);
 
                 // We don't flatten member declarations, to be able to handle
-                //  pointers to structs (hopfully indirectly too). We iterate all
-                //  members when resolving the enum declaration pushed below.
+                //  pointers to aggregates. We iterate all members when resolving
+                //  the structure declaration pushed below.
 
                 // for (int64_t i = 0; i < decl->structure.member_declarations.count; i++) {
                 //     ast_flatten_declaration(builder, decl->structure.member_declarations[i],
+                //                             nodes);
+                // }
+
+                array_append(nodes, node);
+                break;
+            }
+
+            case AST_Declaration_Kind::UNION:
+            {
+                 assert(decl->union_decl.parameters.count == 0);
+
+                // We don't flatten member declarations, to be able to handle
+                //  pointers to aggregates. We iterate all members when resolving
+                //  the union declaration pushed below.
+
+                // for (int64_t i = 0; i < decl->union_decl.member_declarations.count; i++) {
+                //     ast_flatten_declaration(builder, decl->union_decl.member_declarations[i],
                 //                             nodes);
                 // }
 
@@ -2126,6 +2209,33 @@ namespace Zodiac
         result->structure.member_scope = mem_scope;
 
         return result;
+    }
+
+    AST_Declaration *ast_union_declaration_new(Allocator *allocator,
+                                               AST_Identifier *identifier,
+                                               Array<AST_Declaration*> member_decls,
+                                               Array<AST_Declaration*> parameters,
+                                               Scope *parent_scope,
+                                               Scope *param_scope,
+                                               Scope *mem_scope,
+                                               const File_Pos &begin_fp,
+                                               const File_Pos &end_fp)
+    {
+        assert(param_scope);
+        assert(param_scope->kind == Scope_Kind::PARAMETER);
+        assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::UNION,
+                                          identifier, parent_scope, begin_fp, end_fp);
+
+        result->union_decl.member_declarations = member_decls;
+        result->union_decl.parameters = parameters;
+
+        result->union_decl.parameter_scope = param_scope;
+        result->union_decl.member_scope = mem_scope;
+
+        return result;
+
     }
 
     AST_Declaration *ast_enum_declaration_new(Allocator *allocator,
@@ -2864,6 +2974,19 @@ namespace Zodiac
         return result;
     }
 
+    AST_Type *ast_union_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                 Scope *member_scope)
+    {
+        auto result = ast_type_new(allocator, AST_Type_Kind::UNION, 0);
+        result->union_type.member_scope = member_scope;
+        result->union_type.declaration = declaration;
+        result->union_type.member_types = array_create<AST_Type *>(allocator, 4);
+        result->union_type.biggest_member_type = nullptr;
+
+        return result;
+
+    }
+
     AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
                                 AST_Type *base_type,
                                 Scope *member_scope)
@@ -3144,6 +3267,8 @@ namespace Zodiac
                 printf("}\n");
                 break;
             }
+
+            case AST_Declaration_Kind::UNION: assert(false);
 
             case AST_Declaration_Kind::ENUM: {
                 printf(" :: enum\n");
@@ -3787,6 +3912,8 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Declaration_Kind::UNION: assert(false);
+
             case AST_Declaration_Kind::ENUM: assert(false);
 
             case AST_Declaration_Kind::POLY_TYPE:
@@ -3866,6 +3993,8 @@ namespace Zodiac
                 string_builder_appendf(sb, "struct(%s)", decl->identifier->atom.data);
                 break;
             }
+
+            case AST_Type_Kind::UNION: assert(false);
 
             case AST_Type_Kind::ENUM:
             {

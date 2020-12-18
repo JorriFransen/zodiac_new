@@ -82,6 +82,7 @@ namespace Zodiac
         TYPE,
         TYPEDEF,
         STRUCTURE,
+        UNION,
         ENUM,
 
         POLY_TYPE,
@@ -109,7 +110,8 @@ namespace Zodiac
         AST_DECL_FLAG_REGISTERED_BYTECODE   = 0x0400,
         AST_DECL_FLAG_EMITTED_BYTECODE      = 0x0800,
         AST_DECL_FLAG_IS_STRUCT_MEMBER      = 0x1000,
-        AST_DECL_FLAG_CHECKING_DEPENDECIES  = 0x2000,
+        AST_DECL_FLAG_IS_UNION_MEMBER       = 0x2000,
+        AST_DECL_FLAG_CHECKING_DEPENDECIES  = 0x4000,
     };
 
     struct AST_Flat_Declaration
@@ -177,7 +179,7 @@ namespace Zodiac
 
                 Scope *parameter_scope;
                 Scope *member_scope;
-            } structure;
+            } structure, union_decl;
 
             struct
             {
@@ -538,6 +540,7 @@ namespace Zodiac
 
         FUNCTION,
         STRUCTURE,
+        UNION,
         ENUM,
         ARRAY,
     };
@@ -577,6 +580,14 @@ namespace Zodiac
                 Scope *member_scope;
                 AST_Declaration *declaration;
             } structure;
+
+            struct
+            {
+                Array<AST_Type*> member_types;
+                Scope *member_scope;
+                AST_Declaration *declaration;
+                AST_Type *biggest_member_type;
+            } union_type;
 
             struct
             {
@@ -737,6 +748,16 @@ namespace Zodiac
                                                    Scope *mem_scope,
                                                    const File_Pos &begin_fp,
                                                    const File_Pos &end_fp);
+
+    AST_Declaration *ast_union_declaration_new(Allocator *allocator,
+                                               AST_Identifier *identifier,
+                                               Array<AST_Declaration*> member_decls,
+                                               Array<AST_Declaration*> parameters,
+                                               Scope *parent_scope,
+                                               Scope *param_scope,
+                                               Scope *mem_scope,
+                                               const File_Pos &begin_fp,
+                                               const File_Pos &end_fp);
 
     AST_Declaration *ast_enum_declaration_new(Allocator *allocator,
                                               AST_Identifier *identifier,
@@ -1021,6 +1042,8 @@ namespace Zodiac
                                     AST_Type *return_type);
     AST_Type *ast_structure_type_new(Allocator *allocator, AST_Declaration *declaration,
                                      Scope *member_scope);
+    AST_Type *ast_union_type_new(Allocator *allocator, AST_Declaration *declaration,
+                                 Scope *member_scope);
     AST_Type *ast_enum_type_new(Allocator *allocator, AST_Declaration *declaration,
                                 AST_Type *base_type,
                                 Scope *member_scope);

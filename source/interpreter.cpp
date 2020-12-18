@@ -956,6 +956,21 @@ namespace Zodiac
                     break;
                 }
 
+                case PTR_TO_PTR: {
+                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+
+                    void *pointer = nullptr;
+                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
+                        pointer = interpreter_load_lvalue(interp, inst->a);
+                    } else {
+                        Bytecode_Value operand_val = interpreter_load_value(interp, inst->a);
+                        pointer = operand_val.pointer;
+                    }
+
+                    interp_store(result_addr, pointer);
+                    break;
+                }
+
                 case SIZEOF: {
                     assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
                     auto result_addr = interpreter_load_lvalue(interp, inst->result);
