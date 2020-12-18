@@ -56,7 +56,7 @@ std :: import std;
     raise :: func(signal : s32) -> s32
     {
         // @TODO: block other (app) signals, see musl implementation of raise()
-        result := @syscall(SYS_tkill, @cast(s64, gettid()), @cast(s64, signal));
+        result := @syscall(SYS_tkill, gettid(), signal);
         return @cast(s32, result);
     }
 

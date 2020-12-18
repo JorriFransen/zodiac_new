@@ -2328,9 +2328,13 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                             assert(cast_res);
                         } else {
                             if (args[i]->type != Builtin::type_s64) {
-                                resolver_report_mismatching_call_arg(resolver, i, args[i],
-                                                                     Builtin::type_s64, true);
-                                return false;
+                                if (is_valid_type_conversion(args[i], Builtin::type_s64)) {
+                                    do_type_conversion(resolver, &args[i], Builtin::type_s64);
+                                } else {
+                                    resolver_report_mismatching_call_arg(resolver, i, args[i],
+                                                                         Builtin::type_s64, true);
+                                    return false;
+                                }
                             }
                         }
                     }
@@ -3744,7 +3748,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::MISMATCHING_TYPES,
                             arg_expr, err_fmt, index);
         auto param_type_str = ast_type_to_tstring(expected_type);
-        zodiac_report_info(resolver->build_data, arg_expr, "Expected type: ''%.*s'",
+        zodiac_report_info(resolver->build_data, arg_expr, "Expected type: '%.*s'",
                            (int)param_type_str.length, param_type_str.data);
         auto arg_type_str = ast_type_to_tstring(arg_expr->type);
         zodiac_report_info(resolver->build_data, arg_expr, "Given type: '%.*s'",
