@@ -113,6 +113,9 @@ namespace Zodiac
                 printf("[RESOLVER] Starting resolve cycle: %" PRIu64 "\n", cycle_count);
             }
 
+            auto ta = temp_allocator_get();
+            temp_allocator_reset(ta);
+
             auto parse_job_count = queue_count(&resolver->parse_jobs);
             while (parse_job_count--) {
                 auto job = queue_dequeue(&resolver->parse_jobs);
@@ -4144,7 +4147,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         if (!queue_count(&resolver->resolve_jobs)) return;
 
         auto ta = temp_allocator_get();
-        temp_allocator_reset(ta);
+        // temp_allocator_reset(ta);
 
         auto queue = &resolver->resolve_jobs;
 

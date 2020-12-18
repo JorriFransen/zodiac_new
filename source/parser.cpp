@@ -616,14 +616,40 @@ Declaration_PTN *parser_parse_enum_declaration(Parser *parser, Token_Stream *ts,
         }
 
         assert(member);
-        if (parser_match_token(ts, TOK_COMMA) ||
-            parser_match_token(ts, TOK_SEMICOLON))
-        {
-            array_append(&members, member);
+
+        bool last_member = false;
+
+        if (!(member->flags & PTN_FLAG_SEMICOLON)) {
+
+            auto ct = ts->current_token();
+
+            bool terminated = false;
+
+            if (parser_match_token(ts, TOK_COMMA) ||
+                parser_match_token(ts, TOK_SEMICOLON)) {
+                member->flags |= PTN_FLAG_SEMICOLON;
+                terminated = true;
+            }
+
+            // Only the last member is allowed to be unterminated
+            if (parser_is_token(ts, TOK_RBRACE)) {
+                terminated = true;
+                last_member = true;
+            }
+
+            if (!terminated) {
+                zodiac_report_error(parser->build_data, Zodiac_Error_Kind::UNEXPECTED_TOKEN,
+                                    ct.begin_file_pos, ct.end_file_pos,
+                                    "Expected a ',' or ';' after an enum member.");
+                return nullptr;
+            }
+        } else if (parser_is_token(ts, TOK_RBRACE)) {
+            last_member = true;
         }
-        else if (parser_is_token(ts, TOK_RBRACE))
-        {
-            array_append(&members, member);
+
+        array_append(&members, member);
+
+        if (last_member) {
             break;
         }
     }
