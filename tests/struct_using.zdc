@@ -1,0 +1,30 @@
+
+std :: import std;
+
+#run main();
+
+Vec2 :: struct
+{
+    x : s64;
+    y : s64;
+}
+
+Entity :: struct
+{
+    name : *u8;
+
+    position : Vec2;
+    using position;
+
+    // using position : Vec2;
+}
+
+main :: func () -> s64
+{
+    std.print("struct using test\n");
+
+    e : Entity;
+
+
+    return 0;
+}
