@@ -3152,7 +3152,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             case AST_Type_Kind::STRUCTURE:
             {
-                int64_t bit_size = 0;
+                uint64_t bit_size = 0;
                 for (int64_t i = 0; i < type->structure.member_types.count; i++) {
                     AST_Type *mem_type = type->structure.member_types[i];
                     assert(mem_type->flags & AST_NODE_FLAG_SIZED);
@@ -3168,7 +3168,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             case AST_Type_Kind::UNION: {
                 assert(!type->union_type.biggest_member_type);
-                int64_t biggest_size = 0;
+                uint64_t biggest_size = 0;
                 AST_Type *biggest_type = nullptr;
                 for (int64_t i = 0; i < type->union_type.member_types.count; i++) {
                     AST_Type *mem_type = type->union_type.member_types[i];
