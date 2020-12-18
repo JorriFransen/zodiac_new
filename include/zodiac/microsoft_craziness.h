@@ -47,7 +47,7 @@
 
 #include <string.h>
 
-struct Find_Result {
+struct Win_SDK_Info {
     int windows_sdk_version;   // Zero if no Windows SDK found.
 
     wchar_t *windows_sdk_root              = NULL;
@@ -59,7 +59,7 @@ struct Find_Result {
 };
 
 
-Find_Result find_visual_studio_and_windows_sdk();
+Win_SDK_Info find_visual_studio_and_windows_sdk();
 void free_resources(Find_Result *result);
 
 #endif  // MICROSOFT_CRAZINESS_HEADER_GUARD

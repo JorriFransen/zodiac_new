@@ -15,8 +15,6 @@ namespace Zodiac
 {
     struct Bytecode_Function;
 
-    typedef Find_Result Windows_SDK_Info;
-
     struct Build_Data
     {
         Options *options = nullptr;
