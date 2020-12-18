@@ -548,7 +548,7 @@ Declaration_PTN *new_import_declaration_ptn(Allocator *allocator, Identifier_PTN
 }
 
 Declaration_PTN *new_function_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
-                                              String module_name, Function_Proto_PTN *prototype,
+                                              Atom module_name, Function_Proto_PTN *prototype,
                                               Statement_PTN *body,
                                               const File_Pos &begin_fp, const File_Pos &end_fp)
 {

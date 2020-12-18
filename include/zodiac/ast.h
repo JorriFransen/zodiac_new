@@ -64,6 +64,8 @@ namespace Zodiac
 
         Scope *module_scope = nullptr;
 
+        Atom name = {};
+
         Declarations declarations = {};
     };
 
@@ -167,7 +169,7 @@ namespace Zodiac
 
                 Scope *parameter_scope;
 
-                String module_name = {};
+                Atom module_name = {};
 
                 Array<AST_Declaration *> called_functions;
             } function;
@@ -677,7 +679,7 @@ namespace Zodiac
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom, Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
-    AST_Module *ast_module_new(Allocator *allocator, Declarations decls,
+    AST_Module *ast_module_new(Allocator *allocator, Atom name, Declarations decls,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 
@@ -723,7 +725,7 @@ namespace Zodiac
 
     AST_Declaration *ast_function_declaration_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
-                                                  String module_name,
+                                                  Atom module_name,
                                                   AST_Type_Spec *type_spec,
                                                   Array<AST_Declaration*> param_decls,
                                                   Array<AST_Declaration*> var_decls,

@@ -76,7 +76,7 @@ namespace Zodiac
             (is_bytecode_entry_decl(decl)) ||
             (decl->decl_flags & AST_DECL_FLAG_FOREIGN)) {
         } else {
-            auto _prefix_name = string_append(ta, decl->function.module_name, ".");
+            auto _prefix_name = string_append(ta, string_ref(decl->function.module_name), ".");
             prefix_name = atom_get(&builder->build_data->atom_table, _prefix_name);
         }
 
@@ -750,6 +750,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT: {
 
+                AST_Declaration *parent_decl = resolver_get_declaration(expr->dot.parent_expression);
+
                 if (expr->dot.child_decl &&
                     (expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT)) {
                     auto decl = expr->dot.child_decl;
@@ -780,6 +782,10 @@ namespace Zodiac
                     auto element_count = parent_type->array.element_count;
                     Integer_Literal il = { .s64 = element_count };
                     result = bytecode_integer_literal_new(builder, expr->type, il);
+                } else if (parent_decl && parent_decl->kind == AST_Declaration_Kind::IMPORT) {
+                    assert(expr->dot.child_identifier);
+                    assert(expr->dot.child_decl);
+                    result = bytecode_emit_identifier(builder, expr->dot.child_identifier);
                 } else {
                     Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
                     result = bytecode_emit_load(builder, lvalue);
@@ -1151,6 +1157,53 @@ namespace Zodiac
 
         assert(result);
         return result;
+    }
+
+    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *identifier)
+    {
+        auto decl = identifier->declaration;
+
+        Bytecode_Value *result = nullptr;
+
+        if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+            assert(decl->constant.init_expression);
+            result = bytecode_emit_expression(builder, decl->constant.init_expression);
+        } else {
+            Bytecode_Value *source_val = bytecode_emit_identifier_lvalue(builder, identifier);
+            result = bytecode_emit_load(builder, source_val);
+        }
+
+        if (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER &&
+            result->type->kind != AST_Type_Kind::ENUM) {
+            assert(result->type->kind == AST_Type_Kind::INTEGER);
+            assert(false);
+            // assert(result->type == expr->type->enum_type.base_type);
+            // result->type = expr->type;
+        }
+
+        assert(result);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_identifier_lvalue(Bytecode_Builder *builder,
+                                                    AST_Identifier *identifier)
+    {
+        auto decl = identifier->declaration;
+        assert(decl);
+
+        Bytecode_Value *source_val = nullptr;
+
+        if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+            source_val = bytecode_find_variable(builder, decl);
+        } else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
+            source_val = bytecode_find_parameter(builder, decl);
+        } else {
+            assert(false);
+        }
+
+        assert(source_val);
+
+        return source_val;
     }
 
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr)
@@ -1950,6 +2003,27 @@ namespace Zodiac
         Bytecode_Value *result = bytecode_string_literal_new(builder, atom);
         array_append(&builder->string_literals, result);
         return result;
+    }
+
+    bool bytecode_ready_to_run(Bytecode_Builder *builder)
+    {
+        auto bd = builder->build_data;
+
+        {
+            auto default_assert_handler_decl =
+                scope_find_declaration(bd, bd->entry_module->module_scope,
+                                       "default_assert_handler");
+            assert(default_assert_handler_decl);
+
+            auto default_assert_handler_func =
+                bytecode_find_function(builder, default_assert_handler_decl);
+
+            if (!default_assert_handler_func) return false;
+            if (!(default_assert_handler_func->flags & BC_FUNC_FLAG_EMITTED)) return false;
+        }
+
+        return true;
+
     }
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder)

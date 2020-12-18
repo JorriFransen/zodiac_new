@@ -7,10 +7,15 @@
 #include "command_line_parser.h"
 #include "zodiac_error.h"
 
+#ifdef WIN32
+#include "microsoft_craziness.h"
+#endif // WIN32
+
 namespace Zodiac
 {
     struct Bytecode_Function;
-    struct Windows_SDK_Info;
+
+    typedef Find_Result Windows_SDK_Info;
 
     struct Build_Data
     {
@@ -35,7 +40,7 @@ namespace Zodiac
         uint64_t bytecode_instruction_count = 0;
 
 #ifdef WIN32
-        Windows_SDK_Info *sdk_info = nullptr;
+        Windows_SDK_Info sdk_info = {};
 #endif
     };
 

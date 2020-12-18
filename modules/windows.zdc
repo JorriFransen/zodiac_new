@@ -13,6 +13,23 @@ LPOVERLAPPED :: typedef *void;
 #foreign WriteFile :: func (handle: HANDLE, buffer: *u8, nbyteswrite: DWORD,
                             pnbyteswritten: LPDWORD, overlapped: LPOVERLAPPED) -> BOOL
 
+
+#foreign raise :: func (signal : s32) -> s32;
+
+SIGINT   : s32 :  2;
+SIGILL   : s32 :  4;
+SIGFPE   : s32 :  8;
+SIGSEGV  : s32 : 11;
+SIGTERM  : s32 : 15;
+SIGBREAK : s32 : 21;
+SIGABRT	 : s32 : 22;
+
+#compiler abort :: func ()
+{
+    raise(SIGABRT);
+    @exit(127);
+}
+
 #foreign #noreturn ExitProcess :: func (exit_code: u32) -> void
 
 WINDOWS_STDOUT_HANDLE_NUM :: @cast(DWORD, -11);

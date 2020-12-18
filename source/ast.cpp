@@ -84,7 +84,7 @@ namespace Zodiac
         auto begin_fp = bucket_array_get_first(&global_decls)->begin_file_pos;
         auto end_fp = bucket_array_get_last(&global_decls)->end_file_pos;
 
-        AST_Module *ast_module = ast_module_new(ast_builder->allocator,
+        AST_Module *ast_module = ast_module_new(ast_builder->allocator, parsed_file->name,
                                                 global_decls, module_scope,
                                                 begin_fp, end_fp);
         assert(ast_module);
@@ -2015,7 +2015,7 @@ namespace Zodiac
         return result;
     }
 
-    AST_Module *ast_module_new(Allocator *allocator, Declarations decls,
+    AST_Module *ast_module_new(Allocator *allocator, Atom name, Declarations decls,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp)
     {
@@ -2023,6 +2023,7 @@ namespace Zodiac
 
         auto result = ast_node_new<AST_Module>(allocator, module_scope, begin_fp, end_fp);
 
+        result->name = name;
         result->declarations = decls;
         result->module_scope = module_scope;
 
@@ -2124,7 +2125,7 @@ namespace Zodiac
 
     AST_Declaration *ast_function_declaration_new(Allocator *allocator,
                                                   AST_Identifier *identifier,
-                                                  String module_name,
+                                                  Atom module_name,
                                                   AST_Type_Spec *type_spec,
                                                   Array<AST_Declaration*> parameter_declarations,
                                                   Array<AST_Declaration*> variable_declarations,

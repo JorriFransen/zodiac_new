@@ -310,6 +310,9 @@ namespace Zodiac
             }
 
             auto run_job_count = queue_count(&resolver->run_jobs);
+            if (!bytecode_ready_to_run(&resolver->bytecode_builder)) {
+                run_job_count = 0;
+            }
             while (run_job_count--) {
                 auto job = queue_dequeue(&resolver->run_jobs);
 
@@ -606,7 +609,8 @@ namespace Zodiac
 
             Token_Stream *ets = lexer_new_token_stream(resolver->allocator, &lf_entry);
 
-            epf = parser_parse_file(&resolver->parser, ets, string_ref("entry"));
+            Atom entry_module_name = atom_get(&resolver->build_data->atom_table, "entry");
+            epf = parser_parse_file(&resolver->parser, ets, entry_module_name);
 
             if (!epf.valid) return false;
 
@@ -622,13 +626,15 @@ namespace Zodiac
 
         Parsed_File parsed_file = {};
 
+        Atom module_name = atom_get(&resolver->build_data->atom_table, job->module_name);
+
         if (insert_epf) {
             parsed_file = epf;
         } else {
-            parsed_file_init(&resolver->parser, &parsed_file);
+            parsed_file_init(&resolver->parser, &parsed_file, module_name);
         }
 
-        parser_parse_file(&resolver->parser, token_stream, &parsed_file, job->module_name);
+        parser_parse_file(&resolver->parser, token_stream, &parsed_file, module_name);
 
         if (!parsed_file.valid) return false;
 
@@ -1865,7 +1871,19 @@ namespace Zodiac
 
                     AST_Declaration *child_decl = scope_find_declaration(ast_module->module_scope,
                                                                          child_ident);
-                    if (!child_decl) return false;
+                    if (!child_decl) {
+                        zodiac_report_error(resolver->build_data,
+                                            Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                            child_ident,
+                                            "Reference to undeclared identifier: '%s'",
+                                            child_ident->atom.data);
+                        zodiac_report_info(resolver->build_data, parent_decl,
+                                           "In module: '%s'\n",
+                                           ast_module->name.data);
+
+                        return false;
+                    }
+
                     if (!(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
                         return false;
                     }

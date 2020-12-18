@@ -30,11 +30,11 @@ namespace Zodiac {
         assert(kernel32_lib);
         array_append(&result.libs, kernel32_lib);
 
-        if (build_data->options->link_c) {
-            DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
-            assert(ucrtbase_lib);
-            array_append(&result.libs, ucrtbase_lib);
+        DLLib *ucrtbase_lib = dlLoadLibrary("ucrtbase.dll");
+        assert(ucrtbase_lib);
+        array_append(&result.libs, ucrtbase_lib);
 
+        if (build_data->options->link_c) {
             DLLib* msvcrt_lib = dlLoadLibrary("msvcrt.dll");
             assert(msvcrt_lib);
             array_append(&result.libs, msvcrt_lib);

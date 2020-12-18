@@ -1,45 +1,6 @@
 
 std :: import std;
 
-pid_t :: typedef s32;
-
-SYS_getpid ::  39;
-SYS_kill   ::  62;
-SYS_gettid :: 186;
-SYS_tkill  :: 200;
-
-SIGABRT : s32 : 6;
-
-getpid :: func () -> pid_t
-{
-    return @cast(pid_t, @syscall(SYS_getpid));
-}
-
-gettid :: func () -> pid_t
-{
-    return @cast(pid_t, @syscall(SYS_gettid));
-}
-
-#compiler abort :: func ()
-{
-    raise(SIGABRT);
-
-    // @TODO: If a handler is installed, the call to raise above might return.
-    //  In this case we should install the default handler, and raise the signal
-    //  again. We do always exit because @exit() is called below.
-    // @NOTE: When we do implement this, we should also block all signals, see the
-    //  comment in raise(), and the musl implementation of abort().
-
-    @exit(127);
-}
-
-raise :: func(signal : s32) -> s32
-{
-    // @TODO: block other (app) signals, see musl implementation of raise()
-    result := @syscall(SYS_tkill, @cast(s64, gettid()), @cast(s64, signal));
-    return @cast(s32, result);
-}
-
 #if (PLATFORM_WINDOWS) {
 
     windows :: import windows;
@@ -50,9 +11,54 @@ raise :: func(signal : s32) -> s32
         stdout = windows.GetStdHandle(windows.WINDOWS_STDOUT_HANDLE_NUM);
     }
 
+    abort :: func()
+    {
+        windows.abort();
+        @exit(127);
+    }
+
 } #elseif (PLATFORM_LINUX) {
 
     _open_default_io_handles :: func() { }
+
+    pid_t :: typedef s32;
+
+    SYS_getpid ::  39;
+    SYS_kill   ::  62;
+    SYS_gettid :: 186;
+    SYS_tkill  :: 200;
+
+    SIGABRT : s32 : 6;
+
+    getpid :: func () -> pid_t
+    {
+        return @cast(pid_t, @syscall(SYS_getpid));
+    }
+
+    gettid :: func () -> pid_t
+    {
+        return @cast(pid_t, @syscall(SYS_gettid));
+    }
+
+    #compiler abort :: func ()
+    {
+        raise(SIGABRT);
+
+        // @TODO: If a handler is installed, the call to raise above might return.
+        //  In this case we should install the default handler, and raise the signal
+        //  again. We do always exit because @exit() is called below.
+        // @NOTE: When we do implement this, we should also block all signals, see the
+        //  comment in raise(), and the musl implementation of abort().
+
+        @exit(127);
+    }
+
+    raise :: func(signal : s32) -> s32
+    {
+        // @TODO: block other (app) signals, see musl implementation of raise()
+        result := @syscall(SYS_tkill, @cast(s64, gettid()), @cast(s64, signal));
+        return @cast(s32, result);
+    }
 
 } #else {
     @static_assert(false);

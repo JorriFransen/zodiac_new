@@ -31,22 +31,23 @@ void parser_init(Allocator *allocator, Parser *parser, Build_Data *build_data, R
     parser->static_if_depth = 0;
 }
 
-void parsed_file_init(Parser *parser, Parsed_File *pf)
+void parsed_file_init(Parser *parser, Parsed_File *pf, Atom name)
 {
+    pf->name = name;
     array_init(parser->allocator, &pf->declarations);
 }
 
-Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, String module_name)
+Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, Atom module_name)
 {
     Parsed_File result = {};
 
-    parsed_file_init(parser, &result);
+    parsed_file_init(parser, &result, module_name);
     parser_parse_file(parser, ts, &result, module_name);
 
     return result;
 }
 
-void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, String module_name)
+void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, Atom module_name)
 {
     ZoneScoped
 
@@ -307,7 +308,8 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
         else
         {
             Expression_PTN *const_expr = parser_parse_expression(parser, ts);
-            assert(const_expr);
+            if (!const_expr) return nullptr;
+
             end_fp = ts->current_token().end_file_pos;
             result = new_constant_declaration_ptn(parser->allocator, identifier,
                                                   specified_type,
@@ -362,6 +364,12 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts,
     if (is_compiler_func) {
         assert(result->kind == Declaration_PTN_Kind::FUNCTION);
         result->self.flags |= PTN_FLAG_FUNC_COMPILER_FUNC;
+    }
+
+    if (!(result->self.flags & PTN_FLAG_SEMICOLON)) {
+        if (parser_match_token(ts, TOK_SEMICOLON)) {
+            result->self.flags |= PTN_FLAG_SEMICOLON;
+        }
     }
     return result;
 }

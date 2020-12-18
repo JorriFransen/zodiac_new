@@ -7,8 +7,8 @@ os :: import os;
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
-
     // @assert(false);
+    // return 0;
 
     // @syscall(1, 1, "Test!\n", 6);
 

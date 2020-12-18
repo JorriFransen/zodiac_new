@@ -2,6 +2,7 @@
 #pragma once
 
 #include "array.h"
+#include "atom.h"
 
 namespace Zodiac
 {
@@ -20,8 +21,9 @@ namespace Zodiac
 
     struct Parsed_File
     {
-        bool valid = true;
+        Atom name = {};
         Array<Declaration_PTN*> declarations = {};
+        bool valid = true;
     };
 
     struct Scope;

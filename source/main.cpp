@@ -12,6 +12,7 @@
 #include <tracy/TracyC.h>
 
 // #include <syscall.h>
+// #include <signal.h>
 
 using namespace Zodiac;
 
@@ -23,6 +24,8 @@ int main(int argc, char **argv)
     // printf("SYS_tkill: %d\n", SYS_tkill);
     // printf("SYS_getpid: %d\n", SYS_getpid);
     // printf("SYS_gettid: %d\n", SYS_gettid);
+
+    // printf("SIGABRT: %d\n", SIGABRT);
 
     TracyCZoneN(tcz_init, "init", true);
 

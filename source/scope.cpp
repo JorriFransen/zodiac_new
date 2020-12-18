@@ -2,6 +2,7 @@
 #include "scope.h"
 
 #include "ast.h"
+#include "build_data.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
 
@@ -47,6 +48,12 @@ namespace Zodiac
         }
 
         return result;
+    }
+
+    AST_Declaration *scope_find_declaration(Build_Data *build_data, Scope *scope, const char *cstr)
+    {
+        Atom atom = atom_get(&build_data->atom_table, cstr);
+        return scope_find_declaration(scope, atom);
     }
 
     void scope_add_declaration(Scope *scope, AST_Declaration *adecl)

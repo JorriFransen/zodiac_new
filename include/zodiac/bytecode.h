@@ -314,6 +314,11 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *expr);
 
+    Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder,
+                                             AST_Identifier *identifier);
+    Bytecode_Value *bytecode_emit_identifier_lvalue(Bytecode_Builder *builder,
+                                                    AST_Identifier *identifier);
+
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_builtin_call(Bytecode_Builder *builder, AST_Expression *expr);
 
@@ -378,6 +383,8 @@ namespace Zodiac
 
     Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const String &str);
     Bytecode_Value *bytecode_get_string_literal(Bytecode_Builder *builder, const Atom &atom);
+
+    bool bytecode_ready_to_run(Bytecode_Builder *builder);
 
     void bytecode_print(Allocator *allocator, Bytecode_Builder *builder);
     void bytecode_print_function(String_Builder *sb, Bytecode_Function *func);

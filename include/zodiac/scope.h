@@ -40,6 +40,7 @@ namespace Zodiac
 
     AST_Declaration *scope_find_declaration(Scope *scope, Atom atom);
     AST_Declaration *scope_find_declaration(Scope *scope, AST_Identifier *identifier);
+    AST_Declaration *scope_find_declaration(Build_Data *build_data, Scope *scope, const char *cstr);
 
     void scope_add_declaration(Scope *scope, AST_Declaration *adecl);
     void scope_grow(Allocator *allocator, Scope *scope);

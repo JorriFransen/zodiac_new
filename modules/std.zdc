@@ -7,19 +7,23 @@ strlen :: func (cstr: *u8) -> s64 {
     return i;
 }
 
+os :: import os;
+
 #if (PLATFORM_WINDOWS) {
+
+    windows :: import windows;
 
     print :: func(str: *u8) {
         written : windows.DWORD;
         len := @cast(windows.DWORD, strlen(str));
-        windows.WriteFile(stdout, str, len, *written, null);
+        windows.WriteFile(os.stdout, str, len, *written, null);
     }
 
     print_char :: func (c: u8)
     {
         _c := c;
         written : windows.DWORD;
-        windows.WriteFile(stdout, *_c, 1, *written, null);
+        windows.WriteFile(os.stdout, *_c, 1, *written, null);
     }
 
 } #elseif (PLATFORM_LINUX) {

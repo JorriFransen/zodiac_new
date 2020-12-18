@@ -1083,9 +1083,12 @@ namespace Zodiac
 
             if (!(func->flags & BC_FUNC_FLAG_EMITTED))
             {
+                if (func->flags & BC_FUNC_FLAG_FOREIGN) {
+                    continue;
+                }
+
                 if ((func->flags & BC_FUNC_FLAG_CRT_ENTRY) &&
-                    options->link_c)
-                {
+                    options->link_c) {
                     continue;
                 }
 
@@ -1232,9 +1235,9 @@ namespace Zodiac
 
         auto ta = temp_allocator_get();
 
-        auto sdk_info = builder->build_data->sdk_info;
+        auto &sdk_info = builder->build_data->sdk_info;
 
-        auto vs_exe_path = unicode_string_ref(sdk_info->vs_exe_path);
+        auto vs_exe_path = unicode_string_ref(sdk_info.vs_exe_path);
         auto wide_linker_path = string_append(ta, vs_exe_path, L"\\link.exe");
         auto linker_path = narrow(ta, wide_linker_path);
 
@@ -1243,7 +1246,7 @@ namespace Zodiac
         // string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE ");
         string_builder_append(sb, " /nologo /wx /subsystem:CONSOLE /nodefaultlib");
 
-        auto wide_um_lib_path = unicode_string_ref(sdk_info->windows_sdk_um_library_path);
+        auto wide_um_lib_path = unicode_string_ref(sdk_info.windows_sdk_um_library_path);
         auto um_lib_path = narrow(ta, wide_um_lib_path);
 
         // printf("um_lib_path: %s\n", um_lib_path.data);
@@ -1256,19 +1259,20 @@ namespace Zodiac
         string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)um_lib_path.length,
                                um_lib_path.data);
 
-        auto wide_ucrt_lib_path = unicode_string_ref(sdk_info->windows_sdk_ucrt_library_path);
+        auto wide_ucrt_lib_path = unicode_string_ref(sdk_info.windows_sdk_ucrt_library_path);
         auto ucrt_lib_path = narrow(ta, wide_ucrt_lib_path);
         assert(ucrt_lib_path.length == strlen(ucrt_lib_path.data));
         string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)ucrt_lib_path.length,
                                ucrt_lib_path.data);
 
-        auto wide_vs_lib_path = unicode_string_ref(sdk_info->vs_library_path);
+        auto wide_vs_lib_path = unicode_string_ref(sdk_info.vs_library_path);
         auto vs_lib_path = narrow(ta, wide_vs_lib_path);
         assert(vs_lib_path.length == strlen(vs_lib_path.data));
         string_builder_appendf(sb, " /libpath:\"%.*s\"", (int)vs_lib_path.length,
                                vs_lib_path.data);
 
         string_builder_append(sb, " kernel32.lib");
+        string_builder_append(sb, " ucrt.lib");
         string_builder_append(sb, " msvcrt.lib");
 
         string_builder_appendf(sb, " %s.o", output_file_name);
@@ -1276,7 +1280,7 @@ namespace Zodiac
         if (options->link_c) {
             // string_builder_append(sb, " libcmt.lib");
             string_builder_append(sb, " libvcruntime.lib");
-            string_builder_append(sb, " libucrt.lib");
+            // string_builder_append(sb, " libucrt.lib");
             string_builder_append(sb, " legacy_stdio_definitions.lib");
             string_builder_append(sb, " legacy_stdio_wide_specifiers.lib");
         }
