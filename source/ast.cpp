@@ -349,11 +349,22 @@ namespace Zodiac
                     }
                 }
 
+                Array<AST_Identifier *> ast_usings = {};
+                if (ptn->structure.usings.count) {
+                    array_init(ast_builder->allocator, &ast_usings, ptn->structure.usings.count);
+
+                    for (int64_t i = 0; i < ptn->structure.usings.count; i++) {
+                        auto ptn_using = ptn->structure.usings[i];
+                        auto ast_using = ast_create_identifier_from_ptn(ast_builder, ptn_using, mem_scope);
+                        array_append(&ast_usings, ast_using);
+                    }
+                }
+
                 assert(ast_parameters.count == 0);
                 auto end_fp = ptn->self.end_file_pos;
 
                 result = ast_structure_declaration_new(ast_builder->allocator, ast_ident,
-                                                       ast_member_decls, ast_parameters,
+                                                       ast_member_decls, ast_parameters, ast_usings,
                                                        parent_scope, param_scope, mem_scope,
                                                        begin_fp, end_fp);
                 break;
@@ -1721,6 +1732,9 @@ namespace Zodiac
                 array_append(nodes, node);
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_REF: assert(false);
+
         }
     }
 
@@ -2188,8 +2202,9 @@ namespace Zodiac
 
     AST_Declaration *ast_structure_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
-                                                   Array<AST_Declaration*> member_decls,
-                                                   Array<AST_Declaration*> parameters,
+                                                   Array<AST_Declaration *> member_decls,
+                                                   Array<AST_Declaration *> parameters,
+                                                   Array<AST_Identifier *> usings,
                                                    Scope *parent_scope,
                                                    Scope *param_scope,
                                                    Scope *mem_scope,
@@ -2205,6 +2220,7 @@ namespace Zodiac
 
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
+        result->structure.usings = usings;
 
         result->structure.parameter_scope = param_scope;
         result->structure.member_scope = mem_scope;
@@ -2329,6 +2345,22 @@ namespace Zodiac
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STATIC_ASSERT,
                                           nullptr, scope, bfp, efp);
         result->static_assert_decl.cond_expression = cond_expr;
+        return result;
+    }
+
+    AST_Declaration *ast_import_reference_new(Allocator *allocator, AST_Identifier *identifier,
+                                              AST_Declaration *referring_to,
+                                              AST_Declaration *found_in,
+                                              Scope *scope,
+                                              const File_Pos &bfp,
+                                              const File_Pos &efp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT_REF,
+                                          identifier, scope, bfp, efp);
+
+        result->import_ref.referring_to = referring_to;
+        result->import_ref.found_in = found_in;
+
         return result;
     }
 
@@ -3338,6 +3370,9 @@ namespace Zodiac
                 printf(");");
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_REF: assert(false);
+
         }
     }
 
@@ -3927,6 +3962,9 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_IF: assert(false);
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::IMPORT_REF: assert(false);
+
         }
     }
 

@@ -92,6 +92,8 @@ namespace Zodiac
         RUN,
         STATIC_IF,
         STATIC_ASSERT,
+
+        IMPORT_REF,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -178,6 +180,7 @@ namespace Zodiac
             {
                 Array<AST_Declaration*> member_declarations;
                 Array<AST_Declaration*> parameters;
+                Array<AST_Identifier *> usings;
 
                 Scope *parameter_scope;
                 Scope *member_scope;
@@ -219,6 +222,12 @@ namespace Zodiac
             {
                 AST_Expression *cond_expression;
             } static_assert_decl;
+
+            struct
+            {
+                AST_Declaration *referring_to;
+                AST_Declaration *found_in;
+            } import_ref;
         };
     };
 
@@ -578,7 +587,7 @@ namespace Zodiac
 
             struct
             {
-                Array<AST_Type*> member_types;
+                Array<AST_Type* > member_types;
                 Scope *member_scope;
                 AST_Declaration *declaration;
             } structure;
@@ -727,8 +736,8 @@ namespace Zodiac
                                                   AST_Identifier *identifier,
                                                   Atom module_name,
                                                   AST_Type_Spec *type_spec,
-                                                  Array<AST_Declaration*> param_decls,
-                                                  Array<AST_Declaration*> var_decls,
+                                                  Array<AST_Declaration *> param_decls,
+                                                  Array<AST_Declaration *> var_decls,
                                                   AST_Statement *body,
                                                   bool is_naked, bool is_noreturn,
                                                   bool is_foreign,
@@ -743,8 +752,9 @@ namespace Zodiac
 
     AST_Declaration *ast_structure_declaration_new(Allocator *allocator,
                                                    AST_Identifier *identifier,
-                                                   Array<AST_Declaration*> member_decls,
-                                                   Array<AST_Declaration*> parameters,
+                                                   Array<AST_Declaration *> member_decls,
+                                                   Array<AST_Declaration *> parameters,
+                                                   Array<AST_Identifier *> usings,
                                                    Scope *parent_scope,
                                                    Scope *param_scope,
                                                    Scope *mem_scope,
@@ -753,8 +763,8 @@ namespace Zodiac
 
     AST_Declaration *ast_union_declaration_new(Allocator *allocator,
                                                AST_Identifier *identifier,
-                                               Array<AST_Declaration*> member_decls,
-                                               Array<AST_Declaration*> parameters,
+                                               Array<AST_Declaration *> member_decls,
+                                               Array<AST_Declaration *> parameters,
                                                Scope *parent_scope,
                                                Scope *param_scope,
                                                Scope *mem_scope,
@@ -800,6 +810,13 @@ namespace Zodiac
                                                         Scope *scope,
                                                         const File_Pos &bfp,
                                                         const File_Pos &efp);
+
+    AST_Declaration *ast_import_reference_new(Allocator *allocator, AST_Identifier *identifier,
+                                              AST_Declaration *referring_to,
+                                              AST_Declaration *found_in,
+                                              Scope *scope,
+                                              const File_Pos &bfp,
+                                              const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,

@@ -1337,6 +1337,9 @@ namespace Zodiac
                 return true;
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_REF: assert(false);
+
         }
 
         assert(false);
@@ -1377,6 +1380,8 @@ namespace Zodiac
 
         if (!all_members_resolved) return false;
 
+        assert(declaration->type->structure.member_types.count == 0);
+
         for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
             AST_Declaration *member_decl = declaration->structure.member_declarations[i];
 
@@ -1384,6 +1389,56 @@ namespace Zodiac
             assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
 
             array_append(&declaration->type->structure.member_types, member_decl->type);
+        }
+
+        Scope *current_scope = declaration->structure.member_scope;
+
+        for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
+            AST_Identifier *using_ident = declaration->structure.usings[i];
+
+            AST_Declaration *mem_decl = scope_find_declaration(current_scope, using_ident);
+            assert(mem_decl);
+            assert(mem_decl->kind == AST_Declaration_Kind::VARIABLE);
+
+            AST_Type *mem_type = mem_decl->type;
+
+            if (mem_type->kind == AST_Type_Kind::STRUCTURE) {
+                AST_Declaration *struct_decl = mem_type->structure.declaration;
+                assert(struct_decl);
+                assert(struct_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                assert(struct_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(struct_decl->flags & AST_NODE_FLAG_TYPED);
+
+                Scope *scope_to_import = struct_decl->structure.member_scope;
+
+                Scope_Block *scope_block = &scope_to_import->first_block;
+
+                while (scope_block) {
+
+                    for (int64_t j = 0; j < scope_block->decl_count; j++) {
+                        AST_Declaration *decl_to_import = scope_block->declarations[j];
+                        auto redecl = scope_find_declaration(current_scope,
+                                                             decl_to_import->identifier);
+                        assert(!redecl);
+
+                        AST_Declaration *import_ref =
+                            ast_import_reference_new(resolver->allocator,
+                                                     decl_to_import->identifier,
+                                                     decl_to_import, mem_decl,
+                                                     current_scope,
+                                                     using_ident->begin_file_pos,
+                                                     using_ident->end_file_pos);
+
+                        scope_add_declaration(current_scope, import_ref);
+                    }
+
+                    scope_block = scope_block->next_block;
+                }
+
+            } else {
+                assert(false);
+            }
         }
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1988,7 +2043,27 @@ namespace Zodiac
                         AST_Declaration *child_decl = nullptr;
                         if (!child_ident->declaration) {
                             child_decl = scope_find_declaration(mem_scope, child_ident);
+                            if (!child_decl) {
+                                assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
+                                zodiac_report_error(resolver->build_data,
+                                                    Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                                    child_ident,
+                                                    "Undeclared identifier: '%.*s'",
+                                                    (int)child_ident->atom.length,
+                                                    child_ident->atom.data);;
+                                auto struct_decl = parent_type->structure.declaration;
+                                assert(struct_decl);
+                                zodiac_report_info(resolver->build_data, struct_decl,
+                                                   "Is not a member of struct: '%.*s'",
+                                                   (int)struct_decl->identifier->atom.length,
+                                                   struct_decl->identifier->atom.data);
+                                return false;
+                            }
                             assert(child_decl);
+                            assert(child_decl->kind == AST_Declaration_Kind::VARIABLE ||
+                                   child_decl->kind == AST_Declaration_Kind::IMPORT_REF);
+                            assert(child_decl->kind != AST_Declaration_Kind::IMPORT_REF &&
+                                   !"IMPORT REF not implemented beyond this point");
                             assert(child_decl->type);
                             assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
                             assert(child_decl->flags & AST_NODE_FLAG_TYPED);
@@ -2908,6 +2983,9 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::IMPORT_REF: assert(false);
+
         }
 
         assert(false);

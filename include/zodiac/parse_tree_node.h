@@ -238,14 +238,15 @@ struct Declaration_PTN
 
         struct
         {
-            Array<Declaration_PTN*> member_declarations;
-            Array<Parameter_PTN*> parameters;
+            Array<Declaration_PTN *> member_declarations;
+            Array<Parameter_PTN *> parameters;
+            Array<Identifier_PTN *> usings;
         } structure, union_decl;
 
         struct
         {
             Expression_PTN *type_spec;
-            Array<PTN*> members;
+            Array<PTN *> members;
         } enum_decl;
 
         struct
@@ -497,8 +498,9 @@ Declaration_PTN *new_variable_declaration_ptn(Allocator *allocator, Identifier_P
                                               const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN *new_struct_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
-                                            Array<Declaration_PTN*> members,
-                                            Array<Parameter_PTN*> parameters,
+                                            Array<Declaration_PTN *> members,
+                                            Array<Parameter_PTN *> parameters,
+                                            Array<Identifier_PTN *> usings,
                                             const File_Pos &begin_fp, const File_Pos &end_fp);
 
 Declaration_PTN *new_union_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,

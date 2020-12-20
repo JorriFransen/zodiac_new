@@ -15,16 +15,54 @@ Entity :: struct
 
     position : Vec2;
     using position;
-
-    // using position : Vec2;
 }
+
+// Player :: struct
+// {
+//     using entity : Entity;
+
+//     health : u64;
+// }
 
 main :: func () -> s64
 {
     std.print("struct using test\n");
 
     e : Entity;
+    print_entity(*e);
+
+    e = create_entity("dummy", 1, 2);
+    print_entity(*e);
 
 
     return 0;
+}
+
+create_entity :: func (name: *u8, x: s64, y: s64) -> Entity
+{
+    result : Entity;
+
+    result.name = name;
+
+    // result.position.x = x;
+    // result.position.y = y;
+    result.x = x;
+    result.position.y = y;
+
+    return result;
+}
+
+print_entity :: func (e: *Entity)
+{
+    std.print("Entity: ");
+    if (e.name) {
+        std.print("'");
+        std.print(e.name);
+        std.print("'");
+    }
+    std.print(" (x: ");
+    std.print_num(e.position.x);
+    std.print(", y: ");
+    std.print_num(e.position.y);
+    std.print(")\n");
 }

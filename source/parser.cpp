@@ -390,28 +390,50 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
 
     if (!parser_expect_token(parser, ts, TOK_LBRACE)) return nullptr;
 
-    Array<Declaration_PTN*> member_decls = {};
+    Array<Declaration_PTN *> member_decls = {};
     array_init(parser->allocator, &member_decls);
+
+    Array<Identifier_PTN *> usings = {};
+    array_init(parser->allocator, &usings);
 
     File_Pos end_fp = {};
 
-    while (!parser_match_token(ts, TOK_RBRACE))
-    {
+    while (!parser_match_token(ts, TOK_RBRACE)) {
+
+        if (parser_match_token(ts, TOK_KW_USING)) {
+            auto ident_tok = ts->current_token();
+
+            if (!parser_expect_token(parser,  ts, TOK_IDENTIFIER)) {
+                return nullptr;
+            }
+
+            if (!parser_expect_token(parser,  ts, TOK_SEMICOLON)) {
+                assert(false); // More specific error
+                return nullptr;
+            }
+
+            assert(ident_tok.kind == TOK_IDENTIFIER);
+            auto ident = new_identifier_ptn(parser->allocator, ident_tok.atom,
+                                            ident_tok.begin_file_pos, ident_tok.end_file_pos);
+
+            array_append(&usings, ident);
+
+            continue;
+        }
+
         assert(parser_is_token(ts, TOK_IDENTIFIER));
-        if (ts->peek_token(1).kind == TOK_COMMA)
-        {
+        if (ts->peek_token(1).kind == TOK_COMMA) {
+
             auto ta = temp_allocator_get();
             Array<Identifier_PTN*> identifiers = {};
             array_init(ta, &identifiers, 4);
 
-            while (true)
-            {
+            while (true) {
                 auto identifier = parser_parse_identifier(parser, ts);
                 assert(identifier);
                 array_append(&identifiers, identifier);
 
-                if (!parser_match_token(ts, TOK_COMMA))
-                {
+                if (!parser_match_token(ts, TOK_COMMA)) {
                     break;
                 }
             }
@@ -425,8 +447,7 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
             if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) assert(false);
             array_append(&member_decls, first_mem_decl);
 
-            for (int64_t i = 1; i < identifiers.count; i++)
-            {
+            for (int64_t i = 1; i < identifiers.count; i++) {
                 auto mem_decl = copy_declaration_ptn(parser->allocator, first_mem_decl);
                 assert(mem_decl);
                 assert(mem_decl->kind == Declaration_PTN_Kind::VARIABLE ||
@@ -438,9 +459,8 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
             }
 
             array_free(&identifiers);
-        }
-        else
-        {
+
+        } else {
             auto decl = parser_parse_declaration(parser, ts);
             array_append(&member_decls, decl);
 
@@ -454,13 +474,12 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
         }
     }
 
-    if (!member_decls.count)
-    {
+    if (!member_decls.count) {
         array_free(&member_decls);
     }
 
     return new_struct_declaration_ptn(parser->allocator, identifier, member_decls,
-                                      parameters, identifier->self.begin_file_pos,
+                                      parameters, usings, identifier->self.begin_file_pos,
                                       end_fp);
 }
 
