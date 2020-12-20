@@ -753,7 +753,8 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT: {
 
-                AST_Declaration *parent_decl = resolver_get_declaration(expr->dot.parent_expression);
+                AST_Declaration *parent_decl =
+                    resolver_get_declaration(expr->dot.parent_expression);
 
                 if (expr->dot.child_decl &&
                     (expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT)) {
@@ -1093,6 +1094,37 @@ namespace Zodiac
                                               result);
                 } else {
                     assert(false);
+                }
+
+                assert(result);
+                assert(expr->dot.child_decl);
+                if (expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_REF) {
+                    auto import_ref = expr->dot.child_decl;
+                    assert(import_ref);
+
+
+                    // Change the type of the old result, because that's the type
+                    //  our final result should have.
+                    auto type_of_used = import_ref->import_ref.decl_being_used->type;
+                    assert(type_of_used->kind == AST_Type_Kind::STRUCTURE);
+                    result->type =
+                        build_data_find_or_create_pointer_type(builder->allocator,
+                                                               builder->build_data, type_of_used);
+
+                    auto nested_index = import_ref->import_ref.index_in_decl_being_used;
+                    assert(nested_index >= 0);
+
+                    assert(nested_index <= UINT32_MAX);
+                    Integer_Literal nested_il = { .u32 = (uint32_t)nested_index };
+                    Bytecode_Value *nested_index_value =
+                        bytecode_integer_literal_new(builder, Builtin::type_u32, nested_il);
+
+                    Bytecode_Value *pointer_to_used = result;
+                    result = bytecode_temporary_new(builder, result_type);
+                    bytecode_emit_instruction(builder, AGG_OFFSET, pointer_to_used,
+                                              nested_index_value, result);
+                } else {
+                    assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
                 }
                 break;
             }
@@ -2214,7 +2246,20 @@ namespace Zodiac
             }
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
-            case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
+
+            case AGG_OFFSET: {
+                ast_print_type(sb, inst->result->type);
+                string_builder_append(sb, " AGG_OFFSET ");
+                bytecode_print_value(sb, inst->a);
+                string_builder_append(sb, ": ");
+                ast_print_type(sb, inst->a->type);
+
+                string_builder_append(sb, ", ");
+                bytecode_print_value(sb, inst->b);
+
+                print_args = false;
+                break;
+             }
 
             case ZEXT:   string_builder_append(sb, "ZEXT "); break;
             case SEXT:   string_builder_append(sb, "SEXT "); break;
@@ -2272,7 +2317,7 @@ namespace Zodiac
                 }
                 break;
             }
-
+ break;
             case Bytecode_Value_Kind::INTEGER_LITERAL: {
                 if (value->type->integer.sign) {
                     switch (value->type->bit_size) {

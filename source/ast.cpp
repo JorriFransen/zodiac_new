@@ -2359,7 +2359,8 @@ namespace Zodiac
                                           identifier, scope, bfp, efp);
 
         result->import_ref.referring_to = referring_to;
-        result->import_ref.found_in = found_in;
+        result->import_ref.decl_being_used = found_in;
+        result->import_ref.index_in_decl_being_used = -1;
 
         return result;
     }

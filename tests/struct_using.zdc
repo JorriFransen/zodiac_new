@@ -47,7 +47,7 @@ create_entity :: func (name: *u8, x: s64, y: s64) -> Entity
     // result.position.x = x;
     // result.position.y = y;
     result.x = x;
-    result.position.y = y;
+    result.y = y;
 
     return result;
 }

@@ -1432,6 +1432,10 @@ namespace Zodiac
                                                      using_ident->begin_file_pos,
                                                      using_ident->end_file_pos);
 
+                        import_ref->type = decl_to_import->type;
+                        import_ref->flags |= AST_NODE_FLAG_RESOLVED_ID;
+                        import_ref->flags |= AST_NODE_FLAG_TYPED;
+
                         scope_add_declaration(current_scope, import_ref);
                     }
 
@@ -2024,92 +2028,8 @@ namespace Zodiac
                         expression->flags |= AST_NODE_FLAG_TYPED;
                         break;
                     } else {
-                        if (parent_type->kind != AST_Type_Kind::STRUCTURE &&
-                            parent_type->kind != AST_Type_Kind::UNION) {
-                            assert(parent_type->kind == AST_Type_Kind::POINTER);
-                            parent_type = parent_type->pointer.base;
-                            assert(parent_type->kind == AST_Type_Kind::STRUCTURE ||
-                                   parent_type->kind == AST_Type_Kind::UNION);
-                        }
-
-                        assert(parent_type);
-                        if (!(parent_type->flags & AST_NODE_FLAG_RESOLVED_ID)) {
-                            return false;
-                        }
-                        assert(parent_type->flags & AST_NODE_FLAG_TYPED);
-
-                        assert(parent_type->structure.member_scope);
-                        auto mem_scope = parent_type->structure.member_scope;
-                        assert(mem_scope->kind == Scope_Kind::AGGREGATE);
-
-                        AST_Declaration *child_decl = nullptr;
-                        if (!child_ident->declaration) {
-                            child_decl = scope_find_declaration(mem_scope, child_ident);
-                            if (!child_decl) {
-                                assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
-                                zodiac_report_error(resolver->build_data,
-                                                    Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
-                                                    child_ident,
-                                                    "Undeclared identifier: '%.*s'",
-                                                    (int)child_ident->atom.length,
-                                                    child_ident->atom.data);;
-                                auto struct_decl = parent_type->structure.declaration;
-                                assert(struct_decl);
-                                zodiac_report_info(resolver->build_data, struct_decl,
-                                                   "Is not a member of struct: '%.*s'",
-                                                   (int)struct_decl->identifier->atom.length,
-                                                   struct_decl->identifier->atom.data);
-                                return false;
-                            }
-                            assert(child_decl);
-                            assert(child_decl->kind == AST_Declaration_Kind::VARIABLE ||
-                                   child_decl->kind == AST_Declaration_Kind::IMPORT_REF);
-                            assert(child_decl->kind != AST_Declaration_Kind::IMPORT_REF &&
-                                   !"IMPORT REF not implemented beyond this point");
-                            assert(child_decl->type);
-                            assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-                            assert(child_decl->flags & AST_NODE_FLAG_TYPED);
-
-                            AST_Declaration *aggregate_decl = nullptr;
-                            Array<AST_Declaration *> member_decls = {};
-                            if (parent_type->kind == AST_Type_Kind::STRUCTURE) {
-                                aggregate_decl = parent_type->structure.declaration;
-                                member_decls = aggregate_decl->structure.member_declarations;
-                            } else {
-                                assert(parent_type->kind == AST_Type_Kind::UNION);
-                                aggregate_decl = parent_type->union_type.declaration;
-                                member_decls = aggregate_decl->union_decl.member_declarations;
-                            }
-                            assert(aggregate_decl);
-                            assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE ||
-                                   aggregate_decl->kind == AST_Declaration_Kind::UNION);
-
-                            bool index_found = false;
-                            int64_t index = -1;
-                            for (int64_t i = 0; i < member_decls.count; i++) {
-
-                                if (child_decl == member_decls[i]) {
-                                    assert(!index_found);
-                                    index_found = true;
-                                    index = i;
-                                    break;
-                                }
-                            }
-                            assert(index_found);
-                            assert(index >= 0);
-
-                            expression->dot.child_index = index;
-                            expression->dot.child_decl = child_decl;
-                            expression->type = child_decl->type;
-                            expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                            expression->flags |= AST_NODE_FLAG_TYPED;
-                            break;
-
-                        } else {
-                            assert(false);
-                        }
-
-                        assert(false);
+                        return try_resolve_aggregate_dereference(resolver, parent_type,
+                                                                 expression);
                     }
                 }
 
@@ -2739,6 +2659,157 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         assert(expression->flags & AST_NODE_FLAG_TYPED);
         assert(expression->type || allow_null_type);
         resolver_inherit_const(expression);
+        return true;
+    }
+
+    bool try_resolve_aggregate_dereference(Resolver *resolver, AST_Type *aggregate_type,
+                                           AST_Expression *dot_expr)
+    {
+        assert(dot_expr->kind == AST_Expression_Kind::DOT);
+
+        if (aggregate_type->kind != AST_Type_Kind::STRUCTURE &&
+            aggregate_type->kind != AST_Type_Kind::UNION) {
+            assert(aggregate_type->kind == AST_Type_Kind::POINTER);
+            aggregate_type = aggregate_type->pointer.base;
+            assert(aggregate_type->kind == AST_Type_Kind::STRUCTURE ||
+                   aggregate_type->kind == AST_Type_Kind::UNION);
+        }
+
+        assert(aggregate_type);
+        if (!(aggregate_type->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+            return false;
+        }
+        assert(aggregate_type->flags & AST_NODE_FLAG_TYPED);
+
+        assert(aggregate_type->structure.member_scope);
+        auto mem_scope = aggregate_type->structure.member_scope;
+        assert(mem_scope->kind == Scope_Kind::AGGREGATE);
+
+        AST_Identifier *child_ident = dot_expr->dot.child_identifier;
+
+        AST_Declaration *child_decl = nullptr;
+        if (!child_ident->declaration) {
+            child_decl = scope_find_declaration(mem_scope, child_ident);
+        } else {
+            child_decl = child_ident->declaration;
+        }
+
+        if (!child_decl) {
+            assert(aggregate_type->kind == AST_Type_Kind::STRUCTURE);
+            zodiac_report_error(resolver->build_data,
+                                Zodiac_Error_Kind::UNDECLARED_IDENTIFIER,
+                                child_ident,
+                                "Undeclared identifier: '%.*s'",
+                                (int)child_ident->atom.length,
+                                child_ident->atom.data);;
+            auto struct_decl = aggregate_type->structure.declaration;
+            assert(struct_decl);
+            zodiac_report_info(resolver->build_data, struct_decl,
+                               "Is not a member of struct: '%.*s'",
+                               (int)struct_decl->identifier->atom.length,
+                               struct_decl->identifier->atom.data);
+            return false;
+        }
+        assert(child_decl);
+        assert(child_decl->kind == AST_Declaration_Kind::VARIABLE ||
+               child_decl->kind == AST_Declaration_Kind::IMPORT_REF);
+        // assert(child_decl->kind != AST_Declaration_Kind::IMPORT_REF &&
+        //        !"IMPORT REF not implemented beyond this point");
+        assert(child_decl->type);
+        assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+        assert(child_decl->flags & AST_NODE_FLAG_TYPED);
+
+        AST_Declaration *aggregate_decl = nullptr;
+        Array<AST_Declaration *> member_decls = {};
+        if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
+            aggregate_decl = aggregate_type->structure.declaration;
+            member_decls = aggregate_decl->structure.member_declarations;
+        } else {
+            assert(aggregate_type->kind == AST_Type_Kind::UNION);
+            aggregate_decl = aggregate_type->union_type.declaration;
+            member_decls = aggregate_decl->union_decl.member_declarations;
+        }
+        assert(aggregate_decl);
+        assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE ||
+               aggregate_decl->kind == AST_Declaration_Kind::UNION);
+
+        if (child_decl->kind == AST_Declaration_Kind::VARIABLE) {
+            bool index_found = false;
+            int64_t index = -1;
+            for (int64_t i = 0; i < member_decls.count; i++) {
+
+                if (child_decl == member_decls[i]) {
+                    assert(!index_found);
+                    index_found = true;
+                    index = i;
+                    break;
+                }
+            }
+            assert(index_found);
+            assert(index >= 0);
+
+            dot_expr->dot.child_index = index;
+        } else if (child_decl->kind == AST_Declaration_Kind::IMPORT_REF) {
+            bool index_found = false;
+            int64_t index = -1;
+            for (int64_t i = 0; i < member_decls.count; i++) {
+                if (child_decl->import_ref.decl_being_used == member_decls[i]) {
+                    assert(!index_found);
+                    index_found = true;
+                    index = i;
+                    break;
+                }
+            }
+
+            assert(index_found);
+            assert(index >= 0);
+
+            dot_expr->dot.child_index = index;
+
+            auto decl_being_used = child_decl->import_ref.decl_being_used;
+
+            assert(child_decl->import_ref.index_in_decl_being_used == -1);
+            AST_Type *aggregate_type = nullptr;
+            assert(decl_being_used->kind == AST_Declaration_Kind::VARIABLE);
+            aggregate_type = decl_being_used->type;
+            assert(aggregate_type);
+
+            if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
+
+                AST_Declaration *aggregate_decl = aggregate_type->structure.declaration;
+                assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+                auto member_decls = aggregate_decl->structure.member_declarations;
+
+                int64_t index = -1;
+                bool index_found = false;
+
+                for (int64_t i = 0; i < member_decls.count; i++) {
+
+                    if (member_decls[i] == child_decl->import_ref.referring_to) {
+                        index = i;
+                        index_found = true;
+                        break;
+                    }
+                }
+
+                assert(index_found);
+                assert(index >= 0);
+
+                child_decl->import_ref.index_in_decl_being_used = index;
+
+            } else {
+                assert(false);
+            }
+        } else {
+            assert(false);
+        }
+
+        dot_expr->dot.child_decl = child_decl;
+        dot_expr->type = child_decl->type;
+        dot_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        dot_expr->flags |= AST_NODE_FLAG_TYPED;
+
         return true;
     }
 
