@@ -1420,7 +1420,9 @@ namespace Zodiac
                         AST_Declaration *decl_to_import = scope_block->declarations[j];
                         auto redecl = scope_find_declaration(current_scope,
                                                              decl_to_import->identifier);
-                        assert(!redecl);
+                        if (redecl) {
+                            assert(false); // @TODO: Report error.
+                        }
 
                         AST_Declaration *import_ref =
                             ast_import_reference_new(resolver->allocator,
