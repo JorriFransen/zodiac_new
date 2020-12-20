@@ -227,7 +227,7 @@ namespace Zodiac
             {
                 AST_Declaration *referring_to;
                 AST_Declaration *decl_being_used;
-                uint64_t index_in_decl_being_used;
+                int64_t index_in_decl_being_used;
             } import_ref;
         };
     };
