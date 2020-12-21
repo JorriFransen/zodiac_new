@@ -2750,6 +2750,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             dot_expr->dot.child_index = index;
         } else if (child_decl->kind == AST_Declaration_Kind::IMPORT_REF) {
+
             bool index_found = false;
             int64_t index = -1;
             for (int64_t i = 0; i < member_decls.count; i++) {
@@ -2768,38 +2769,44 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             auto decl_being_used = child_decl->import_ref.decl_being_used;
 
-            assert(child_decl->import_ref.index_in_decl_being_used == -1);
-            AST_Type *aggregate_type = nullptr;
-            assert(decl_being_used->kind == AST_Declaration_Kind::VARIABLE);
-            aggregate_type = decl_being_used->type;
-            assert(aggregate_type);
 
-            if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
+            // @TOOD: @CLEANUP: This should be refactored to use the regular
+            //  resolved and typed flags mechanism.
+            if (child_decl->import_ref.index_in_decl_being_used == -1) {
 
-                AST_Declaration *aggregate_decl = aggregate_type->structure.declaration;
-                assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE);
+                assert(child_decl->import_ref.index_in_decl_being_used == -1);
+                AST_Type *aggregate_type = nullptr;
+                assert(decl_being_used->kind == AST_Declaration_Kind::VARIABLE);
+                aggregate_type = decl_being_used->type;
+                assert(aggregate_type);
 
-                auto member_decls = aggregate_decl->structure.member_declarations;
+                if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
 
-                int64_t index = -1;
-                bool index_found = false;
+                    AST_Declaration *aggregate_decl = aggregate_type->structure.declaration;
+                    assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE);
 
-                for (int64_t i = 0; i < member_decls.count; i++) {
+                    auto member_decls = aggregate_decl->structure.member_declarations;
 
-                    if (member_decls[i] == child_decl->import_ref.referring_to) {
-                        index = i;
-                        index_found = true;
-                        break;
+                    int64_t index = -1;
+                    bool index_found = false;
+
+                    for (int64_t i = 0; i < member_decls.count; i++) {
+
+                        if (member_decls[i] == child_decl->import_ref.referring_to) {
+                            index = i;
+                            index_found = true;
+                            break;
+                        }
                     }
+
+                    assert(index_found);
+                    assert(index >= 0);
+
+                    child_decl->import_ref.index_in_decl_being_used = index;
+
+                } else {
+                    assert(false);
                 }
-
-                assert(index_found);
-                assert(index >= 0);
-
-                child_decl->import_ref.index_in_decl_being_used = index;
-
-            } else {
-                assert(false);
             }
         } else {
             assert(false);
