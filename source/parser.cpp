@@ -407,14 +407,31 @@ Declaration_PTN *parser_parse_struct_declaration(Parser *parser, Token_Stream *t
                 return nullptr;
             }
 
+            Expression_PTN *type_spec_expr = nullptr;
+
+            if (parser_match_token(ts, TOK_COLON)) {
+                type_spec_expr = parser_parse_expression(parser, ts, true);
+                if (!type_spec_expr) return nullptr;
+            }
+
+            auto end_file_pos = ts->current_token().end_file_pos;
+
             if (!parser_expect_token(parser,  ts, TOK_SEMICOLON)) {
-                assert(false); // More specific error
                 return nullptr;
             }
 
             assert(ident_tok.kind == TOK_IDENTIFIER);
+
             auto ident = new_identifier_ptn(parser->allocator, ident_tok.atom,
-                                            ident_tok.begin_file_pos, ident_tok.end_file_pos);
+                                            ident_tok.begin_file_pos, end_file_pos);
+
+            if (type_spec_expr) {
+                auto member_decl = new_variable_declaration_ptn(parser->allocator, ident,
+                                                                type_spec_expr, nullptr,
+                                                                ident->self.begin_file_pos,
+                                                                end_file_pos);
+                array_append(&member_decls, member_decl);
+            }
 
             array_append(&usings, ident);
 
@@ -1951,19 +1968,16 @@ Expression_PTN *parser_parse_array_type_expression(Parser *parser, Token_Stream 
 {
     auto begin_fp = ts->current_token().begin_file_pos;
 
-    if (!parser_expect_token(parser, ts, TOK_LBRACK))
-    {
-        assert(false);
+    if (!parser_expect_token(parser, ts, TOK_LBRACK)) {
+        return nullptr;
     }
 
     Expression_PTN *length_expr = nullptr;
-    if (!parser_is_token(ts, TOK_RBRACK))
-    {
+    if (!parser_is_token(ts, TOK_RBRACK)) {
         length_expr = parser_parse_expression(parser, ts);
     }
 
-    if (!parser_expect_token(parser, ts, TOK_RBRACK))
-    {
+    if (!parser_expect_token(parser, ts, TOK_RBRACK)) {
         assert(false);
     }
 
