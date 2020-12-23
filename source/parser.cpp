@@ -1025,6 +1025,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
                     result->self.flags |= PTNC_FLAG_NONE;
                 }
             }
+
             assert(result);
             return result;
             break;
@@ -1395,7 +1396,7 @@ Statement_PTN *parser_parse_assignment_statement(Parser *parser, Token_Stream *t
     }
 
     Expression_PTN *rhs_value = parser_parse_expression(parser, ts);
-    assert(rhs_value);
+    if (!rhs_value) return nullptr;
 
     return new_assignment_statement_ptn(parser->allocator, ident_expression, rhs_value,
                                         ident_expression->self.begin_file_pos,

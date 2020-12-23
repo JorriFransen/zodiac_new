@@ -14,9 +14,36 @@ Vec2 :: struct
     y : s64;
 }
 
+Rect :: struct
+{
+    p1 : Vec2;
+    p2 : Vec2;
+}
+
 main :: func() -> s64
 {
     std.print("Struct assignment test\n");
+
+    // member_assignment();
+    member_struct_assignment();
+
+    return 0;
+}
+
+member_struct_assignment :: func ()
+{
+    r1 := make_rect(11, 22, 33, 44);
+    // @assert(r1.p1.x == 1);
+    // @assert(r1.p1.y == 2);
+    // @assert(r1.p2.x == 3);
+    // @assert(r1.p2.y == 4);
+    std.print("r1: ");
+    print_rect(r1);
+}
+
+member_assignment :: func ()
+{
+    std.print("Member assignment\n");
 
     a := make_vec2(11, 22);
     @assert(a.x == 11);
@@ -51,7 +78,6 @@ main :: func() -> s64
     print_vec2(c);
 
     std.print("\n");
-    return 0;
 }
 
 make_vec2 :: func (x: s64, y: s64) -> Vec2
@@ -68,4 +94,37 @@ print_vec2 :: func(v : Vec2)
     std.print_num(v.x);
     std.print(", y: ");
     std.print_numln(v.y);
+}
+
+make_rect :: func (p1x: s64, p1y: s64, p2x: s64, p2y: s64) -> Rect
+{
+    result : Rect;
+
+    // result.p1.x = p1x;
+    // result.p1.y = p1y;
+    // result.p2.x = p2x;
+    // result.p2.y = p2y;
+
+    p2 : Vec2;
+    p2.x = p2x;
+    p2.y = p2y;
+
+    result.p2 = p2;
+
+    return result;
+}
+
+print_rect :: func (r : Rect)
+{
+    std.print("{ p1: {");
+    std.print("x: ");
+    std.print_num(r.p1.x);
+    std.print(", y: ");
+    std.print_num(r.p1.y);
+    std.print("}, p2: {");
+    std.print("x: ");
+    std.print_num(r.p2.x);
+    std.print(", y: ");
+    std.print_num(r.p2.y);
+    std.print(" }\n");
 }

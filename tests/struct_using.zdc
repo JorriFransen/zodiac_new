@@ -13,9 +13,8 @@ Entity :: struct
 {
     name : *u8;
 
-    // position : Vec2;
-    // using position;
-    using position : Vec2;
+    position : Vec2;
+    using position;
 }
 
 Player :: struct
@@ -39,32 +38,32 @@ main :: func () -> s64
 
     std.print("\n");
 
-    // p : Player;
-    // print_entity(*p.entity);
-    // std.print("\n");
-    // print_player(*p);
+    p : Player;
+    print_entity(*p.entity);
+    std.print("\n");
+    print_player(*p);
 
-    // p = create_player("Joe", 11, 22);
-    // print_entity(*p.entity);
-    // std.print("\n");
-
-
+    p = create_player("Joe", 11, 22);
+    print_entity(*p.entity);
+    std.print("\n");
 
 
-    // // I think this (we do a similar thing in create_player) does not work because
-    // //  we do not copy structs correctly (in bytecode) when assigning to a member
-    // //  of another struct (Eg. returning a struct from a function and assigning
-    // //  it to a variable that's directly on the stack).
-    // // This behaviour might be caused by generating an incorret lvalue for
-    // //  p.entity, but I doubt it since doint this with non struct members seems
-    // //  to work fine. We probably just dont handle structs in case of member
-    // //  assignement at al, but I would have expected an assert to warn us in
-    // //  this case...
 
-    // p.entity = create_entity("Joey", 12, 23);
-    // print_entity(*p.entity);
-    // std.print("\n");
-    // print_player(*p);
+
+    // I think this (we do a similar thing in create_player) does not work because
+    //  we do not copy structs correctly (in bytecode) when assigning to a member
+    //  of another struct (Eg. returning a struct from a function and assigning
+    //  it to a variable that's directly on the stack).
+    // This behaviour might be caused by generating an incorret lvalue for
+    //  p.entity, but I doubt it since doint this with non struct members seems
+    //  to work fine. We probably just dont handle structs in case of member
+    //  assignement at al, but I would have expected an assert to warn us in
+    //  this case...
+
+    p.entity = create_entity("Joey", 12, 23);
+    print_entity(*p.entity);
+    std.print("\n");
+    print_player(*p);
 
 
     return 0;

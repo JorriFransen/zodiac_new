@@ -3795,8 +3795,10 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     return true;
                 } else if (target_type->kind == AST_Type_Kind::INTEGER) {
                     return false;
+                } else if (target_type->kind == AST_Type_Kind::STRUCTURE) {
+                    return false;
                 } else {
-                    assert(false);
+                    assert(false && !"Unimplemented type conversion...");
                 }
                 break;
             }
