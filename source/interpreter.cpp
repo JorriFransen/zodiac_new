@@ -119,122 +119,84 @@ namespace Zodiac
                 case STOREL:
                 case STORE_GLOBAL:
                 case STORE_ARG: {
-                    uint8_t *dest_ptr = interpreter_load_lvalue(interp, inst->a);
+                    void *dest_ptr = _interp_load_lvalue(interp, inst->a);
+                    void *_source_ptr = _interp_load_lvalue(interp, inst->b);
+                    void *source_ptr = _source_ptr;
 
                     if (inst->b->kind == Bytecode_Value_Kind::ALLOCL) {
-                        uint8_t *alloc_addr = interpreter_load_lvalue(interp, inst->b);
-                        interp_store(dest_ptr, alloc_addr);
-                    } else {
-                        Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
-
-                        if (source_val.type->kind == AST_Type_Kind::STRUCTURE) {
-                            assert(source_val.type->bit_size % 8 == 0);
-                            auto byte_size = source_val.type->bit_size / 8;
-                            assert(source_val.pointer);
-                            memcpy(dest_ptr, source_val.pointer, byte_size);
-                        } else {
-                            interp_store_value(dest_ptr, source_val);
-                        }
+                        source_ptr = &_source_ptr;
                     }
+
+                    assert(dest_ptr);
+                    assert(source_ptr);
+                    _interp_store(inst->b->type, dest_ptr, source_ptr);
                     break;
+
                 }
 
                 case STORE_PTR: {
-                    Bytecode_Value ptr_val = interpreter_load_value(interp, inst->a);
-                    Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
-                    if (source_val.type->kind == AST_Type_Kind::STRUCTURE) {
-                        assert(ptr_val.pointer);
-                        assert(source_val.pointer);
-                        assert(source_val.type->bit_size % 8 == 0);
-                        auto byte_size = source_val.type->bit_size / 8;
-                        memcpy(ptr_val.pointer, source_val.pointer, byte_size);
-                    } else {
-                        interp_store_value((uint8_t*)ptr_val.pointer, source_val);
-                    }
+                    void *_dest_ptr = _interp_load_lvalue(interp, inst->a);
+                    void *source_ptr = _interp_load_lvalue(interp, inst->b);
+
+                    void *dest_ptr = *(void**)_dest_ptr;
+
+                    assert(source_ptr);
+                    assert(dest_ptr);
+
+                    _interp_store(inst->b->type, dest_ptr, source_ptr);
                     break;
                 }
 
-                case LOADL: {
-                    Bytecode_Value result_value = interpreter_load_value(interp, inst->a);
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
-
-                    interp_store_value(result_addr, result_value);
-
-                    break;
-                }
-
-                case LOAD_PARAM: {
-                    Bytecode_Value arg_value = interpreter_load_value(interp, inst->a);
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
-
-                    interp_store_value(result_addr, arg_value);
-                    break;
-                }
-
+                case LOADL:
+                case LOAD_PARAM:
                 case LOAD_GLOBAL: {
-                    Bytecode_Value glob_value = interpreter_load_value(interp, inst->a);
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+                    void *source_ptr = _interp_load_lvalue(interp, inst->a);
+                    void *dest_ptr = _interp_load_lvalue(interp, inst->result);
 
-                    interp_store_value(result_addr, glob_value);
+                    assert(dest_ptr);
+                    assert(source_ptr);
+
+                    _interp_store(inst->result->type, dest_ptr, source_ptr);
                     break;
                 }
 
                 case LOAD_PTR: {
-                    Bytecode_Value ptr_val = interpreter_load_value(interp, inst->a);
-                    auto result_addr = interpreter_load_lvalue(interp, inst->result);
+                    void *source_ptr = _interp_load_lvalue(interp, inst->a);
+                    void *dest_ptr = _interp_load_lvalue(interp, inst->result);
 
-                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
-                    auto element_type = ptr_val.type->pointer.base;
+                    source_ptr = *(void**)source_ptr;
 
-                    assert(element_type->bit_size % 8 == 0);
-                    auto byte_size = element_type->bit_size / 8;
+                    assert(dest_ptr);
+                    assert(source_ptr);
 
-                    memcpy(result_addr, ptr_val.pointer, byte_size);
+                    _interp_store(inst->result->type, dest_ptr, source_ptr);
                     break;
                 }
 
+#define DO_TYPED_BINOP(type, op) \
+    { *(type*)result_ptr = (*(type*)lhs_ptr) op (*(type*)rhs_ptr); break; }\
+
 #define _binop_arithmetic_int(op, signed) { \
-    auto lhs = interpreter_load_value(interp, inst->a); \
-    auto rhs = interpreter_load_value(interp, inst->b); \
-    assert(lhs.type == rhs.type); \
-    auto result_addr = interpreter_load_lvalue(interp, inst->result); \
+    assert(inst->a->type == inst->b->type); \
+    void *lhs_ptr = _interp_load_lvalue(interp, inst->a); \
+    void *rhs_ptr = _interp_load_lvalue(interp, inst->b); \
+    void *result_ptr = _interp_load_lvalue(interp, inst->result); \
+    assert(lhs_ptr); \
+    assert(rhs_ptr); \
+    assert(result_ptr); \
     if (signed) {  \
-        switch (lhs.type->bit_size) { \
-            case 8: { \
-                int8_t result_value = lhs.integer_literal.s8 op rhs.integer_literal.s8; \
-                interp_store(result_addr, result_value); \
-                break; } \
-            case 16: { \
-                int16_t result_value = lhs.integer_literal.s16 op rhs.integer_literal.s16; \
-                interp_store(result_addr, result_value); \
-                break; } \
-            case 32: { \
-                int32_t result_value = lhs.integer_literal.s32 op rhs.integer_literal.s32; \
-                interp_store(result_addr, result_value); \
-                break; }\
-            case 64: {\
-                int64_t result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; \
-                interp_store(result_addr, result_value); \
-                break; } \
+        switch (inst->a->type->bit_size) { \
+            case 8:  DO_TYPED_BINOP(int8_t, op); \
+            case 16: DO_TYPED_BINOP(int16_t, op); \
+            case 32: DO_TYPED_BINOP(int32_t, op); \
+            case 64: DO_TYPED_BINOP(int64_t, op); \
         } \
-    } else {\
-        switch (lhs.type->bit_size) { \
-            case 8: { \
-                uint8_t result_value = lhs.integer_literal.u8 op rhs.integer_literal.u8; \
-                interp_store(result_addr, result_value); \
-                break; } \
-            case 16: { \
-                uint16_t result_value = lhs.integer_literal.u16 op rhs.integer_literal.u16; \
-                interp_store(result_addr, result_value); \
-                break; } \
-            case 32: { \
-                uint32_t result_value = lhs.integer_literal.u32 op rhs.integer_literal.u32; \
-                interp_store(result_addr, result_value); \
-                break; }\
-            case 64: {\
-                uint64_t result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; \
-                interp_store(result_addr, result_value); \
-                break; } \
+    } else { \
+        switch (inst->a->type->bit_size) { \
+            case 8:  DO_TYPED_BINOP(uint8_t, op); \
+            case 16: DO_TYPED_BINOP(uint16_t, op); \
+            case 32: DO_TYPED_BINOP(uint32_t, op); \
+            case 64: DO_TYPED_BINOP(uint64_t, op); \
         } \
     } \
     break; \
@@ -255,22 +217,22 @@ namespace Zodiac
 #undef _binop_arithmetic_int
 
 #define _binop_arithmetic_float(op, signed) { \
-    auto lhs = interpreter_load_value(interp, inst->a); \
-    auto rhs = interpreter_load_value(interp, inst->b); \
-    assert(lhs.type == rhs.type); \
-    auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    if (lhs.type == Builtin::type_float) { \
-        float result_value = lhs.float_literal.r32 op rhs.float_literal.r32; \
-        interp_store(result_addr, result_value); \
-    } else if (lhs.type == Builtin::type_double) { \
-        double result_value = lhs.float_literal.r64 op rhs.float_literal.r64; \
-        interp_store(result_addr, result_value); \
+    assert(inst->a->type == inst->b->type); \
+    void *lhs_ptr = _interp_load_lvalue(interp, inst->a); \
+    void *rhs_ptr = _interp_load_lvalue(interp, inst->b); \
+    void *result_ptr = _interp_load_lvalue(interp, inst->result); \
+    assert(lhs_ptr); \
+    assert(rhs_ptr); \
+    assert(result_ptr); \
+    if (inst->a->type == Builtin::type_float) { \
+        *(float*)result_ptr = *(float*)lhs_ptr op *(float*)rhs_ptr; \
+    } else if (inst->a->type == Builtin::type_double) { \
+        *(double*)result_ptr = *(double*)lhs_ptr op *(double*)rhs_ptr; \
     } else { \
         assert(false); \
     } \
     break; \
 }
-
                 case ADD_F: _binop_arithmetic_float(+, false);
                 case SUB_F: _binop_arithmetic_float(-, false);
                 case MUL_F: _binop_arithmetic_float(*, false);
@@ -278,47 +240,37 @@ namespace Zodiac
 
 #undef _binop_arithmetic_float
 
-#define _binop_compare_int(op) { \
-    auto lhs = interpreter_load_value(interp, inst->a); \
-    auto rhs = interpreter_load_value(interp, inst->b); \
-    assert(lhs.type == rhs.type); \
-    auto type = lhs.type; \
+#define _binop_compare_int(_op) { \
+    assert(inst->a->type == inst->b->type); \
+    void *lhs_ptr = _interp_load_lvalue(interp, inst->a); \
+    void *rhs_ptr = _interp_load_lvalue(interp, inst->b); \
+    void *result_ptr = _interp_load_lvalue(interp, inst->result); \
+    auto type = inst->a->type; \
     if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
-    auto result_addr = interpreter_load_lvalue(interp, inst->result); \
-    bool result_value = false; \
     if (type->kind == AST_Type_Kind::INTEGER) { \
         if (type->integer.sign) { \
             switch (type->bit_size) { \
-                case 8:\
-                    result_value = lhs.integer_literal.s8 op rhs.integer_literal.s8; break; \
-                case 16: \
-                    result_value = lhs.integer_literal.s16 op rhs.integer_literal.s16; break; \
-                case 32: \
-                    result_value = lhs.integer_literal.s32 op rhs.integer_literal.s32; break; \
-                case 64: \
-                    result_value = lhs.integer_literal.s64 op rhs.integer_literal.s64; break; \
+                case 8: DO_TYPED_BINOP(uint8_t, _op) \
+                case 16: DO_TYPED_BINOP(uint16_t, _op) \
+                case 32: DO_TYPED_BINOP(uint32_t, _op) \
+                case 64: DO_TYPED_BINOP(uint64_t, _op) \
                 default: assert(false); \
             } \
         } else { \
             switch (type->bit_size) { \
-                case 8: \
-                    result_value = lhs.integer_literal.u8 op rhs.integer_literal.u8; break; \
-                case 16: \
-                    result_value = lhs.integer_literal.u16 op rhs.integer_literal.u16; break; \
-                case 32: \
-                    result_value = lhs.integer_literal.u32 op rhs.integer_literal.u32; break; \
-                case 64: \
-                    result_value = lhs.integer_literal.u64 op rhs.integer_literal.u64; break; \
+                case 8: DO_TYPED_BINOP(int8_t, _op) \
+                case 16: DO_TYPED_BINOP(int16_t, _op) \
+                case 32: DO_TYPED_BINOP(int32_t, _op) \
+                case 64: DO_TYPED_BINOP(int64_t, _op) \
                 default: assert(false); \
             } \
         } \
     } else if (type->kind == AST_Type_Kind::POINTER) { \
-        result_value = lhs.pointer op rhs.pointer;\
+        assert(inst->op == EQ_U); \
+        assert(false && !"POINTER_COMPARE"); \
     } else { \
         assert(false && "Unsupported binop compare"); \
     } \
-    assert(sizeof(result_value) == (inst->result->type->bit_size / 8)); \
-    interp_store(result_addr, result_value); \
     break; \
 }
 
@@ -365,6 +317,8 @@ namespace Zodiac
                 case GTEQ_F: _binop_compare_float(>=);
 
 #undef _binop_compare_float
+#undef DO_TYPED_BINOP
+
 
                 case NEG_LOG: {
                     auto operand = interpreter_load_value(interp, inst->a);
@@ -1350,6 +1304,56 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp)
     {
         free(interp->allocator, interp->stack);
+    }
+
+    void _interp_store(AST_Type *type, void *dest_ptr, void *source_ptr)
+    {
+        assert(dest_ptr);
+        assert(source_ptr);
+
+        switch (type->kind) {
+            default: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            case AST_Type_Kind::FLOAT:
+            case AST_Type_Kind::ENUM:
+            case AST_Type_Kind::BOOL: {
+                switch (type->bit_size) {
+                    default: assert(false);
+                    case 8: *(uint8_t*)dest_ptr = *(uint8_t*)source_ptr; break;
+                    case 16: *(uint16_t*)dest_ptr = *(uint16_t*)source_ptr; break;
+                    case 32: *(uint32_t*)dest_ptr = *(uint32_t*)source_ptr; break;
+                    case 64: *(uint64_t*)dest_ptr = *(uint64_t*)source_ptr; break;
+                }
+                break;
+            }
+
+            case AST_Type_Kind::POINTER: {
+                *(void**)dest_ptr = *(void**)source_ptr;
+                break;
+            }
+
+            case AST_Type_Kind::STRUCTURE:
+            case AST_Type_Kind::UNION:
+            case AST_Type_Kind::ARRAY: {
+                assert(type->bit_size % 8 == 0);
+                auto byte_size = type->bit_size / 8;
+                memcpy(dest_ptr, source_ptr, byte_size);
+                break;
+            }
+        }
+    }
+
+    void *_interp_load_lvalue(Interpreter *interp, Bytecode_Value *value)
+    {
+        if (value->kind == Bytecode_Value_Kind::NULL_LITERAL) {
+            return (void*)&interp->null_pointer;
+        } else if (value->type->kind == AST_Type_Kind::STRUCTURE) {
+            assert(value->pointer);
+            return value->pointer;
+        } else {
+            return interpreter_load_lvalue(interp, value);
+        }
     }
 
     void interp_store_value(uint8_t *dest, Bytecode_Value val)

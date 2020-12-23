@@ -25,7 +25,7 @@ main :: func() -> s64
     std.print("Struct assignment test\n");
 
     member_assignment();
-    member_struct_assignment();
+    // member_struct_assignment();
 
     return 0;
 }
@@ -46,38 +46,38 @@ member_assignment :: func ()
     std.print("Member assignment\n");
 
     a := make_vec2(11, 22);
-    @assert(a.x == 11);
-    @assert(a.y == 22);
+    // @assert(a.x == 11);
+    // @assert(a.y == 22);
 
-    b := a;
-    @assert(b.x == 11);
-    @assert(b.y == 22);
+    // b := a;
+    // @assert(b.x == 11);
+    // @assert(b.y == 22);
 
-    b.x *= 2;
-    b.y *= 2;
-    @assert(b.x == 22);
-    @assert(b.y == 44);
+    // b.x *= 2;
+    // b.y *= 2;
+    // @assert(b.x == 22);
+    // @assert(b.y == 44);
 
-    c : Vec2;
-    c.x = 12345678;
-    c.y = 87654321;
-    @assert(c.x == 12345678);
-    @assert(c.y == 87654321);
+    // c : Vec2;
+    // c.x = 12345678;
+    // c.y = 87654321;
+    // @assert(c.x == 12345678);
+    // @assert(c.y == 87654321);
 
-    c = b;
-    @assert(c.x == 22);
-    @assert(c.y == 44);
+    // c = b;
+    // @assert(c.x == 22);
+    // @assert(c.y == 44);
 
-    std.print("a: ");
-    print_vec2(a);
+    // std.print("a: ");
+    // print_vec2(a);
 
-    std.print("b: ");
-    print_vec2(b);
+    // std.print("b: ");
+    // print_vec2(b);
 
-    std.print("c: ");
-    print_vec2(c);
+    // std.print("c: ");
+    // print_vec2(c);
 
-    std.print("\n");
+    // std.print("\n");
 }
 
 make_vec2 :: func (x: s64, y: s64) -> Vec2

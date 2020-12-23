@@ -63,6 +63,9 @@ namespace Zodiac
 
     void interpreter_free(Interpreter *interp);
 
+    void _interp_store(AST_Type *type, void *dest_ptr, void *source_ptr);
+    void *_interp_load_lvalue(Interpreter *interp, Bytecode_Value *value);
+
     void interp_store_value(uint8_t *dest, Bytecode_Value val);
     void interp_store_constant(uint8_t *dest, Const_Value val);
 
