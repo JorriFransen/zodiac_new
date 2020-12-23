@@ -24,7 +24,7 @@ main :: func() -> s64
 {
     std.print("Struct assignment test\n");
 
-    // member_assignment();
+    member_assignment();
     member_struct_assignment();
 
     return 0;
