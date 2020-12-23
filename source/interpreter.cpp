@@ -142,7 +142,15 @@ namespace Zodiac
                 case STORE_PTR: {
                     Bytecode_Value ptr_val = interpreter_load_value(interp, inst->a);
                     Bytecode_Value source_val = interpreter_load_value(interp, inst->b);
-                    interp_store_value((uint8_t*)ptr_val.pointer, source_val);
+                    if (source_val.type->kind == AST_Type_Kind::STRUCTURE) {
+                        assert(ptr_val.pointer);
+                        assert(source_val.pointer);
+                        assert(source_val.type->bit_size % 8 == 0);
+                        auto byte_size = source_val.type->bit_size / 8;
+                        memcpy(ptr_val.pointer, source_val.pointer, byte_size);
+                    } else {
+                        interp_store_value((uint8_t*)ptr_val.pointer, source_val);
+                    }
                     break;
                 }
 

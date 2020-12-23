@@ -33,10 +33,10 @@ main :: func() -> s64
 member_struct_assignment :: func ()
 {
     r1 := make_rect(11, 22, 33, 44);
-    // @assert(r1.p1.x == 1);
-    // @assert(r1.p1.y == 2);
-    // @assert(r1.p2.x == 3);
-    // @assert(r1.p2.y == 4);
+    @assert(r1.p1.x == 11);
+    @assert(r1.p1.y == 22);
+    @assert(r1.p2.x == 33);
+    @assert(r1.p2.y == 44);
     std.print("r1: ");
     print_rect(r1);
 }
@@ -100,17 +100,8 @@ make_rect :: func (p1x: s64, p1y: s64, p2x: s64, p2y: s64) -> Rect
 {
     result : Rect;
 
-    // result.p1.x = p1x;
-    // result.p1.y = p1y;
-    // result.p2.x = p2x;
-    // result.p2.y = p2y;
-
-    p2 : Vec2;
-    p2.x = p2x;
-    p2.y = p2y;
-
-    result.p2 = p2;
-
+    result.p1 = make_vec2(p1x, p1y);
+    result.p2 = make_vec2(p2x, p2y);
     return result;
 }
 
