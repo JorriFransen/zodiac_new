@@ -138,9 +138,7 @@ namespace Zodiac
                     void *_dest_ptr = _interp_load_lvalue(interp, inst->a);
                     void *source_ptr = _interp_load_lvalue(interp, inst->b);
 
-                    // _dest_ptr is the address of a pointer to a float
                     void *dest_ptr = *(void**)_dest_ptr;
-                    // so dest_ptr is the pointer to a float
 
                     assert(source_ptr);
                     assert(dest_ptr);
@@ -349,7 +347,18 @@ namespace Zodiac
                 }
 
                 case PUSH_ARG: {
-                    void *arg_ptr = _interp_load_lvalue(interp, inst->a);
+                    void *_arg_ptr = _interp_load_lvalue(interp, inst->a);
+
+                    void *arg_ptr;
+
+                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
+                        assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+
+                        arg_ptr = &_arg_ptr;
+
+                    } else {
+                        arg_ptr = _arg_ptr;
+                    }
 
                     assert(inst->a->type->bit_size % 8 == 0);
                     int64_t size = inst->a->type->bit_size / 8;
