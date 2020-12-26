@@ -916,12 +916,14 @@ namespace Zodiac
                     void *op_ptr = _interp_load_lvalue(interp, inst->a);
                     void *dest_ptr = _interp_load_lvalue(interp, inst->result);
 
-                    auto op_type = inst->a->type;
                     auto dest_type = inst->result->type;
+#ifndef NDEBUG
+                    auto op_type = inst->a->type;
 
                     assert(op_type->kind == AST_Type_Kind::FLOAT);
                     assert(dest_type->kind == AST_Type_Kind::FLOAT);
                     assert(op_type != dest_type);
+#endif
 
                     if (dest_type == Builtin::type_float) {
                         float v_val = (float)*(double*)op_ptr;
@@ -1017,8 +1019,7 @@ namespace Zodiac
                 case EXIT: {
                     void *exit_code_ptr = _interp_load_lvalue(interp, inst->a);
 
-                    auto type = inst->a->type;
-                    assert(type == Builtin::type_s64);
+                    assert(inst->a->type == Builtin::type_s64);
 
                     advance_ip = false;
                     interp->running = false;
