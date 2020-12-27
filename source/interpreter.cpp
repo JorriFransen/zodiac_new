@@ -56,10 +56,6 @@ namespace Zodiac
                 ret_val_ptr = &ret_val;
             } else {
                 assert(false);
-                // allocated_ret_val = true;
-                // assert(ret_type->bit_size % 8 == 0);
-                // auto size = ret_type->bit_size / 8;
-                // ret_val_ptr = alloc(interp->allocator, size);
             }
         }
 
@@ -72,8 +68,7 @@ namespace Zodiac
         interp_stack_push(interp, empty_ip);
         interp_stack_push(interp, ret_val_ptr); // ret_val_ptr
 
-        for (int64_t i = 0; i < entry_func->locals.count; i++)
-        {
+        for (int64_t i = 0; i < entry_func->locals.count; i++) {
             auto allocl = entry_func->locals[i];
             assert(allocl->type->kind == AST_Type_Kind::POINTER);
             auto allocl_type = allocl->type->pointer.base;
@@ -87,8 +82,7 @@ namespace Zodiac
             interp->sp += size;
         }
 
-        for (int64_t i = 0; i < entry_func->temps.count; i++)
-        {
+        for (int64_t i = 0; i < entry_func->temps.count; i++) {
             auto temp = entry_func->temps[i];
 
             assert(temp->type->bit_size % 8 == 0);
@@ -102,14 +96,12 @@ namespace Zodiac
 
         interp->running = true;
 
-        while (interp->running)
-        {
+        while (interp->running) {
             Bytecode_Instruction *inst = bucket_locator_get_ptr(interp->ip);
 
             bool advance_ip = true;
 
-            switch (inst->op)
-            {
+            switch (inst->op) {
                 case NOP: assert(false);
 
                 case ALLOCL: {
@@ -134,7 +126,6 @@ namespace Zodiac
                     assert(source_ptr);
                     interp_store(inst->b->type, dest_ptr, source_ptr);
                     break;
-
                 }
 
                 case STORE_PTR: {
