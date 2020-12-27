@@ -27,6 +27,17 @@ main :: func() -> s64
     member_assignment();
     member_struct_assignment();
 
+    // v1 := make_vec2(11, 22);
+
+    // r1 : Rect;
+    // r1.p1 = v1;
+
+    // v1.y = 66;
+
+    // r1.p2 = make_vec2(33, 44);
+
+    // return r1.p2.x + r1.p2.y;
+
     return 0;
 }
 
@@ -57,6 +68,8 @@ member_assignment :: func ()
     b.y *= 2;
     @assert(b.x == 22);
     @assert(b.y == 44);
+    @assert(a.x == 11);
+    @assert(a.y == 22);
 
     c : Vec2;
     c.x = 12345678;
@@ -69,7 +82,7 @@ member_assignment :: func ()
     @assert(c.y == 44);
 
     std.print("a: ");
-    print_vec2(a);
+    print_vec2_p(*a);
 
     std.print("b: ");
     print_vec2(b);
@@ -86,6 +99,14 @@ make_vec2 :: func (x: s64, y: s64) -> Vec2
     r.x = x;
     r.y = y;
     return r;
+}
+
+print_vec2_p :: func(v : *Vec2)
+{
+    std.print("x: ");
+    std.print_num(v.x);
+    std.print(", y: ");
+    std.print_numln(v.y);
 }
 
 print_vec2 :: func(v : Vec2)

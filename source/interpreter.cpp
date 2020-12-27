@@ -640,7 +640,9 @@ namespace Zodiac
                     void *ptr_val_ptr = interpreter_load_lvalue(interp, inst->a);
 
                     void *ptr_val;
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
+                    if (inst->a->kind == Bytecode_Value_Kind::GLOBAL) assert(false);
+                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL ||
+                        inst->a->kind == Bytecode_Value_Kind::PARAM) {
                         ptr_val = ptr_val_ptr;
                     } else {
                         ptr_val = *(void**)ptr_val_ptr;
