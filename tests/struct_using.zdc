@@ -88,9 +88,9 @@ print_entity :: func (e: *Entity)
         std.print("'");
     }
     std.print(" (x: ");
-    std.print_num(e.position.x);
+    std.print_num(e.x);
     std.print(", y: ");
-    std.print_num(e.position.y);
+    std.print_num(e.y);
     std.print(")");
 }
 
@@ -99,7 +99,7 @@ print_player :: func (p : *Player)
     std.print("Player: ");
     if (p.name) {
         std.print("'");
-        std.print(p.entity.name);
+        std.print(p.name);
         std.print("'");
     }
     std.print(" (health: ");
