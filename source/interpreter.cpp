@@ -276,8 +276,8 @@ namespace Zodiac
             } \
         } \
     } else if (type->kind == AST_Type_Kind::POINTER) { \
-        assert(inst->op == EQ_U); \
-        assert(false && !"POINTER_COMPARE"); \
+        assert(inst->op == EQ_U || inst->op == NEQ_U); \
+        DO_CMP_BINOP(void*, _op) \
     } else { \
         assert(false && "Unsupported binop compare"); \
     } \

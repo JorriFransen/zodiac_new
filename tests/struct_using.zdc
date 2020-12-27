@@ -46,19 +46,9 @@ main :: func () -> s64
     p = create_player("Joe", 11, 22);
     print_entity(*p.entity);
     std.print("\n");
+    print_player(*p);
 
-
-
-
-    // I think this (we do a similar thing in create_player) does not work because
-    //  we do not copy structs correctly (in bytecode) when assigning to a member
-    //  of another struct (Eg. returning a struct from a function and assigning
-    //  it to a variable that's directly on the stack).
-    // This behaviour might be caused by generating an incorret lvalue for
-    //  p.entity, but I doubt it since doint this with non struct members seems
-    //  to work fine. We probably just dont handle structs in case of member
-    //  assignement at al, but I would have expected an assert to warn us in
-    //  this case...
+    std.print("\n");
 
     p.entity = create_entity("Joey", 12, 23);
     print_entity(*p.entity);
@@ -75,8 +65,6 @@ create_entity :: func (name: *u8, x: s64, y: s64) -> Entity
 
     result.name = name;
 
-    // result.position.x = x;
-    // result.position.y = y;
     result.x = x;
     result.y = y;
 
