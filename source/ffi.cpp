@@ -64,7 +64,7 @@ namespace Zodiac {
         return false;
     }
 
-    void ffi_call(FFI_Context *ffi, const Atom &name, uint8_t *return_val_ptr,
+    void ffi_call(FFI_Context *ffi, const Atom &name, void *return_val_ptr,
                   AST_Type *return_type)
     {
         DCpointer func_ptr = nullptr;
@@ -145,7 +145,7 @@ namespace Zodiac {
         dcReset(ffi->dc_vm);
     }
 
-    void ffi_push_arg(FFI_Context *ffi, uint8_t *arg_ptr, AST_Type *type)
+    void ffi_push_arg(FFI_Context *ffi, void *arg_ptr, AST_Type *type)
     {
         switch (type->kind) {
             default: assert(false);

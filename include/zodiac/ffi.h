@@ -27,8 +27,8 @@ namespace Zodiac
 
     bool ffi_load_function(FFI_Context *ffi, const Atom &name);
 
-    void ffi_call(FFI_Context *ffi, const Atom &name, uint8_t *return_val_ptr,
+    void ffi_call(FFI_Context *ffi, const Atom &name, void *return_val_ptr,
                   AST_Type *return_type);
     void ffi_reset(FFI_Context *ffi);
-    void ffi_push_arg(FFI_Context *ffi, uint8_t *arg_ptr, AST_Type *type);
+    void ffi_push_arg(FFI_Context *ffi, void *arg_ptr, AST_Type *type);
 }

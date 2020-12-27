@@ -58,22 +58,12 @@ namespace Zodiac
     void interpreter_execute_compiler_function(Interpreter *interp, Bytecode_Function *func,
                                                int64_t arg_count, Bytecode_Value *result_value);
 
-    Bytecode_Value interpreter_load_value(Interpreter *interp, Bytecode_Value *value);
-    uint8_t *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);
+    void *interpreter_load_lvalue(Interpreter *interp, Bytecode_Value *value);
 
     void interpreter_free(Interpreter *interp);
 
-    void _interp_store(AST_Type *type, void *dest_ptr, void *source_ptr);
-    void *_interp_load_lvalue(Interpreter *interp, Bytecode_Value *value);
-
-    void interp_store_value(uint8_t *dest, Bytecode_Value val);
-    void interp_store_constant(uint8_t *dest, Const_Value val);
-
-    template <typename T>
-    void interp_store(uint8_t *dest, T value)
-    {
-        *((T*)dest) = value;
-    }
+    void interp_store(AST_Type *type, void *dest_ptr, void *source_ptr);
+    void interp_store_constant(void *dest, Const_Value val);
 
     template <typename T>
     uint8_t *interp_stack_push(Interpreter *interp, T value)
