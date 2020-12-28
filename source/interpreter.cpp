@@ -108,19 +108,50 @@ namespace Zodiac
                     break;
                 }
 
-                case STOREL:
-                case STORE_GLOBAL:
-                case STORE_ARG: {
+                case STOREL: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::ALLOCL);
                     assert(inst->a->type->kind == AST_Type_Kind::POINTER);
                     assert(inst->a->type->pointer.base == inst->b->type);
 
-                    void *dest_ptr = interpreter_load_lvalue(interp, inst->a);
+                    void *dest_ptr = &interp->stack[interp->frame_pointer +
+                                                    inst->a->allocl.byte_offset_from_fp];
+
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->b, source_ptr);
+
+                    assert(dest_ptr);
+                    assert(source_ptr);
+                    interp_store(inst->b->type, dest_ptr, source_ptr);
+                    break;
+                }
+
+                case STORE_GLOBAL: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::GLOBAL);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->b->type);
+
+                    assert(inst->b->kind == Bytecode_Value_Kind::TEMP);
+
+                    void *dest_ptr = &interp->global_data[inst->a->global.byte_offset];
                     void *_source_ptr = interpreter_load_lvalue(interp, inst->b);
                     void *source_ptr = _source_ptr;
 
-                    if (inst->b->kind == Bytecode_Value_Kind::ALLOCL) {
-                        source_ptr = &_source_ptr;
-                    }
+                    assert(dest_ptr);
+                    assert(source_ptr);
+                    interp_store(inst->b->type, dest_ptr, source_ptr);
+                    break;
+                }
+
+                case STORE_ARG: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::PARAM);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->b->type);
+
+                    assert(inst->b->kind == Bytecode_Value_Kind::TEMP);
+
+                    void *dest_ptr = &interp->stack[interp->frame_pointer +
+                                                    inst->a->parameter.byte_offset_from_fp];
+                    void *_source_ptr = interpreter_load_lvalue(interp, inst->b);
+                    void *source_ptr = _source_ptr;
 
                     assert(dest_ptr);
                     assert(source_ptr);
@@ -129,10 +160,14 @@ namespace Zodiac
                 }
 
                 case STORE_PTR: {
-                    void *_dest_ptr = interpreter_load_lvalue(interp, inst->a);
-                    void *source_ptr = interpreter_load_lvalue(interp, inst->b);
+                    assert(inst->a->kind == Bytecode_Value_Kind::TEMP);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->b->type);
 
+                    void *_dest_ptr = interpreter_load_lvalue(interp, inst->a);
                     void *dest_ptr = *(void**)_dest_ptr;
+
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->b, source_ptr);
 
                     assert(source_ptr);
                     assert(dest_ptr);
@@ -141,10 +176,44 @@ namespace Zodiac
                     break;
                 }
 
-                case LOADL:
-                case LOAD_PARAM:
+                case LOADL: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::ALLOCL);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->result->type);
+
+                    void *source_ptr = &interp->stack[interp->frame_pointer +
+                                                      inst->a->allocl.byte_offset_from_fp];
+                    void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(dest_ptr);
+                    assert(source_ptr);
+
+                    interp_store(inst->result->type, dest_ptr, source_ptr);
+                    break;
+                }
+
+                case LOAD_PARAM: {
+                    assert(inst->a->kind == Bytecode_Value_Kind::PARAM);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->result->type);
+
+                    void *source_ptr = &interp->stack[interp->frame_pointer +
+                                                      inst->a->parameter.byte_offset_from_fp];
+                    void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
+
+                    assert(dest_ptr);
+                    assert(source_ptr);
+
+                    interp_store(inst->result->type, dest_ptr, source_ptr);
+                    break;
+                }
+
                 case LOAD_GLOBAL: {
-                    void *source_ptr = interpreter_load_lvalue(interp, inst->a);
+                    assert(inst->a->kind == Bytecode_Value_Kind::GLOBAL);
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base == inst->result->type);
+
+                    void *source_ptr = &interp->global_data[inst->a->global.byte_offset];
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     assert(dest_ptr);
@@ -155,11 +224,12 @@ namespace Zodiac
                 }
 
                 case LOAD_PTR: {
-                    void *_source_ptr = interpreter_load_lvalue(interp, inst->a);
-                    void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
-
+                    assert(inst->a->kind == Bytecode_Value_Kind::TEMP);
                     assert(inst->a->type->kind == AST_Type_Kind::POINTER);
                     assert(inst->a->type->pointer.base == inst->result->type);
+
+                    void *_source_ptr = interpreter_load_lvalue(interp, inst->a);
+                    void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     void *source_ptr = *(void**)_source_ptr;
 
@@ -341,18 +411,7 @@ namespace Zodiac
                 }
 
                 case PUSH_ARG: {
-                    void *_arg_ptr = interpreter_load_lvalue(interp, inst->a);
-
-                    void *arg_ptr;
-
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
-                        assert(inst->a->type->kind == AST_Type_Kind::POINTER);
-
-                        arg_ptr = &_arg_ptr;
-
-                    } else {
-                        arg_ptr = _arg_ptr;
-                    }
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->a, arg_ptr);
 
                     assert(inst->a->type->bit_size % 8 == 0);
                     int64_t size = inst->a->type->bit_size / 8;
@@ -594,14 +653,9 @@ namespace Zodiac
                 }
 
                 case PTR_OFFSET: {
-                    void *_ptr_val_ptr = interpreter_load_lvalue(interp, inst->a);
-                    void *ptr_val;
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL ||
-                        inst->a->kind == Bytecode_Value_Kind::GLOBAL) {
-                        ptr_val = _ptr_val_ptr;
-                    } else {
-                        ptr_val = *(void**)_ptr_val_ptr;
-                    }
+
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->a, ptr_val_lval);
+                    void *ptr_val = *(void**)ptr_val_lval;
 
                     void *offset_ptr = interpreter_load_lvalue(interp, inst->b);
                     void *result_ptr = interpreter_load_lvalue(interp, inst->result);
@@ -628,17 +682,9 @@ namespace Zodiac
                 }
 
                 case AGG_OFFSET: {
-                    void *ptr_val_ptr = interpreter_load_lvalue(interp, inst->a);
 
-                    void *ptr_val;
-                    if (inst->a->kind == Bytecode_Value_Kind::GLOBAL) assert(false);
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL ||
-                        inst->a->kind == Bytecode_Value_Kind::PARAM) {
-                        ptr_val = ptr_val_ptr;
-                    } else {
-                        ptr_val = *(void**)ptr_val_ptr;
-                    }
-                    assert(ptr_val);
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->a, ptr_val_lval);
+                    void *ptr_val = *(void**)ptr_val_lval;
 
                     void *index_ptr = interpreter_load_lvalue(interp, inst->b);
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
@@ -930,15 +976,10 @@ namespace Zodiac
                 }
 
                 case PTR_TO_INT: {
-                    void *_source_ptr = interpreter_load_lvalue(interp, inst->a);
-                    void *source_ptr;
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->result->type->kind == AST_Type_Kind::INTEGER);
 
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
-                        source_ptr = _source_ptr;
-                    } else {
-                        source_ptr = *(void**)_source_ptr;
-                    }
-
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->a, source_ptr_lvalue);
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     auto dest_type = inst->result->type;
@@ -946,26 +987,20 @@ namespace Zodiac
                     assert(dest_type->kind == AST_Type_Kind::INTEGER);
                     assert(dest_type->bit_size >= Builtin::pointer_size);
 
-                    interp_store(dest_type, dest_ptr, &source_ptr);
+                    interp_store(dest_type, dest_ptr, source_ptr_lvalue);
                     break;
                 }
 
                 case PTR_TO_PTR: {
-                    void *_source_ptr = interpreter_load_lvalue(interp, inst->a);
-                    void *source_ptr;
 
-                    if (inst->a->kind == Bytecode_Value_Kind::ALLOCL) {
-                        source_ptr = _source_ptr;
-                    } else {
-                        source_ptr = *(void**)_source_ptr;
-                    }
+                    INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->a, source_ptr_lval);
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     auto dest_type = inst->result->type;
 
                     assert(dest_type->kind == AST_Type_Kind::POINTER);
 
-                    interp_store(dest_type, dest_ptr, &source_ptr);
+                    interp_store(dest_type, dest_ptr, source_ptr_lval);
                     break;
                 }
 
@@ -1085,7 +1120,7 @@ namespace Zodiac
         for (int64_t i = 0; i < global_info.count; i++) {
             auto info = global_info[i];
 
-            void *ptr = interpreter_load_lvalue(interp, info.global_value);
+            void *ptr = &interp->global_data[info.global_value->global.byte_offset];
 
             if (info.has_initializer) {
                 interp_store_constant(ptr, info.init_const_val);
@@ -1153,7 +1188,8 @@ namespace Zodiac
 
             param->parameter.byte_offset_from_fp = param_offset - size;
 
-            void *arg_ptr = interpreter_load_lvalue(interp, param);
+            void *arg_ptr = &interp->stack[interp->frame_pointer +
+                                            param->parameter.byte_offset_from_fp];
             ffi_push_arg(&interp->ffi, arg_ptr, param_type);
         }
 
@@ -1197,13 +1233,10 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::GLOBAL: {
-                return &interp->global_data[value->global.byte_offset];
-                break;
-            }
-
-            case Bytecode_Value_Kind::ALLOCL: {
-                return &interp->stack[interp->frame_pointer + value->allocl.byte_offset_from_fp];
+            case Bytecode_Value_Kind::GLOBAL:
+            case Bytecode_Value_Kind::ALLOCL:
+            case Bytecode_Value_Kind::PARAM: {
+                assert(false);
                 break;
             }
 
@@ -1235,14 +1268,6 @@ namespace Zodiac
 
             case Bytecode_Value_Kind::NULL_LITERAL: {
                 return (void*)&interp->null_pointer;
-                break;
-            }
-
-            case Bytecode_Value_Kind::PARAM: {
-                assert(value->parameter.byte_offset_from_fp < 0);
-                auto result = &interp->stack[interp->frame_pointer +
-                                      value->parameter.byte_offset_from_fp];
-                return result;
                 break;
             }
 

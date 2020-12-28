@@ -93,4 +93,36 @@ namespace Zodiac
         uint8_t *ptr = &interp->stack[interp->sp];
         return *(T *)ptr;
     }
+
+#define INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, val, name) \
+    void *name; \
+    switch (val->kind) { \
+        default: assert(false && !"default"); \
+        case Bytecode_Value_Kind::ALLOCL: { \
+            void *tmp = &interp->stack[interp->frame_pointer + val->allocl.byte_offset_from_fp]; \
+            name = &tmp; \
+            break; \
+        } \
+        case Bytecode_Value_Kind::PARAM: { \
+            void *tmp = &interp->stack[interp->frame_pointer + \
+                                       val->parameter.byte_offset_from_fp]; \
+            name = &tmp; \
+            break; \
+        } \
+        case Bytecode_Value_Kind::GLOBAL: { \
+            void *tmp = &interp->global_data[val->global.byte_offset]; \
+            name = &tmp; \
+            break; \
+        } \
+        case Bytecode_Value_Kind::TEMP: \
+        case Bytecode_Value_Kind::INTEGER_LITERAL: \
+        case Bytecode_Value_Kind::BOOL_LITERAL: \
+        case Bytecode_Value_Kind::FLOAT_LITERAL: \
+        case Bytecode_Value_Kind::NULL_LITERAL: \
+        case Bytecode_Value_Kind::STRING_LITERAL: { \
+            name = interpreter_load_lvalue(interp, val); \
+            break;                                     \
+        } \
+    }
+
 }

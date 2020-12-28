@@ -55,7 +55,11 @@ main :: func () -> s64
     std.print("\n");
     print_player(*p);
 
-
+    // p.x = 55;
+    // p.y = 77;
+    // print_entity(*p.entity);
+    // print_player(*p);
+ 
     return 0;
 }
 

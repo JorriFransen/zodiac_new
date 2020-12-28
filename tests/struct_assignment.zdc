@@ -27,17 +27,6 @@ main :: func() -> s64
     member_assignment();
     member_struct_assignment();
 
-    // v1 := make_vec2(11, 22);
-
-    // r1 : Rect;
-    // r1.p1 = v1;
-
-    // v1.y = 66;
-
-    // r1.p2 = make_vec2(33, 44);
-
-    // return r1.p2.x + r1.p2.y;
-
     return 0;
 }
 
