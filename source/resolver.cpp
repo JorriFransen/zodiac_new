@@ -1420,7 +1420,10 @@ namespace Zodiac
                                        ident->begin_file_pos, ident->end_file_pos);
 
                 auto redecl = scope_find_declaration(struct_scope, link_ident->atom);
-                assert(!redecl);
+                if (!redecl) {
+                    // @TODO: Report error
+                    assert(false);
+                }
 
                 AST_Type *type = member_being_imported->type;
 
