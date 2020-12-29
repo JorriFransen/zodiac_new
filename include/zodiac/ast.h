@@ -93,7 +93,7 @@ namespace Zodiac
         STATIC_IF,
         STATIC_ASSERT,
 
-        IMPORT_REF,
+        IMPORT_LINK,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -225,10 +225,8 @@ namespace Zodiac
 
             struct
             {
-                AST_Declaration *referring_to;
                 AST_Declaration *decl_being_used;
-                int64_t index_in_decl_being_used;
-            } import_ref;
+            } import_link;
         };
     };
 
@@ -812,12 +810,13 @@ namespace Zodiac
                                                         const File_Pos &bfp,
                                                         const File_Pos &efp);
 
-    AST_Declaration *ast_import_reference_new(Allocator *allocator, AST_Identifier *identifier,
-                                              AST_Declaration *referring_to,
-                                              AST_Declaration *found_in,
-                                              Scope *scope,
-                                              const File_Pos &bfp,
-                                              const File_Pos &efp);
+    AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
+                                                     AST_Identifier *identifier,
+                                                     AST_Declaration *decl_being_used,
+                                                     AST_Type *type,
+                                                     Scope *scope,
+                                                     const File_Pos &bfp,
+                                                     const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,

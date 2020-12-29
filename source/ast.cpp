@@ -1733,8 +1733,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::IMPORT_REF: assert(false);
-
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
@@ -2348,19 +2347,23 @@ namespace Zodiac
         return result;
     }
 
-    AST_Declaration *ast_import_reference_new(Allocator *allocator, AST_Identifier *identifier,
-                                              AST_Declaration *referring_to,
-                                              AST_Declaration *found_in,
-                                              Scope *scope,
-                                              const File_Pos &bfp,
-                                              const File_Pos &efp)
+    AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
+                                                     AST_Identifier *identifier,
+                                                     AST_Declaration *decl_being_used,
+                                                     AST_Type *type,
+                                                     Scope *scope,
+                                                     const File_Pos &bfp,
+                                                     const File_Pos &efp)
     {
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT_REF,
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT_LINK,
                                           identifier, scope, bfp, efp);
 
-        result->import_ref.referring_to = referring_to;
-        result->import_ref.decl_being_used = found_in;
-        result->import_ref.index_in_decl_being_used = -1;
+        result->import_link.decl_being_used = decl_being_used;
+
+        result->type = type;
+
+        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        result->flags |= AST_NODE_FLAG_TYPED;
 
         return result;
     }
@@ -3372,8 +3375,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::IMPORT_REF: assert(false);
-
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
@@ -3964,8 +3966,7 @@ namespace Zodiac
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
-            case AST_Declaration_Kind::IMPORT_REF: assert(false);
-
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
