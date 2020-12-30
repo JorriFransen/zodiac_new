@@ -2350,6 +2350,7 @@ namespace Zodiac
     AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
                                                      AST_Identifier *identifier,
                                                      AST_Declaration *decl_being_used,
+                                                     int64_t index_in_decl_being_used,
                                                      AST_Type *type,
                                                      Scope *scope,
                                                      const File_Pos &bfp,
@@ -2359,6 +2360,7 @@ namespace Zodiac
                                           identifier, scope, bfp, efp);
 
         result->import_link.decl_being_used = decl_being_used;
+        result->import_link.index_in_decl_being_used = index_in_decl_being_used;
 
         result->type = type;
 

@@ -1049,6 +1049,10 @@ namespace Zodiac
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
             case AST_Expression_Kind::DOT: {
+                assert(expr->dot.child_decl);
+                assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE ||
+                    expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+
                 auto parent_expr = expr->dot.parent_expression;
 
                 Bytecode_Value *parent_lvalue = bytecode_emit_lvalue(builder, parent_expr);
@@ -1073,7 +1077,18 @@ namespace Zodiac
                 AST_Type *result_type =
                     build_data_find_or_create_pointer_type(builder->allocator,
                                                            builder->build_data, expr->type);
+
                 assert(result_type);
+
+                AST_Type *type_of_first_load = result_type;
+                if (expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
+                    auto type = expr->dot.child_decl->import_link.decl_being_used->type;
+                    assert(type->kind == AST_Type_Kind::STRUCTURE);
+                    type_of_first_load =
+                        build_data_find_or_create_pointer_type(builder->allocator,
+                                                               builder->build_data,
+                                                               type);
+                }
 
                 if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
                     Integer_Literal il = { .u32 = (uint32_t)expr->dot.child_index };
@@ -1081,7 +1096,7 @@ namespace Zodiac
                                                                                Builtin::type_u32,
                                                                                il);
 
-                    result = bytecode_temporary_new(builder, result_type);
+                    result = bytecode_temporary_new(builder, type_of_first_load);
                     bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue, index_value,
                                               result);
                 } else if (aggregate_type->kind == AST_Type_Kind::UNION) {
@@ -1095,9 +1110,26 @@ namespace Zodiac
                     assert(false);
                 }
 
+                if (expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
+                    assert(result_type != type_of_first_load);
+
+                    auto index_in_imported =
+                        expr->dot.child_decl->import_link.index_in_decl_being_used;
+
+                    assert(index_in_imported >= 0);
+                    assert(index_in_imported <= UINT32_MAX);
+
+                    Integer_Literal il = { .u32 = (uint32_t)index_in_imported };
+                    Bytecode_Value *index_val =
+                        bytecode_integer_literal_new(builder,Builtin::type_u32, il);
+
+                    Bytecode_Value *pointer_to_used = result;
+                    result = bytecode_temporary_new(builder, result_type);
+                    bytecode_emit_instruction(builder, AGG_OFFSET, pointer_to_used, index_val,
+                                              result);
+                }
+
                 assert(result);
-                assert(expr->dot.child_decl);
-                assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
                 break;
             }
 

@@ -226,6 +226,7 @@ namespace Zodiac
             struct
             {
                 AST_Declaration *decl_being_used;
+                int64_t index_in_decl_being_used;
             } import_link;
         };
     };
@@ -813,6 +814,7 @@ namespace Zodiac
     AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
                                                      AST_Identifier *identifier,
                                                      AST_Declaration *decl_being_used,
+                                                     int64_t index_in_decl_being_used,
                                                      AST_Type *type,
                                                      Scope *scope,
                                                      const File_Pos &bfp,
