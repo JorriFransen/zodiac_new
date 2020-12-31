@@ -353,9 +353,18 @@ namespace Zodiac
     {
         AST_EXPR_FLAG_NONE             = 0x00,
         AST_EXPR_FLAG_CONST            = 0x01,
-        AST_EXPR_FLAG_DOT_COUNT        = 0x02,
-        AST_EXPR_FLAG_RECURSIVE_IDENT  = 0x04,
-        AST_EXPR_FLAG_IDENT_USES_FN_TS = 0x08,
+        AST_EXPR_FLAG_RECURSIVE_IDENT  = 0x02,
+        AST_EXPR_FLAG_IDENT_USES_FN_TS = 0x04,
+    };
+
+    enum class AST_Dot_Expression_Kind
+    {
+        INVALID,
+        UNKNOWN,
+        AGGREGATE_OFFSET,
+        ARRAY_COUNT,
+        ENUM_MEMBER,
+        MODULE_MEMBER,
     };
 
     struct AST_Expression : public AST_Node
@@ -381,6 +390,8 @@ namespace Zodiac
 
             struct
             {
+                AST_Dot_Expression_Kind kind = AST_Dot_Expression_Kind::INVALID;
+
                 AST_Expression *parent_expression;
                 AST_Identifier *child_identifier;
 
@@ -898,12 +909,10 @@ namespace Zodiac
                                                        const File_Pos &begin_fp,
                                                        const File_Pos &end_fp);
 
-    AST_Expression *ast_dot_expression_new(Allocator *allocator,
+    AST_Expression *ast_dot_expression_new(Allocator *allocator, AST_Dot_Expression_Kind kind,
                                            AST_Expression *parent_expr,
-                                           AST_Identifier *child_ident,
-                                           Scope *scope,
-                                           const File_Pos &begin_fp,
-                                           const File_Pos &end_fp);
+                                           AST_Identifier *child_ident, Scope *scope,
+                                           const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Expression *ast_binary_expression_new(Allocator *allocator, Binary_Operator op,
                                               AST_Expression *lhs, AST_Expression *rhs,

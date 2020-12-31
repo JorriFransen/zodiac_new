@@ -1895,6 +1895,9 @@ namespace Zodiac
                     assert(child_decl->type);
                     assert(child_decl->flags & AST_NODE_FLAG_TYPED);
 
+                    assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN);
+                    expression->dot.kind = AST_Dot_Expression_Kind::MODULE_MEMBER;
+
                     expression->dot.child_decl = child_decl;
                     expression->type = child_decl->type;
                     expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -1908,7 +1911,11 @@ namespace Zodiac
                     AST_Type *parent_type = parent_decl->type;
                     if (parent_type->kind == AST_Type_Kind::ARRAY) {
                         if (child_ident->atom == Builtin::atom_count) {
-                            expression->expr_flags |= AST_EXPR_FLAG_DOT_COUNT;
+
+                            assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN ||
+                                   expression->dot.kind == AST_Dot_Expression_Kind::ARRAY_COUNT);
+                            expression->dot.kind = AST_Dot_Expression_Kind::ARRAY_COUNT;
+
                             expression->type = Builtin::type_s64;
                             expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                             expression->flags |= AST_NODE_FLAG_TYPED;
@@ -1963,12 +1970,19 @@ namespace Zodiac
                         }
                         assert(found);
 
+                        assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN ||
+                               expression->dot.kind == AST_Dot_Expression_Kind::ENUM_MEMBER);
+                        expression->dot.kind = AST_Dot_Expression_Kind::ENUM_MEMBER;
+
                         expression->dot.child_decl = child_ident->declaration;
                         expression->type = child_decl->type;
                         expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
                         expression->flags |= AST_NODE_FLAG_TYPED;
                         break;
                     } else {
+                        assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN ||
+                               expression->dot.kind == AST_Dot_Expression_Kind::AGGREGATE_OFFSET);
+                        expression->dot.kind = AST_Dot_Expression_Kind::AGGREGATE_OFFSET;
                         return try_resolve_aggregate_dereference(resolver, parent_type,
                                                                  expression);
                     }
@@ -3416,7 +3430,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             case AST_Expression_Kind::IDENTIFIER:
             case AST_Expression_Kind::DOT: {
-                if (expr->expr_flags & AST_EXPR_FLAG_DOT_COUNT) {
+                if (expr->dot.kind == AST_Dot_Expression_Kind::ARRAY_COUNT) {
                     is_const = true;
                 } else {
                     auto decl = resolver_get_declaration(expr);
@@ -3934,6 +3948,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                                                    begin_fp, end_fp);
 
                             new_expr = ast_dot_expression_new(resolver->allocator,
+                                                              AST_Dot_Expression_Kind::ENUM_MEMBER,
                                                               parent_expr, child_ident,
                                                               switch_scope,
                                                               begin_fp, end_fp);

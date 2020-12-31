@@ -750,46 +750,55 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT: {
 
-                AST_Declaration *parent_decl =
-                    resolver_get_declaration(expr->dot.parent_expression);
+                switch (expr->dot.kind) {
+                    case AST_Dot_Expression_Kind::INVALID: assert(false);
+                    case AST_Dot_Expression_Kind::UNKNOWN: assert(false);
 
-                if (expr->dot.child_decl &&
-                    (expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT)) {
-                    auto decl = expr->dot.child_decl;
-                    auto init_expr = decl->constant.init_expression;
-                    result = bytecode_emit_expression(builder, init_expr);
-
-                    if (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER &&
-                        result->type->kind != AST_Type_Kind::ENUM) {
-                        assert(result->type->kind == AST_Type_Kind::INTEGER);
-                        assert(result->type == expr->type->enum_type.base_type);
-                        result->type = expr->type;
+                    case AST_Dot_Expression_Kind::AGGREGATE_OFFSET: {
+                        Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
+                        result = bytecode_emit_load(builder, lvalue);
+                        break;
                     }
-                } else if (expr->expr_flags & AST_EXPR_FLAG_DOT_COUNT) {
 
-                    auto parent_expr = expr->dot.parent_expression;
-                    AST_Declaration *parent_decl = nullptr;
+                    case AST_Dot_Expression_Kind::ARRAY_COUNT: {
+                        auto parent_expr = expr->dot.parent_expression;
+                        AST_Declaration *parent_decl = nullptr;
 
-                    if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER) {
-                        parent_decl = parent_expr->identifier->declaration;
-                    } else {
+                        if (parent_expr->kind == AST_Expression_Kind::IDENTIFIER) {
+                            parent_decl = parent_expr->identifier->declaration;
+                        } else {
+                            assert(false);
+                        }
+
+                        auto parent_type = parent_decl->type;
+                        assert(parent_type);
+                        assert(parent_type->kind == AST_Type_Kind::ARRAY);
+
+                        auto element_count = parent_type->array.element_count;
+                        Integer_Literal il = { .s64 = element_count };
+                        result = bytecode_integer_literal_new(builder, expr->type, il);
+                        break;
+                    }
+
+                    case AST_Dot_Expression_Kind::ENUM_MEMBER: {
+                        assert(expr->dot.child_decl);
+                        assert(expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT);
+
+                        auto decl = expr->dot.child_decl;
+                        auto init_expr = decl->constant.init_expression;
+                        result = bytecode_emit_expression(builder, init_expr);
+
+                        assert(decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER);
+                        assert(result->type->kind == AST_Type_Kind::ENUM);
+                        break;
+                    }
+
+                    case AST_Dot_Expression_Kind::MODULE_MEMBER: {
+                        // At the moment we only do this with functions, which are
+                        //  handled elsewhere.
                         assert(false);
+                        break;
                     }
-
-                    auto parent_type = parent_decl->type;
-                    assert(parent_type);
-                    assert(parent_type->kind == AST_Type_Kind::ARRAY);
-
-                    auto element_count = parent_type->array.element_count;
-                    Integer_Literal il = { .s64 = element_count };
-                    result = bytecode_integer_literal_new(builder, expr->type, il);
-                } else if (parent_decl && parent_decl->kind == AST_Declaration_Kind::IMPORT) {
-                    assert(expr->dot.child_identifier);
-                    assert(expr->dot.child_decl);
-                    result = bytecode_emit_identifier(builder, expr->dot.child_identifier);
-                } else {
-                    Bytecode_Value *lvalue = bytecode_emit_lvalue(builder, expr);
-                    result = bytecode_emit_load(builder, lvalue);
                 }
 
                 assert(result);
@@ -1047,6 +1056,7 @@ namespace Zodiac
             case AST_Expression_Kind::POLY_IDENTIFIER: assert(false);
 
             case AST_Expression_Kind::DOT: {
+                assert(expr->dot.kind == AST_Dot_Expression_Kind::AGGREGATE_OFFSET);
                 assert(expr->dot.child_decl);
                 assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
 
@@ -1077,17 +1087,16 @@ namespace Zodiac
 
                 assert(result_type);
 
-                AST_Type *type_of_first_load = result_type;
-
                 if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
                     Integer_Literal il = { .u32 = (uint32_t)expr->dot.child_index };
                     Bytecode_Value *index_value = bytecode_integer_literal_new(builder,
                                                                                Builtin::type_u32,
                                                                                il);
 
-                    result = bytecode_temporary_new(builder, type_of_first_load);
+                    result = bytecode_temporary_new(builder, result_type);
                     bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue, index_value,
                                               result);
+
                 } else if (aggregate_type->kind == AST_Type_Kind::UNION) {
                     assert(parent_lvalue->type->kind == AST_Type_Kind::POINTER);
                     assert(parent_lvalue->type->pointer.base->kind == AST_Type_Kind::UNION);

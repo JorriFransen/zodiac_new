@@ -937,8 +937,10 @@ namespace Zodiac
                 auto count_ident = ast_identifier_new(ast_builder->allocator, Builtin::atom_count,
                                                       for_scope, ii_bfp, ii_efp);
 
-                auto cond_rhs = ast_dot_expression_new(ast_builder->allocator, array_expr,
-                                                       count_ident, for_scope, ii_bfp, ii_efp);
+                auto cond_rhs = ast_dot_expression_new(ast_builder->allocator,
+                                                       AST_Dot_Expression_Kind::ARRAY_COUNT,
+                                                       array_expr, count_ident, for_scope,
+                                                       ii_bfp, ii_efp);
 
                 auto cond_expr = ast_binary_expression_new(ast_builder->allocator,
                                                            BINOP_LT,
@@ -1223,8 +1225,9 @@ namespace Zodiac
                                                    scope);
                 assert(ast_child_ident);
 
-                return ast_dot_expression_new(ast_builder->allocator, ast_parent_expr,
-                                              ast_child_ident, scope,
+                return ast_dot_expression_new(ast_builder->allocator,
+                                              AST_Dot_Expression_Kind::UNKNOWN,
+                                              ast_parent_expr, ast_child_ident, scope,
                                               begin_fp, end_fp);
                 break;
             }
@@ -2577,13 +2580,17 @@ namespace Zodiac
         return result;
     }
 
-    AST_Expression *ast_dot_expression_new(Allocator *allocator, AST_Expression *parent_expr,
+    AST_Expression *ast_dot_expression_new(Allocator *allocator, AST_Dot_Expression_Kind kind,
+                                           AST_Expression *parent_expr,
                                            AST_Identifier *child_ident, Scope *scope,
                                            const File_Pos &begin_fp, const File_Pos &end_fp)
     {
         auto result = ast_expression_new(allocator, AST_Expression_Kind::DOT, scope,
                                          begin_fp, end_fp);
 
+        assert(kind != AST_Dot_Expression_Kind::INVALID);
+
+        result->dot.kind = kind;
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
         result->dot.child_decl = nullptr;
