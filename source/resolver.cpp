@@ -1337,8 +1337,6 @@ namespace Zodiac
                 return true;
                 break;
             }
-
-            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
 
         assert(false);
@@ -1388,57 +1386,6 @@ namespace Zodiac
             assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
 
             array_append(&declaration->type->structure.member_types, member_decl->type);
-        }
-
-        Scope *struct_scope = declaration->structure.member_scope;
-
-        for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
-
-            AST_Identifier *ident = declaration->structure.usings[i];
-            AST_Declaration *member_being_used = scope_find_declaration(struct_scope, ident);
-
-            assert(member_being_used);
-            assert(member_being_used->kind == AST_Declaration_Kind::VARIABLE);
-
-            AST_Type *type_being_used = member_being_used->type;
-            assert(type_being_used->kind == AST_Type_Kind::STRUCTURE);
-
-            AST_Declaration *struct_being_imported = type_being_used->structure.declaration;
-            assert(struct_being_imported->kind == AST_Declaration_Kind::STRUCTURE);
-
-            for (int64_t i = 0; i < struct_being_imported->structure.member_declarations.count;
-                    i++)
-            {
-                AST_Declaration *member_being_imported =
-                    struct_being_imported->structure.member_declarations[i];
-                assert(member_being_imported->kind == AST_Declaration_Kind::VARIABLE);
-
-                AST_Identifier *link_ident =
-                    ast_identifier_new(resolver->allocator,
-                                       member_being_imported->identifier->atom,
-                                       struct_scope,
-                                       ident->begin_file_pos, ident->end_file_pos);
-
-                auto redecl = scope_find_declaration(struct_scope, link_ident->atom);
-                if (redecl) {
-                    // @TODO: Report error
-                    assert(false);
-                }
-
-                AST_Type *type = member_being_imported->type;
-
-                auto index_in_member_being_used = i;
-
-                AST_Declaration *import_link_decl =
-                    ast_import_link_declaration_new(resolver->allocator, link_ident,
-                                                    member_being_used,
-                                                    index_in_member_being_used,
-                                                    type,
-                                                    struct_scope,
-                                                    ident->begin_file_pos, ident->end_file_pos);
-
-                scope_add_declaration(struct_scope, import_link_decl);
-            }
         }
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2724,20 +2671,12 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE ||
                aggregate_decl->kind == AST_Declaration_Kind::UNION);
 
-        AST_Declaration* actual_decl_to_find = child_decl;
-        if (child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
-            assert(child_decl->import_link.decl_being_used);
-            actual_decl_to_find = child_decl->import_link.decl_being_used;
-        } else {
-            actual_decl_to_find = child_decl;
-        }
-        assert(actual_decl_to_find);
 
         bool index_found = false;
         int64_t index = -1;
         for (int64_t i = 0; i < member_decls.count; i++) {
 
-            if (actual_decl_to_find == member_decls[i]) {
+            if (child_decl == member_decls[i]) {
                 assert(!index_found);
                 index_found = true;
                 index = i;
@@ -2999,8 +2938,6 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
-
-            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
 
         assert(false);

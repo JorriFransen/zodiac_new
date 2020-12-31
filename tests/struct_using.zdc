@@ -17,12 +17,12 @@ Entity :: struct
     using position;
 }
 
-// Player :: struct
-// {
-//     using entity : Entity;
+Player :: struct
+{
+    using entity : Entity;
 
-//     health : u64;
-// }
+    health : u64;
+}
 
 main :: func () -> s64
 {
@@ -35,34 +35,34 @@ main :: func () -> s64
     e = create_entity("dummy", 1, 2);
     print_entity(*e);
     std.print("\n");
-    e.x = 777;
-    e.y = 888;
+    // e.x = 777;
+    // e.y = 888;
     print_entity(*e);
     std.print("\n");
 
     std.print("\n");
 
-    // p : Player;
-    // print_entity(*p.entity);
-    // std.print("\n");
-    // print_player(*p);
+    p : Player;
+    print_entity(*p.entity);
+    std.print("\n");
+    print_player(*p);
 
-    // p = create_player("Joe", 11, 22);
-    // print_entity(*p.entity);
-    // std.print("\n");
-    // print_player(*p);
+    p = create_player("Joe", 11, 22);
+    print_entity(*p.entity);
+    std.print("\n");
+    print_player(*p);
 
-    // std.print("\n");
+    std.print("\n");
 
-    // p.entity = create_entity("Joey", 12, 23);
-    // print_entity(*p.entity);
-    // std.print("\n");
-    // print_player(*p);
+    p.entity = create_entity("Joey", 12, 23);
+    print_entity(*p.entity);
+    std.print("\n");
+    print_player(*p);
 
     // p.x = 55;
     // p.y = 77;
-    // print_entity(*p.entity);
-    // print_player(*p);
+    print_entity(*p.entity);
+    print_player(*p);
 
     return 0;
 }
@@ -81,13 +81,13 @@ create_entity :: func (name: *u8, x: s64, y: s64) -> Entity
     return result;
 }
 
-// create_player :: func (name: *u8, x: s64, y: s64) -> Player
-// {
-//     result : Player;
-//     result.entity = create_entity(name, x, y);
-//     result.health = 100;
-//     return result;
-// }
+create_player :: func (name: *u8, x: s64, y: s64) -> Player
+{
+    result : Player;
+    result.entity = create_entity(name, x, y);
+    result.health = 100;
+    return result;
+}
 
 print_entity :: func (e: *Entity)
 {
@@ -106,17 +106,17 @@ print_entity :: func (e: *Entity)
     std.print(")");
 }
 
-// print_player :: func (p : *Player)
-// {
-//     std.print("Player: ");
-//     if (p.name) {
-//         std.print("'");
-//         std.print(p.name);
-//         std.print("'");
-//     }
-//     std.print(" (health: ");
-//     std.print_num(@cast(s64, p.health));
-//     std.print(", ");
-//     print_entity(*p.entity);
-//     std.print(")\n");
-// }
+print_player :: func (p : *Player)
+{
+    std.print("Player: ");
+    if (p.entity.name) {
+        std.print("'");
+        std.print(p.entity.name);
+        std.print("'");
+    }
+    std.print(" (health: ");
+    std.print_num(@cast(s64, p.health));
+    std.print(", ");
+    print_entity(*p.entity);
+    std.print(")\n");
+}

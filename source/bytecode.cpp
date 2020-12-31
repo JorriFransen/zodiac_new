@@ -439,8 +439,6 @@ namespace Zodiac
             case AST_Declaration_Kind::RUN: assert(false);
             case AST_Declaration_Kind::STATIC_IF: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false); //@@TODO: Implement!
-
-            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
@@ -1050,8 +1048,7 @@ namespace Zodiac
 
             case AST_Expression_Kind::DOT: {
                 assert(expr->dot.child_decl);
-                assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE ||
-                    expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+                assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
 
                 auto parent_expr = expr->dot.parent_expression;
 
@@ -1081,14 +1078,6 @@ namespace Zodiac
                 assert(result_type);
 
                 AST_Type *type_of_first_load = result_type;
-                if (expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
-                    auto type = expr->dot.child_decl->import_link.decl_being_used->type;
-                    assert(type->kind == AST_Type_Kind::STRUCTURE);
-                    type_of_first_load =
-                        build_data_find_or_create_pointer_type(builder->allocator,
-                                                               builder->build_data,
-                                                               type);
-                }
 
                 if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
                     Integer_Literal il = { .u32 = (uint32_t)expr->dot.child_index };
@@ -1108,25 +1097,6 @@ namespace Zodiac
                                               result);
                 } else {
                     assert(false);
-                }
-
-                if (expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
-                    assert(result_type != type_of_first_load);
-
-                    auto index_in_imported =
-                        expr->dot.child_decl->import_link.index_in_decl_being_used;
-
-                    assert(index_in_imported >= 0);
-                    assert(index_in_imported <= UINT32_MAX);
-
-                    Integer_Literal il = { .u32 = (uint32_t)index_in_imported };
-                    Bytecode_Value *index_val =
-                        bytecode_integer_literal_new(builder,Builtin::type_u32, il);
-
-                    Bytecode_Value *pointer_to_used = result;
-                    result = bytecode_temporary_new(builder, result_type);
-                    bytecode_emit_instruction(builder, AGG_OFFSET, pointer_to_used, index_val,
-                                              result);
                 }
 
                 assert(result);
