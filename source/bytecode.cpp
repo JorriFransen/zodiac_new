@@ -796,9 +796,9 @@ namespace Zodiac
                     }
 
                     case AST_Dot_Expression_Kind::MODULE_MEMBER: {
-                        // At the moment we only do this with functions, which are
-                        //  handled elsewhere.
-                        assert(false);
+                        assert(expr->dot.child_identifier);
+                        assert(expr->dot.child_decl);
+                        result = bytecode_emit_identifier(builder, expr->dot.child_identifier);
                         break;
                     }
                 }
