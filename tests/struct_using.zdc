@@ -35,7 +35,7 @@ main :: func () -> s64
     e = create_entity("dummy", 1, 2);
     print_entity(*e);
     std.print("\n");
-    // e.x = 777;
+    e.x = 777;
     // e.y = 888;
     print_entity(*e);
     std.print("\n");

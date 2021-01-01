@@ -1735,6 +1735,8 @@ namespace Zodiac
                 array_append(nodes, node);
                 break;
             }
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
     }
 
@@ -2345,6 +2347,30 @@ namespace Zodiac
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STATIC_ASSERT,
                                           nullptr, scope, bfp, efp);
         result->static_assert_decl.cond_expression = cond_expr;
+        return result;
+    }
+
+    AST_Declaration  *ast_using_link_declaration_new(Allocator *allocator, AST_Identifier *ident,
+                                                     AST_Declaration *parent, AST_Declaration *child,
+                                                     int64_t child_index, AST_Type *type,
+                                                     const File_Pos &bfp, const File_Pos &efp)
+    {
+        assert(parent->kind == AST_Declaration_Kind::VARIABLE);
+        assert(parent->type->kind == AST_Type_Kind::STRUCTURE);
+        assert(child->kind == AST_Declaration_Kind::VARIABLE);
+
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::USING_LINK,
+                                          ident, ident->scope, bfp, efp);
+
+        result->type = type;
+
+        result->using_link.parent = parent;
+        result->using_link.child = child;
+        result->using_link.child_index = child_index;
+
+        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        result->flags |= AST_NODE_FLAG_TYPED;
+
         return result;
     }
 
@@ -3358,6 +3384,8 @@ namespace Zodiac
                 printf(");");
                 break;
             }
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
     }
 
@@ -3947,6 +3975,8 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_IF: assert(false);
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
     }
 

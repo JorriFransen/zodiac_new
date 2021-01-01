@@ -439,6 +439,8 @@ namespace Zodiac
             case AST_Declaration_Kind::RUN: assert(false);
             case AST_Declaration_Kind::STATIC_IF: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false); //@@TODO: Implement!
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
     }
 

@@ -1337,6 +1337,8 @@ namespace Zodiac
                 return true;
                 break;
             }
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
 
         assert(false);
@@ -1387,6 +1389,9 @@ namespace Zodiac
 
             array_append(&declaration->type->structure.member_types, member_decl->type);
         }
+
+        resolver_import_struct_usings(resolver, declaration, declaration, 0);
+        printf("\n");
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
         declaration->flags |= AST_NODE_FLAG_TYPED;
@@ -2621,6 +2626,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                                            AST_Expression *dot_expr)
     {
         assert(dot_expr->kind == AST_Expression_Kind::DOT);
+        assert(dot_expr->dot.kind == AST_Dot_Expression_Kind::AGGREGATE_OFFSET);
 
         if (aggregate_type->kind != AST_Type_Kind::STRUCTURE &&
             aggregate_type->kind != AST_Type_Kind::UNION) {
@@ -2685,22 +2691,42 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         assert(aggregate_decl->kind == AST_Declaration_Kind::STRUCTURE ||
                aggregate_decl->kind == AST_Declaration_Kind::UNION);
 
+        if (child_decl->kind == AST_Declaration_Kind::VARIABLE) {
+            bool index_found = false;
+            int64_t index = -1;
+            for (int64_t i = 0; i < member_decls.count; i++) {
 
-        bool index_found = false;
-        int64_t index = -1;
-        for (int64_t i = 0; i < member_decls.count; i++) {
-
-            if (child_decl == member_decls[i]) {
-                assert(!index_found);
-                index_found = true;
-                index = i;
-                break;
+                if (child_decl == member_decls[i]) {
+                    assert(!index_found);
+                    index_found = true;
+                    index = i;
+                    break;
+                }
             }
-        }
-        assert(index_found);
-        assert(index >= 0);
+            assert(index_found);
+            assert(index >= 0);
 
-        dot_expr->dot.child_index = index;
+            dot_expr->dot.child_index = index;
+        } else if (child_decl->kind == AST_Declaration_Kind::USING_LINK) {
+            bool index_found = false;
+            int64_t index = -1;
+            for (int64_t i = 0; i < member_decls.count; i++) {
+
+                if (child_decl->using_link.parent == member_decls[i]) {
+                    assert(!index_found);
+                    index_found = true;
+                    index = i;
+                    break;
+                }
+            }
+            assert(index_found);
+            assert(index >= 0);
+
+            dot_expr->dot.child_index = index;
+        } else {
+            assert(false);
+        }
+
         dot_expr->dot.child_decl = child_decl;
         dot_expr->type = child_decl->type;
         dot_expr->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2952,6 +2978,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::USING_LINK: assert(false);
         }
 
         assert(false);
@@ -3308,6 +3336,62 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
             type_spec->flags |= AST_NODE_FLAG_SIZED;
             return true;
+    }
+
+    void resolver_import_struct_usings(Resolver *resolver, AST_Declaration *target_decl, AST_Declaration *source_decl, int indent)
+    {
+        assert(target_decl->kind == AST_Declaration_Kind::STRUCTURE);
+        assert(source_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+        Scope *target_scope = target_decl->structure.member_scope;
+        Scope *source_scope = source_decl->structure.member_scope;
+
+        if (source_decl->structure.usings.count) {
+            for (int x = 0; x < indent; x++) printf("  ");
+            printf("Importing struct usings for: %s\n", source_decl->identifier->atom.data);
+        }
+
+        for (int64_t i = 0; i < source_decl->structure.usings.count; i++) {
+
+            AST_Identifier *used_member_ident = source_decl->structure.usings[i];
+            AST_Declaration *used_member_decl = scope_find_declaration(source_scope, used_member_ident);
+            for (int x = 0; x < indent; x++) printf("  ");
+            printf("Using member with name: %s\n", used_member_decl->identifier->atom.data);
+
+            assert(used_member_decl->kind == AST_Declaration_Kind::VARIABLE);
+            AST_Type *used_member_type = used_member_decl->type;
+            assert(used_member_type->kind == AST_Type_Kind::STRUCTURE);
+
+            for (int x = 0; x < indent; x++) printf("  ");
+            printf("  Using type: %s\n", used_member_type->structure.declaration->identifier->atom.data);
+
+            AST_Declaration *used_mem_type_decl = used_member_type->structure.declaration;
+            for (int64_t i = 0; i < used_mem_type_decl->structure.member_declarations.count; i++) {
+                AST_Declaration *member_to_import = used_mem_type_decl->structure.member_declarations[i];
+                for (int x = 0; x < indent; x++) printf("  ");
+                printf("    Importing member: %s\n", member_to_import->identifier->atom.data);
+
+                AST_Identifier *ident_copy = ast_identifier_new(resolver->allocator, member_to_import->identifier->atom,
+                        target_scope, member_to_import->begin_file_pos, member_to_import->end_file_pos);
+
+                AST_Declaration *using_link = ast_using_link_declaration_new(resolver->allocator, ident_copy,
+                                                                             used_member_decl, member_to_import, i,
+                                                                             member_to_import->type,
+                                                                             ident_copy->begin_file_pos,
+                                                                             ident_copy->end_file_pos);
+
+                auto redecl = scope_find_declaration(target_scope, using_link->identifier);
+                if (redecl) {
+                    assert(false);
+                } else {
+                    scope_add_declaration(target_scope, using_link);
+                }
+            }
+
+            if (used_mem_type_decl->structure.usings.count) {
+                resolver_import_struct_usings(resolver, target_decl, used_mem_type_decl, indent + 1);
+            }
+        }
     }
 
     AST_Type *infer_type(AST_Node *ast_node)
