@@ -2223,6 +2223,7 @@ namespace Zodiac
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
         result->structure.usings = usings;
+        result->structure.imported_by_using = {};
 
         result->structure.parameter_scope = param_scope;
         result->structure.member_scope = mem_scope;
