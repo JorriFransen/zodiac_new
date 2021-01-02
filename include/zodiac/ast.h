@@ -178,9 +178,10 @@ namespace Zodiac
 
             struct
             {
-                Array<AST_Declaration*> member_declarations;
-                Array<AST_Declaration*> parameters;
+                Array<AST_Declaration *> member_declarations;
+                Array<AST_Declaration *> parameters;
                 Array<AST_Identifier *> usings;
+                Array<AST_Declaration *> imported_by_using;
 
                 Scope *parameter_scope;
                 Scope *member_scope;
@@ -227,6 +228,7 @@ namespace Zodiac
             {
                 AST_Declaration *parent;
                 AST_Declaration *child;
+
                 uint64_t child_index;
             } using_link;
         };

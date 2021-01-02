@@ -3343,7 +3343,11 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         assert(target_decl->kind == AST_Declaration_Kind::STRUCTURE);
         assert(source_decl->kind == AST_Declaration_Kind::STRUCTURE);
 
-        Scope *target_scope = target_decl->structure.member_scope;
+        assert(target_decl->structure.imported_by_using.count == 0);
+        assert(target_decl->structure.imported_by_using.data == nullptr);
+
+        array_init(resolver->allocator, &target_decl->structure.imported_by_using);
+
         Scope *source_scope = source_decl->structure.member_scope;
 
         if (source_decl->structure.usings.count) {
@@ -3354,43 +3358,86 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         for (int64_t i = 0; i < source_decl->structure.usings.count; i++) {
 
             AST_Identifier *used_member_ident = source_decl->structure.usings[i];
-            AST_Declaration *used_member_decl = scope_find_declaration(source_scope, used_member_ident);
+            AST_Declaration *used_member_decl = scope_find_declaration(source_scope,
+                                                                       used_member_ident);
+
+            resolver_import_struct_using(resolver, target_decl, used_member_decl, indent);
+        }
+    }
+
+    void resolver_import_struct_using(Resolver *resolver, AST_Declaration *target_decl, AST_Declaration *used_mem_decl, int indent)
+    {
+        assert(target_decl);
+        assert(target_decl->kind == AST_Declaration_Kind::STRUCTURE);
+
+        auto target_scope = target_decl->structure.member_scope;
+
+        for (int x = 0; x < indent; x++) printf("  ");
+        printf("Using member with name: %s\n", used_mem_decl->identifier->atom.data);
+
+        assert(used_mem_decl->kind == AST_Declaration_Kind::VARIABLE);
+        AST_Type *used_member_type = used_mem_decl->type;
+        assert(used_member_type->kind == AST_Type_Kind::STRUCTURE);
+
+        for (int x = 0; x < indent; x++) printf("  ");
+        printf("  Using type: %s\n",
+               used_member_type->structure.declaration->identifier->atom.data);
+
+        AST_Declaration *used_mem_type_decl = used_member_type->structure.declaration;
+        for (int64_t i = 0; i < used_mem_type_decl->structure.member_declarations.count; i++) {
+
+            AST_Declaration *member_to_import =
+                used_mem_type_decl->structure.member_declarations[i];
+
             for (int x = 0; x < indent; x++) printf("  ");
-            printf("Using member with name: %s\n", used_member_decl->identifier->atom.data);
+            printf("    Importing member: %s\n", member_to_import->identifier->atom.data);
 
-            assert(used_member_decl->kind == AST_Declaration_Kind::VARIABLE);
-            AST_Type *used_member_type = used_member_decl->type;
-            assert(used_member_type->kind == AST_Type_Kind::STRUCTURE);
+            AST_Identifier *ident_copy = ast_identifier_new(resolver->allocator,
+                                                            member_to_import->identifier->atom,
+                                                            target_scope,
+                                                            member_to_import->begin_file_pos,
+                                                            member_to_import->end_file_pos);
 
+            AST_Declaration *using_link =
+                ast_using_link_declaration_new(resolver->allocator, ident_copy,
+                                               used_mem_decl, member_to_import, i,
+                                               member_to_import->type,
+                                               ident_copy->begin_file_pos,
+                                               ident_copy->end_file_pos);
+
+            auto redecl = scope_find_declaration(target_scope, using_link->identifier);
+            if (redecl) {
+                assert(false);
+            } else {
+                scope_add_declaration(target_scope, using_link);
+                array_append(&target_decl->structure.imported_by_using, using_link);
+            }
+        }
+
+        resolver_import_child_struct_usings(resolver, target_decl, used_mem_type_decl, indent);
+    }
+
+    void resolver_import_child_struct_usings(Resolver *resolver,
+                                                AST_Declaration *target_decl,
+                                                AST_Declaration *decl_being_imported,
+                                                int indent)
+    {
+        assert(decl_being_imported->kind == AST_Declaration_Kind::STRUCTURE);
+
+        auto imports_in_child = decl_being_imported->structure.imported_by_using;
+
+        for (int64_t i = 0; i < imports_in_child.count; i++) {
+
+            AST_Declaration *imported_by_using = imports_in_child[i];
+            assert(imported_by_using->kind == AST_Declaration_Kind::USING_LINK);
+            AST_Declaration *containing_mem_decl = imported_by_using->using_link.parent;
             for (int x = 0; x < indent; x++) printf("  ");
-            printf("  Using type: %s\n", used_member_type->structure.declaration->identifier->atom.data);
+            printf("    Importing member: %s (from: %s)\n",
+                   imported_by_using->identifier->atom.data,
+                   containing_mem_decl->identifier->atom.data);
 
-            AST_Declaration *used_mem_type_decl = used_member_type->structure.declaration;
-            for (int64_t i = 0; i < used_mem_type_decl->structure.member_declarations.count; i++) {
-                AST_Declaration *member_to_import = used_mem_type_decl->structure.member_declarations[i];
-                for (int x = 0; x < indent; x++) printf("  ");
-                printf("    Importing member: %s\n", member_to_import->identifier->atom.data);
+            array_append(&target_decl->structure.imported_by_using, imported_by_using);
 
-                AST_Identifier *ident_copy = ast_identifier_new(resolver->allocator, member_to_import->identifier->atom,
-                        target_scope, member_to_import->begin_file_pos, member_to_import->end_file_pos);
-
-                AST_Declaration *using_link = ast_using_link_declaration_new(resolver->allocator, ident_copy,
-                                                                             used_member_decl, member_to_import, i,
-                                                                             member_to_import->type,
-                                                                             ident_copy->begin_file_pos,
-                                                                             ident_copy->end_file_pos);
-
-                auto redecl = scope_find_declaration(target_scope, using_link->identifier);
-                if (redecl) {
-                    assert(false);
-                } else {
-                    scope_add_declaration(target_scope, using_link);
-                }
-            }
-
-            if (used_mem_type_decl->structure.usings.count) {
-                resolver_import_struct_usings(resolver, target_decl, used_mem_type_decl, indent + 1);
-            }
         }
     }
 

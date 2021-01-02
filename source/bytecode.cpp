@@ -1060,7 +1060,6 @@ namespace Zodiac
             case AST_Expression_Kind::DOT: {
                 assert(expr->dot.kind == AST_Dot_Expression_Kind::AGGREGATE_OFFSET);
                 assert(expr->dot.child_decl);
-                assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
 
                 auto parent_expr = expr->dot.parent_expression;
 
@@ -1108,6 +1107,31 @@ namespace Zodiac
                                               result);
                 } else {
                     assert(false);
+                }
+
+                if (expr->dot.child_decl->kind == AST_Declaration_Kind::USING_LINK) {
+
+                    auto old_result = result;
+                    auto parent_type = expr->dot.child_decl->using_link.parent->type;
+                    assert(parent_type->kind == AST_Type_Kind::STRUCTURE);
+                    parent_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                         builder->build_data,
+                                                                         parent_type);
+                    old_result->type = parent_type;
+
+                    result = bytecode_temporary_new(builder, result_type);
+
+                    Integer_Literal il =
+                        { .u32 = (uint32_t)expr->dot.child_decl->using_link.child_index };
+                    Bytecode_Value *index_value = bytecode_integer_literal_new(builder,
+                                                                               Builtin::type_u32,
+                                                                               il);
+
+                    bytecode_emit_instruction(builder, AGG_OFFSET, old_result, index_value,
+                                              result);
+
+                } else {
+                    assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
                 }
 
                 assert(result);
