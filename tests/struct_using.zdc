@@ -2,7 +2,6 @@
 std :: import std;
 
 #run main();
-
 Vec2 :: struct
 {
     x : s64;

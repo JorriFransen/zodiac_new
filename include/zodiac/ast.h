@@ -94,6 +94,7 @@ namespace Zodiac
         STATIC_ASSERT,
 
         USING_LINK,
+        INDIRECT_USING_LINK,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -231,6 +232,12 @@ namespace Zodiac
 
                 uint64_t child_index;
             } using_link;
+
+            struct
+            {
+                AST_Declaration *link_in_child;
+                uint64_t index_in_parent;
+            } indirect_using_link;
         };
     };
 
@@ -829,6 +836,13 @@ namespace Zodiac
                                                      AST_Declaration *parent, AST_Declaration *child,
                                                      int64_t child_index, AST_Type *type,
                                                      const File_Pos &bfp, const File_Pos &efp);
+
+    AST_Declaration  *ast_indirect_using_link_declaration_new(Allocator *allocator,
+                                                              AST_Identifier *ident,
+                                                              AST_Declaration *link_in_child,
+                                                              uint64_t index_in_parent,
+                                                              const File_Pos &bfp,
+                                                              const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,

@@ -1339,6 +1339,7 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::USING_LINK: assert(false);
+            case AST_Declaration_Kind::INDIRECT_USING_LINK: assert(false);
         }
 
         assert(false);
@@ -2980,6 +2981,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
             case AST_Declaration_Kind::USING_LINK: assert(false);
+            case AST_Declaration_Kind::INDIRECT_USING_LINK: assert(false);
         }
 
         assert(false);
@@ -3414,17 +3416,31 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             }
         }
 
-        resolver_import_child_struct_usings(resolver, target_decl, used_mem_type_decl, indent);
+        int64_t index_of_used_mem = -1;
+
+        for (int64_t i = 0; i < target_decl->structure.member_declarations.count; i++) {
+            if (target_decl->structure.member_declarations[i] == used_mem_decl) {
+                index_of_used_mem = i;
+                break;
+            }
+        }
+        assert(index_of_used_mem >= 0);
+
+        resolver_import_child_struct_usings(resolver, target_decl, used_mem_type_decl,
+                                            index_of_used_mem, indent);
     }
 
     void resolver_import_child_struct_usings(Resolver *resolver,
                                                 AST_Declaration *target_decl,
                                                 AST_Declaration *decl_being_imported,
+                                                uint64_t index_in_root,
                                                 int indent)
     {
         assert(decl_being_imported->kind == AST_Declaration_Kind::STRUCTURE);
 
         auto imports_in_child = decl_being_imported->structure.imported_by_using;
+
+        auto target_scope = target_decl->structure.member_scope;
 
         for (int64_t i = 0; i < imports_in_child.count; i++) {
 
@@ -3436,7 +3452,28 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                    imported_by_using->identifier->atom.data,
                    containing_mem_decl->identifier->atom.data);
 
-            array_append(&target_decl->structure.imported_by_using, imported_by_using);
+
+            auto redecl = scope_find_declaration(target_scope,
+                                                 imported_by_using->identifier->atom);
+            if (redecl) {
+                assert(false);
+            } else {
+                auto ident_copy = 
+                    ast_identifier_new(resolver->allocator, imported_by_using->identifier->atom,
+                                       target_scope,
+                                       imported_by_using->identifier->begin_file_pos,
+                                       imported_by_using->identifier->end_file_pos);
+
+                auto indirect_using_link =
+                    ast_indirect_using_link_declaration_new(resolver->allocator, ident_copy,
+                                                            imported_by_using, index_in_root,
+                                                            ident_copy->begin_file_pos,
+                                                            ident_copy->end_file_pos);
+
+
+                scope_add_declaration(target_scope, indirect_using_link);
+                array_append(&target_decl->structure.imported_by_using, indirect_using_link);
+            }
 
         }
     }
