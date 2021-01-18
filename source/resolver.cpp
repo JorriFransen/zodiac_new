@@ -1337,6 +1337,8 @@ namespace Zodiac
                 return true;
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
 
         assert(false);
@@ -1388,9 +1390,41 @@ namespace Zodiac
             array_append(&declaration->type->structure.member_types, member_decl->type);
         }
 
+        if (declaration->structure.usings.count)
+            printf("Resolving imports for struct: \"%s\"\n", declaration->identifier->atom.data);
+
+        for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
+            auto using_ident = declaration->structure.usings[i];
+            printf("  Using member: \"%s\"\n", using_ident->atom.data);
+
+            AST_Declaration *using_member =
+                    scope_find_declaration(declaration->structure.member_scope, using_ident);
+
+            assert(using_member);
+            assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
+            assert(using_member->type->kind == AST_Type_Kind::STRUCTURE);
+
+            AST_Type *using_type = using_member->type;
+            AST_Declaration *decl_of_used_type = using_type->structure.declaration;
+            assert(decl_of_used_type->kind == AST_Declaration_Kind::STRUCTURE);
+
+            for (int64_t j = 0; j < decl_of_used_type->structure.member_declarations.count; j++) {
+                AST_Declaration *imported_decl = decl_of_used_type->structure.member_declarations[j];
+                assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
+                printf("    Imported: \"%s\"\n", imported_decl->identifier->atom.data);
+
+                AST_Declaration *import_link =
+                    ast_import_link_declaration_new(resolver->allocator, using_member,
+                                                    imported_decl,
+                                                    declaration->structure.member_scope);
+                assert(import_link);
+                scope_add_declaration(declaration->structure.member_scope, import_link);
+            }
+        }
+        printf("\n");
+
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
         declaration->flags |= AST_NODE_FLAG_TYPED;
-
         declaration->type->flags |= AST_NODE_FLAG_RESOLVED_ID;
         declaration->type->flags |= AST_NODE_FLAG_TYPED;
         return true;
@@ -2689,7 +2723,13 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         if (child_decl->kind == AST_Declaration_Kind::VARIABLE) {
             assert(child_decl->variable.index_in_parent != -1);
         } else {
-            assert(false);
+            assert(child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+            auto using_member = child_decl->import_link.using_member;
+            auto imported_member = child_decl->import_link.imported_member;
+            assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
+            assert(using_member->variable.index_in_parent != -1);
+            assert(imported_member->kind == AST_Declaration_Kind::VARIABLE);
+            assert(imported_member->variable.index_in_parent != -1);
         }
 
         dot_expr->dot.child_decl = child_decl;
@@ -2943,6 +2983,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::TYPE: assert(false);
             case AST_Declaration_Kind::POLY_TYPE: assert(false);
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
 
         assert(false);

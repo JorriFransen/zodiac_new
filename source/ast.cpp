@@ -1740,6 +1740,8 @@ namespace Zodiac
                 array_append(nodes, node);
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
@@ -2351,6 +2353,34 @@ namespace Zodiac
         auto result = ast_declaration_new(allocator, AST_Declaration_Kind::STATIC_ASSERT,
                                           nullptr, scope, bfp, efp);
         result->static_assert_decl.cond_expression = cond_expr;
+        return result;
+    }
+
+    AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
+                                                     AST_Declaration *using_member,
+                                                     AST_Declaration *imported_member,
+                                                     Scope *scope)
+    {
+        assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
+        assert(imported_member->kind == AST_Declaration_Kind::VARIABLE);
+
+        auto bfp = using_member->begin_file_pos;
+        auto efp = using_member->end_file_pos;
+
+        auto identifier = ast_identifier_new(allocator, imported_member->identifier->atom, scope,
+                                             bfp, efp);
+
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::IMPORT_LINK,
+                                          identifier, scope, bfp, efp);
+
+        result->import_link.using_member = using_member;
+        result->import_link.imported_member = imported_member;
+
+        assert(imported_member->type);
+        result->type = imported_member->type;
+        result->flags |= AST_NODE_FLAG_RESOLVED_ID;
+        result->flags |= AST_NODE_FLAG_TYPED;
+
         return result;
     }
 
@@ -3363,6 +3393,8 @@ namespace Zodiac
                 printf(");");
                 break;
             }
+
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 
@@ -3952,6 +3984,8 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_IF: assert(false);
 
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
+
+            case AST_Declaration_Kind::IMPORT_LINK: assert(false);
         }
     }
 

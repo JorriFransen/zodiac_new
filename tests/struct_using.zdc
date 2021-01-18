@@ -5,12 +5,24 @@ std :: import std;
 
 main :: func () -> s64
 {
+    // sp: Super_Player;
     std.print("Struct using test\n");
 
     e1 := make_entity(1, 2, 3, 4, "e1");
     print_entity(*e1);
 
     e1.x = 11;
+    e1.y = 12;
+
+    print_entity(*e1);
+
+    p1 := make_player("p1", *e1, 100);
+    print_player(*p1);
+
+    p1.size.x = 20;
+    // p1.x = 200;
+
+    print_player(*p1);
 
     return 0;
 }
@@ -31,6 +43,20 @@ Entity :: struct
     name: *char;
 
 }
+
+Player :: struct
+{
+    using entity : Entity;
+
+    companion: *Entity;
+    
+    health : int;
+}
+
+// Super_Player :: struct
+// {
+//     using player: Player;
+// }
 
 make_vector :: func(x: int, y: int) -> Vector
 {
@@ -57,12 +83,43 @@ print_entity :: func(e: *Entity)
 {
     std.print(e.name);
     std.print(" { ");
-    std.print_num(e.position.x);
+    std.print_num(e.x);
     std.print(", ");
-    std.print_num(e.position.y);
+    std.print_num(e.y);
     std.print(", ");
-    std.print_num(e.size.x);
+    std.print_num(e.x);
     std.print(", ");
-    std.print_num(e.size.y);
+    std.print_num(e.y);
     std.print(" }\n");
+}
+
+make_player :: func(name: *char, companion: *Entity, health: int) -> Player
+{
+    result: Player;
+
+    result.entity = make_entity(2, 3, 4, 5, name);
+    result.companion = companion;
+    result.health = health;
+
+    return result;
+}
+
+print_player :: func(p: *Player)
+{
+    std.print(p.name);
+    std.print(" (entity)\n{\n");
+    std.print("    { ");
+    std.print_num(p.position.x);
+    std.print(", ");
+    std.print_num(p.position.y);
+    std.print(", ");
+    std.print_num(p.size.x);
+    std.print(", ");
+    std.print_num(p.size.y);
+    std.print(" }\n");
+    std.print("    companion: ");
+    print_entity(p.companion);
+    std.print("    health: ");
+    std.print_num(p.health);
+    std.print("\n}\n\n");
 }

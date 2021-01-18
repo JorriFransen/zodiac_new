@@ -92,6 +92,8 @@ namespace Zodiac
         RUN,
         STATIC_IF,
         STATIC_ASSERT,
+
+        IMPORT_LINK,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -223,6 +225,12 @@ namespace Zodiac
             {
                 AST_Expression *cond_expression;
             } static_assert_decl;
+
+            struct
+            {
+                AST_Declaration *using_member;
+                AST_Declaration *imported_member;
+            } import_link;
 
         };
     };
@@ -816,6 +824,11 @@ namespace Zodiac
                                                         Scope *scope,
                                                         const File_Pos &bfp,
                                                         const File_Pos &efp);
+
+    AST_Declaration *ast_import_link_declaration_new(Allocator *allocator,
+                                                     AST_Declaration *using_member,
+                                                     AST_Declaration *imported_member,
+                                                     Scope *scope);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,
