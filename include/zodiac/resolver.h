@@ -143,16 +143,6 @@ namespace Zodiac
     bool try_size_type(Resolver *resolver, AST_Type *type);
     bool try_size_type_spec(Resolver *resolver, AST_Type_Spec *type_spec);
 
-    void resolver_import_struct_usings(Resolver *resolver, AST_Declaration *target_decl, AST_Declaration *source_decl, int indent);
-
-    void resolver_import_struct_using(Resolver *resolver, AST_Declaration *target_decl, AST_Declaration *used_mem_decl, int indent);
-
-    void resolver_import_child_struct_usings(Resolver *resolver,
-                                                AST_Declaration *target_decl,
-                                                AST_Declaration *decl_being_imported,
-                                                uint64_t index_in_root,
-                                                int indent);
-
     AST_Type *infer_type(AST_Node *ast_node);
 
     AST_Declaration *enclosing_function(Resolver *resolver, Scope *scope);
