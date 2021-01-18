@@ -2,6 +2,9 @@
 _std_ :: import std;
 _os_  :: import os;
 
+int  :: typedef s64;
+char :: typedef u8;
+
 pre_main :: func()
 {
     _os_._open_default_io_handles();

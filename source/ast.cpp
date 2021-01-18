@@ -315,7 +315,10 @@ namespace Zodiac
                                                                             nullptr,
                                                                             mem_scope);
                         assert(ast_mem_decl);
+                        assert(ast_mem_decl->kind == AST_Declaration_Kind::VARIABLE);
                         ast_mem_decl->decl_flags |= AST_DECL_FLAG_IS_STRUCT_MEMBER;
+                        assert(ast_mem_decl->variable.index_in_parent == -1);
+                        ast_mem_decl->variable.index_in_parent = i;
 
                         array_append(&ast_member_decls, ast_mem_decl);
                     }
@@ -355,7 +358,8 @@ namespace Zodiac
 
                     for (int64_t i = 0; i < ptn->structure.usings.count; i++) {
                         auto ptn_using = ptn->structure.usings[i];
-                        auto ast_using = ast_create_identifier_from_ptn(ast_builder, ptn_using, mem_scope);
+                        auto ast_using = ast_create_identifier_from_ptn(ast_builder, ptn_using,
+                                                                        mem_scope);
                         array_append(&ast_usings, ast_using);
                     }
                 }
@@ -364,7 +368,8 @@ namespace Zodiac
                 auto end_fp = ptn->self.end_file_pos;
 
                 result = ast_structure_declaration_new(ast_builder->allocator, ast_ident,
-                                                       ast_member_decls, ast_parameters, ast_usings,
+                                                       ast_member_decls, ast_parameters,
+                                                       ast_usings,
                                                        parent_scope, param_scope, mem_scope,
                                                        begin_fp, end_fp);
                 break;
@@ -2102,6 +2107,7 @@ namespace Zodiac
 
         result->variable.type_spec = type_spec;
         result->variable.init_expression = init_expr;
+        result->variable.index_in_parent = -1;
 
         return result;
     }
@@ -2221,7 +2227,6 @@ namespace Zodiac
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
         result->structure.usings = usings;
-        result->structure.imported_by_using = {};
 
         result->structure.parameter_scope = param_scope;
         result->structure.member_scope = mem_scope;
@@ -2595,7 +2600,6 @@ namespace Zodiac
         result->dot.parent_expression = parent_expr;
         result->dot.child_identifier = child_ident;
         result->dot.child_decl = nullptr;
-        result->dot.child_index = -1;
 
         return result;
     }

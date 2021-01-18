@@ -153,6 +153,9 @@ namespace Zodiac
             {
                 AST_Type_Spec *type_spec;
                 AST_Expression *init_expression;
+
+                // For struct members
+                int64_t index_in_parent;
             } variable, constant;
 
             struct
@@ -179,7 +182,6 @@ namespace Zodiac
                 Array<AST_Declaration *> member_declarations;
                 Array<AST_Declaration *> parameters;
                 Array<AST_Identifier *> usings;
-                Array<AST_Declaration *> imported_by_using;
 
                 Scope *parameter_scope;
                 Scope *member_scope;
@@ -398,7 +400,6 @@ namespace Zodiac
                 AST_Identifier *child_identifier;
 
                 AST_Declaration *child_decl;
-                int64_t child_index;
             } dot;
 
             struct

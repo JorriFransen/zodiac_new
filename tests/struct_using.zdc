@@ -1,0 +1,68 @@
+
+std :: import std;
+
+#run main();
+
+main :: func () -> s64
+{
+    std.print("Struct using test\n");
+
+    e1 := make_entity(1, 2, 3, 4, "e1");
+    print_entity(*e1);
+
+    e1.x = 11;
+
+    return 0;
+}
+
+Vector :: struct
+{
+    x: int;
+    y: int;
+}
+
+Entity :: struct
+{
+    position: Vector;
+    using position;
+
+    size: Vector;
+
+    name: *char;
+
+}
+
+make_vector :: func(x: int, y: int) -> Vector
+{
+    result: Vector;
+
+    result.x = x;
+    result.y = y;
+
+    return result;
+}
+
+make_entity :: func(x: int, y: int, width: int, height: int, name: *char) -> Entity
+{
+    result: Entity;
+
+    result.position = make_vector(x, y);
+    result.size = make_vector(width, height);
+    result.name = name;
+
+    return result;
+}
+
+print_entity :: func(e: *Entity)
+{
+    std.print(e.name);
+    std.print(" { ");
+    std.print_num(e.position.x);
+    std.print(", ");
+    std.print_num(e.position.y);
+    std.print(", ");
+    std.print_num(e.size.x);
+    std.print(", ");
+    std.print_num(e.size.y);
+    std.print(" }\n");
+}

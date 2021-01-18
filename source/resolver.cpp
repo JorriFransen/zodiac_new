@@ -2687,21 +2687,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                aggregate_decl->kind == AST_Declaration_Kind::UNION);
 
         if (child_decl->kind == AST_Declaration_Kind::VARIABLE) {
-            bool index_found = false;
-            int64_t index = -1;
-            for (int64_t i = 0; i < member_decls.count; i++) {
-
-                if (child_decl == member_decls[i]) {
-                    assert(!index_found);
-                    index_found = true;
-                    index = i;
-                    break;
-                }
-            }
-            assert(index_found);
-            assert(index >= 0);
-
-            dot_expr->dot.child_index = index;
+            assert(child_decl->variable.index_in_parent != -1);
         } else {
             assert(false);
         }

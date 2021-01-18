@@ -1087,7 +1087,12 @@ namespace Zodiac
                 assert(result_type);
 
                 if (aggregate_type->kind == AST_Type_Kind::STRUCTURE) {
-                    Integer_Literal il = { .u32 = (uint32_t)expr->dot.child_index };
+
+                    assert(expr->dot.child_decl->kind == AST_Declaration_Kind::VARIABLE);
+                    auto index = expr->dot.child_decl->variable.index_in_parent;
+                    assert(index >= 0);
+
+                    Integer_Literal il = { .u32 = (uint32_t)index };
                     Bytecode_Value *index_value = bytecode_integer_literal_new(builder,
                                                                                Builtin::type_u32,
                                                                                il);
