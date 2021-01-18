@@ -2724,8 +2724,11 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             assert(child_decl->variable.index_in_parent != -1);
         } else {
             assert(child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+
+#ifndef NDEBUG
             auto using_member = child_decl->import_link.using_member;
             auto imported_member = child_decl->import_link.imported_member;
+#endif
             assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
             assert(using_member->variable.index_in_parent != -1);
             assert(imported_member->kind == AST_Declaration_Kind::VARIABLE);
