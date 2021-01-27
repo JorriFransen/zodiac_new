@@ -18,8 +18,10 @@ namespace Zodiac
 
         result.running = false;
 
-        result.stack_size = 4096;
-        result.stack = alloc_array<uint8_t>(allocator, 4096);
+        const auto stack_size = 4096;
+        result.stack_size = stack_size;
+        result.stack = alloc_array<uint8_t>(allocator, stack_size);
+        memset(result.stack, 0, stack_size);
         result.sp = 0;
 
         result.frame_pointer = 0;
@@ -46,7 +48,7 @@ namespace Zodiac
         interpreter_initialize_globals(interp, global_data_size, global_info);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
-        int64_t ret_val;
+        int64_t ret_val = 0;
         void *ret_val_ptr = nullptr;
 
         AST_Type *ret_type = entry_func->type->function.return_type;
@@ -428,6 +430,7 @@ namespace Zodiac
                     auto func_val = inst->a;
                     assert(func_val->kind == Bytecode_Value_Kind::FUNCTION);
                     auto func = func_val->function;
+                    fprintf(stderr, "Calling function: %s\n", func->name.data);
                     assert((func->flags & BC_FUNC_FLAG_EMITTED) ||
                            (func->flags & BC_FUNC_FLAG_FOREIGN));
 
@@ -1071,12 +1074,24 @@ namespace Zodiac
                     Array<int64_t> args = {};
                     array_init(interp->allocator, &args, arg_count);
 
+                    bool is_print = false;
+
                     for (int64_t i = 0; i < arg_count; i++)
                     {
                         auto offset = -((arg_count - i) * sizeof(int64_t));
                         int64_t *param_ptr =
                             (int64_t*)&interp->stack[interp->sp + offset];
                         array_append(&args, *param_ptr);
+
+                        if (i == 0 && *param_ptr == 1) {
+                            is_print = true;
+                        }
+
+                        if (is_print && i == 2)
+                            printf("\n  Syscall arg: %ld, (%.*s)\n  (%p)\n",
+                                   *(int64_t*)param_ptr,
+                                   2, (char*)*(void**)param_ptr,
+                                   param_ptr);
                     }
 
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);

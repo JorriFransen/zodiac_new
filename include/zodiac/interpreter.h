@@ -95,7 +95,7 @@ namespace Zodiac
     }
 
 #define INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, val, name) \
-    void *name; \
+    void *name = nullptr; \
     switch (val->kind) { \
         default: assert(false && !"default"); \
         case Bytecode_Value_Kind::ALLOCL: { \

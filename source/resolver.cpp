@@ -925,7 +925,8 @@ namespace Zodiac
                     scope_block = scope_block->next_block;
                 }
 
-                assert(result);
+                if (!result) return false;
+
                 declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 declaration->flags |= AST_NODE_FLAG_TYPED;
                 return true;
@@ -1391,37 +1392,36 @@ namespace Zodiac
         }
 
         if (declaration->structure.usings.count)
-            printf("Resolving imports for struct: \"%s\"\n", declaration->identifier->atom.data);
+        {
+            for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
+                auto using_ident = declaration->structure.usings[i];
 
-        for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
-            auto using_ident = declaration->structure.usings[i];
-            printf("  Using member: \"%s\"\n", using_ident->atom.data);
+                AST_Declaration *using_member =
+                        scope_find_declaration(declaration->structure.member_scope, using_ident);
 
-            AST_Declaration *using_member =
-                    scope_find_declaration(declaration->structure.member_scope, using_ident);
+                assert(using_member);
+                assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
+                assert(using_member->type->kind == AST_Type_Kind::STRUCTURE);
 
-            assert(using_member);
-            assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
-            assert(using_member->type->kind == AST_Type_Kind::STRUCTURE);
+                AST_Type *using_type = using_member->type;
+                AST_Declaration *decl_of_used_type = using_type->structure.declaration;
+                assert(decl_of_used_type->kind == AST_Declaration_Kind::STRUCTURE);
 
-            AST_Type *using_type = using_member->type;
-            AST_Declaration *decl_of_used_type = using_type->structure.declaration;
-            assert(decl_of_used_type->kind == AST_Declaration_Kind::STRUCTURE);
+                for (int64_t j = 0;
+                     j < decl_of_used_type->structure.member_declarations.count; j++) {
+                    AST_Declaration *imported_decl =
+                        decl_of_used_type->structure.member_declarations[j];
+                    assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            for (int64_t j = 0; j < decl_of_used_type->structure.member_declarations.count; j++) {
-                AST_Declaration *imported_decl = decl_of_used_type->structure.member_declarations[j];
-                assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
-                printf("    Imported: \"%s\"\n", imported_decl->identifier->atom.data);
-
-                AST_Declaration *import_link =
-                    ast_import_link_declaration_new(resolver->allocator, using_member,
-                                                    imported_decl,
-                                                    declaration->structure.member_scope);
-                assert(import_link);
-                scope_add_declaration(declaration->structure.member_scope, import_link);
+                    AST_Declaration *import_link =
+                        ast_import_link_declaration_new(resolver->allocator, using_member,
+                                                        imported_decl,
+                                                        declaration->structure.member_scope);
+                    assert(import_link);
+                    scope_add_declaration(declaration->structure.member_scope, import_link);
+                }
             }
         }
-        printf("\n");
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
         declaration->flags |= AST_NODE_FLAG_TYPED;
@@ -2002,7 +2002,8 @@ namespace Zodiac
                                 break;
                             }
                         }
-                        assert(found);
+
+                        if (!found) assert(false && "Enum member not found");
 
                         assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN ||
                                expression->dot.kind == AST_Dot_Expression_Kind::ENUM_MEMBER);
@@ -2213,8 +2214,14 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 }
                 assert(func_type);
 
-                assert(recursive || use_fn_ts ||(callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID));
-                assert(recursive || use_fn_ts ||(callee_decl->flags & AST_NODE_FLAG_TYPED));
+
+                if (!(recursive || use_fn_ts ||
+                      (callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID)))
+                    assert(false && "Internal compiler error");
+
+                if (!(recursive || use_fn_ts ||
+                      (callee_decl->flags & AST_NODE_FLAG_TYPED)))
+                    assert(false && "Internal compiler error");
 
                 if (recursive) {
 #ifndef NDEBUG
@@ -2405,18 +2412,17 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                     }
 
                     Scope *entry_scope = resolver->build_data->entry_module->module_scope;
+                    assert(entry_scope);
+
                     auto default_handler_decl =
                         scope_find_declaration(entry_scope,
                                                Builtin::atom_default_assert_handler);
-                    if (!default_handler_decl) {
-                        assert(false);
-                    } else {
-                        assert(default_handler_decl->kind == AST_Declaration_Kind::FUNCTION);
-                        if (!(default_handler_decl->decl_flags &
-                              AST_DECL_FLAG_REGISTERED_BYTECODE)) {
-                            bytecode_register_function(&resolver->bytecode_builder,
-                                                       default_handler_decl);
-                        }
+                    assert(default_handler_decl);
+                    assert(default_handler_decl->kind == AST_Declaration_Kind::FUNCTION);
+                    if (!(default_handler_decl->decl_flags &
+                          AST_DECL_FLAG_REGISTERED_BYTECODE)) {
+                        bytecode_register_function(&resolver->bytecode_builder,
+                                                   default_handler_decl);
                     }
 
                     expression->type = Builtin::type_void;
@@ -2647,6 +2653,10 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         assert(expression->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(expression->flags & AST_NODE_FLAG_TYPED);
         assert(expression->type || allow_null_type);
+
+        if (!(expression->type || allow_null_type))
+                assert(false && "@TODO: Implement error");
+
         resolver_inherit_const(expression);
         return true;
     }
@@ -4324,7 +4334,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             }
         }
 
-        assert(found);
+        if (!found) assert(false && "Module not found @TODO");
 
         return file_path;
     }
@@ -4363,7 +4373,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 #endif
         }
 
-        assert(found);
+        if (!found) assert(false && "@TODO Report error module not found");
 
         String result = string_copy(allocator, current_dir);
 

@@ -30,6 +30,7 @@ global_int : s64;
 
 main :: func () -> s64
 {
+    @assert(false);
     int_ptr : *s64 = null;
     x : s64 = 55;
     int_ptr = *x;
