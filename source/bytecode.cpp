@@ -1103,38 +1103,10 @@ namespace Zodiac
                                                   result);
                     } else {
                         assert(expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
-
-                        auto using_decl = expr->dot.child_decl->import_link.using_member;
-                        auto imported_decl = expr->dot.child_decl->import_link.imported_member;
-
-                        auto using_index = using_decl->variable.index_in_parent;
-                        auto imported_index = imported_decl->variable.index_in_parent;
-
-                        auto using_type = using_decl->type;
-                        assert(using_type->kind == AST_Type_Kind::STRUCTURE);
-
-                        assert(using_index >= 0);
-                        assert(using_index < aggregate_type->structure.member_types.count);
-                        assert(imported_index >= 0);
-                        assert(imported_index < using_type->structure.member_types.count);
-
-                        Integer_Literal using_il = { .u32 = (uint32_t)using_index };
-                        Integer_Literal imported_il = { .u32 = (uint32_t)imported_index };
-
-                        Bytecode_Value *using_index_value =
-                            bytecode_integer_literal_new(builder, Builtin::type_u32, using_il);
-                        assert(using_type->pointer_to);
-                        auto using_result = bytecode_temporary_new(builder,
-                                                                   using_type->pointer_to);
-                        bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue,
-                                                  using_index_value, using_result);
-
-                        Bytecode_Value *imported_index_value =
-                            bytecode_integer_literal_new(builder, Builtin::type_u32, imported_il);
-                        assert(result_type);
-                        result = bytecode_temporary_new(builder, result_type);
-                        bytecode_emit_instruction(builder, AGG_OFFSET, using_result,
-                                                  imported_index_value, result);
+                        result = bytecode_emit_struct_dereference(builder, aggregate_type,
+                                                                  parent_lvalue,
+                                                                  expr->dot.child_decl,
+                                                                  result_type);
                     }
 
                 } else if (aggregate_type->kind == AST_Type_Kind::UNION) {
@@ -1216,6 +1188,68 @@ namespace Zodiac
         }
 
         assert(result);
+        return result;
+    }
+
+    Bytecode_Value *bytecode_emit_struct_dereference(Bytecode_Builder *builder,
+                                                     AST_Type *struct_type,
+                                                     Bytecode_Value *parent_lvalue,
+                                                     AST_Declaration *import_link,
+                                                     AST_Type *result_type)
+    {
+        assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+        assert(parent_lvalue->type->kind == AST_Type_Kind::POINTER);
+        assert(struct_type->pointer_to = parent_lvalue->type);
+        assert(import_link->kind == AST_Declaration_Kind::IMPORT_LINK);
+
+        auto using_decl = import_link->import_link.using_member;
+        auto imported_decl = import_link->import_link.imported_member;
+
+        auto using_index = using_decl->variable.index_in_parent;
+
+        int64_t imported_index = -1;
+        if (imported_decl->kind == AST_Declaration_Kind::VARIABLE) {
+            imported_index = imported_decl->variable.index_in_parent;
+        } else {
+            assert(imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+            imported_index = import_link->import_link.index_in_parent;
+        }
+
+        auto using_type = using_decl->type;
+        assert(using_type->kind == AST_Type_Kind::STRUCTURE);
+
+        assert(using_index >= 0);
+        assert(using_index < struct_type->structure.member_types.count);
+        assert(imported_index >= 0);
+        assert(imported_index < using_type->structure.member_types.count);
+
+        Integer_Literal using_il = { .u32 = (uint32_t)using_index };
+        Integer_Literal imported_il = { .u32 = (uint32_t)imported_index };
+
+        Bytecode_Value *using_index_value =
+            bytecode_integer_literal_new(builder, Builtin::type_u32, using_il);
+        assert(using_type->pointer_to);
+        auto using_result = bytecode_temporary_new(builder,
+                                                   using_type->pointer_to);
+        bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue,
+                                  using_index_value, using_result);
+
+        if (imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
+            auto child_struct_type = imported_decl->import_link.using_member->type;
+            assert(child_struct_type->kind == AST_Type_Kind::STRUCTURE);
+            auto child_result_type = imported_decl->type->pointer_to;
+            using_result = bytecode_emit_struct_dereference(builder, child_struct_type,
+                                                            using_result, imported_decl,
+                                                            child_result_type);
+        }
+
+        Bytecode_Value *imported_index_value =
+            bytecode_integer_literal_new(builder, Builtin::type_u32, imported_il);
+        assert(result_type);
+        auto result = bytecode_temporary_new(builder, result_type);
+        bytecode_emit_instruction(builder, AGG_OFFSET, using_result,
+                                  imported_index_value, result);
+        return result;
         return result;
     }
 

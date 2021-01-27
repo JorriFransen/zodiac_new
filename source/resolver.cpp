@@ -1393,6 +1393,12 @@ namespace Zodiac
         if (declaration->structure.usings.count)
             printf("Resolving imports for struct: \"%s\"\n", declaration->identifier->atom.data);
 
+        assert(declaration->structure.imported_members.count == 0);
+        assert(declaration->structure.imported_members.data == nullptr);
+        declaration->structure.imported_members =
+            array_create<AST_Declaration *>(resolver->allocator,
+                                            declaration->structure.usings.count * 2);
+
         for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
             auto using_ident = declaration->structure.usings[i];
             printf("  Using member: \"%s\"\n", using_ident->atom.data);
@@ -1419,8 +1425,30 @@ namespace Zodiac
                                                     declaration->structure.member_scope);
                 assert(import_link);
                 scope_add_declaration(declaration->structure.member_scope, import_link);
+                array_append(&declaration->structure.imported_members, import_link);
+            }
+
+            for (int64_t j = 0; j < decl_of_used_type->structure.imported_members.count; j++) {
+                auto imported_decl = decl_of_used_type->structure.imported_members[j];
+
+                assert(imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+                printf("    Imported: \"%s\" from \"%s\"\n",
+                       imported_decl->identifier->atom.data,
+                       imported_decl->import_link.using_member->identifier->atom.data);
+
+
+                AST_Declaration *import_link =
+                    ast_import_link_declaration_new(resolver->allocator, using_member,
+                                                    imported_decl,
+                                                    declaration->structure.member_scope);
+
+                assert(import_link);
+                import_link->import_link.index_in_parent = using_member->variable.index_in_parent;
+                scope_add_declaration(declaration->structure.member_scope, import_link);
+                array_append(&declaration->structure.imported_members, import_link);
             }
         }
+
         printf("\n");
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2727,12 +2755,15 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
 #ifndef NDEBUG
             auto using_member = child_decl->import_link.using_member;
-            auto imported_member = child_decl->import_link.imported_member;
 #endif
+            auto imported_member = child_decl->import_link.imported_member;
             assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
             assert(using_member->variable.index_in_parent != -1);
-            assert(imported_member->kind == AST_Declaration_Kind::VARIABLE);
-            assert(imported_member->variable.index_in_parent != -1);
+            if (imported_member->kind == AST_Declaration_Kind::VARIABLE) {
+                assert(imported_member->variable.index_in_parent != -1);
+            } else {
+                assert(imported_member->kind == AST_Declaration_Kind::IMPORT_LINK);
+            }
         }
 
         dot_expr->dot.child_decl = child_decl;

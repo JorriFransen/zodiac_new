@@ -1,7 +1,7 @@
 
 std :: import std;
 
-#run main();
+// #run main();
 
 main :: func () -> s64
 {
@@ -11,7 +11,7 @@ main :: func () -> s64
     e1 := make_entity(1, 2, 3, 4, "e1");
     print_entity(*e1);
 
-    e1.x = 11;
+    // e1.x = 11;
     e1.y = 12;
 
     print_entity(*e1);
@@ -20,7 +20,8 @@ main :: func () -> s64
     print_player(*p1);
 
     p1.size.x = 20;
-    // p1.x = 200;
+    p1.position.x = 110;
+    p1.y = 200;
 
     print_player(*p1);
 
@@ -87,9 +88,9 @@ print_entity :: func(e: *Entity)
     std.print(", ");
     std.print_num(e.y);
     std.print(", ");
-    std.print_num(e.x);
+    std.print_num(e.size.x);
     std.print(", ");
-    std.print_num(e.y);
+    std.print_num(e.size.y);
     std.print(" }\n");
 }
 

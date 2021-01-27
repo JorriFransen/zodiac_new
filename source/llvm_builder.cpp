@@ -1188,7 +1188,7 @@ namespace Zodiac
             if (!crt_found) return false;
 
             string_builder_append(sb, crt_path.data);
-            string_builder_append(sb, "Scrt1.o ");
+            string_builder_append(sb, "crt1.o ");
             string_builder_append(sb, crt_path.data);
             string_builder_appendf(sb, "crti.o ");
 

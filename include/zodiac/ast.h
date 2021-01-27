@@ -184,6 +184,7 @@ namespace Zodiac
                 Array<AST_Declaration *> member_declarations;
                 Array<AST_Declaration *> parameters;
                 Array<AST_Identifier *> usings;
+                Array<AST_Declaration *> imported_members;
 
                 Scope *parameter_scope;
                 Scope *member_scope;
@@ -230,6 +231,8 @@ namespace Zodiac
             {
                 AST_Declaration *using_member;
                 AST_Declaration *imported_member;
+
+                int64_t index_in_parent;
             } import_link;
 
         };

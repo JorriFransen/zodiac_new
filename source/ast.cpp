@@ -2229,6 +2229,7 @@ namespace Zodiac
         result->structure.member_declarations = member_decls;
         result->structure.parameters = parameters;
         result->structure.usings = usings;
+        result->structure.imported_members = {};
 
         result->structure.parameter_scope = param_scope;
         result->structure.member_scope = mem_scope;
@@ -2362,7 +2363,8 @@ namespace Zodiac
                                                      Scope *scope)
     {
         assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
-        assert(imported_member->kind == AST_Declaration_Kind::VARIABLE);
+        assert(imported_member->kind == AST_Declaration_Kind::VARIABLE ||
+               imported_member->kind == AST_Declaration_Kind::IMPORT_LINK);
 
         auto bfp = using_member->begin_file_pos;
         auto efp = using_member->end_file_pos;
@@ -2375,6 +2377,7 @@ namespace Zodiac
 
         result->import_link.using_member = using_member;
         result->import_link.imported_member = imported_member;
+        result->import_link.index_in_parent = -1;
 
         assert(imported_member->type);
         result->type = imported_member->type;

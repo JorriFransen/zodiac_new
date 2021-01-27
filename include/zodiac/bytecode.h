@@ -314,6 +314,12 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_expression(Bytecode_Builder *builder, AST_Expression *expr);
     Bytecode_Value *bytecode_emit_lvalue(Bytecode_Builder *builder, AST_Expression *expr);
 
+    Bytecode_Value *bytecode_emit_struct_dereference(Bytecode_Builder *builder,
+                                                     AST_Type *struct_type,
+                                                     Bytecode_Value *parent_lvalue,
+                                                     AST_Declaration *import_link,
+                                                     AST_Type *result_type);
+
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder,
                                              AST_Identifier *identifier);
     Bytecode_Value *bytecode_emit_identifier_lvalue(Bytecode_Builder *builder,
