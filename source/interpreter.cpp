@@ -1314,24 +1314,11 @@ namespace Zodiac
                     Array<int64_t> args = {};
                     array_init(interp->allocator, &args, arg_count);
 
-                    bool is_print = false;
-
-                    for (int64_t i = 0; i < arg_count; i++)
-                    {
+                    for (int64_t i = 0; i < arg_count; i++) {
                         auto offset = -((arg_count - i) * sizeof(int64_t));
                         int64_t *param_ptr =
                             (int64_t*)interp_stack_ptr(interp, interp->sp + offset, 8);
                         array_append(&args, *param_ptr);
-
-                        if (i == 0 && *param_ptr == 1) {
-                            is_print = true;
-                        }
-
-                        // if (is_print && i == 2)
-                        //     printf("\n  Syscall arg: %ld, (%.*s)\n  (%p)\n",
-                        //            *(int64_t*)param_ptr,
-                        //            2, (char*)*(void**)param_ptr,
-                        //            param_ptr);
                     }
 
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
