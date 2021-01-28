@@ -1415,7 +1415,7 @@ namespace Zodiac
             assert(default_handler_func);
 
             auto fp = expr->begin_file_pos;
-            printf("Inserting assert at: %s:%lu\n", fp.file_name.data, fp.line);
+            // printf("Inserting assert at: %s:%lu\n", fp.file_name.data, fp.line);
 
             Bytecode_Value *cond_val = bytecode_emit_expression(builder, args[0]);
             Bytecode_Value *file_name = bytecode_get_string_literal(builder, fp.file_name);

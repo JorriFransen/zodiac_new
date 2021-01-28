@@ -1630,7 +1630,6 @@ namespace Zodiac
             }
 
             case AST_Statement_Kind::WHILE: {
-#ifndef NDEBUG
                 AST_Expression **p_cond_expr = &statement->while_stmt.cond_expr;
                 auto cond_expr = *p_cond_expr;
 
@@ -1641,6 +1640,7 @@ namespace Zodiac
                 if (!(cond_expr->type->kind == AST_Type_Kind::BOOL)) {
                     if (is_valid_type_conversion(cond_expr->type, Builtin::type_bool)) {
                         do_type_conversion(resolver, p_cond_expr, Builtin::type_bool);
+                        cond_expr = *p_cond_expr;
                     } else {
                         zodiac_report_error(resolver->build_data,
                                             Zodiac_Error_Kind::MISMATCHING_TYPES,
@@ -1650,10 +1650,13 @@ namespace Zodiac
                     }
                 }
 
+                assert(cond_expr->type->kind == AST_Type_Kind::BOOL);
+
+#ifndef NDEBUG
                 AST_Statement *body = statement->while_stmt.body;
+#endif
                 assert(body->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(body->flags & AST_NODE_FLAG_TYPED);
-#endif
 
                 statement->flags |= AST_NODE_FLAG_RESOLVED_ID;
                 statement->flags |= AST_NODE_FLAG_TYPED;
@@ -3641,11 +3644,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                                                  expr, null_expr, expr->scope,
                                                  expr->begin_file_pos,
                                                  expr->end_file_pos);
-#ifndef NDEBUG
-            bool null_expr_res =
-#endif
-                try_resolve_expression(resolver, null_expr);
-            assert(null_expr_res);
+
+            if (!try_resolve_expression(resolver, null_expr)) assert(false);
 
         } else {
             new_expr = ast_cast_expression_new(resolver->allocator,
@@ -3657,11 +3657,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
         if (new_expr) {
 
-#ifndef NDEBUG
-            bool new_res =
-#endif
-                try_resolve_expression(resolver, new_expr);
-            assert(new_res);
+            if (!try_resolve_expression(resolver, new_expr)) assert(false);
+
             *p_expr = new_expr;
         }
 
