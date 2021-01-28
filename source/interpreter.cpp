@@ -18,10 +18,10 @@ namespace Zodiac
 
         result.running = false;
 
-        const auto stack_size = 4096;
+        const auto stack_size = 4096 * 4;
         result.stack_size = stack_size;
-        result.stack = alloc_array<uint8_t>(allocator, stack_size);
-        memset(result.stack, 0, stack_size);
+        result._stack = alloc_array<uint8_t>(allocator, stack_size);
+        memset(result._stack, 0, stack_size);
         result.sp = 0;
 
         result.frame_pointer = 0;
@@ -115,8 +115,9 @@ namespace Zodiac
                     assert(inst->a->type->kind == AST_Type_Kind::POINTER);
                     assert(inst->a->type->pointer.base == inst->b->type);
 
-                    void *dest_ptr = &interp->stack[interp->frame_pointer +
-                                                    inst->a->allocl.byte_offset_from_fp];
+                    void *dest_ptr = interp_stack_ptr(interp,
+                                                      interp->frame_pointer +
+                                                      inst->a->allocl.byte_offset_from_fp);
 
                     INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, inst->b, source_ptr);
 
@@ -150,8 +151,9 @@ namespace Zodiac
 
                     assert(inst->b->kind == Bytecode_Value_Kind::TEMP);
 
-                    void *dest_ptr = &interp->stack[interp->frame_pointer +
-                                                    inst->a->parameter.byte_offset_from_fp];
+                    void *dest_ptr = interp_stack_ptr(interp,
+                                                      interp->frame_pointer +
+                                                       inst->a->parameter.byte_offset_from_fp);
                     void *_source_ptr = interpreter_load_lvalue(interp, inst->b);
                     void *source_ptr = _source_ptr;
 
@@ -183,8 +185,8 @@ namespace Zodiac
                     assert(inst->a->type->kind == AST_Type_Kind::POINTER);
                     assert(inst->a->type->pointer.base == inst->result->type);
 
-                    void *source_ptr = &interp->stack[interp->frame_pointer +
-                                                      inst->a->allocl.byte_offset_from_fp];
+                    void *source_ptr = interp_stack_ptr(interp, interp->frame_pointer +
+                                                      inst->a->allocl.byte_offset_from_fp);
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     assert(dest_ptr);
@@ -199,8 +201,8 @@ namespace Zodiac
                     assert(inst->a->type->kind == AST_Type_Kind::POINTER);
                     assert(inst->a->type->pointer.base == inst->result->type);
 
-                    void *source_ptr = &interp->stack[interp->frame_pointer +
-                                                      inst->a->parameter.byte_offset_from_fp];
+                    void *source_ptr = interp_stack_ptr(interp, interp->frame_pointer +
+                                                      inst->a->parameter.byte_offset_from_fp);
                     void *dest_ptr = interpreter_load_lvalue(interp, inst->result);
 
                     assert(dest_ptr);
@@ -419,7 +421,7 @@ namespace Zodiac
                     int64_t size = inst->a->type->bit_size / 8;
                     assert(interp->sp + size <= interp->stack_size);
 
-                    void *dest_ptr = &interp->stack[interp->sp];
+                    void *dest_ptr = interp_stack_ptr(interp, interp->sp);
                     interp->sp += size;
 
                     interp_store(inst->a->type, dest_ptr, arg_ptr);
@@ -524,17 +526,17 @@ namespace Zodiac
                     void *ret_val_source_ptr = interpreter_load_lvalue(interp, inst->a);
 
                     int64_t offset = 0;
-                    int64_t old_fp = *(int64_t*)(&interp->stack[interp->frame_pointer]);
+                    int64_t old_fp = *(int64_t*)(interp_stack_ptr(interp, interp->frame_pointer));
 
                     if (old_fp != -1) {
                         offset += sizeof(old_fp);
                         interp->ip =
-                            *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer +
-                                                                   offset]);
+                            *(Instruction_Pointer*)(interp_stack_ptr(interp, interp->frame_pointer +
+                                                                   offset));
 
                         offset += sizeof(Instruction_Pointer);
                         uint8_t *ret_val_dest_ptr =
-                            *(uint8_t**)(&interp->stack[interp->frame_pointer + offset]);
+                            *(uint8_t**)(interp_stack_ptr(interp, interp->frame_pointer + offset));
 
                         interp_store(inst->a->type, ret_val_dest_ptr, ret_val_source_ptr);
 
@@ -555,12 +557,12 @@ namespace Zodiac
 
                 case RETURN_VOID: {
                     int64_t offset = 0;
-                    int64_t old_fp = *(int64_t*)(&interp->stack[interp->frame_pointer]);
+                    int64_t old_fp = *(int64_t*)(interp_stack_ptr(interp, interp->frame_pointer));
 
                     if (old_fp != -1) {
                         offset += sizeof(old_fp);
-                        interp->ip = *(Instruction_Pointer*)(&interp->stack[interp->frame_pointer +
-                                                                            offset]);
+                        interp->ip = *(Instruction_Pointer*)(interp_stack_ptr(interp, interp->frame_pointer +
+                                                                            offset));
                         interp->sp = interp->frame_pointer;
                         interp->frame_pointer = old_fp;
 
@@ -1080,7 +1082,7 @@ namespace Zodiac
                     {
                         auto offset = -((arg_count - i) * sizeof(int64_t));
                         int64_t *param_ptr =
-                            (int64_t*)&interp->stack[interp->sp + offset];
+                            (int64_t*)interp_stack_ptr(interp, interp->sp + offset);
                         array_append(&args, *param_ptr);
 
                         if (i == 0 && *param_ptr == 1) {
@@ -1203,8 +1205,8 @@ namespace Zodiac
 
             param->parameter.byte_offset_from_fp = param_offset - size;
 
-            void *arg_ptr = &interp->stack[interp->frame_pointer +
-                                            param->parameter.byte_offset_from_fp];
+            void *arg_ptr = interp_stack_ptr(interp, interp->frame_pointer +
+                                            param->parameter.byte_offset_from_fp);
             ffi_push_arg(&interp->ffi, arg_ptr, param_type);
         }
 
@@ -1244,7 +1246,7 @@ namespace Zodiac
         switch (value->kind) {
 
             case Bytecode_Value_Kind::TEMP: {
-                return &interp->stack[interp->frame_pointer + value->temp.byte_offset_from_fp];
+                return interp_stack_ptr(interp, interp->frame_pointer + value->temp.byte_offset_from_fp);
                 break;
             }
 
@@ -1299,7 +1301,7 @@ namespace Zodiac
 
     void interpreter_free(Interpreter *interp)
     {
-        free(interp->allocator, interp->stack);
+        free(interp->allocator, interp->_stack);
     }
 
     void interp_store(AST_Type *type, void *dest_ptr, void *source_ptr)
@@ -1354,5 +1356,13 @@ namespace Zodiac
             case 64: interp_store(val.type, dest, &val.integer.s64); break;
             default: assert(false);
         }
+    }
+
+    void *interp_stack_ptr(Interpreter *interp, int64_t index)
+    {
+        assert(index >= 0);
+        assert(index < interp->stack_size);
+
+        return &interp->_stack[index];
     }
 }
