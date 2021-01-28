@@ -41,9 +41,9 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
     if (!cond) {
         // @TODO: We should print to stdout and use lower level print functions here, so
         //  we have the possibilty to assert from print itself.
-        // _std_.print("Assertion failed: ");
-        // _std_.print(file_name);
-        // _std_.print(":");
+        _std_.print("Assertion failed: ");
+        _std_.print(file_name);
+        _std_.print(":");
         _std_.print_numln(line);
 
 
