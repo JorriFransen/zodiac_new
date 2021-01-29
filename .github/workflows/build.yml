@@ -34,13 +34,18 @@ jobs:
       working-directory: ${{github.workspace}}/build_clang/debug
       shell: bash
       run: cmake --build .
-
-    - name: Build clang tracy
-      working-directory: ${{github.workspace}}/build_clang/tracy
+      
+    - name: Build clang release
+      working-directory: ${{github.workspace}}/build_clang/release
       shell: bash
       run: cmake --build .
 
     - name: Build gcc debug
       working-directory: ${{github.workspace}}/build_gcc/debug
+      shell: bash
+      run: cmake --build .
+
+    - name: Build gcc release
+      working-directory: ${{github.workspace}}/build_gcc/release
       shell: bash
       run: cmake --build .
