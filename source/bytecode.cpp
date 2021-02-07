@@ -431,7 +431,15 @@ namespace Zodiac
 
             case AST_Declaration_Kind::TYPE: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::TYPEDEF: assert(false); //@@TODO: Implement!
-            case AST_Declaration_Kind::STRUCTURE: assert(false); //@@TODO: Implement!
+
+            case AST_Declaration_Kind::STRUCTURE: {
+                assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+                assert(decl->flags & AST_NODE_FLAG_TYPED);
+                assert(decl->type);
+                assert(decl->type->kind == AST_Type_Kind::STRUCTURE);
+                break;
+            }
+
             case AST_Declaration_Kind::UNION: assert(false);
 
             case AST_Declaration_Kind::ENUM: assert(false); //@@TODO: Implement!

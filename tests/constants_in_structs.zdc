@@ -1,0 +1,19 @@
+
+std :: import std;
+
+#run main();
+
+main :: func() -> s64 {
+
+    std.println("Constants in structs");
+
+    Buffer :: struct {
+        // CAPACITY :: 32;
+        x : int;
+    };
+
+    b : Buffer;
+    b.x = 6;
+
+    return b.x;
+}
