@@ -5,7 +5,7 @@ std :: import std;
 
 main :: func () -> s64
 {
-    // sp: Super_Player;
+    sp: Super_Player;
     std.print("Struct using test\n");
 
     e1 := make_entity(1, 2, 3, 4, "e1");
@@ -25,6 +25,12 @@ main :: func () -> s64
     p1.y = 210;
 
     print_player(*p1);
+
+    sp.player = make_player("sp", *p1.entity, 200);
+    sp.x = 42;
+    sp.y = 24;
+    _p := *sp.player;
+    print_player(_p);
 
     return 0;
 }
@@ -55,10 +61,10 @@ Player :: struct
     health : int;
 }
 
-// Super_Player :: struct
-// {
-//     using player: Player;
-// }
+Super_Player :: struct
+{
+    using player: Player;
+}
 
 make_vector :: func(x: int, y: int) -> Vector
 {

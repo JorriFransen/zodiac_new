@@ -52,6 +52,11 @@ namespace Zodiac
     {
         assert(build_data);
 
+        if (base_type->pointer_to) {
+            assert(base_type->pointer_to->pointer.base == base_type);
+            return base_type->pointer_to;
+        }
+
         for (int64_t i = 0; i < build_data->type_table.count; i++)
         {
 
@@ -66,7 +71,6 @@ namespace Zodiac
             }
         }
 
-        //AST_Type *ptr_type = ast_pointer_type_new(allocator, base_type);
         AST_Type *ptr_type = _ast_find_or_create_pointer_type(allocator, base_type);
         assert(ptr_type);
         array_append(&build_data->type_table, ptr_type);

@@ -1197,13 +1197,12 @@ namespace Zodiac
                                                      AST_Declaration *import_link,
                                                      AST_Type *result_type)
     {
-        assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
-        assert(parent_lvalue->type->kind == AST_Type_Kind::POINTER);
-        // assert(struct_type->pointer_to == parent_lvalue->type);
-        assert(import_link->kind == AST_Declaration_Kind::IMPORT_LINK);
-
         auto using_decl = import_link->import_link.using_member;
         auto imported_decl = import_link->import_link.imported_member;
+
+        assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+        assert(parent_lvalue->type->kind == AST_Type_Kind::POINTER);
+        assert(import_link->kind == AST_Declaration_Kind::IMPORT_LINK);
 
         auto using_index = using_decl->variable.index_in_parent;
 
@@ -1232,10 +1231,7 @@ namespace Zodiac
             build_data_find_or_create_pointer_type(builder->allocator,
                                                    builder->build_data,
                                                    using_type);
-        // assert(using_type->pointer_to);
-        assert(using_type->pointer_to == interm_result_type);
-        assert(using_type->pointer_to->pointer.base == using_type);
-        
+
         auto using_result = bytecode_temporary_new(builder,
                                                    interm_result_type);
         bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue,
@@ -1251,6 +1247,8 @@ namespace Zodiac
             return using_result;
 
         } else {
+
+            assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
 
             Bytecode_Value *imported_index_value =
                 bytecode_integer_literal_new(builder, Builtin::type_u32, imported_il);
