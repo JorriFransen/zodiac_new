@@ -3061,7 +3061,10 @@ namespace Zodiac
 
     AST_Type *_ast_find_or_create_pointer_type(Allocator *allocator, AST_Type *base_type)
     {
-        if (base_type->pointer_to) return base_type->pointer_to;
+        if (base_type->pointer_to) {
+            assert(base_type->pointer_to->pointer.base == base_type);
+            return base_type->pointer_to;
+        }
 
         auto result = ast_pointer_type_new(allocator, base_type);
         base_type->pointer_to = result;

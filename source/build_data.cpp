@@ -58,7 +58,10 @@ namespace Zodiac
             auto r_type = build_data->type_table[i];
             if (r_type->kind == AST_Type_Kind::POINTER &&
                 r_type->pointer.base == base_type)
+                
             {
+                assert(base_type->pointer_to);
+                assert(base_type->pointer_to == r_type);
                 return r_type;
             }
         }

@@ -1393,20 +1393,20 @@ namespace Zodiac
 
         if (declaration->structure.usings.count)
         {
-            for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
-                auto using_ident = declaration->structure.usings[i];
-
-        assert(declaration->structure.imported_members.count == 0);
-        assert(declaration->structure.imported_members.data == nullptr);
-        declaration->structure.imported_members =
+            assert(declaration->structure.imported_members.count == 0);
+            assert(declaration->structure.imported_members.data == nullptr);
+            declaration->structure.imported_members =
             array_create<AST_Declaration *>(resolver->allocator,
                                             declaration->structure.usings.count * 2);
 
-        for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
-            auto using_ident = declaration->structure.usings[i];
-            printf("  Using member: \"%s\"\n", using_ident->atom.data);
+            for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
+                auto using_ident = declaration->structure.usings[i];
+                printf("  Using member: \"%s\"\n", using_ident->atom.data);
 
+                AST_Declaration *using_member =
+                scope_find_declaration(declaration->structure.member_scope, using_ident);
                 assert(using_member);
+
                 assert(using_member->kind == AST_Declaration_Kind::VARIABLE);
                 assert(using_member->type->kind == AST_Type_Kind::STRUCTURE);
 
@@ -1416,46 +1416,46 @@ namespace Zodiac
 
                 for (int64_t j = 0;
                      j < decl_of_used_type->structure.member_declarations.count; j++) {
-                    AST_Declaration *imported_decl =
-                        decl_of_used_type->structure.member_declarations[j];
+                        AST_Declaration *imported_decl =
+                    decl_of_used_type->structure.member_declarations[j];
                     assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
 
-            for (int64_t j = 0; j < decl_of_used_type->structure.member_declarations.count; j++) {
-                AST_Declaration *imported_decl = decl_of_used_type->structure.member_declarations[j];
-                assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
-                printf("    Imported: \"%s\"\n", imported_decl->identifier->atom.data);
+                    printf("    Imported: \"%s\"\n", imported_decl->identifier->atom.data);
 
-                AST_Declaration *import_link =
-                    ast_import_link_declaration_new(resolver->allocator, using_member,
-                                                    imported_decl,
-                                                    declaration->structure.member_scope);
-                assert(import_link);
-                scope_add_declaration(declaration->structure.member_scope, import_link);
-                array_append(&declaration->structure.imported_members, import_link);
+                    AST_Declaration *import_link =
+                        ast_import_link_declaration_new(resolver->allocator, using_member,
+                                                        imported_decl,
+                                                        declaration->structure.member_scope);
+                    assert(import_link);
+                    scope_add_declaration(declaration->structure.member_scope, import_link);
+                    array_append(&declaration->structure.imported_members, import_link);
+                }
+
+                for (int64_t j = 0; j < decl_of_used_type->structure.imported_members.count;
+                     j++) {
+                    auto imported_decl = decl_of_used_type->structure.imported_members[j];
+
+                    assert(imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+                    printf("    Imported: \"%s\" from \"%s\"\n",
+                           imported_decl->identifier->atom.data,
+                           imported_decl->import_link.using_member->identifier->atom.data);
+
+
+                    AST_Declaration *import_link =
+                        ast_import_link_declaration_new(resolver->allocator, using_member,
+                                                        imported_decl,
+                                                        declaration->structure.member_scope);
+
+                    assert(import_link);
+                    import_link->import_link.index_in_parent =
+                        using_member->variable.index_in_parent;
+                    scope_add_declaration(declaration->structure.member_scope, import_link);
+                    array_append(&declaration->structure.imported_members, import_link);
+                }
             }
 
-            for (int64_t j = 0; j < decl_of_used_type->structure.imported_members.count; j++) {
-                auto imported_decl = decl_of_used_type->structure.imported_members[j];
-
-                assert(imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
-                printf("    Imported: \"%s\" from \"%s\"\n",
-                       imported_decl->identifier->atom.data,
-                       imported_decl->import_link.using_member->identifier->atom.data);
-
-
-                AST_Declaration *import_link =
-                    ast_import_link_declaration_new(resolver->allocator, using_member,
-                                                    imported_decl,
-                                                    declaration->structure.member_scope);
-
-                assert(import_link);
-                import_link->import_link.index_in_parent = using_member->variable.index_in_parent;
-                scope_add_declaration(declaration->structure.member_scope, import_link);
-                array_append(&declaration->structure.imported_members, import_link);
-            }
+            printf("\n");
         }
-
-        printf("\n");
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
         declaration->flags |= AST_NODE_FLAG_TYPED;

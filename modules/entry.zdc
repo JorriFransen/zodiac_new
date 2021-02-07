@@ -45,47 +45,8 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
         _std_.print(file_name);
         _std_.print(":");
         _std_.print_num(line);
-        _std_.println(" !!!\n");
+        _std_.println("!\n");
 
-<<<<<<<
-        if (line < 0) _std_.print("negative");
-        else if (line == 1) _std_.print("1\n");
-        else if (line == 2) _std_.print("2\n");
-        else if (line == 3) _std_.print("3\n");
-        else if (line == 4) _std_.print("4\n");
-        else if (line == 5) _std_.print("5\n");
-        else if (line == 6) _std_.print("6\n");
-        else if (line == 7) _std_.print("7\n");
-        else if (line == 8) _std_.print("8\n");
-        else if (line == 9) _std_.print("9\n");
-        else if (line == 10) _std_.print("10\n");
-        else if (line == 11) _std_.print("11\n");
-        else if (line == 12) _std_.print("12\n");
-        else if (line == 13) _std_.print("13\n");
-        else if (line == 14) _std_.print("14\n");
-        else if (line == 15) _std_.print("15\n");
-        else if (line == 16) _std_.print("16\n");
-        else if (line == 17) _std_.print("17\n");
-        else if (line == 18) _std_.print("18\n");
-        else if (line == 19) _std_.print("19\n");
-        else if (line == 20) _std_.print("20\n");
-        else if (line == 21) _std_.print("21\n");
-        else if (line == 22) _std_.print("22\n");
-        else if (line == 23) _std_.print("23\n");
-        else if (line == 24) _std_.print("24\n");
-        else if (line == 25) _std_.print("25\n");
-        // else if (line == 26) _std_.print("26\n");
-        // else if (line == 27) _std_.print("27\n");
-        // else if (line == 28) _std_.print("28\n");
-        // else if (line == 29) _std_.print("29\n");
-        // else if (line == 30) _std_.print("30\n");
-        else _std_.print("big");
-
-        // _os_.abort();
-=======
-
-        _std_.print("\n");
         _os_.abort();
->>>>>>>
     }
 }

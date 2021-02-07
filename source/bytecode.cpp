@@ -1199,7 +1199,7 @@ namespace Zodiac
     {
         assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
         assert(parent_lvalue->type->kind == AST_Type_Kind::POINTER);
-        assert(struct_type->pointer_to = parent_lvalue->type);
+        // assert(struct_type->pointer_to == parent_lvalue->type);
         assert(import_link->kind == AST_Declaration_Kind::IMPORT_LINK);
 
         auto using_decl = import_link->import_link.using_member;
@@ -1228,9 +1228,16 @@ namespace Zodiac
 
         Bytecode_Value *using_index_value =
             bytecode_integer_literal_new(builder, Builtin::type_u32, using_il);
-        assert(using_type->pointer_to);
+        auto interm_result_type =
+            build_data_find_or_create_pointer_type(builder->allocator,
+                                                   builder->build_data,
+                                                   using_type);
+        // assert(using_type->pointer_to);
+        assert(using_type->pointer_to == interm_result_type);
+        assert(using_type->pointer_to->pointer.base == using_type);
+        
         auto using_result = bytecode_temporary_new(builder,
-                                                   using_type->pointer_to);
+                                                   interm_result_type);
         bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue,
                                   using_index_value, using_result);
 
@@ -1241,16 +1248,18 @@ namespace Zodiac
             using_result = bytecode_emit_struct_dereference(builder, child_struct_type,
                                                             using_result, imported_decl,
                                                             child_result_type);
-        }
+            return using_result;
 
-        Bytecode_Value *imported_index_value =
-            bytecode_integer_literal_new(builder, Builtin::type_u32, imported_il);
-        assert(result_type);
-        auto result = bytecode_temporary_new(builder, result_type);
-        bytecode_emit_instruction(builder, AGG_OFFSET, using_result,
-                                  imported_index_value, result);
-        return result;
-        return result;
+        } else {
+
+            Bytecode_Value *imported_index_value =
+                bytecode_integer_literal_new(builder, Builtin::type_u32, imported_il);
+            assert(result_type);
+            auto result = bytecode_temporary_new(builder, result_type);
+            bytecode_emit_instruction(builder, AGG_OFFSET, using_result,
+                                      imported_index_value, result);
+            return result;
+        }
     }
 
     Bytecode_Value *bytecode_emit_identifier(Bytecode_Builder *builder, AST_Identifier *identifier)
