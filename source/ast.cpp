@@ -308,6 +308,7 @@ namespace Zodiac
                     array_init(ast_builder->allocator, &ast_member_decls,
                                ptn->structure.member_declarations.count);
 
+                    int64_t index_in_parent = 0;
                     for (int64_t i = 0; i < ptn->structure.member_declarations.count; i++) {
                         auto ptn_mem_decl = ptn->structure.member_declarations[i];
                         auto ast_mem_decl = ast_create_declaration_from_ptn(ast_builder,
@@ -318,7 +319,8 @@ namespace Zodiac
                         ast_mem_decl->decl_flags |= AST_DECL_FLAG_IS_STRUCT_MEMBER;
                         if (ast_mem_decl->kind == AST_Declaration_Kind::VARIABLE) {
                             assert(ast_mem_decl->variable.index_in_parent == -1);
-                            ast_mem_decl->variable.index_in_parent = i;
+                            ast_mem_decl->variable.index_in_parent = index_in_parent;
+                            index_in_parent += 1;
                         } else {
                             assert(ast_mem_decl->kind == AST_Declaration_Kind::CONSTANT);
                         }
