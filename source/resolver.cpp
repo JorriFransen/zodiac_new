@@ -1386,9 +1386,11 @@ namespace Zodiac
             AST_Declaration *member_decl = declaration->structure.member_declarations[i];
 
             assert(member_decl->type);
-            assert(member_decl->kind == AST_Declaration_Kind::VARIABLE);
-
-            array_append(&declaration->type->structure.member_types, member_decl->type);
+            if (member_decl->kind == AST_Declaration_Kind::VARIABLE) {
+                array_append(&declaration->type->structure.member_types, member_decl->type);
+            } else {
+                assert(member_decl->kind == AST_Declaration_Kind::CONSTANT);
+            }
         }
 
         if (declaration->structure.usings.count)
@@ -2769,8 +2771,7 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
 
         if (child_decl->kind == AST_Declaration_Kind::VARIABLE) {
             assert(child_decl->variable.index_in_parent != -1);
-        } else {
-            assert(child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
+        } else if (child_decl->kind == AST_Declaration_Kind::IMPORT_LINK) {
 
 #ifndef NDEBUG
             auto using_member = child_decl->import_link.using_member;
@@ -2783,6 +2784,9 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             } else {
                 assert(imported_member->kind == AST_Declaration_Kind::IMPORT_LINK);
             }
+        } else {
+            assert(child_decl->kind == AST_Declaration_Kind::CONSTANT);
+            dot_expr->dot.kind = AST_Dot_Expression_Kind::CONSTANT_MEMBER;
         }
 
         dot_expr->dot.child_decl = child_decl;

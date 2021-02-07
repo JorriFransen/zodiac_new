@@ -809,6 +809,16 @@ namespace Zodiac
                         result = bytecode_emit_identifier(builder, expr->dot.child_identifier);
                         break;
                     }
+
+                    case AST_Dot_Expression_Kind::CONSTANT_MEMBER: {
+                        auto child_decl = expr->dot.child_decl;
+                        assert(child_decl->kind == AST_Declaration_Kind::CONSTANT);
+                        assert(child_decl->constant.init_expression);
+
+                        result = bytecode_emit_expression(builder,
+                                                          child_decl->constant.init_expression);
+                        break;
+                    }
                 }
 
                 assert(result);
@@ -1109,6 +1119,11 @@ namespace Zodiac
                         result = bytecode_temporary_new(builder, result_type);
                         bytecode_emit_instruction(builder, AGG_OFFSET, parent_lvalue, index_value,
                                                   result);
+                    } else if (expr->dot.child_decl->kind == AST_Declaration_Kind::CONSTANT) {
+                        auto const_decl = expr->dot.child_decl;
+                        assert(const_decl->constant.init_expression);
+                        result = bytecode_emit_expression(builder,
+                                                          const_decl->constant.init_expression);
                     } else {
                         assert(expr->dot.child_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
                         result = bytecode_emit_struct_dereference(builder, aggregate_type,

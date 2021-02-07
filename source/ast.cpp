@@ -315,10 +315,13 @@ namespace Zodiac
                                                                             nullptr,
                                                                             mem_scope);
                         assert(ast_mem_decl);
-                        assert(ast_mem_decl->kind == AST_Declaration_Kind::VARIABLE);
                         ast_mem_decl->decl_flags |= AST_DECL_FLAG_IS_STRUCT_MEMBER;
-                        assert(ast_mem_decl->variable.index_in_parent == -1);
-                        ast_mem_decl->variable.index_in_parent = i;
+                        if (ast_mem_decl->kind == AST_Declaration_Kind::VARIABLE) {
+                            assert(ast_mem_decl->variable.index_in_parent == -1);
+                            ast_mem_decl->variable.index_in_parent = i;
+                        } else {
+                            assert(ast_mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+                        }
 
                         array_append(&ast_member_decls, ast_mem_decl);
                     }

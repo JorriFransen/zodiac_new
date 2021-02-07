@@ -380,6 +380,7 @@ namespace Zodiac
         ARRAY_COUNT,
         ENUM_MEMBER,
         MODULE_MEMBER,
+        CONSTANT_MEMBER,
     };
 
     struct AST_Expression : public AST_Node
