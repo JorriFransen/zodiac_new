@@ -8,12 +8,28 @@ main :: func() -> s64 {
     std.println("Constants in structs");
 
     Buffer :: struct {
-        // CAPACITY :: 32;
-        x : int;
+        CAPACITY :: 32;
+
+        used : s64;
+        data : [CAPACITY]u8;
+
+        // append :: func (b: *Buffer, str: *u8);
     };
 
     b : Buffer;
-    b.x = 6;
+    b.used = 0;
 
-    return b.x;
+    std.print("b.CAPACITY: ");
+    std.print_numln(b.CAPACITY);
+    std.print("Buffer.CAPACITY: ");
+    std.print_numln(Buffer.CAPACITY);
+
+    @assert(@sizeof(Buffer) == @sizeof(u8) * Buffer.CAPACITY + @sizeof(b.used));
+    @assert(@sizeof(Buffer) == Buffer.CAPACITY + @sizeof(b.used));
+    @assert(@sizeof(Buffer) == 40);
+
+    @assert(@sizeof(Buffer) == @sizeof(b.data) + @sizeof(b.used));
+
+
+    return 0;
 }
