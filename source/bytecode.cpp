@@ -1421,7 +1421,7 @@ namespace Zodiac
                 }
             }
 
-            assert(found);
+            if (!found) assert(false && "Member not found");
 
             auto struct_type = struct_decl->type;
             assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
@@ -1439,6 +1439,8 @@ namespace Zodiac
             assert(args.count == 1);
 
             Scope *entry_scope = builder->build_data->entry_module->module_scope;
+            assert(entry_scope);
+
             auto default_handler_decl =
                 scope_find_declaration(entry_scope,
                                        Builtin::atom_default_assert_handler);
@@ -1447,6 +1449,7 @@ namespace Zodiac
             assert(default_handler_func);
 
             auto fp = expr->begin_file_pos;
+            // printf("Inserting assert at: %s:%lu\n", fp.file_name.data, fp.line);
 
             Bytecode_Value *cond_val = bytecode_emit_expression(builder, args[0]);
             Bytecode_Value *file_name = bytecode_get_string_literal(builder, fp.file_name);

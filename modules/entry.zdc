@@ -47,6 +47,7 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
         _std_.print_num(line);
         _std_.println(" !!!\n");
 
+<<<<<<<
         if (line < 0) _std_.print("negative");
         else if (line == 1) _std_.print("1\n");
         else if (line == 2) _std_.print("2\n");
@@ -81,5 +82,10 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
         else _std_.print("big");
 
         // _os_.abort();
+=======
+
+        _std_.print("\n");
+        _os_.abort();
+>>>>>>>
     }
 }

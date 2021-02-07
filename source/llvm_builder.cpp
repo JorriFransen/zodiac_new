@@ -565,9 +565,10 @@ namespace Zodiac
                 break;
             }
 
-            case JUMP_IF:
-            {
+            case JUMP_IF: {
                 llvm::Value *cond_val = llvm_emit_value(builder, inst->a);
+                assert(cond_val->getType()->isIntegerTy());
+                assert(builder->llvm_datalayout->getTypeAllocSize(cond_val->getType()) == 1);
 
                 assert(inst->b->kind == Bytecode_Value_Kind::BLOCK);
                 assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);

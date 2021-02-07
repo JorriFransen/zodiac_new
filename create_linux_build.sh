@@ -43,11 +43,21 @@ pushd debug
 call_cmake Debug
 
 popd
-# pushd release
 
-# call_cmake Release
+mkdir release_debug
+pushd release_debug
+call_cmake RelWithDebInfo
+popd
 
-# popd
+pushd release
+call_cmake Release
+popd
+
+mkdir release_debug
+pushd release_debug
+call_cmake RelWithDebInfo
+popd
+
 popd
 
 
@@ -61,11 +71,15 @@ pushd debug
 CC=clang CXX=clang++ call_cmake Debug
 
 popd
-# pushd release
 
-# CC=clang CXX=clang++ call_cmake Release
+pushd release
+CC=clang CXX=clang++ call_cmake Release
+popd
 
-# popd
+mkdir release_debug
+pushd release_debug
+CC=clang CXX=clang++ call_cmake RelWithDebInfo
+popd
 
 mkdir release_debug
 pushd release_debug

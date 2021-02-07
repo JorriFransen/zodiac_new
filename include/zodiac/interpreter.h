@@ -23,7 +23,7 @@ namespace Zodiac
 
         bool running = false;
 
-        uint8_t *stack = nullptr;
+        uint8_t *_stack = nullptr;
         int64_t stack_size = 0;
         int64_t sp = 0;
 
@@ -65,6 +65,8 @@ namespace Zodiac
     void interp_store(AST_Type *type, void *dest_ptr, void *source_ptr);
     void interp_store_constant(void *dest, Const_Value val);
 
+    void *interp_stack_ptr(Interpreter *interp, int64_t index, int64_t byte_size);
+
     template <typename T>
     uint8_t *interp_stack_push(Interpreter *interp, T value)
     {
@@ -72,13 +74,13 @@ namespace Zodiac
 
         assert(interp->sp + size <= interp->stack_size);
 
-        uint8_t *ptr = &interp->stack[interp->sp];
+        void *ptr = interp_stack_ptr(interp, interp->sp, sizeof(T));
 
         memcpy(ptr, &value, size);
         interp->sp += size;
 
 
-        return ptr;
+        return (uint8_t*)ptr;
     }
 
     template <typename T>
@@ -90,22 +92,29 @@ namespace Zodiac
 
         interp->sp -= size;
 
-        uint8_t *ptr = &interp->stack[interp->sp];
+        void *ptr = interp_stack_ptr(interp, interp->sp, sizeof(T));
         return *(T *)ptr;
     }
 
 #define INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, val, name) \
-    void *name; \
+    void *name = nullptr; { \
+    assert(val->type->bit_size % 8 == 0); \
+    auto byte_size = val->type->bit_size / 8; \
     switch (val->kind) { \
         default: assert(false && !"default"); \
         case Bytecode_Value_Kind::ALLOCL: { \
-            void *tmp = &interp->stack[interp->frame_pointer + val->allocl.byte_offset_from_fp]; \
+            void *tmp = \
+                interp_stack_ptr(interp, \
+                                 interp->frame_pointer + val->allocl.byte_offset_from_fp, \
+                                 byte_size); \
             name = &tmp; \
             break; \
         } \
         case Bytecode_Value_Kind::PARAM: { \
-            void *tmp = &interp->stack[interp->frame_pointer + \
-                                       val->parameter.byte_offset_from_fp]; \
+            void *tmp = interp_stack_ptr(interp, \
+                                         interp->frame_pointer + \
+                                         val->parameter.byte_offset_from_fp, \
+                                         byte_size); \
             name = &tmp; \
             break; \
         } \
@@ -123,6 +132,6 @@ namespace Zodiac
             name = interpreter_load_lvalue(interp, val); \
             break;                                     \
         } \
-    }
+    }}
 
 }
