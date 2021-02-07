@@ -96,6 +96,7 @@ namespace Zodiac
         return *(T *)ptr;
     }
 
+
 #define INTERPRETER_LOAD_OR_CREATE_LVALUE(interp, val, name) \
     void *name = nullptr; { \
     assert(val->type->bit_size % 8 == 0); \
@@ -103,10 +104,7 @@ namespace Zodiac
     switch (val->kind) { \
         default: assert(false && !"default"); \
         case Bytecode_Value_Kind::ALLOCL: { \
-            void *tmp = \
-                interp_stack_ptr(interp, \
-                                 interp->frame_pointer + val->allocl.byte_offset_from_fp, \
-                                 byte_size); \
+            void *tmp = interpreter_load_lvalue(interp, val); \
             name = &tmp; \
             break; \
         } \
