@@ -381,6 +381,7 @@ namespace Zodiac
         ENUM_MEMBER,
         MODULE_MEMBER,
         CONSTANT_MEMBER,
+        FUNCTION_CALL,
     };
 
     struct AST_Expression : public AST_Node

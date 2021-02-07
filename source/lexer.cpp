@@ -299,9 +299,19 @@ Token lex_string_literal(Lexer_Data *ld)
 
     advance(ld);
 
-    while (current_char(ld) != '"')
-    {
-        advance(ld);
+    while (current_char(ld) != '"') {
+        if (current_char(ld) == '\\') {
+            while (current_char(ld) == '\\') {
+                advance(ld);
+#ifndef NDEBUG
+                auto c = current_char(ld);
+#endif
+                assert(c == '\\' || c == 'n' || c == '"' );
+                advance(ld);
+            }
+        } else {
+            advance(ld);
+        }
     }
 
     advance(ld);
@@ -442,9 +452,9 @@ String lexer_replace_character_literals(Allocator *allocator, const char *str, i
 
 char lexer_get_escape_char(char ident)
 {
-    switch (ident)
-    {
+    switch (ident) {
         case 'n': return '\n';
+        case '"': return '"';
         default: assert(false);
     }
 

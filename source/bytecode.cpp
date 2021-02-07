@@ -819,6 +819,11 @@ namespace Zodiac
                                                           child_decl->constant.init_expression);
                         break;
                     }
+
+                    case AST_Dot_Expression_Kind::FUNCTION_CALL: {
+                        assert(false);
+                        break;
+                    }
                 }
 
                 assert(result);
@@ -1174,7 +1179,11 @@ namespace Zodiac
                 auto ptr_val = bytecode_emit_lvalue(builder, ptr_expr);
                 if (ptr_val->kind != Bytecode_Value_Kind::ALLOCL &&
                     ptr_val->kind != Bytecode_Value_Kind::GLOBAL) {
-                    ptr_val = bytecode_emit_load(builder, ptr_val);
+                    if (ptr_expr->type->kind == AST_Type_Kind::ARRAY) {
+                        // We don't need to load, the PTR_OFFSET below will do this
+                    } else {
+                        ptr_val = bytecode_emit_load(builder, ptr_val);
+                    }
                 }
 
                 auto offset_val = bytecode_emit_expression(builder, index_expr);
@@ -2515,7 +2524,10 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::TYPE: assert(false);
+            case Bytecode_Value_Kind::TYPE: {
+                ast_print_type(sb, value->type);
+                break;
+            }
             case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
         }
     }

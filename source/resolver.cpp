@@ -1372,8 +1372,10 @@ namespace Zodiac
 
             } else if (!((member_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
                          (member_decl->flags & AST_NODE_FLAG_TYPED))) {
-                all_members_resolved = false;
-                break;
+                if (member_decl->kind != AST_Declaration_Kind::FUNCTION) {
+                    all_members_resolved = false;
+                    break;
+                }
             }
 
         }
@@ -1385,11 +1387,12 @@ namespace Zodiac
         for (int64_t i = 0; i < declaration->structure.member_declarations.count; i++) {
             AST_Declaration *member_decl = declaration->structure.member_declarations[i];
 
-            assert(member_decl->type);
             if (member_decl->kind == AST_Declaration_Kind::VARIABLE) {
+                assert(member_decl->type);
                 array_append(&declaration->type->structure.member_types, member_decl->type);
             } else {
-                assert(member_decl->kind == AST_Declaration_Kind::CONSTANT);
+                assert(member_decl->kind == AST_Declaration_Kind::CONSTANT ||
+                       member_decl->kind == AST_Declaration_Kind::FUNCTION);
             }
         }
 
@@ -2279,7 +2282,11 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
                 auto args = expression->call.arg_expressions;
                 auto params = callee_decl->function.parameter_declarations;
 
-                assert(args.count == params.count);
+                if (args.count != params.count) {
+                    zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::MISMATCHING_ARGUMENT_COUNT, expression, "Mismatching argument count, expected %d arguments, got %d", params.count, args.count);
+                    return false;
+                }
+
                 for (int64_t i = 0; i < args.count; i++) {
                     AST_Expression **p_arg_expr = &args[i];
                     auto arg_expr = *p_arg_expr;
@@ -2751,6 +2758,12 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
         }
 
         assert(child_decl);
+
+        // if (child_decl->kind == AST_Declaration_Kind::FUNCTION &&
+        //     !child_decl->type) {
+        //     return false;
+        // }
+
         assert(child_decl->type);
         assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(child_decl->flags & AST_NODE_FLAG_TYPED);
@@ -2784,9 +2797,12 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             } else {
                 assert(imported_member->kind == AST_Declaration_Kind::IMPORT_LINK);
             }
-        } else {
-            assert(child_decl->kind == AST_Declaration_Kind::CONSTANT);
+        } else if (child_decl->kind == AST_Declaration_Kind::CONSTANT){
             dot_expr->dot.kind = AST_Dot_Expression_Kind::CONSTANT_MEMBER;
+        } else if (child_decl->kind == AST_Declaration_Kind::FUNCTION) {
+            dot_expr->dot.kind = AST_Dot_Expression_Kind::FUNCTION_CALL;
+        } else {
+            assert(false);
         }
 
         dot_expr->dot.child_decl = child_decl;

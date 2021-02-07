@@ -3,18 +3,32 @@ std :: import std;
 
 #run main();
 
+Buffer :: struct {
+    CAPACITY :: 32;
+
+    used : s64;
+    data : [CAPACITY]u8;
+
+    append :: func (b: *Buffer, str: *u8) {
+        len := std.strlen(str);
+        @assert(b.used + len < CAPACITY);
+
+        for (i := 0; i < len; i += 1) {
+            b.data[b.used] = str[i];
+            b.used += 1;
+        }
+    }
+
+    print :: func (b: *Buffer) {
+        std.print("Buffer content: \"");
+        std.print_len(*b.data[0], b.used);
+        std.print("\"\n");
+    }
+};
+
 main :: func() -> s64 {
 
     std.println("Constants in structs");
-
-    Buffer :: struct {
-        CAPACITY :: 32;
-
-        used : s64;
-        data : [CAPACITY]u8;
-
-        // append :: func (b: *Buffer, str: *u8);
-    };
 
     b : Buffer;
     b.used = 0;
@@ -30,6 +44,10 @@ main :: func() -> s64 {
 
     @assert(@sizeof(Buffer) == @sizeof(b.data) + @sizeof(b.used));
 
+    Buffer.append(*b, "test");
+    b.append(*b, "-abcd");
+
+    b.print(*b);
 
     return 0;
 }

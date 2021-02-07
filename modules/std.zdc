@@ -28,13 +28,15 @@ os :: import os;
 
 } #elseif (PLATFORM_LINUX) {
 
-    print :: func (cstr: *u8)
-    {
-        @syscall(1, 1, cstr, strlen(cstr));
+    print_len :: func(cstr: *u8, len: s64)  {
+        @syscall(1, 1, cstr, len);
     }
 
-    print_char :: func (c: u8)
-    {
+    print :: func (cstr: *u8) {
+        print_len(cstr, strlen(cstr));
+    }
+
+    print_char :: func (c: u8) {
         _c : u8 = c;
         @syscall(1, 1, *_c, 1);
     }

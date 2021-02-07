@@ -224,7 +224,8 @@ namespace Zodiac
                 if (func_parent_scope->kind != Scope_Kind::MODULE) {
 
                     while (func_parent_scope->kind != Scope_Kind::MODULE &&
-                           func_parent_scope->kind != Scope_Kind::STATIC_IF) {
+                           func_parent_scope->kind != Scope_Kind::STATIC_IF &&
+                           func_parent_scope->kind != Scope_Kind::AGGREGATE) {
 
                         auto fps = func_parent_scope->parent;
                         assert(fps);
@@ -322,7 +323,8 @@ namespace Zodiac
                             ast_mem_decl->variable.index_in_parent = index_in_parent;
                             index_in_parent += 1;
                         } else {
-                            assert(ast_mem_decl->kind == AST_Declaration_Kind::CONSTANT);
+                            assert(ast_mem_decl->kind == AST_Declaration_Kind::CONSTANT ||
+                                   ast_mem_decl->kind == AST_Declaration_Kind::FUNCTION);
                         }
 
                         array_append(&ast_member_decls, ast_mem_decl);
