@@ -1406,7 +1406,6 @@ namespace Zodiac
 
             for (int64_t i = 0; i < declaration->structure.usings.count; i++) {
                 auto using_ident = declaration->structure.usings[i];
-                printf("  Using member: \"%s\"\n", using_ident->atom.data);
 
                 AST_Declaration *using_member =
                 scope_find_declaration(declaration->structure.member_scope, using_ident);
@@ -1425,8 +1424,6 @@ namespace Zodiac
                     decl_of_used_type->structure.member_declarations[j];
                     assert(imported_decl->kind == AST_Declaration_Kind::VARIABLE);
 
-                    printf("    Imported: \"%s\"\n", imported_decl->identifier->atom.data);
-
                     AST_Declaration *import_link =
                         ast_import_link_declaration_new(resolver->allocator, using_member,
                                                         imported_decl,
@@ -1441,10 +1438,6 @@ namespace Zodiac
                     auto imported_decl = decl_of_used_type->structure.imported_members[j];
 
                     assert(imported_decl->kind == AST_Declaration_Kind::IMPORT_LINK);
-                    printf("    Imported: \"%s\" from \"%s\"\n",
-                           imported_decl->identifier->atom.data,
-                           imported_decl->import_link.using_member->identifier->atom.data);
-
 
                     AST_Declaration *import_link =
                         ast_import_link_declaration_new(resolver->allocator, using_member,
@@ -1458,8 +1451,6 @@ namespace Zodiac
                     array_append(&declaration->structure.imported_members, import_link);
                 }
             }
-
-            printf("\n");
         }
 
         declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
