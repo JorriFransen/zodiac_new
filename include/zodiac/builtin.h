@@ -37,6 +37,7 @@ enum class Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(it)                     \
     DEFINE_BUILTIN_ATOM(it_index)               \
     DEFINE_BUILTIN_ATOM(run)                    \
+    DEFINE_BUILTIN_ATOM(test)                   \
     DEFINE_BUILTIN_ATOM(elseif)                 \
     DEFINE_BUILTIN_ATOM(naked)                  \
     DEFINE_BUILTIN_ATOM(noreturn)               \

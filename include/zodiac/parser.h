@@ -11,9 +11,11 @@ namespace Zodiac
 {
 
 struct Resolver;
+
 struct Parser
 {
     Allocator *allocator = nullptr;
+
     Build_Data *build_data = nullptr;
 
     Resolver *resolver = nullptr;
@@ -53,6 +55,7 @@ Declaration_PTN *parser_parse_import_declaration(Parser *parser, Token_Stream *t
 
 Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream *ts,
                                                     bool elseif = false);
+Declaration_PTN *parser_parse_test_declaration(Parser *parser, Token_Stream *ts);
 
 Identifier_PTN *parser_parse_identifier(Parser *parser, Token_Stream *ts);
 

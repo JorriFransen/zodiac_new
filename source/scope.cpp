@@ -141,43 +141,41 @@ namespace Zodiac
 
         scope_print_indent(sb, indent);
 
-        switch (scope->kind)
-        {
+        switch (scope->kind) {
             case Scope_Kind::INVALID: assert(false);
 
-            case Scope_Kind::GLOBAL:
-            {
+            case Scope_Kind::GLOBAL: {
                 string_builder_append(sb, "GLOBAL:\n");
                 break;
             }
 
-            case Scope_Kind::MODULE:
-            {
+            case Scope_Kind::MODULE: {
                 string_builder_append(sb, "MODULE:\n");
                 break;
             }
 
-            case Scope_Kind::PARAMETER:
-            {
+            case Scope_Kind::PARAMETER: {
                 string_builder_append(sb, "PARAMETER:\n");
                 break;
             }
 
-            case Scope_Kind::BLOCK:
-            {
+            case Scope_Kind::BLOCK: {
                 string_builder_append(sb, "BLOCK:\n");
                 break;
             }
 
-            case Scope_Kind::AGGREGATE:
-            {
+            case Scope_Kind::AGGREGATE: {
                 string_builder_append(sb, "AGGREGATE:\n");
                 break;
             }
 
-            case Scope_Kind::STATIC_IF:
-            {
+            case Scope_Kind::STATIC_IF: {
                 string_builder_append(sb, "STATIC_IF:\n");
+                break;
+            }
+
+            case Scope_Kind::TEST: {
+                string_builder_append(sb, "TEST:\n");
                 break;
             }
         }

@@ -185,7 +185,12 @@ namespace Zodiac
 
         if (!bytecode_block_ends_with_terminator(last_block) &&
             !(func->flags & BC_FUNC_FLAG_NORETURN)) {
-            bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+
+            if (func->type->function.return_type == Builtin::type_void) {
+                bytecode_emit_instruction(builder, RETURN_VOID, nullptr, nullptr, nullptr);
+            } else {
+                assert(false && !"Not all control paths return a value, we should catch this in the resolver");
+            }
         }
 
         func->flags |= BC_FUNC_FLAG_EMITTED;
@@ -402,19 +407,17 @@ namespace Zodiac
 
     void bytecode_emit_declaration(Bytecode_Builder *builder, AST_Declaration *decl)
     {
-        switch (decl->kind)
-        {
+        switch (decl->kind) {
+
             case AST_Declaration_Kind::INVALID: assert(false);
             case AST_Declaration_Kind::IMPORT: assert(false); //@@TODO: Implement!
             case AST_Declaration_Kind::USING: assert(false); //@@TODO: Implement!
 
-            case AST_Declaration_Kind::VARIABLE:
-            {
+            case AST_Declaration_Kind::VARIABLE: {
                 auto allocl_val = bytecode_find_variable(builder, decl);
                 assert(allocl_val);
 
-                if (decl->variable.init_expression)
-                {
+                if (decl->variable.init_expression) {
                     auto init_val = bytecode_emit_expression(builder,
                                                              decl->variable.init_expression);
                     bytecode_emit_store(builder, allocl_val, init_val);
@@ -449,6 +452,8 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false); //@@TODO: Implement!
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: assert(false);
         }
     }
 

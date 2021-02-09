@@ -37,7 +37,7 @@ typedef uint64_t PTN_Flag;
 
 enum PTN_FLAG : PTN_Flag
 {
-    PTN_FLAG_NONE                = 0x00,
+    PTN_FLAG_NONE               = 0x00,
     PTN_FLAG_DECL_IS_NAKED      = 0x01,
     PTN_FLAG_FUNC_NORETURN      = 0x02,
     PTN_FLAG_FUNC_FOREIGN       = 0x04,
@@ -201,6 +201,8 @@ enum class Declaration_PTN_Kind
     RUN,
     STATIC_IF,
     STATIC_ASSERT,
+
+    TEST,
 };
 
 struct Declaration_PTN
@@ -276,6 +278,13 @@ struct Declaration_PTN
         {
             Expression_PTN *cond_expression;
         } static_assert_decl;
+
+        struct
+        {
+            Atom module_name;
+            Identifier_PTN *name;
+            Statement_PTN *body;
+        } test;
     };
 
     Declaration_PTN() {}
@@ -540,6 +549,11 @@ Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
 Declaration_PTN *new_static_assert_declaration_ptn(Allocator *allocator,
                                                    Expression_PTN *cond_expr,
                                                    const File_Pos bfp, const File_Pos &efp);
+
+Declaration_PTN *new_test_declaration_ptn(Allocator *allocator, Atom module_name,
+                                          Identifier_PTN *name,
+                                          Statement_PTN *body,
+                                          const File_Pos &bfp, const File_Pos &efp);
 
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,

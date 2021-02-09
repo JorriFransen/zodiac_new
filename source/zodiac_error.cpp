@@ -52,6 +52,18 @@ namespace Zodiac
     }
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
+                             Zodiac_Error_Site site, const char *fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+
+        zodiac_report_error(build_data, kind, site, fmt, args);
+
+        va_end(args);
+        
+    }
+
+    void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,
                              File_Pos bfp, File_Pos efp, const char *fmt, ...)
     {
         va_list args;

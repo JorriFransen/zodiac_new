@@ -28,45 +28,40 @@ global_int : s64;
 
 #run main();
 
-#test "add_vec2" {
+#test "add_vec2_test" {
 
     a : Vec2;
     a.x = 1;
     a.y = 2;
 
-    b : Vec2;
-    b.x = 3;
-    b.y = 4;
+    expected_result := 3;
+    result := add_vec2(*a);
 
-    expected_result : Vec2;
-    expected_result.x = 4;
-    expected_result.y = 6;
-
-    result := add_vec2(*a, *b);
-
-    @assert(result.x == expected_result.x);
-    @assert(result.y == expected_result.y);
+    @assert(result == expected_result);
+    return true;
 }
 
-#test "passing test" {
-    // We don't have to do anything
-}
+// @TODO: Make this work, we need to some control flow analysis and insert
+//         returns in case of tests, and warn in case of functions.
+// #test "passing_test" {
+//     // We don't have to do anything
+// }
 
-#test "passing test 2" {
+#test "passing_test_2" {
     // Or we could return a boolean
     return true;
 }
 
-#test "failing test" {
+#test "failing_test" {
     // Return a boolean
     return false;
 }
 
-#test "failing test 2" {
+#test "failing_test_2" {
     // Trigger an assert
 
     @assert(false);
-    
+
     return true;
 }
 

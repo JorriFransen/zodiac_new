@@ -143,6 +143,11 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             free_ptn(allocator, ptn->static_assert_decl.cond_expression);
             break;
         }
+
+        case Declaration_PTN_Kind::TEST: {
+            free_ptn(allocator, ptn->test.body);
+            break;
+        }
     }
 }
 
@@ -704,6 +709,20 @@ Declaration_PTN *new_static_assert_declaration_ptn(Allocator *allocator,
     return result;
 }
 
+Declaration_PTN *new_test_declaration_ptn(Allocator *allocator, Atom module_name,
+                                          Identifier_PTN *name,
+                                          Statement_PTN *body,
+                                          const File_Pos &bfp, const File_Pos &efp)
+{
+    auto result = new_ptn<Declaration_PTN>(allocator, bfp, efp);
+    result->kind = Declaration_PTN_Kind::TEST;
+    result->test.module_name = module_name;
+    result->test.name = name;
+    result->test.body = body;
+
+    return result;
+}
+
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -949,24 +968,22 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
 
     assert(ident_copy);
 
-    switch (decl->kind)
-    {
+    switch (decl->kind) {
+
         case Declaration_PTN_Kind::INVALID: assert(false);
         case Declaration_PTN_Kind::IMPORT: assert(false);
 
         case Declaration_PTN_Kind::USING: assert(false);
 
-        case Declaration_PTN_Kind::VARIABLE:
-        {
+        case Declaration_PTN_Kind::VARIABLE: {
+
             Expression_PTN *type_expr_copy = nullptr;
             Expression_PTN *init_expr_copy = nullptr;
-            if (flags & PTNC_FLAG_DONT_COPY_EXPRESSIONS)
-            {
+
+            if (flags & PTNC_FLAG_DONT_COPY_EXPRESSIONS) {
                 type_expr_copy = decl->variable.type_expression;
                 init_expr_copy = decl->variable.init_expression;
-            }
-            else
-            {
+            } else {
                 type_expr_copy = copy_expression_ptn(allocator, decl->variable.type_expression);
                 init_expr_copy = copy_expression_ptn(allocator, decl->variable.init_expression);
             }
@@ -985,8 +1002,7 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
         case Declaration_PTN_Kind::UNION: assert(false);
         case Declaration_PTN_Kind::ENUM: assert(false);
 
-        case Declaration_PTN_Kind::TYPEDEF:
-        {
+        case Declaration_PTN_Kind::TYPEDEF: {
             assert(false);
             break;
         }
@@ -995,6 +1011,8 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
 
         case Declaration_PTN_Kind::STATIC_IF: assert(false);
         case Declaration_PTN_Kind::STATIC_ASSERT: assert(false);
+
+        case Declaration_PTN_Kind::TEST: assert(false);
     }
 
     assert(false);
@@ -1356,12 +1374,10 @@ void print_statement_ptn(Statement_PTN *statement, uint64_t indent, bool newline
 
 void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/*=true*/)
 {
-    switch (decl->kind)
-    {
+    switch (decl->kind) {
         case Declaration_PTN_Kind::INVALID: assert(false);
 
-        case Declaration_PTN_Kind::IMPORT:
-        {
+        case Declaration_PTN_Kind::IMPORT: {
             print_indent(indent);
             printf("%s :: import ", decl->identifier->atom.data);
             print_expression_ptn(decl->import.module_ident_expr, 0);
@@ -1370,19 +1386,17 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             break;
         }
 
-        case Declaration_PTN_Kind::FUNCTION:
-        {
+        case Declaration_PTN_Kind::FUNCTION: {
             print_indent(indent);
 
-            if (decl->self.flags & PTN_FLAG_DECL_IS_NAKED)
-            {
+            if (decl->self.flags & PTN_FLAG_DECL_IS_NAKED) {
                 printf("#naked ");
             }
 
             printf("%s :: ", decl->identifier->atom.data);
             print_ptn(&decl->function.prototype->self, 0);
-            if (decl->function.body)
-            {
+
+            if (decl->function.body) {
                 print_statement_ptn(decl->function.body, indent);
             }
 
@@ -1390,8 +1404,7 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             break;
         }
 
-        case Declaration_PTN_Kind::USING:
-        {
+        case Declaration_PTN_Kind::USING: {
             print_indent(indent);
 
             printf("using ");
@@ -1407,54 +1420,53 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_indent(indent);
             printf("%s :", decl->identifier->atom.data);
             bool has_type = false;
-            if (decl->variable.type_expression)
-            {
+
+            if (decl->variable.type_expression) {
                 printf(" ");
                 print_expression_ptn(decl->variable.type_expression, 0);
                 has_type = true;
             }
-            if (decl->variable.init_expression)
-            {
+
+            if (decl->variable.init_expression) {
                 if (has_type) printf(" ");
                 printf("= ");
                 print_expression_ptn(decl->variable.init_expression, 0);
             }
+
             printf(";");
             if (newline) printf("\n");
             break;
         }
 
-        case Declaration_PTN_Kind::CONSTANT:
-        {
+        case Declaration_PTN_Kind::CONSTANT: {
             print_indent(indent);
             printf("%s :", decl->identifier->atom.data);
             bool has_type = false;
-            if (decl->constant.type_expression)
-            {
+
+            if (decl->constant.type_expression) {
                 printf(" ");
                 print_expression_ptn(decl->constant.type_expression, 0);
                 has_type = true;
             }
-            if (decl->constant.init_expression)
-            {
+
+            if (decl->constant.init_expression) {
                 if (has_type) printf(" ");
                 printf(": ");
                 print_expression_ptn(decl->constant.init_expression, 0);
             }
+
             printf(";\n");
             if (newline) printf("\n");
             break;
         };
 
-        case Declaration_PTN_Kind::STRUCT:
-        {
+        case Declaration_PTN_Kind::STRUCT: {
             print_indent(indent);
             printf("%s :: struct", decl->identifier->atom.data);
-            if (decl->structure.parameters.count)
-            {
+
+            if (decl->structure.parameters.count) {
                 printf("(");
-                for (int64_t i = 0; i < decl->structure.parameters.count; i++)
-                {
+                for (int64_t i = 0; i < decl->structure.parameters.count; i++) {
                     print_ptn(&decl->structure.parameters[i]->self, 0);
                 }
                 printf(")");
@@ -1462,12 +1474,13 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             printf("\n");
             print_indent(indent);
             printf("{\n");
-            for (int64_t i = 0; i < decl->structure.member_declarations.count; i++)
-            {
+
+            for (int64_t i = 0; i < decl->structure.member_declarations.count; i++) {
                 auto mem_decl = decl->structure.member_declarations[i];
                 printf("\n");
                 print_declaration_ptn(mem_decl, indent + 4, false);
             }
+
             print_indent(indent);
             printf("\n}\n");
             if (newline) printf("\n");
@@ -1542,6 +1555,8 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             printf(");\n");
             break;
         }
+
+        case Declaration_PTN_Kind::TEST: assert(false);
     }
 }
 

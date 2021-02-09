@@ -35,6 +35,7 @@ void parsed_file_init(Parser *parser, Parsed_File *pf, Atom name)
 {
     pf->name = name;
     array_init(parser->allocator, &pf->declarations);
+    array_init(parser->allocator, &pf->tests);
 }
 
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, Atom module_name)
@@ -56,12 +57,15 @@ void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, Atom m
 
     parser->current_module_name = module_name;
 
-    while (ts->current_token().kind != TOK_EOF)
-    {
+    pf->begin_file_pos = ts->current_token().begin_file_pos;
+
+    Token last_token = ts->current_token();
+
+    while (ts->current_token().kind != TOK_EOF) {
+        last_token = ts->current_token();
         auto ptn = parser_parse_declaration(parser, ts);
 
-        if (!ptn)
-        {
+        if (!ptn) {
             pf->valid = false;
             break;
         }
@@ -71,19 +75,22 @@ void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, Atom m
             ptn->kind != Declaration_PTN_Kind::STRUCT &&
             ptn->kind != Declaration_PTN_Kind::ENUM)
         {
-            if (!parser_expect_token(parser, ts, TOK_SEMICOLON))
-            {
+            if (!parser_expect_token(parser, ts, TOK_SEMICOLON)) {
                 pf->valid = false;
                 break;
-            }
-            else
-            {
+            } else {
                 ptn->self.flags |= PTN_FLAG_SEMICOLON;
             }
         }
-        array_append(&pf->declarations, ptn);
+
+        if (ptn->kind == Declaration_PTN_Kind::TEST) {
+            array_append(&pf->tests, ptn);
+        } else {
+            array_append(&pf->declarations, ptn);
+        }
     }
 
+    pf->end_file_pos = last_token.end_file_pos;
     parser->current_module_name = {};
 }
 
@@ -113,9 +120,11 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
     bool is_compiler_func = false;
 
     if (parser_is_token(ts, TOK_POUND)) {
+
         auto pt = ts->peek_token(1);
         if (pt.kind == TOK_KW_IF) {
             return parser_parse_static_if_declaration(parser, ts);
+
         } else if (pt.kind == TOK_IDENTIFIER && pt.atom == Builtin::atom_run) {
             auto bfp = ts->current_token().begin_file_pos;
             ts->next_token();
@@ -135,6 +144,10 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
 
             auto result = new_run_declaration_ptn(parser->allocator, run_expression, bfp, efp);
             result->self.flags |= PTN_FLAG_SEMICOLON;
+            return result;
+        } else if (pt.kind == TOK_IDENTIFIER && pt.atom == Builtin::atom_test) {
+            auto result =  parser_parse_test_declaration(parser, ts);
+            assert(result);
             return result;
         }
 
@@ -828,7 +841,52 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
     parser->static_if_depth -= 1;
     assert(parser->static_if_depth == old_sif_depth);
     return result;
+}
 
+Declaration_PTN *parser_parse_test_declaration(Parser *parser, Token_Stream *ts)
+{
+    auto bfp = ts->current_token().begin_file_pos;
+
+    if (!parser_expect_token(parser, ts, TOK_POUND)) {
+        return nullptr;
+    }
+
+#ifndef NDEBUG
+    auto test_id = ts->current_token();
+#endif
+
+    if (!parser_expect_token(parser, ts, TOK_IDENTIFIER)) {
+        assert(test_id.kind == TOK_IDENTIFIER);
+        assert(test_id.atom == Builtin::atom_test);
+        return nullptr;
+    }
+
+    auto test_name = ts->current_token();
+    if (!parser_expect_token(parser, ts, TOK_STRING_LITERAL)) {
+        return nullptr;
+    }
+
+    Identifier_PTN *test_ident = new_identifier_ptn(parser->allocator, test_name.atom,
+                                                    test_name.begin_file_pos,
+                                                    test_name.end_file_pos);
+
+
+    Statement_PTN *test_body = parser_parse_statement(parser, ts);
+    if (!test_body) return nullptr;
+    if (test_body->kind != Statement_PTN_Kind::BLOCK) {
+        assert(false && !"Test body must be a block statement!");
+        return nullptr;
+    }
+
+    auto efp = test_body->self.end_file_pos;
+
+    Declaration_PTN *result = new_test_declaration_ptn(parser->allocator,
+                                                       parser->current_module_name,
+                                                       test_ident,
+                                                       test_body, bfp, efp);
+    result->self.flags |= PTN_FLAG_SEMICOLON;
+
+    return result;
 }
 
 Identifier_PTN *parser_parse_identifier(Parser *parser, Token_Stream *ts)
@@ -1060,6 +1118,7 @@ Statement_PTN *parser_parse_statement(Parser *parser, Token_Stream *ts)
 
             auto result = new_return_statement_ptn(parser->allocator, expr, begin_fp, end_fp);
             result->self.flags |= PTN_FLAG_SEMICOLON;
+
             assert(result);
 
             return result;
