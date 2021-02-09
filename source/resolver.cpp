@@ -19,6 +19,7 @@ namespace Zodiac
         resolver->ast_builder = {
             .allocator = allocator,
             .build_data = build_data,
+            .test_scope = nullptr,
             .break_stack = {},
         };
 
