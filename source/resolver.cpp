@@ -422,6 +422,34 @@ namespace Zodiac
                 }
             }
 
+            int total_test_count = 0;
+            int resolved_test_count = 0;
+
+            for (int64_t i = 0; i < resolver->parsed_modules.count; i++) {
+                auto tl = bucket_array_first(&resolver->parsed_modules[i].ast->tests);
+                while(tl.bucket) {
+                    auto p_test = bucket_locator_get_ptr(tl);
+
+                    total_test_count++;
+
+                    AST_Declaration *test_decl = *p_test;
+                    if ((test_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
+                        (test_decl->flags & AST_NODE_FLAG_TYPED)) {
+                        resolved_test_count++;
+                    }
+
+                    bucket_locator_advance(&tl);
+                }
+            }
+
+            if (total_test_count) {
+                printf("Resolved %d/%d tests\n", resolved_test_count, total_test_count);
+
+                if (resolved_test_count == total_test_count) {
+                    assert(false && !"Build wrapper and resolve it.");
+                }
+            }
+
             if (queue_count(&resolver->parse_jobs)    == 0 &&
                 queue_count(&resolver->resolve_jobs)  == 0 &&
                 queue_count(&resolver->size_jobs)     == 0 &&

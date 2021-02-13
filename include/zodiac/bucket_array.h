@@ -186,15 +186,22 @@ namespace Zodiac
     template <typename Element_Type, int16_t bucket_capacity>
     Bucket_Locator<Element_Type, bucket_capacity>
     bucket_array_first(Bucket_Array<Element_Type, bucket_capacity> *ba) {
+
+        Bucket_Locator<Element_Type, bucket_capacity> result = {
+            .bucket = nullptr,
+            .index = 0,
+        };
+
+        if (ba->count <= 0) {
+            return result;
+        }
+
         assert(ba->first_bucket);
         assert(ba->first_bucket->count > 0);
         assert(ba->last_bucket);
         assert(ba->last_bucket->count > 0);
 
-        Bucket_Locator<Element_Type, bucket_capacity> result = {
-            .bucket = ba->first_bucket,
-            .index = 0,
-        };
+        result.bucket = ba->first_bucket;
 
         return result;
     }
