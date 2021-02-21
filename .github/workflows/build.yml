@@ -12,7 +12,7 @@ jobs:
     # well on Windows or Mac.  You can convert this to a matrix build if you need
     # cross-platform coverage.
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
 
     steps:
     - uses: actions/checkout@v2
@@ -20,13 +20,23 @@ jobs:
     # - name: find path
     #   run: echo ${{github.workspace}}
 
+    - name: Add llvm keys
+      run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - # Fingerprint: 6084 F3CF 814B 57C1 CF12 EFD5 15CF 4D18 AF4F 7421
+
+    - name: Adding llvm sources
+      run: sudo echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/llvm.list
+
+    - name: apt update
+      run: sudo apt update
+
+    # - name: apt upgrade
+    #   run: sudo apt upgrade
+
     - name: Install ninja-build
       run: sudo apt install ninja-build
 
     - name: Install llvm-11-dev
-      run: sudo echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main
-        deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/llvm.list && sudo apt update && sudo apt install llvm-11-dev
-      # run: sudo apt install llvm-11-dev
+      run: sudo apt install llvm-11-dev
 
     - name: Configure Dependencies
       shell: bash
