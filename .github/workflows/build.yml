@@ -24,7 +24,7 @@ jobs:
       run: sudo apt install ninja-build
 
     - name: Install llvm-11-dev
-      run: echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main
+      run: sudo echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main
         deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-11 main" >> /etc/apt/sources.list.d/llvm.list && sudo apt update && sudo apt install llvm-11-dev
       # run: sudo apt install llvm-11-dev
 
