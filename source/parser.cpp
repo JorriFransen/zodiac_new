@@ -842,8 +842,11 @@ Declaration_PTN *parser_parse_test_declaration(Parser *parser, Token_Stream *ts)
     assert(ft.kind == TOK_POUND);
     auto bfp = ft.begin_file_pos;
 
+#ifndef NDEBUG
+    auto test_ident_token =
+#endif
+        ts->next_token();
 
-    auto test_ident_token = ts->next_token();
     assert(test_ident_token.kind == TOK_IDENTIFIER);
     assert(test_ident_token.atom == Builtin::atom_test);
 
