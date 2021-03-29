@@ -19,7 +19,6 @@ namespace Zodiac
         resolver->ast_builder = {
             .allocator = allocator,
             .build_data = build_data,
-            .test_scope = nullptr,
             .break_stack = {},
         };
 
@@ -148,17 +147,6 @@ namespace Zodiac
 
                         bucket_locator_advance(&bl);
                     }
-
-                    if (ast_module->tests.count) {
-                        auto tl = bucket_array_first(&ast_module->tests);
-                        while (tl.bucket) {
-                            auto p_decl = bucket_locator_get_ptr(tl);
-                            auto decl = *p_decl;
-                            queue_resolve_job(resolver, decl);
-
-                            bucket_locator_advance(&tl);
-                        }
-                    }
                 }
             }
 
@@ -224,10 +212,6 @@ namespace Zodiac
                                 assert((decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER) ||
                                        (decl->decl_flags & AST_DECL_FLAG_IS_UNION_MEMBER));
                             }
-
-                        } else if (decl->kind == AST_Declaration_Kind::TEST) {
-                            if (!(decl->test.func->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE))
-                                queue_bytecode_job(resolver, decl->test.func);
                         } else {
                             assert(decl->kind == AST_Declaration_Kind::IMPORT ||
                                    decl->kind == AST_Declaration_Kind::USING ||
@@ -419,34 +403,6 @@ namespace Zodiac
                                              to_finalize.ast_type);
                     array_unordered_remove(&resolver->llvm_builder.union_types_to_finalize,
                                            i);
-                }
-            }
-
-            int total_test_count = 0;
-            int resolved_test_count = 0;
-
-            for (int64_t i = 0; i < resolver->parsed_modules.count; i++) {
-                auto tl = bucket_array_first(&resolver->parsed_modules[i].ast->tests);
-                while(tl.bucket) {
-                    auto p_test = bucket_locator_get_ptr(tl);
-
-                    total_test_count++;
-
-                    AST_Declaration *test_decl = *p_test;
-                    if ((test_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
-                        (test_decl->flags & AST_NODE_FLAG_TYPED)) {
-                        resolved_test_count++;
-                    }
-
-                    bucket_locator_advance(&tl);
-                }
-            }
-
-            if (total_test_count) {
-                printf("Resolved %d/%d tests\n", resolved_test_count, total_test_count);
-
-                if (resolved_test_count == total_test_count) {
-                    assert(false && !"Build wrapper and resolve it.");
                 }
             }
 
@@ -687,6 +643,7 @@ namespace Zodiac
 
         if (resolver->build_data->options->print_parse_tree) parsed_file_print(&parsed_file);
 
+        assert(parsed_file.declarations.count);
         AST_Module *module_ast = ast_create_from_parsed_file(&resolver->ast_builder, &parsed_file,
                                                              resolver->global_scope);
         //
@@ -831,8 +788,7 @@ namespace Zodiac
         AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
         assert(decl->type ||
                decl->kind == AST_Declaration_Kind::IMPORT ||
-               decl->kind == AST_Declaration_Kind::USING ||
-               decl->kind == AST_Declaration_Kind::TEST);
+               decl->kind == AST_Declaration_Kind::USING);
         assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
         assert(decl->flags & AST_NODE_FLAG_TYPED);
 
@@ -1385,22 +1341,6 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
-
-            case AST_Declaration_Kind::TEST: {
-
-#ifndef NDEBUG
-                AST_Declaration *func = declaration->test.func;
-#endif
-
-                assert(func->flags & AST_NODE_FLAG_RESOLVED_ID);
-                assert(func->flags & AST_NODE_FLAG_TYPED);
-
-                declaration->type = nullptr;
-                declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
-                declaration->flags |= AST_NODE_FLAG_TYPED;
-                return true;
-                break;
-            }
         }
 
         assert(false);
@@ -3110,13 +3050,6 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
-
-            case AST_Declaration_Kind::TEST: {
-                assert(decl->test.func->flags & AST_NODE_FLAG_SIZED);
-                decl->flags |= AST_NODE_FLAG_SIZED;
-                return true;
-                break;
-            }
         }
 
         assert(false);

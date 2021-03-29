@@ -68,7 +68,6 @@ namespace Zodiac
         Atom name = {};
 
         Declarations declarations = {};
-        Declarations tests = {};
     };
 
     enum class AST_Declaration_Kind
@@ -96,8 +95,6 @@ namespace Zodiac
         STATIC_ASSERT,
 
         IMPORT_LINK,
-
-        TEST,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -650,8 +647,6 @@ namespace Zodiac
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
 
-        Scope *test_scope = nullptr;
-
         Stack<AST_Statement *> break_stack = {};
     };
 
@@ -720,8 +715,7 @@ namespace Zodiac
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Module *ast_module_new(Allocator *allocator, Atom name, Declarations decls,
-                               Declarations tests,
-                               Scope *module_scope, Scope *test_scope,
+                               Scope *module_scope, 
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 
     AST_Declaration *ast_declaration_new(Allocator *allocator, AST_Declaration_Kind kind,
@@ -847,11 +841,6 @@ namespace Zodiac
                                                      AST_Declaration *using_member,
                                                      AST_Declaration *imported_member,
                                                      Scope *scope);
-
-    AST_Declaration *ast_test_declaration_new(Allocator *allocator, AST_Identifier *name,
-                                              AST_Declaration *func,
-                                              Scope *scope,
-                                              const File_Pos &bfp, const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,
