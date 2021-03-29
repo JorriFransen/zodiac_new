@@ -28,44 +28,6 @@ global_int : s64;
 
 #run main();
 
-// #test "add_vec2_test" {
-// 
-//     a : Vec2;
-//     a.x = 1;
-//     a.y = 2;
-// 
-//     expected_result := 3;
-//     result := add_vec2(*a);
-// 
-//     @assert(result == expected_result);
-//     return true;
-// }
-
-// @TODO: Make this work, we need to some control flow analysis and insert
-//         returns in case of tests, and warn in case of functions.
-// #test "passing_test" {
-//     // We don't have to do anything
-// }
-
-// #test "passing_test_2" {
-//     // Or we could return a boolean
-//     return true;
-// }
-// 
-// #test "failing_test" {
-//     // Return a boolean
-//     return false;
-// }
-// 
-// #test "failing_test_2" {
-//     // Trigger an assert
-// 
-//     @assert(false);
-// 
-//     return true;
-// }
-
-
 main :: func () -> s64
 {
     int_ptr : *s64 = null;
