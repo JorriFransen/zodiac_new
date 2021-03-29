@@ -141,10 +141,7 @@ Declaration_PTN *parser_parse_declaration(Parser *parser, Token_Stream *ts)
             result->self.flags |= PTN_FLAG_SEMICOLON;
             return result;
         } else if (pt.kind == TOK_IDENTIFIER && pt.atom == Builtin::atom_test) {
-            auto bfp = ts->current_token().begin_file_pos;
-            zodiac_report_error(parser->build_data, Zodiac_Error_Kind::UNIMPLEMENTED,
-                                bfp, bfp, "Tests are not implemented atm...");
-            return nullptr;
+            return parser_parse_test_declaration(parser, ts);
         }
 
     } else if (parser_is_token(ts, TOK_AT) && ts->peek_token(1).kind == TOK_IDENTIFIER) {
@@ -836,6 +833,40 @@ Declaration_PTN *parser_parse_static_if_declaration(Parser *parser, Token_Stream
     result->self.flags |= PTN_FLAG_SEMICOLON;
     parser->static_if_depth -= 1;
     assert(parser->static_if_depth == old_sif_depth);
+    return result;
+}
+
+Declaration_PTN *parser_parse_test_declaration(Parser *parser, Token_Stream *ts)
+{
+    auto ft = ts->current_token();
+    assert(ft.kind == TOK_POUND);
+    auto bfp = ft.begin_file_pos;
+
+
+    auto test_ident_token = ts->next_token();
+    assert(test_ident_token.kind == TOK_IDENTIFIER);
+    assert(test_ident_token.atom == Builtin::atom_test);
+
+    auto test_name_str_lit = ts->next_token();
+    if (!parser_expect_token(parser, ts, TOK_STRING_LITERAL)) return nullptr;
+
+    auto test_ident = new_identifier_ptn(parser->allocator, test_name_str_lit.atom,
+                                         test_name_str_lit.begin_file_pos,
+                                         test_name_str_lit.end_file_pos);
+
+    auto test_body = parser_parse_statement(parser, ts);
+    if (test_body->kind != Statement_PTN_Kind::BLOCK) {
+        zodiac_report_error(parser->build_data, Zodiac_Error_Kind::PARSE_ERROR,
+                            test_body->self.begin_file_pos,
+                            test_body->self.end_file_pos,
+                            "Statement following '#test \"%s\"' must be a block",
+                            test_name_str_lit.atom.data);
+    }
+
+    auto efp = test_body->self.end_file_pos;
+
+    auto result = new_test_declaration_ptn(parser->allocator, test_ident, test_body, bfp, efp);
+    result->self.flags |=PTN_FLAG_SEMICOLON;
     return result;
 }
 
