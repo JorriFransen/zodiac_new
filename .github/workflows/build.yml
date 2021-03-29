@@ -33,11 +33,8 @@ jobs:
     # - name: apt upgrade
     #   run: sudo apt upgrade
 
-    - name: Install ninja-build
+    - name: Install apt packages
       run: sudo apt install ninja-build
-
-    - name: Install llvm-11-dev
-      run: sudo apt install llvm-11-dev
 
     - name: Configure Dependencies
       shell: bash
