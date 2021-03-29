@@ -87,7 +87,7 @@ namespace Zodiac
         auto end_fp = parsed_file->end_file_pos;
 
         AST_Module *ast_module = ast_module_new(ast_builder->allocator, parsed_file->name,
-                                                global_decls, module_scope, 
+                                                global_decls, module_scope,
                                                 begin_fp, end_fp);
         assert(ast_module);
         return ast_module;
@@ -573,6 +573,27 @@ namespace Zodiac
                                                            parent_scope,
                                                            ptn->self.begin_file_pos,
                                                            ptn->self.end_file_pos);
+                break;
+            }
+
+            case Declaration_PTN_Kind::TEST: {
+                auto ident = ast_create_identifier_from_ptn(ast_builder,
+                                                            ptn->test.identifier,
+                                                            parent_scope);
+
+                assert(var_decls == nullptr);
+
+                Array<AST_Declaration *> my_var_decls = {};
+                array_init(ast_builder->allocator, &my_var_decls);
+
+                auto body = ast_create_statement_from_ptn(ast_builder, ptn->test.body,
+                                                          &my_var_decls, parent_scope);
+
+                result = ast_test_declaration_new(ast_builder->allocator, ident, body,
+                                                  my_var_decls,
+                                                  parent_scope,
+                                                  ptn->self.begin_file_pos,
+                                                  ptn->self.end_file_pos);
                 break;
             }
         }
@@ -1755,6 +1776,12 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: {
+                zodiac_report_error(builder->build_data, Zodiac_Error_Kind::UNIMPLEMENTED, decl,
+                                    "Tests are not supported yet...");
+                break;
+            }
         }
     }
 
@@ -2396,6 +2423,23 @@ namespace Zodiac
         result->type = imported_member->type;
         result->flags |= AST_NODE_FLAG_RESOLVED_ID;
         result->flags |= AST_NODE_FLAG_TYPED;
+
+        return result;
+    }
+
+    AST_Declaration *ast_test_declaration_new(Allocator *allocator,
+                                              AST_Identifier *ident,
+                                              AST_Statement *body_stmt,
+                                              Array<AST_Declaration *> var_decls,
+                                              Scope *scope,
+                                              const File_Pos &bfp,
+                                              const File_Pos &efp)
+    {
+        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::TEST,
+                                          ident, scope, bfp, efp);
+
+        result->test.body = body_stmt;
+        result->test.var_decls = var_decls;
 
         return result;
     }
@@ -3227,8 +3271,7 @@ namespace Zodiac
 
         if (ast_decl->identifier) printf("%s", ast_decl->identifier->atom.data);
 
-        switch (ast_decl->kind)
-        {
+        switch (ast_decl->kind) {
             case AST_Declaration_Kind::INVALID: assert(false);
 
             case AST_Declaration_Kind::IMPORT:
@@ -3414,6 +3457,8 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: assert(false);
         }
     }
 
@@ -3931,38 +3976,32 @@ namespace Zodiac
                                       int64_t indent)
     {
         assert(sb);
-        switch (ast_decl->kind)
-        {
+        switch (ast_decl->kind) {
             case AST_Declaration_Kind::INVALID: assert(false);
 
-            case AST_Declaration_Kind::IMPORT:
-            {
+            case AST_Declaration_Kind::IMPORT: {
                 string_builder_append(sb, " (import)");
                 break;
             }
 
             case AST_Declaration_Kind::USING: assert(false);
 
-            case AST_Declaration_Kind::VARIABLE:
-            {
+            case AST_Declaration_Kind::VARIABLE: {
                 string_builder_append(sb, " (variable)");
                 break;
             }
 
-            case AST_Declaration_Kind::CONSTANT:
-            {
+            case AST_Declaration_Kind::CONSTANT: {
                 string_builder_append(sb, " (constant)");
                 break;
             }
 
-            case AST_Declaration_Kind::PARAMETER:
-            {
+            case AST_Declaration_Kind::PARAMETER: {
                 string_builder_append(sb, " (param)");
                 break;
             }
 
-            case AST_Declaration_Kind::FUNCTION:
-            {
+            case AST_Declaration_Kind::FUNCTION: {
                 string_builder_append(sb, " (func)\n");
                 scope_print(sb, ast_decl->function.parameter_scope, indent);
                 if (ast_decl->function.body)
@@ -3970,19 +4009,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::TYPE:
-            {
+            case AST_Declaration_Kind::TYPE: {
                 string_builder_append(sb, " (type)");
                 break;
             }
 
             case AST_Declaration_Kind::TYPEDEF: assert(false);
 
-            case AST_Declaration_Kind::STRUCTURE:
-            {
+            case AST_Declaration_Kind::STRUCTURE: {
                 string_builder_append(sb, " (struct)\n");
-                if (ast_decl->structure.parameters.count > 0)
-                {
+                if (ast_decl->structure.parameters.count > 0) {
                     scope_print(sb, ast_decl->structure.parameter_scope, indent);
                 }
                 scope_print(sb, ast_decl->structure.member_scope, indent);
@@ -3993,8 +4029,7 @@ namespace Zodiac
 
             case AST_Declaration_Kind::ENUM: assert(false);
 
-            case AST_Declaration_Kind::POLY_TYPE:
-            {
+            case AST_Declaration_Kind::POLY_TYPE: {
                 string_builder_append(sb, " (poly_param)");
                 break;
             }
@@ -4005,6 +4040,8 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: assert(false);
         }
     }
 

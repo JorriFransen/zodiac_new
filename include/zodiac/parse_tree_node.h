@@ -201,6 +201,8 @@ enum class Declaration_PTN_Kind
     RUN,
     STATIC_IF,
     STATIC_ASSERT,
+
+    TEST,
 };
 
 struct Declaration_PTN
@@ -279,8 +281,7 @@ struct Declaration_PTN
 
         struct
         {
-            Atom module_name;
-            Identifier_PTN *name;
+            Identifier_PTN *identifier;
             Statement_PTN *body;
         } test;
     };
@@ -547,6 +548,10 @@ Declaration_PTN *new_static_if_declaration_ptn(Allocator *allocator,
 Declaration_PTN *new_static_assert_declaration_ptn(Allocator *allocator,
                                                    Expression_PTN *cond_expr,
                                                    const File_Pos bfp, const File_Pos &efp);
+
+Declaration_PTN *new_test_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
+                                          Statement_PTN *body,
+                                          const File_Pos &bfp, const File_Pos &efp);
 
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,

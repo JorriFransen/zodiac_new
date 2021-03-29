@@ -33,6 +33,8 @@ namespace Zodiac
 
         // Iterp errors
         FOREIGN_FUNCTION_NOT_FOUND,
+
+        PARSE_ERROR,
     };
 
     struct Zodiac_Error_Site

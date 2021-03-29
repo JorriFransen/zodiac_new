@@ -1341,6 +1341,8 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: assert(false);
         }
 
         assert(false);
@@ -3050,6 +3052,8 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
+
+            case AST_Declaration_Kind::TEST: assert(false);
         }
 
         assert(false);
