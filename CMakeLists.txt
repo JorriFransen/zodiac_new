@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.13)
 
 project(zodiac)
 
-find_package(LLVM 11.1.0 REQUIRED CONFIG)
+# CMake finds the lowest version of llvm by default, we want the highest.
+SET(CMAKE_FIND_PACKAGE_SORT_ORDER NATURAL)
+SET(CMAKE_FIND_PACKAGE_SORT_DIRECTION DEC)
+
+find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message("LLVM_INCLUDE_DIRS=${LLVM_INCLUDE_DIRS}")
