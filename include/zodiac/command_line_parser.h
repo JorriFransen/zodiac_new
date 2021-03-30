@@ -25,6 +25,7 @@ namespace Zodiac
     DEFINE_OPTION(bool, dont_emit_llvm, false, "Dont't emit llvm ir and binary")         \
     DEFINE_OPTION(bool, link_c, false, "Link with libc (creates a dynamic executable)")  \
     DEFINE_OPTION(String, exe_file_name, EMPTY_STRING, "Output executable name")         \
+    DEFINE_OPTION(bool, run_tests, false, "Run tests")                                   \
 
 
 

@@ -144,7 +144,11 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             break;
         }
 
-        case Declaration_PTN_Kind::TEST: assert(false);
+        case Declaration_PTN_Kind::TEST: {
+            free_ptn(allocator, ptn->test.identifier);
+            free_ptn(allocator, ptn->test.body);
+            break;
+        }
     }
 }
 

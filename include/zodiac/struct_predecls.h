@@ -24,6 +24,7 @@ namespace Zodiac
     {
         Atom name = {};
         Array<Declaration_PTN*> declarations = {};
+        Array<Declaration_PTN*> tests = {};
         File_Pos begin_file_pos = {};
         File_Pos end_file_pos = {};
         bool valid = true;

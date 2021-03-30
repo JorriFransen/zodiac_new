@@ -62,12 +62,13 @@ namespace Zodiac
     {
         static AST_Node_Kind _kind;
 
-        Scope *module_scope = nullptr;
-        Scope *test_scope = nullptr;
-
         Atom name = {};
 
         Declarations declarations = {};
+        Scope *module_scope = nullptr;
+
+        Declarations test_decls = {};
+        Scope *module_test_scope = nullptr;
     };
 
     enum class AST_Declaration_Kind
@@ -240,8 +241,7 @@ namespace Zodiac
 
             struct
             {
-                AST_Statement *body;
-                Array<AST_Declaration *> var_decls;
+                AST_Declaration *func_decl;
             } test;
 
         };
@@ -676,19 +676,20 @@ namespace Zodiac
     AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Declaration_PTN *ptn,
                                                      Array<AST_Declaration*> *var_decls,
-                                                     Scope *parent_scope);
+                                                     Scope *parent_scope,
+                                                     AST_Module *module);
 
     AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Parameter_PTN *ptn,
                                                      AST_Type_Spec *type_spec,
-                                                     Scope *scope);
+                                                     Scope *scope, AST_Module *ast_module);
 
     AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn,
                                                      Scope *scope);
 
     AST_Statement *ast_create_statement_from_ptn(AST_Builder *ast_builder, Statement_PTN *ptn,
                                                  Array<AST_Declaration*> *var_decls,
-                                                 Scope *parent_scope);
+                                                 Scope *parent_scope, AST_Module *ast_module);
 
     AST_Expression *ast_create_expression_from_ptn(AST_Builder *ast_builder,
                                                    Expression_PTN *ptn,
@@ -716,7 +717,7 @@ namespace Zodiac
     AST_Identifier *ast_identifier_new(Allocator *allocator, Atom &atom, Scope *scope,
                                        const File_Pos &begin_fp, const File_Pos &end_fp);
 
-    AST_Module *ast_module_new(Allocator *allocator, Atom name, Declarations decls,
+    AST_Module *ast_module_new(Allocator *allocator, Atom name,
                                Scope *module_scope,
                                const File_Pos &begin_fp, const File_Pos &end_fp);
 
@@ -845,9 +846,7 @@ namespace Zodiac
                                                      Scope *scope);
 
     AST_Declaration *ast_test_declaration_new(Allocator *allocator,
-                                              AST_Identifier *ident,
-                                              AST_Statement *body_stmt,
-                                              Array<AST_Declaration *> var_decls,
+                                              AST_Declaration *func_decl,
                                               Scope *scope,
                                               const File_Pos &bfp,
                                               const File_Pos &efp);

@@ -35,6 +35,9 @@ void parsed_file_init(Parser *parser, Parsed_File *pf, Atom name)
 {
     pf->name = name;
     array_init(parser->allocator, &pf->declarations);
+
+    if (parser->build_data->options->run_tests)
+      array_init(parser->allocator, &pf->tests);
 }
 
 Parsed_File parser_parse_file(Parser *parser, Token_Stream *ts, Atom module_name)
@@ -82,7 +85,14 @@ void parser_parse_file(Parser *parser, Token_Stream *ts, Parsed_File *pf, Atom m
             }
         }
 
-        array_append(&pf->declarations, ptn);
+        if (ptn->kind == Declaration_PTN_Kind::TEST) {
+          if (parser->build_data->options->run_tests)
+            array_append(&pf->tests, ptn);
+          else
+            free_ptn(parser->allocator, ptn);
+        } else {
+          array_append(&pf->declarations, ptn);
+        }
     }
 
     pf->end_file_pos = last_token.end_file_pos;

@@ -147,6 +147,16 @@ namespace Zodiac
 
                         bucket_locator_advance(&bl);
                     }
+
+
+                    auto tl = bucket_array_first(&ast_module->test_decls);
+                    while (tl.bucket) {
+                        auto p_decl = bucket_locator_get_ptr(tl);
+                        auto decl = *p_decl;
+                        queue_resolve_job(resolver, decl);
+
+                        bucket_locator_advance(&tl);
+                    }
                 }
             }
 
@@ -1579,6 +1589,8 @@ namespace Zodiac
                 auto operand_expr = *p_operand_expr;
 
                 AST_Declaration *func = enclosing_function(resolver, statement);
+                assert(func);
+
                 AST_Type_Spec *func_ts = func->function.type_spec;
                 assert(func_ts);
                 AST_Type *func_type = func_ts->type;
@@ -3478,7 +3490,12 @@ if (is_valid_type_conversion(*(p_source), (dest)->type)) { \
     {
         auto scope = node->scope;
         assert(scope);
-        return enclosing_function(resolver, scope);
+        auto result = enclosing_function(resolver, scope);
+
+        if (result)
+            assert(result->kind == AST_Declaration_Kind::FUNCTION);
+
+        return result;
     }
 
     AST_Declaration *resolver_get_declaration(AST_Expression *expr)
