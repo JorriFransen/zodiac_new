@@ -88,18 +88,16 @@ const String string_from_int(Allocator *allocator, int64_t val)
 
     int64_t length = 0;
 
-    if (val != 0)
-    {
-        while (val > 0)
-        {
+    if (val != 0) {
+
+        while (val > 0) {
             auto d = val % 10;
             buf[buf_size - 2 - length] = d + '0';
             val /= 10;
             length++;
         }
-    }
-    else
-    {
+
+    } else {
         buf[buf_size - 2] = '0';
         length = 1;
     }
@@ -110,8 +108,7 @@ const String string_from_int(Allocator *allocator, int64_t val)
 
 int64_t string_last_index_of(const String &string, char c)
 {
-    for (int64_t i = string.length - 1; i >= 0; i--)
-    {
+    for (int64_t i = string.length - 1; i >= 0; i--) {
         if (string.data[i] == c) return i;
     }
 
@@ -128,16 +125,15 @@ bool string_contains(const String &str, const String &sub_str)
     if (sub_str.length > str.length) return false;
     if (str == sub_str) return true;
 
-    for (int64_t str_i = 0; str_i < str.length; str_i++)
-    {
+    for (int64_t str_i = 0; str_i < str.length; str_i++) {
+
         auto remaining_length = str.length - str_i;
         if (sub_str.length > remaining_length) return false;
 
         bool match = true;
-        for (int64_t substr_i = 0; substr_i < sub_str.length; substr_i++)
-        {
-            if (str[str_i + substr_i] != sub_str[substr_i]) 
-            {
+        for (int64_t substr_i = 0; substr_i < sub_str.length; substr_i++) {
+
+            if (str[str_i + substr_i] != sub_str[substr_i]) {
                 match = false;
                 break;
             }
@@ -159,8 +155,7 @@ bool string_starts_with(const String &a, const String &b)
     if (b.length > a.length) return false;
     if (a == b) return true;
 
-    for (int64_t i = 0; i < b.length; i++)
-    {
+    for (int64_t i = 0; i < b.length; i++) {
         if (a[i] != b[i]) return false;
     }
 
@@ -179,8 +174,7 @@ bool string_ends_with(const String &a, const String &b)
 
     auto offset = a.length - b.length;
 
-    for (int64_t i = 0; i < b.length; i++)
-    {
+    for (int64_t i = 0; i < b.length; i++) {
         if (a[i + offset] != b[i]) return false;
     }
 
@@ -197,8 +191,7 @@ bool string_equal(const String &a, const String &b)
     if (a == b) return true;
     if (a.length != b.length) return false;
 
-    for (int64_t i = 0; i < a.length; i++)
-    {
+    for (int64_t i = 0; i < a.length; i++) {
         if (a[i] != b[i]) return false;
     }
 

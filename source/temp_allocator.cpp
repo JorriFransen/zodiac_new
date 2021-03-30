@@ -11,10 +11,8 @@ void *_temp_allocate(Allocator *allocator, Allocation_Mode mode, int64_t size, v
 {
     auto ta = (Temp_Allocator*)allocator;
 
-    switch (mode)
-    {
-        case ALLOCATE:
-        {
+    switch (mode) {
+        case ALLOCATE: {
             assert(ta->capacity - ta->next_index >= size);
 
             uint8_t *result = &ta->data[ta->next_index];
@@ -24,23 +22,20 @@ void *_temp_allocate(Allocator *allocator, Allocation_Mode mode, int64_t size, v
             break;
         }
 
-        case REALLOCATE:
-        {
+        case REALLOCATE: {
             assert(false);
             assert(old_ptr);
             break;
         }
 
-        case FREE:
-        {
+        case FREE: {
             assert(old_ptr);
             return nullptr;
             break;
         }
 
-        case FREE_ALL:
-        {
-            assert(false); 
+        case FREE_ALL: {
+            assert(false);
             return nullptr;
             break;
         }
@@ -55,8 +50,7 @@ static bool __global_instance_initialized__ = false;
 
 Allocator *temp_allocator_get()
 {
-    if (!__global_instance_initialized__)
-    {
+    if (!__global_instance_initialized__) {
         auto ca = c_allocator_get();
 
         const auto TEMP_MEM_SIZE = 8096;

@@ -24,7 +24,7 @@ namespace Zodiac
 
     void string_builder_free(String_Builder *sb)
     {
-        assert(sb); 
+        assert(sb);
 
         assert(sb->allocator);
         assert(sb->first_block);

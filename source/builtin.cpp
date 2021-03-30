@@ -10,13 +10,13 @@ uint64_t Builtin::pointer_size = 64;
 
 #define DEFINE_BUILTIN_ATOM(name) Atom Builtin::atom_ ##name = {};
 #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) Atom Builtin::atom_ ##name = {};
-BUILTIN_TYPE_LIST
-BUILTIN_ATOM_LIST
+    BUILTIN_TYPE_LIST
+    BUILTIN_ATOM_LIST
 #undef DEFINE_BUILTIN_ATOM
 #undef DEFINE_BUILTIN_TYPE
 
 #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) AST_Type *Builtin::type_ ##name = {};
-BUILTIN_TYPE_LIST
+    BUILTIN_TYPE_LIST
 #undef DEFINE_BUILTIN_TYPE
 
 AST_Type *Builtin::type_ptr_u8 = {};

@@ -60,7 +60,7 @@ namespace Zodiac
         zodiac_report_error(build_data, kind, site, fmt, args);
 
         va_end(args);
-        
+
     }
 
     void zodiac_report_error(Build_Data *build_data, Zodiac_Error_Kind kind,

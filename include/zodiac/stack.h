@@ -37,7 +37,7 @@ namespace Zodiac
         assert(stack);
         free(stack->allocator, stack->buffer);
     }
-    
+
     template <typename Element_Type>
     void stack_ensure_capacity(Stack<Element_Type> *stack)
     {
@@ -49,7 +49,7 @@ namespace Zodiac
             free(stack->allocator, stack->buffer);
             stack->buffer = new_buf;
             stack->capacity = new_cap;
-        } 
+        }
     }
 
     template <typename Element_Type>
