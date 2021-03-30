@@ -151,8 +151,6 @@ namespace Zodiac
     AST_Declaration *resolver_get_declaration(AST_Expression *expr);
     void resolver_inherit_const(AST_Expression *expr);
 
-    void convert_condition_to_bool(Resolver *resolver, AST_Expression **p_expr);
-
     AST_Type *do_type_conversion(Resolver *resolver, AST_Expression **p_expr,
                                  AST_Type *target_type);
 
