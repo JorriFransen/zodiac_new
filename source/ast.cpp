@@ -688,6 +688,8 @@ namespace Zodiac
                                                  ptn->self.begin_file_pos,
                                                  ptn->self.end_file_pos);
 
+                fn_param_scope->function_declaration = test_func_decl;
+
                 result = ast_test_declaration_new(ast_builder->allocator,
                                                   test_func_decl,
                                                   parent_scope,
@@ -1887,7 +1889,11 @@ namespace Zodiac
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
 
-            case AST_Declaration_Kind::TEST: assert(false);
+            case AST_Declaration_Kind::TEST: {
+                ast_flatten_declaration(builder, &decl->test.func_decl, nodes);
+                array_append(nodes, node);
+                break;
+            }
         }
     }
 

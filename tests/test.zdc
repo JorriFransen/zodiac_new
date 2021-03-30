@@ -10,7 +10,7 @@ main :: func () -> int
 }
 
 #test "my_test_1" {
-    std.println("Running my_test_1");
+    std.printlnn("Running my_test_1");
     return true;
 }
 
