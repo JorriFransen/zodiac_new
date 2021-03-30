@@ -1367,7 +1367,9 @@ bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration) {
     assert(false);
 
   case AST_Declaration_Kind::TEST: {
+#ifndef NDEBUG
     auto fn_decl = declaration->test.func_decl;
+#endif
     assert(fn_decl->type);
     assert(fn_decl->type->kind == AST_Type_Kind::FUNCTION);
     assert(fn_decl->type->function.return_type == Builtin::type_bool);
