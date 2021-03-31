@@ -120,6 +120,7 @@ namespace Zodiac
         AST_DECL_FLAG_IS_STRUCT_MEMBER      = 0x1000,
         AST_DECL_FLAG_IS_UNION_MEMBER       = 0x2000,
         AST_DECL_FLAG_CHECKING_DEPENDECIES  = 0x4000,
+        AST_DECL_FLAG_IS_TEST_FUNC          = 0x8000,
     };
 
     struct AST_Flat_Declaration

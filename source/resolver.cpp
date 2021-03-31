@@ -3132,7 +3132,9 @@ bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
                 if (!resolver->build_data->options->dont_emit_llvm)
                     llvm_register_function(&resolver->llvm_builder, bc_func);
 
-                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
+                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE) &&
+                    !(decl->decl_flags & AST_DECL_FLAG_IS_TEST_FUNC)) {
+
                     queue_bytecode_job(resolver, decl);
                 }
             }

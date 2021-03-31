@@ -1093,6 +1093,10 @@ namespace Zodiac
                     continue;
                 }
 
+                if (func->flags & BC_FUNC_FLAG_IS_TEST) {
+                    continue;
+                }
+
                 printf("Trying to emit binary, but bytecode for function '%s' has not been emitted!!!\n",
                                 func->name.data);
                 return false;

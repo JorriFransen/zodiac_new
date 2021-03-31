@@ -90,6 +90,10 @@ namespace Zodiac
             result->flags |= BC_FUNC_FLAG_COMPILER_FUNC;
         }
 
+        if (decl->decl_flags & AST_DECL_FLAG_IS_TEST_FUNC) {
+            result->flags |= BC_FUNC_FLAG_IS_TEST;
+        }
+
         for (int64_t i = 0; i < decl->function.parameter_declarations.count; i++)
         {
             auto param_decl = decl->function.parameter_declarations[i];

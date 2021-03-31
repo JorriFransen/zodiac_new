@@ -688,6 +688,8 @@ namespace Zodiac
                                                  ptn->self.begin_file_pos,
                                                  ptn->self.end_file_pos);
 
+                test_func_decl->decl_flags |= AST_DECL_FLAG_IS_TEST_FUNC;
+
                 fn_param_scope->function_declaration = test_func_decl;
 
                 result = ast_test_declaration_new(ast_builder->allocator,
