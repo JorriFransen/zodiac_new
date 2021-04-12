@@ -6,10 +6,6 @@
 #include <dyncall.h>
 #include <dynload.h>
 
-#ifdef linux
-#include <bits/stdint-uintn.h>
-#endif
-
 namespace Zodiac
 {
     struct FFI_Context
