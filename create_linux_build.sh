@@ -19,12 +19,12 @@ call_cmake () {
 git submodule init
 git submodule update
 
-if  [ ! -d "lib/dyncall-1.1" ]; then
+if  [ ! -d "lib/dyncall-1.2" ]; then
     echo Unpacking dyncall
     pushd lib
-    tar xvf dyncall-1.1.tar.gz
+    tar xvf dyncall-1.2.tar.gz
     echo Building dyncall
-    pushd dyncall-1.1
+    pushd dyncall-1.2
     ./configure
     make
     popd

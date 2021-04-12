@@ -20,7 +20,7 @@ _deps
 *.rdbg
 
 
-lib/dyncall-1.1/
+lib/dyncall-1.2/
 
 zodiac.sln
 .vs/
