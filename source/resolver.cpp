@@ -223,15 +223,16 @@ Resolve_Result finish_resolving(Resolver *resolver)
                             assert((decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER) ||
                                    (decl->decl_flags & AST_DECL_FLAG_IS_UNION_MEMBER));
                         }
+                    } else if (decl->kind == AST_Declaration_Kind::TEST) {
+                        assert(false);
                     } else {
-                        assert(decl->kind == AST_Declaration_Kind::IMPORT    ||
-                        decl->kind == AST_Declaration_Kind::USING     ||
-                        decl->kind == AST_Declaration_Kind::STRUCTURE ||
-                        decl->kind == AST_Declaration_Kind::UNION     ||
-                        decl->kind == AST_Declaration_Kind::TYPEDEF   ||
-                        decl->kind == AST_Declaration_Kind::ENUM      ||
-                        decl->kind == AST_Declaration_Kind::STATIC_IF ||
-                        decl->kind == AST_Declaration_Kind::TEST);
+                        assert(decl->kind == AST_Declaration_Kind::IMPORT ||
+                        decl->kind == AST_Declaration_Kind::USING         ||
+                        decl->kind == AST_Declaration_Kind::STRUCTURE     ||
+                        decl->kind == AST_Declaration_Kind::UNION         ||
+                        decl->kind == AST_Declaration_Kind::TYPEDEF       ||
+                        decl->kind == AST_Declaration_Kind::ENUM          ||
+                        decl->kind == AST_Declaration_Kind::STATIC_IF);
                     }
                 } else {
                     assert(node->kind == AST_Node_Kind::EXPRESSION);
