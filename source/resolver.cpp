@@ -109,6 +109,10 @@ Resolve_Result finish_resolving(Resolver *resolver)
     bool progressed = false;
     uint64_t cycle_count = 0;
 
+    uint64_t parsed_test_count = 0;
+    uint64_t resolved_test_count = 0;
+    uint64_t sized_test_count = 0;
+
     while (!done) {
 
         if (resolver->build_data->options->verbose) {
@@ -156,6 +160,8 @@ Resolve_Result finish_resolving(Resolver *resolver)
                     auto decl = *p_decl;
                     queue_resolve_job(resolver, decl);
 
+                    parsed_test_count += 1;
+
                     bucket_locator_advance(&tl);
                 }
             }
@@ -183,6 +189,9 @@ Resolve_Result finish_resolving(Resolver *resolver)
                         decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
                     } else if (is_bytecode_entry_decl(decl)) {
                         // decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
+                    } else if (decl->kind == AST_Declaration_Kind::TEST) {
+                        printf("Resolved test: %" PRIu64 "/%" PRIu64 "\n",
+                                ++resolved_test_count, parsed_test_count);
                     }
                 }
             }
@@ -224,7 +233,10 @@ Resolve_Result finish_resolving(Resolver *resolver)
                                    (decl->decl_flags & AST_DECL_FLAG_IS_UNION_MEMBER));
                         }
                     } else if (decl->kind == AST_Declaration_Kind::TEST) {
-                        assert(false);
+                        assert(decl->test.func_decl->flags & AST_NODE_FLAG_SIZED);
+                        printf("Sized test %" PRIu64 "/%" PRIu64 "\n",
+                                ++sized_test_count, parsed_test_count);
+                        queue_bytecode_job(resolver, decl);
                     } else {
                         assert(decl->kind == AST_Declaration_Kind::IMPORT ||
                         decl->kind == AST_Declaration_Kind::USING         ||
@@ -256,7 +268,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 // The function should have been registered at this point
                 //  (after the type spec is resolved).
                 auto bc_func = bytecode_emit_function_declaration(
-                &resolver->bytecode_builder, job.decl);
+                                   &resolver->bytecode_builder, job.decl);
                 assert(bc_func);
 
                 job.decl->decl_flags |= AST_DECL_FLAG_EMITTED_BYTECODE;
@@ -267,7 +279,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
             } else if (job.decl->kind == AST_Declaration_Kind::VARIABLE) {
                 assert(job.decl->decl_flags & AST_DECL_FLAG_GLOBAL);
                 auto bc_global = bytecode_emit_global_variable(
-                &resolver->bytecode_builder, job.decl);
+                                     &resolver->bytecode_builder, job.decl);
 
                 if (!resolver->build_data->options->dont_emit_llvm) {
                     queue_llvm_job(resolver, bc_global);
@@ -275,7 +287,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
 
             } else if (job.decl->kind == AST_Declaration_Kind::CONSTANT) {
                 // Dont do anything
-            } else if (job.decl->kind == AST_Declaration_Kind::RUN  ) {
+            } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
                 Bytecode_Function *pre_main_func = nullptr;
 
                 if (bd->pre_main_func) {
@@ -319,6 +331,19 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 } else {
                     queue_enqueue(&resolver->bytecode_jobs, job);
                 }
+            } else if (job.decl->kind == AST_Declaration_Kind::TEST) {
+                auto test_func_decl = job.decl->test.func_decl;
+                auto test_func = bytecode_emit_function_declaration(
+                                     &resolver->bytecode_builder,
+                                     test_func_decl);
+
+                printf("Emitted bytecode for test: %s\n",
+                       test_func_decl->identifier->atom.data);
+
+                if (!resolver->build_data->options->dont_emit_llvm) {
+                    queue_llvm_job(resolver, test_func);
+                }
+
             } else {
                 assert(false);
             }
@@ -579,6 +604,7 @@ void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
            decl->kind == AST_Declaration_Kind::RUN ||
+           decl->kind == AST_Declaration_Kind::TEST ||
            decl->kind == AST_Declaration_Kind::VARIABLE ||
            decl->kind == AST_Declaration_Kind::CONSTANT);
 

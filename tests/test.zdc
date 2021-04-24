@@ -14,10 +14,10 @@ main :: func () -> int
     return true;
 }
 
-// #test "my_test_2" {
-//     std.println("Running my_test_2");
-//     return false;
-// }
+#test "my_test_2" {
+    std.println("Running my_test_2");
+    return false;
+}
 
 // #test "my_test_3" {
 //     std.println("Running my_test_3");
