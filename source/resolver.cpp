@@ -112,6 +112,14 @@ Resolve_Result finish_resolving(Resolver *resolver)
     uint64_t parsed_test_count = 0;
     uint64_t resolved_test_count = 0;
     uint64_t sized_test_count = 0;
+    uint64_t bc_test_count = 0;
+
+    Bytecode_Function *bc_test_wrapper = nullptr;
+    Array<Bytecode_Function *> bc_tests = {};
+
+    if (bd->options->run_tests) {
+        array_init(resolver->allocator, &bc_tests);
+    }
 
     while (!done) {
 
@@ -337,11 +345,31 @@ Resolve_Result finish_resolving(Resolver *resolver)
                                      &resolver->bytecode_builder,
                                      test_func_decl);
 
+                array_append(&bc_tests, test_func);
+
                 printf("Emitted bytecode for test: %s\n",
                        test_func_decl->identifier->atom.data);
 
+                bc_test_count++;
+
+                printf("Emitted bytecode for test %" PRIu64 "/%" PRIu64 "\n",
+                       bc_test_count, parsed_test_count);
+
                 if (!resolver->build_data->options->dont_emit_llvm) {
                     queue_llvm_job(resolver, test_func);
+                }
+
+                if (bc_test_count == parsed_test_count) {
+                    printf("Emitting test wrapper...\n");
+                    bc_test_wrapper =
+                        bytecode_emit_test_wrapper(&resolver->bytecode_builder,
+                                                   bc_tests);
+                    assert(bc_test_wrapper);
+                    
+                    if (!resolver->build_data->options->dont_emit_llvm) {
+                        llvm_register_function(&resolver->llvm_builder, bc_test_wrapper);
+                        queue_llvm_job(resolver, bc_test_wrapper);
+                    }
                 }
 
             } else {

@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     TracyCZoneN(tcz_init, "init", true);
 
     auto ca = c_allocator_get();
-    
+
     // The allocator is only used to allocate the full path for the zodiac exe
     auto options = parse_command_line(ca, argc, argv);
 

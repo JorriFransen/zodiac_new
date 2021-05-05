@@ -11,6 +11,17 @@ pre_main :: func()
     return;
 }
 
+test_result_reporter :: func(result: bool, name: *char)
+{
+    _std_.print(name);
+
+    if (result) {
+        _std_.print(" succeeded!\n");
+    } else {
+        _std_.print(" failed!\n");
+    }
+}
+
 #if (PLATFORM_WINDOWS) {
 
     mainCRTStartup :: func ()

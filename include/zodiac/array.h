@@ -32,8 +32,6 @@ struct Array
         assert(index < count);
         return data[index];
     }
-
-    Array() {}
 };
 
 template <typename Element_Type>

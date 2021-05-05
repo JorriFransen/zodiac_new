@@ -317,6 +317,61 @@ namespace Zodiac
         return result;
     }
 
+    Bytecode_Function *bytecode_emit_test_wrapper(Bytecode_Builder *builder,
+                                                  Array<Bytecode_Function *> test_functions)
+    {
+        assert(test_functions.count);
+
+        auto bd = builder->build_data;
+
+        auto reporter_decl = scope_find_declaration(bd, bd->entry_module->module_scope,
+                                                    "test_result_reporter");
+        assert(reporter_decl);
+
+        auto report_test_result_func = bytecode_find_function(builder, reporter_decl);
+        assert(report_test_result_func);
+
+        AST_Type *wrapper_type =
+            build_data_find_function_type(builder->build_data, {},
+                                          Builtin::type_bool);
+
+        Atom name = atom_get(&builder->build_data->atom_table, "_test_wrapper_");
+
+        Bytecode_Function *result =
+            bytecode_new_function(builder, wrapper_type, {}, name);
+
+
+        builder->current_function = result;
+        builder->parameters.count = 0;
+        builder->locals.count = 0;
+        builder->next_temp_index = 0;
+
+        Bytecode_Block *entry_block = bytecode_new_block(builder, "entry");
+        bytecode_append_block(builder, result, entry_block);
+        bytecode_set_insert_point(builder, entry_block);
+
+        for (int64_t i = 0; i < test_functions.count; i++) {
+            Bytecode_Function *test_func = test_functions[i];
+            assert(test_func->flags & BC_FUNC_FLAG_IS_TEST);
+
+            Bytecode_Value *test_result = bytecode_emit_call(builder, test_func, {});
+            Bytecode_Value *test_name = bytecode_get_string_literal(builder, test_func->name);
+
+            Bytecode_Value *args[] = { test_result, test_name };
+            bytecode_emit_call(builder, report_test_result_func, args);
+
+        }
+
+        auto return_val = bytecode_bool_literal_new(builder, Builtin::type_bool, true);
+        bytecode_emit_instruction(builder, RETURN, return_val, nullptr, nullptr);
+
+        auto index = builder->functions.count;
+        array_append(&builder->functions, { nullptr, result, index });
+        result->flags |= BC_FUNC_FLAG_EMITTED;
+
+        return result;
+    }
+
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name)
     {
         Bytecode_Block *result = alloc_type<Bytecode_Block>(builder->allocator);
@@ -1359,26 +1414,38 @@ namespace Zodiac
         auto func = bytecode_find_function(builder, decl);
         assert(func);
 
-        auto arg_exprs = expr->call.arg_expressions;
-        assert(arg_exprs.count == func->parameters.count);
+        auto ta = temp_allocator_get();
+        auto arg_values = array_create<Bytecode_Value *>(ta, expr->call.arg_expressions.count);
 
-        for (int64_t i = 0; i < arg_exprs.count; i++)
-        {
-            Bytecode_Value *arg_val = bytecode_emit_expression(builder, arg_exprs[i]);
-            bytecode_emit_instruction(builder, PUSH_ARG, arg_val, nullptr, nullptr);
+        for (int64_t i = 0; i < expr->call.arg_expressions.count; i++) {
+            auto arg_val = bytecode_emit_expression(builder, expr->call.arg_expressions[i]);
+            array_append(&arg_values, arg_val);
+        }
+
+        return bytecode_emit_call(builder, func, arg_values);
+    }
+
+    Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder,
+                                       Bytecode_Function *callee,
+                                       const Array_Ref<Bytecode_Value *> arg_values)
+    {
+        assert(callee->type->function.param_types.count == arg_values.count);
+
+        for (int64_t i = 0; i < arg_values.count; i++) {
+            bytecode_emit_instruction(builder, PUSH_ARG, arg_values[i], nullptr, nullptr);
         }
 
         Bytecode_Value *return_value = nullptr;
-        if (func->type->function.return_type->kind != AST_Type_Kind::VOID)
-        {
-            return_value = bytecode_temporary_new(builder, func->type->function.return_type);
+        if (callee->type->function.return_type->kind != AST_Type_Kind::VOID) {
+            return_value = bytecode_temporary_new(builder, callee->type->function.return_type);
         }
 
-        auto func_val = bytecode_function_value_new(builder, func);
+        auto callee_val = bytecode_function_value_new(builder, callee);
         auto arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
-                                                          { .s64 = arg_exprs.count });
+                                                          { .s64 = arg_values.count });
 
-        bytecode_emit_instruction(builder, CALL, func_val, arg_count_val, return_value);
+
+        bytecode_emit_instruction(builder, CALL, callee_val, arg_count_val, return_value);
 
         return return_value;
     }

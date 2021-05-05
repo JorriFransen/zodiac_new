@@ -1,6 +1,7 @@
 #pragma once
 
 #include "allocator.h"
+#include "array_ref.h"
 #include "bucket_array.h"
 #include "build_data.h"
 #include "stack.h"
@@ -296,6 +297,8 @@ namespace Zodiac
                                                   AST_Declaration *decl);
     Bytecode_Function *bytecode_emit_run_wrapper(Bytecode_Builder *builder, AST_Declaration *decl,
                                                  Bytecode_Function *pre_main_func);
+    Bytecode_Function *bytecode_emit_test_wrapper(Bytecode_Builder *builder,
+                                                  Array<Bytecode_Function *> test_functions);
 
     Bytecode_Block *bytecode_new_block(Bytecode_Builder *builder, const char *name);
     void bytecode_append_block(Bytecode_Builder *builder, Bytecode_Function *function,
@@ -326,7 +329,11 @@ namespace Zodiac
     Bytecode_Value *bytecode_emit_identifier_lvalue(Bytecode_Builder *builder,
                                                     AST_Identifier *identifier);
 
+    Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder,
+                                       Bytecode_Function *callee,
+                                       const Array_Ref<Bytecode_Value *> args);
     Bytecode_Value *bytecode_emit_call(Bytecode_Builder *builder, AST_Expression *expr);
+
     Bytecode_Value *bytecode_emit_builtin_call(Bytecode_Builder *builder, AST_Expression *expr);
 
     Bytecode_Value *bytecode_emit_cast(Bytecode_Builder *builder, AST_Expression *expr);
