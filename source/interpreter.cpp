@@ -5,6 +5,7 @@ namespace Zodiac
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data)
     {
         assert(false);
+        return {};
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func)

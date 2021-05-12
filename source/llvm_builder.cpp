@@ -582,14 +582,12 @@ namespace Zodiac
             }
 
             case SWITCH: {
-                llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
-
-                assert(inst->b->kind == BC_Value_Kind::SWITCH_DATA);
-                BC_Switch_Data *switch_data = &inst->b->switch_data;
-
                 assert(false);
-                assert(switch_val);
-                assert(switch_data);
+                // llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
+
+                // assert(inst->b->kind == BC_Value_Kind::SWITCH_DATA);
+                // BC_Switch_Data *switch_data = &inst->b->switch_data;
+
                 // assert(switch_data->default_block);
                 // assert(switch_val);
 
@@ -820,7 +818,7 @@ namespace Zodiac
 
                 assert(false);
                 // assert(builder->temps.count == inst->result->temp.index);
-                // array_append(&builder->temps, result);
+                array_append(&builder->temps, result);
             }
         }
     }
