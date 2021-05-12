@@ -1,0 +1,12 @@
+
+#run main();
+
+main :: func () -> int
+{
+    return times_two(24);
+}
+
+times_two :: func (x: int) -> int
+{
+    return x * 2;
+}

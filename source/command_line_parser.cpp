@@ -82,7 +82,7 @@ namespace Zodiac
                     array_append(tokens, string_ref("="));
                 }
                 else if (c == '-' || c == '_' || c == '.' || c == '/' || c == '\\' ||
-                         is_alpha(c))
+                         is_alpha_num(c))
                 {
                     length++;
                 }
