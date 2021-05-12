@@ -593,6 +593,7 @@ namespace Zodiac
                 }
 
                 case RETURN: {
+
                     void *ret_val_source_ptr = interpreter_load_lvalue(interp, inst->a);
                     assert(inst->a->type->bit_size % 8 == 0);
                     auto byte_size = inst->a->type->bit_size / 8;
@@ -603,6 +604,7 @@ namespace Zodiac
                                                      sizeof(interp->frame_pointer)));
 
                     if (old_fp != -1) {
+
                         offset += sizeof(old_fp);
                         auto ptr = interp_stack_ptr(interp,
                                                     interp->frame_pointer + offset,
@@ -620,7 +622,9 @@ namespace Zodiac
                         interp->frame_pointer = old_fp;
 
                         int64_t total_arg_size = interp_stack_pop<int64_t>(interp);
+                        assert(total_arg_size <= interp->sp);
                         interp->sp -= total_arg_size;
+
                     } else {
                         interp->running = false;
                         advance_ip = false;
@@ -632,6 +636,7 @@ namespace Zodiac
                 }
 
                 case RETURN_VOID: {
+
                     int64_t offset = 0;
                     int64_t old_fp =
                         *(int64_t*)(interp_stack_ptr(interp,

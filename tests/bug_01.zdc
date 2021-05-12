@@ -1,12 +1,16 @@
 
+std :: import std;
+
 #run main();
 
 main :: func () -> int
 {
-    return times_two(24);
+    result := times_two(25, 44);
+    std.println("returned from times_two...");
+    return result;
 }
 
-times_two :: func (x: int) -> int
+times_two :: func (x: int, y: int) -> int
 {
     return x * 2;
 }

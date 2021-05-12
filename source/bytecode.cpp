@@ -331,9 +331,9 @@ namespace Zodiac
         auto report_test_result_func = bytecode_find_function(builder, reporter_decl);
         assert(report_test_result_func);
 
-        AST_Type *wrapper_type =
-            build_data_find_function_type(builder->build_data, {},
-                                          Builtin::type_bool);
+        AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
+                                                               Builtin::type_s64);
+        assert(wrapper_type);
 
         Atom name = atom_get(&builder->build_data->atom_table, "_test_wrapper_");
 
@@ -355,14 +355,16 @@ namespace Zodiac
             assert(test_func->flags & BC_FUNC_FLAG_IS_TEST);
 
             Bytecode_Value *test_result = bytecode_emit_call(builder, test_func, {});
-            Bytecode_Value *test_name = bytecode_get_string_literal(builder, test_func->name);
+            assert(test_result->type == Builtin::type_bool);
 
-            Bytecode_Value *args[] = { test_result, test_name };
-            bytecode_emit_call(builder, report_test_result_func, args);
+            // Bytecode_Value *test_name = bytecode_get_string_literal(builder, test_func->name);
+
+            // Bytecode_Value *args[] = { test_result, test_name };
+            // bytecode_emit_call(builder, report_test_result_func, args);
 
         }
 
-        auto return_val = bytecode_bool_literal_new(builder, Builtin::type_bool, true);
+        auto return_val = bytecode_integer_literal_new(builder, Builtin::type_u64, { .u64 = 0 });
         bytecode_emit_instruction(builder, RETURN, return_val, nullptr, nullptr);
 
         auto index = builder->functions.count;
@@ -1435,15 +1437,14 @@ namespace Zodiac
             bytecode_emit_instruction(builder, PUSH_ARG, arg_values[i], nullptr, nullptr);
         }
 
-        Bytecode_Value *return_value = nullptr;
-        if (callee->type->function.return_type->kind != AST_Type_Kind::VOID) {
-            return_value = bytecode_temporary_new(builder, callee->type->function.return_type);
-        }
-
         auto callee_val = bytecode_function_value_new(builder, callee);
         auto arg_count_val = bytecode_integer_literal_new(builder, Builtin::type_s64,
                                                           { .s64 = arg_values.count });
 
+        Bytecode_Value *return_value = nullptr;
+        if (callee->type->function.return_type->kind != AST_Type_Kind::VOID) {
+            return_value = bytecode_temporary_new(builder, callee->type->function.return_type);
+        }
 
         bytecode_emit_instruction(builder, CALL, callee_val, arg_count_val, return_value);
 

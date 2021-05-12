@@ -365,7 +365,9 @@ Resolve_Result finish_resolving(Resolver *resolver)
                         bytecode_emit_test_wrapper(&resolver->bytecode_builder,
                                                    bc_tests);
                     assert(bc_test_wrapper);
-                    
+
+                    queue_run_job(resolver, nullptr, bc_test_wrapper);
+
                     if (!resolver->build_data->options->dont_emit_llvm) {
                         llvm_register_function(&resolver->llvm_builder, bc_test_wrapper);
                         queue_llvm_job(resolver, bc_test_wrapper);
@@ -385,16 +387,27 @@ Resolve_Result finish_resolving(Resolver *resolver)
         }
         while (run_job_count--) {
             auto job = queue_dequeue(&resolver->run_jobs);
+            assert(job.wrapper);
 
-            auto run_decl = job.run_decl;
-            assert(run_decl->kind == AST_Declaration_Kind::RUN);
-            auto call_expr = run_decl->run.expression;
-            assert(call_expr->kind == AST_Expression_Kind::CALL);
-            auto callee_decl = call_expr->call.callee_declaration;
-            assert(callee_decl);
-            assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+            bool deps_ready = false;
 
-            if (all_dependencies_emitted(resolver, callee_decl)) {
+            if (job.run_decl) {
+                auto run_decl = job.run_decl;
+                assert(run_decl->kind == AST_Declaration_Kind::RUN);
+                auto call_expr = run_decl->run.expression;
+                assert(call_expr->kind == AST_Expression_Kind::CALL);
+                auto callee_decl = call_expr->call.callee_declaration;
+                assert(callee_decl);
+                assert(callee_decl->kind == AST_Declaration_Kind::FUNCTION);
+
+                deps_ready = all_dependencies_emitted(resolver, callee_decl);
+            } else {
+                // Must be the test wrapper
+                deps_ready = true;
+            }
+
+
+            if (deps_ready) {
                 assert(job.wrapper);
                 assert(job.wrapper->flags & BC_FUNC_FLAG_EMITTED);
 
@@ -653,7 +666,7 @@ void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
 void queue_run_job(Resolver *resolver, AST_Declaration *run_decl,
                    Bytecode_Function *wrapper)
 {
-    assert(run_decl->kind == AST_Declaration_Kind::RUN);
+    if (run_decl) { assert(run_decl->kind == AST_Declaration_Kind::RUN); }
 
     Run_Job run_job = {.run_decl = run_decl, .wrapper = wrapper};
     queue_enqueue(&resolver->run_jobs, run_job);

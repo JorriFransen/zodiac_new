@@ -19,15 +19,15 @@ main :: func () -> int
     return false;
 }
 
-#test "my_test_3" {
-    std.println("Running my_test_3");
-    @assert(true);
-    return true;
-}
+// #test "my_test_3" {
+//     std.println("Running my_test_3");
+//     @assert(true);
+//     return true;
+// }
 
-#test "my_test_4" {
-    std.println("Running my_test_4");
-    @assert(true);
-    @assert(false);
-    return true;
-}
+// #test "my_test_4" {
+//     std.println("Running my_test_4");
+//     @assert(true);
+//     @assert(false);
+//     return true;
+// }

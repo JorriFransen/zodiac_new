@@ -63,7 +63,6 @@ namespace Zodiac
             auto r_type = build_data->type_table[i];
             if (r_type->kind == AST_Type_Kind::POINTER &&
                 r_type->pointer.base == base_type)
-                
             {
                 assert(base_type->pointer_to);
                 assert(base_type->pointer_to == r_type);
@@ -137,6 +136,22 @@ namespace Zodiac
         }
 
         return nullptr;
+    }
+
+    AST_Type *build_data_find_or_create_function_type(Allocator *allocator,
+                                                      Build_Data *build_data,
+                                                      Array<AST_Type *> param_types,
+                                                      AST_Type *return_type)
+    {
+        AST_Type *result = build_data_find_function_type(build_data, param_types, return_type);
+
+        if (!result) {
+            result = ast_function_type_new(allocator, param_types, return_type);
+            array_append(&build_data->type_table, result);
+        }
+
+        assert(result->kind == AST_Type_Kind::FUNCTION);
+        return result;
     }
 
     AST_Type  *build_data_find_enum_type(Build_Data *build_data, AST_Declaration *enum_decl)

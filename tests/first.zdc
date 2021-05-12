@@ -105,7 +105,9 @@ main :: func () -> s64
         print_vec2(*p1);
         p1.y = 55;
         print_vec2(*p1);
-        return add_vec2(*p1);
+        // return add_vec2(*p1);
+        v := return_double(15);
+        return v;
     } else {
         std.println("Not printing vector...");
     }
@@ -113,3 +115,8 @@ main :: func () -> s64
     return 0;
 }
 
+
+return_double :: func(v: int) -> int
+{
+    return v * 2;
+}

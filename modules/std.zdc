@@ -47,7 +47,7 @@ os :: import os;
 
 println :: func (cstr: *u8) {
     print(cstr);
-    print("\n");
+    print_char('\n');
 }
 
 print_numln :: func (n: s64) {
