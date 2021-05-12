@@ -7,7 +7,6 @@
 #include "ast.h"
 #include "scope.h"
 #include "resolver.h"
-#include "interpreter.h"
 
 #include <tracy/TracyC.h>
 
@@ -60,7 +59,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (options.print_bytecode) bytecode_print(ca, &resolver.bytecode_builder);
+    if (options.print_bytecode) bc_print(ca, &resolver.bytecode_builder);
 
     if (options.verbose)
         printf("Total bytecode instructions: %" PRId64 "\n", build_data.bytecode_instruction_count);

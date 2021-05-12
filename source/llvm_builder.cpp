@@ -2,7 +2,7 @@
 #include "llvm_builder.h"
 
 #include "builtin.h"
-#include "bytecode.h"
+#include "bc.h"
 #include "os.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -70,7 +70,7 @@ namespace Zodiac
         return result;
     }
 
-    void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    void llvm_register_function(LLVM_Builder *builder, BC_Function *bc_func)
     {
         if (bc_func->flags & BC_FUNC_FLAG_LLVM_REGISTERED) return;
 
@@ -100,7 +100,7 @@ namespace Zodiac
         bc_func->flags |= BC_FUNC_FLAG_LLVM_REGISTERED;
     }
 
-    void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    void llvm_emit_function(LLVM_Builder *builder, BC_Function *bc_func)
     {
         // if (builder->build_data->options->verbose)
         //     printf("LLVM Emitting function: %s\n", bc_func->name.data);
@@ -123,7 +123,7 @@ namespace Zodiac
         builder->temps.count = 0;
 
         for (int64_t i = 0; i < bc_func->blocks.count; i++) {
-            auto block = bc_func->blocks[i];;
+            auto block = bc_func->blocks[i];
             auto llvm_block = llvm::BasicBlock::Create(*builder->llvm_context, block->name.data,
                                                        llvm_func);
 
@@ -160,27 +160,28 @@ namespace Zodiac
             builder->llvm_builder->CreateStore(param_val, param_alloca);
         }
 
-        auto inst_loc = bucket_array_first(&bc_func->instructions);
+        assert(false);
+        // auto inst_loc = bucket_array_first(&bc_func->instructions);
 
-        for (int64_t i = 0; i < bc_func->blocks.count; i++) {
-            builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
+        // for (int64_t i = 0; i < bc_func->blocks.count; i++) {
+        //     builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
 
-            auto block = bc_func->blocks[i];
+        //     auto block = bc_func->blocks[i];
 
-            for (int64_t j = 0; j < block->instruction_count; j++) {
+        //     for (int64_t j = 0; j < block->instruction_count; j++) {
 
-                Bytecode_Instruction *inst = bucket_locator_get_ptr(inst_loc);
-                llvm_emit_instruction(builder, inst);
-                bucket_locator_advance(&inst_loc);
-            }
+        //         BC_Instruction *inst = bucket_locator_get_ptr(inst_loc);
+        //         llvm_emit_instruction(builder, inst);
+        //         bucket_locator_advance(&inst_loc);
+        //     }
 
-            llvm_block_it++;
-        }
+        //     llvm_block_it++;
+        // }
 
         bc_func->flags |= BC_FUNC_FLAG_EMITTED;
     }
 
-    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global_Info global_info)
+    void llvm_emit_global(LLVM_Builder *builder, BC_Global_Info global_info)
     {
 
         llvm::Type *llvm_type = llvm_type_from_ast(builder, global_info.declaration->type);
@@ -227,7 +228,7 @@ namespace Zodiac
         return nullptr;
     }
 
-    void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst)
+    void llvm_emit_instruction(LLVM_Builder *builder, BC_Instruction *inst)
     {
         llvm::Value *result = nullptr;
 
@@ -508,12 +509,12 @@ namespace Zodiac
             }
 
             case CALL: {
-                Bytecode_Function *bc_func = inst->a->function;
+                BC_Function *bc_func = inst->a->function;
                 llvm::Function *callee = llvm_find_function(builder, bc_func);
                 assert(callee);
 
                 auto bc_arg_count = inst->b;
-                assert(bc_arg_count->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(bc_arg_count->kind == BC_Value_Kind::INTEGER_LITERAL);
                 assert(bc_arg_count->type == Builtin::type_s64);
 
                 uint64_t arg_count = bc_arg_count->integer_literal.u64;
@@ -556,7 +557,7 @@ namespace Zodiac
 
             case JUMP: {
                 auto block_val = inst->a;
-                assert(block_val->kind == Bytecode_Value_Kind::BLOCK);
+                assert(block_val->kind == BC_Value_Kind::BLOCK);
 
                 auto block = block_val->block;
                 llvm::BasicBlock *llvm_block = llvm_find_block(builder, block);
@@ -570,8 +571,8 @@ namespace Zodiac
                 assert(cond_val->getType()->isIntegerTy());
                 assert(builder->llvm_datalayout->getTypeAllocSize(cond_val->getType()) == 1);
 
-                assert(inst->b->kind == Bytecode_Value_Kind::BLOCK);
-                assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);
+                assert(inst->b->kind == BC_Value_Kind::BLOCK);
+                assert(inst->result->kind == BC_Value_Kind::BLOCK);
 
                 llvm::BasicBlock *then_block = llvm_find_block(builder, inst->b->block);
                 llvm::BasicBlock *else_block = llvm_find_block(builder, inst->result->block);
@@ -583,32 +584,35 @@ namespace Zodiac
             case SWITCH: {
                 llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
 
-                assert(inst->b->kind == Bytecode_Value_Kind::SWITCH_DATA);
-                Bytecode_Switch_Data *switch_data = &inst->b->switch_data;
+                assert(inst->b->kind == BC_Value_Kind::SWITCH_DATA);
+                BC_Switch_Data *switch_data = &inst->b->switch_data;
 
-                assert(switch_data->default_block);
+                assert(false);
                 assert(switch_val);
+                assert(switch_data);
+                // assert(switch_data->default_block);
+                // assert(switch_val);
 
-                llvm::BasicBlock *default_block = llvm_find_block(builder,
-                                                                  switch_data->default_block);
+                // llvm::BasicBlock *default_block = llvm_find_block(builder,
+                //                                                   switch_data->default_block);
 
-                auto switch_inst = builder->llvm_builder->CreateSwitch(switch_val, default_block,
-                                                                       switch_data->cases.count);
+                // auto switch_inst = builder->llvm_builder->CreateSwitch(switch_val, default_block,
+                //                                                        switch_data->cases.count);
 
-                for (int64_t i = 0; i < switch_data->cases.count; i++) {
-                    Bytecode_Switch_Case switch_case = switch_data->cases[i];
-                    if (switch_case.target_block == switch_data->default_block) continue;
+                // for (int64_t i = 0; i < switch_data->cases.count; i++) {
+                //     BC_Switch_Case switch_case = switch_data->cases[i];
+                //     if (switch_case.target_block == switch_data->default_block) continue;
 
-                    llvm::Value *_case_value = llvm_emit_value(builder, switch_case.case_value);
-                    assert(_case_value->getType()->isIntegerTy());
-                    llvm::ConstantInt *case_value =
-                        llvm::dyn_cast<llvm::ConstantInt>(_case_value);
+                //     llvm::Value *_case_value = llvm_emit_value(builder, switch_case.case_value);
+                //     assert(_case_value->getType()->isIntegerTy());
+                //     llvm::ConstantInt *case_value =
+                //         llvm::dyn_cast<llvm::ConstantInt>(_case_value);
 
-                    llvm::BasicBlock *dest_block = llvm_find_block(builder,
-                                                                   switch_case.target_block);
+                //     llvm::BasicBlock *dest_block = llvm_find_block(builder,
+                //                                                    switch_case.target_block);
 
-                    switch_inst->addCase(case_value, dest_block);
-                }
+                //     switch_inst->addCase(case_value, dest_block);
+                // }
                 break;
             }
 
@@ -735,7 +739,7 @@ namespace Zodiac
             }
 
             case SIZEOF: {
-                assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+                assert(inst->a->kind == BC_Value_Kind::TYPE);
 
                 assert(inst->a->type->bit_size % 8 == 0);
                 auto bc_size = inst->a->type->bit_size / 8;
@@ -755,11 +759,11 @@ namespace Zodiac
             }
 
             case OFFSETOF: {
-                assert(inst->a->kind == Bytecode_Value_Kind::TYPE);
+                assert(inst->a->kind == BC_Value_Kind::TYPE);
                 AST_Type *struct_type = inst->a->type;
                 assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
 
-                assert(inst->b->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(inst->b->kind == BC_Value_Kind::INTEGER_LITERAL);
                 assert(inst->b->type == Builtin::type_s64);
 
                 auto llvm_type = llvm_type_from_ast<llvm::StructType>(builder, struct_type);
@@ -792,7 +796,7 @@ namespace Zodiac
             }
 
             case SYSCALL: {
-                assert(inst->a->kind == Bytecode_Value_Kind::INTEGER_LITERAL);
+                assert(inst->a->kind == BC_Value_Kind::INTEGER_LITERAL);
                 assert(inst->a->type == Builtin::type_u64);
 
                 llvm::Value *syscall_ret = llvm_emit_syscall(builder,
@@ -807,25 +811,26 @@ namespace Zodiac
 
         if (inst->result) {
             if (inst->op == ALLOCL) {
-                assert(inst->result->kind == Bytecode_Value_Kind::ALLOCL);
+                assert(inst->result->kind == BC_Value_Kind::ALLOCL);
             } else if (inst->op == JUMP_IF) {
-                assert(inst->result->kind == Bytecode_Value_Kind::BLOCK);
+                assert(inst->result->kind == BC_Value_Kind::BLOCK);
             } else {
-                assert(inst->result->kind == Bytecode_Value_Kind::TEMP);
+                assert(inst->result->kind == BC_Value_Kind::TEMP);
                 assert(result);
 
-                assert(builder->temps.count == inst->result->temp.index);
-                array_append(&builder->temps, result);
+                assert(false);
+                // assert(builder->temps.count == inst->result->temp.index);
+                // array_append(&builder->temps, result);
             }
         }
     }
 
-    llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value)
+    llvm::Value *llvm_emit_value(LLVM_Builder *builder, BC_Value *bc_value)
     {
         switch (bc_value->kind) {
-            case Bytecode_Value_Kind::INVALID: assert(false);
+            case BC_Value_Kind::INVALID: assert(false);
 
-            case Bytecode_Value_Kind::INTEGER_LITERAL:
+            case BC_Value_Kind::INTEGER_LITERAL:
             {
                 auto type = bc_value->type;
                 llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
@@ -836,7 +841,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::FLOAT_LITERAL: {
+            case BC_Value_Kind::FLOAT_LITERAL: {
                 auto type = bc_value->type;
                 llvm::Type *llvm_type = llvm_type_from_ast(builder, type);
                 if (type == Builtin::type_float) {
@@ -850,7 +855,7 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::STRING_LITERAL:
+            case BC_Value_Kind::STRING_LITERAL:
             {
                 llvm::GlobalValue *llvm_str_glob = nullptr;
 
@@ -892,46 +897,50 @@ namespace Zodiac
                 break;
             }
 
-            case Bytecode_Value_Kind::BOOL_LITERAL: {
+            case BC_Value_Kind::BOOL_LITERAL: {
                 llvm::Type *llvm_type = llvm_type_from_ast(builder, bc_value->type);
                 return llvm::ConstantInt::get(llvm_type, bc_value->bool_literal, false);
                 break;
             }
 
-            case Bytecode_Value_Kind::NULL_LITERAL: {
+            case BC_Value_Kind::NULL_LITERAL: {
                 auto type = llvm_type_from_ast<llvm::PointerType>(builder, bc_value->type);
                 return llvm::ConstantPointerNull::get(type);
                 break;
             }
 
-            case Bytecode_Value_Kind::TEMP: {
-                assert(bc_value->temp.index < builder->temps.count);
-                return builder->temps[bc_value->temp.index];
+            case BC_Value_Kind::TEMP: {
+                assert(false);
+                // assert(bc_value->temp.index < builder->temps.count);
+                // return builder->temps[bc_value->temp.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::ALLOCL: {
-                assert(bc_value->allocl.index < builder->locals.count);
-                return builder->locals[bc_value->allocl.index];
+            case BC_Value_Kind::ALLOCL: {
+                assert(false);
+                // assert(bc_value->allocl.index < builder->locals.count);
+                // return builder->locals[bc_value->allocl.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::PARAM: {
-                assert(bc_value->allocl.index < builder->parameters.count);
-                return builder->parameters[bc_value->parameter.index];
+            case BC_Value_Kind::PARAM: {
+                assert(false);
+                // assert(bc_value->allocl.index < builder->parameters.count);
+                // return builder->parameters[bc_value->parameter.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::GLOBAL: {
-                assert(bc_value->global.index < builder->globals.count);
-                return builder->globals[bc_value->global.index];
+            case BC_Value_Kind::GLOBAL: {
+                assert(false);
+                // assert(bc_value->global.index < builder->globals.count);
+                // return builder->globals[bc_value->global.index];
                 break;
             }
 
-            case Bytecode_Value_Kind::FUNCTION: assert(false);
-            case Bytecode_Value_Kind::BLOCK: assert(false);
-            case Bytecode_Value_Kind::TYPE: assert(false);
-            case Bytecode_Value_Kind::SWITCH_DATA: assert(false);
+            case BC_Value_Kind::FUNCTION: assert(false);
+            case BC_Value_Kind::BLOCK: assert(false);
+            case BC_Value_Kind::TYPE: assert(false);
+            case BC_Value_Kind::SWITCH_DATA: assert(false);
         }
 
         assert(false);
@@ -1305,7 +1314,7 @@ namespace Zodiac
 #endif
     }
 
-    llvm::Function *llvm_find_function(LLVM_Builder *builder, Bytecode_Function *bc_func)
+    llvm::Function *llvm_find_function(LLVM_Builder *builder, BC_Function *bc_func)
     {
         for (int64_t i = 0; i < builder->registered_functions.count; i++)
         {
@@ -1317,7 +1326,7 @@ namespace Zodiac
         return nullptr;
     }
 
-    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, Bytecode_Block *bc_block)
+    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, BC_Block *bc_block)
     {
         for (int64_t i = 0; i < builder->blocks.count; i++) {
             auto bi = builder->blocks[i];

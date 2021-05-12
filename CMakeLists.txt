@@ -17,13 +17,13 @@ include_directories(${LLVM_INCLUDE_DIRS})
 set (ZODIAC_COMPILER_SOURCE
     source/main.cpp
 
-    source/ast.cpp
     source/allocator.cpp
+    source/ast.cpp
     source/atom.cpp
+    source/bc.cpp
     source/bucket_array.cpp
     source/build_data.cpp
     source/builtin.cpp
-    source/bytecode.cpp
     source/c_allocator.cpp
     source/command_line_parser.cpp
     source/common.cpp
@@ -41,13 +41,13 @@ set (ZODIAC_COMPILER_SOURCE
     source/parser.cpp
     source/parse_tree_node.cpp
     source/resolver.cpp
-    source/temp_allocator.cpp
-    source/token.cpp
-    source/token_stream.cpp
     source/scope.cpp
     source/stack.cpp
     source/string_builder.cpp
     source/struct_predecls.cpp
+    source/temp_allocator.cpp
+    source/token.cpp
+    source/token_stream.cpp
     source/zodiac_error.cpp
     source/zodiac_string.cpp
 )

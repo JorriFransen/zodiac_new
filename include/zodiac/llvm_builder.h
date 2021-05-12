@@ -1,7 +1,7 @@
 #pragma once
 
 #include "build_data.h"
-#include "bytecode.h"
+#include "bc.h"
 #include "stack.h"
 
 #include <llvm/IR/IRBuilder.h>
@@ -17,13 +17,13 @@ namespace Zodiac
 
     struct LLVM_Function_Info
     {
-        Bytecode_Function *bytecode_function = nullptr;
+        BC_Function *bytecode_function = nullptr;
         llvm::Function *llvm_function = nullptr;
     };
 
     struct LLVM_Block_Info
     {
-        Bytecode_Block *bytecode_block = nullptr;
+        BC_Block *bytecode_block = nullptr;
         llvm::BasicBlock *llvm_block = nullptr;
     };
 
@@ -35,7 +35,7 @@ namespace Zodiac
 
     struct LLVM_String_Literal
     {
-        Bytecode_Value *bc_value = nullptr;
+        BC_Value *bc_value = nullptr;
         llvm::GlobalValue *llvm_global = nullptr;
     };
 
@@ -69,19 +69,19 @@ namespace Zodiac
 
     LLVM_Builder llvm_builder_create(Allocator *allocator, Build_Data *build_data);
 
-    void llvm_register_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
-    void llvm_emit_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
-    void llvm_emit_global(LLVM_Builder *builder, Bytecode_Global_Info global_info);
+    void llvm_register_function(LLVM_Builder *builder, BC_Function *bc_func);
+    void llvm_emit_function(LLVM_Builder *builder, BC_Function *bc_func);
+    void llvm_emit_global(LLVM_Builder *builder, BC_Global_Info global_info);
     llvm::Constant *llvm_emit_constant(LLVM_Builder *builder, Const_Value const_val);
 
-    void llvm_emit_instruction(LLVM_Builder *builder, Bytecode_Instruction *inst);
-    llvm::Value *llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value);
+    void llvm_emit_instruction(LLVM_Builder *builder, BC_Instruction *inst);
+    llvm::Value *llvm_emit_value(LLVM_Builder *builder, BC_Value *bc_value);
 
     void llvm_emit_exit(LLVM_Builder *builder, llvm::Value *exit_code_val);
     llvm::Value *llvm_emit_syscall(LLVM_Builder *builder, uint64_t arg_count);
 
     template <typename T>
-    T* llvm_emit_value(LLVM_Builder *builder, Bytecode_Value *bc_value)
+    T* llvm_emit_value(LLVM_Builder *builder, BC_Value *bc_value)
     {
         return static_cast<T*>(llvm_emit_value(builder, bc_value));
     }
@@ -89,8 +89,8 @@ namespace Zodiac
     bool llvm_emit_binary(LLVM_Builder *builder, const char * output_file_name);
     bool llvm_run_linker(LLVM_Builder *builder, const char *output_file_name);
 
-    llvm::Function *llvm_find_function(LLVM_Builder *builder, Bytecode_Function *bc_func);
-    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, Bytecode_Block *bc_block);
+    llvm::Function *llvm_find_function(LLVM_Builder *builder, BC_Function *bc_func);
+    llvm::BasicBlock *llvm_find_block(LLVM_Builder *builder, BC_Block *bc_block);
 
     llvm::Type *llvm_type_from_ast(LLVM_Builder *builder, AST_Type *ast_type);
 

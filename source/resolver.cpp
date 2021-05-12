@@ -25,7 +25,7 @@ void resolver_init(Allocator *allocator, Resolver *resolver,
     stack_init(allocator, &resolver->ast_builder.break_stack);
 
     resolver->parser = parser_create(allocator, build_data, resolver);
-    resolver->bytecode_builder = bytecode_builder_create(allocator, build_data);
+    resolver->bytecode_builder = bc_builder_create(allocator, build_data);
     resolver->llvm_builder = llvm_builder_create(allocator, build_data);
 
     queue_init(allocator, &resolver->parse_jobs);
@@ -114,8 +114,8 @@ Resolve_Result finish_resolving(Resolver *resolver)
     uint64_t sized_test_count = 0;
     uint64_t bc_test_count = 0;
 
-    Bytecode_Function *bc_test_wrapper = nullptr;
-    Array<Bytecode_Function *> bc_tests = {};
+    BC_Function *bc_test_wrapper = nullptr;
+    Array<BC_Function *> bc_tests = {};
 
     if (bd->options->run_tests) {
         array_init(resolver->allocator, &bc_tests);
@@ -275,7 +275,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
 
                 // The function should have been registered at this point
                 //  (after the type spec is resolved).
-                auto bc_func = bytecode_emit_function_declaration(
+                auto bc_func = bc_emit_function_declaration(
                                    &resolver->bytecode_builder, job.decl);
                 assert(bc_func);
 
@@ -286,7 +286,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 }
             } else if (job.decl->kind == AST_Declaration_Kind::VARIABLE) {
                 assert(job.decl->decl_flags & AST_DECL_FLAG_GLOBAL);
-                auto bc_global = bytecode_emit_global_variable(
+                auto bc_global = bc_emit_global_variable(
                                      &resolver->bytecode_builder, job.decl);
 
                 if (!resolver->build_data->options->dont_emit_llvm) {
@@ -296,7 +296,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
             } else if (job.decl->kind == AST_Declaration_Kind::CONSTANT) {
                 // Dont do anything
             } else if (job.decl->kind == AST_Declaration_Kind::RUN) {
-                Bytecode_Function *pre_main_func = nullptr;
+                BC_Function *pre_main_func = nullptr;
 
                 if (bd->pre_main_func) {
                     pre_main_func = bd->pre_main_func;
@@ -317,11 +317,11 @@ Resolve_Result finish_resolving(Resolver *resolver)
                     if ((pre_main_decl->flags & AST_NODE_FLAG_RESOLVED_ID) &&
                         (pre_main_decl->flags & AST_NODE_FLAG_TYPED)) {
 
-                        pre_main_func = bytecode_find_function(&resolver->bytecode_builder,
+                        pre_main_func = bc_find_function(&resolver->bytecode_builder,
                                                                pre_main_decl);
                         if (pre_main_func) {
                             if (!(pre_main_func->flags & BC_FUNC_FLAG_EMITTED)) {
-                                bytecode_emit_function_declaration(&resolver->bytecode_builder,
+                                bc_emit_function_declaration(&resolver->bytecode_builder,
                                                                pre_main_decl);
                             }
 
@@ -332,7 +332,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
 
                 if (pre_main_func) {
 
-                    Bytecode_Function *wrapper = bytecode_emit_run_wrapper(
+                    BC_Function *wrapper = bc_emit_run_wrapper(
                       &resolver->bytecode_builder, job.decl, pre_main_func);
 
                     queue_run_job(resolver, job.decl, wrapper);
@@ -341,7 +341,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 }
             } else if (job.decl->kind == AST_Declaration_Kind::TEST) {
                 auto test_func_decl = job.decl->test.func_decl;
-                auto test_func = bytecode_emit_function_declaration(
+                auto test_func = bc_emit_function_declaration(
                                      &resolver->bytecode_builder,
                                      test_func_decl);
 
@@ -362,7 +362,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 if (bc_test_count == parsed_test_count) {
                     printf("Emitting test wrapper...\n");
                     bc_test_wrapper =
-                        bytecode_emit_test_wrapper(&resolver->bytecode_builder,
+                        bc_emit_test_wrapper(&resolver->bytecode_builder,
                                                    bc_tests);
                     assert(bc_test_wrapper);
 
@@ -382,7 +382,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
         }
 
         auto run_job_count = queue_count(&resolver->run_jobs);
-        if (!bytecode_ready_to_run(&resolver->bytecode_builder)) {
+        if (!bc_ready_to_run(&resolver->bytecode_builder)) {
             run_job_count = 0;
         }
         while (run_job_count--) {
@@ -414,10 +414,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 Interpreter interp =
                     interpreter_create(resolver->allocator, resolver->build_data);
 
-                interpreter_start(&interp, job.wrapper,
-                              resolver->bytecode_builder.global_data_size,
-                              resolver->bytecode_builder.globals,
-                              resolver->bytecode_builder.foreign_functions);
+                interpreter_start(&interp, job.wrapper);
 
                 if (interp.build_data->options->verbose) {
                     printf("Interpreter exited with code: %" PRId64
@@ -664,7 +661,7 @@ void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
 }
 
 void queue_run_job(Resolver *resolver, AST_Declaration *run_decl,
-                   Bytecode_Function *wrapper)
+                   BC_Function *wrapper)
 {
     if (run_decl) { assert(run_decl->kind == AST_Declaration_Kind::RUN); }
 
@@ -672,14 +669,14 @@ void queue_run_job(Resolver *resolver, AST_Declaration *run_decl,
     queue_enqueue(&resolver->run_jobs, run_job);
 }
 
-void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func)
+void queue_llvm_job(Resolver *resolver, BC_Function *bc_func)
 {
     LLVM_Job job = {.kind = LLVM_Job_Kind::FUNCTION};
     job.bc_func = bc_func;
     queue_enqueue(&resolver->llvm_jobs, job);
 }
 
-void queue_llvm_job(Resolver *resolver, Bytecode_Global_Info bc_global)
+void queue_llvm_job(Resolver *resolver, BC_Global_Info bc_global)
 {
     LLVM_Job job = {.kind = LLVM_Job_Kind::GLOBAL};
     job.bc_global = bc_global;
@@ -2437,7 +2434,7 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
             }
 
             if (!(callee_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE)) {
-                bytecode_register_function(&resolver->bytecode_builder, callee_decl);
+                bc_register_function(&resolver->bytecode_builder, callee_decl);
             }
 
             expression->call.callee_declaration = callee_decl;
@@ -2635,7 +2632,7 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
 
                 if (!(default_handler_decl->decl_flags &
                       AST_DECL_FLAG_REGISTERED_BYTECODE)) {
-                    bytecode_register_function(&resolver->bytecode_builder,
+                    bc_register_function(&resolver->bytecode_builder,
                                default_handler_decl);
                 }
 
@@ -3195,7 +3192,7 @@ bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
                   (decl->decl_flags & AST_DECL_FLAG_IS_ENTRY))) {
 
                 auto bc_func =
-                    bytecode_register_function(&resolver->bytecode_builder, decl);
+                    bc_register_function(&resolver->bytecode_builder, decl);
 
                 if (!resolver->build_data->options->dont_emit_llvm)
                     llvm_register_function(&resolver->llvm_builder, bc_func);
@@ -3448,7 +3445,7 @@ bool try_size_expression(Resolver *resolver, AST_Expression *expression)
             AST_Declaration *callee = expression->call.callee_declaration;
             assert(callee);
 
-            auto bc_func = bytecode_find_function(&resolver->bytecode_builder, callee);
+            auto bc_func = bc_find_function(&resolver->bytecode_builder, callee);
 
             if (!resolver->build_data->options->dont_emit_llvm)
                 llvm_register_function(&resolver->llvm_builder, bc_func);

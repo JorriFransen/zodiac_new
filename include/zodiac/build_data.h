@@ -13,7 +13,7 @@
 
 namespace Zodiac
 {
-    struct Bytecode_Function;
+    struct BC_Function;
 
     struct Build_Data
     {
@@ -24,9 +24,9 @@ namespace Zodiac
         Array<AST_Type*> type_table = {};
         AST_Module *entry_module = nullptr;
 
-        Bytecode_Function *bc_entry_function = nullptr;
-        Bytecode_Function *bc_bytecode_entry_function = nullptr;
-        Bytecode_Function *pre_main_func = nullptr;
+        BC_Function *bc_entry_function = nullptr;
+        BC_Function *bc_bytecode_entry_function = nullptr;
+        BC_Function *pre_main_func = nullptr;
 
         Allocator *err_allocator = nullptr;
 

@@ -3,7 +3,7 @@
 
 #include "allocator.h"
 #include "build_data.h"
-#include "bytecode.h"
+#include "bc.h"
 #include "lexer.h"
 #include "llvm_builder.h"
 #include "parser.h"
@@ -47,7 +47,7 @@ namespace Zodiac
     struct Run_Job
     {
         AST_Declaration *run_decl = nullptr;
-        Bytecode_Function *wrapper = nullptr;
+        BC_Function *wrapper = nullptr;
     };
 
     enum class LLVM_Job_Kind
@@ -63,8 +63,8 @@ namespace Zodiac
 
         union
         {
-            Bytecode_Global_Info bc_global = {};
-            Bytecode_Function *bc_func;
+            BC_Global_Info bc_global = {};
+            BC_Function *bc_func;
         };
     };
 
@@ -76,7 +76,7 @@ namespace Zodiac
         Lexer lexer = {};
         AST_Builder ast_builder = {};
         Parser parser = {};
-        Bytecode_Builder bytecode_builder = {};
+        BC_Builder bytecode_builder = {};
         LLVM_Builder llvm_builder = {};
 
         Queue<Parse_Job> parse_jobs = {};
@@ -120,9 +120,9 @@ namespace Zodiac
     void queue_resolve_job(Resolver *resolver, AST_Node *ast_node);
     void queue_size_job(Resolver *resolver, AST_Node *node);
     void queue_bytecode_job(Resolver *resolver, AST_Declaration *func_decl);
-    void queue_run_job(Resolver *resolver, AST_Declaration *run_decl, Bytecode_Function *wrapper);
-    void queue_llvm_job(Resolver *resolver, Bytecode_Function *bc_func);
-    void queue_llvm_job(Resolver *resolver, Bytecode_Global_Info bc_global);
+    void queue_run_job(Resolver *resolver, AST_Declaration *run_decl, BC_Function *wrapper);
+    void queue_llvm_job(Resolver *resolver, BC_Function *bc_func);
+    void queue_llvm_job(Resolver *resolver, BC_Global_Info bc_global);
 
     bool try_parse_job(Resolver *resolver, Parse_Job *job);
     bool try_resolve_job(Resolver *resolver, Resolve_Job *job);

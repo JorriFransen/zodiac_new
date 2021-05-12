@@ -3,7 +3,7 @@
 
 namespace Zodiac {
 
-    bool __bytecode_fn_ptr_eq(Bytecode_Function *const &a, Bytecode_Function *const &b) {
+    bool __bytecode_fn_ptr_eq(BC_Function *const &a, BC_Function *const &b) {
         return a == b;
     }
 
