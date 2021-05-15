@@ -34,7 +34,7 @@ jobs:
     #   run: sudo apt upgrade
 
     - name: Install apt packages
-      run: sudo apt install ninja-build clang
+      run: sudo apt install ninja-build clang-11
 
     - name: Configure Dependencies
       shell: bash
