@@ -70,7 +70,7 @@ static const Option_Template option_templates[] = {
 #define OPTION_VALUE_String(v) { ._String = (v) }
 
 #define DEFINE_OPTION(type, name, default_value, desc) \
-    { OT_Kind_##type, #name, desc, OPTION_VALUE_##type(default_value), offsetof(Options, name) },
+    { OT_Kind_##type, #name, desc, OPTION_VALUE_##type(default_value), offsetof(struct Options, name) },
 
     CMD_OPTION_LIST
 
