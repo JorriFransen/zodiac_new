@@ -34,16 +34,16 @@ jobs:
     #   run: sudo apt upgrade
 
     - name: Install apt packages
-      run: sudo apt install ninja-build clang-11
+      run: sudo apt install ninja-build
 
     - name: Configure Dependencies
       shell: bash
       run: ./create_linux_build.sh
 
-    - name: Build clang debug
-      working-directory: ${{github.workspace}}/build_clang/debug
-      shell: bash
-      run: cmake --build .
+    # - name: Build clang debug
+    #   working-directory: ${{github.workspace}}/build_clang/debug
+    #   shell: bash
+    #   run: cmake --build .
 
     - name: Build clang release
       working-directory: ${{github.workspace}}/build_clang/release
