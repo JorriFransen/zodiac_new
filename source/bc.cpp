@@ -2,6 +2,7 @@
 
 #include "builtin.h"
 #include "resolver.h"
+#include "string_builder.h"
 #include "temp_allocator.h"
 
 namespace Zodiac
@@ -1953,22 +1954,327 @@ namespace Zodiac
 
     void bc_print(Allocator *allocator, BC_Builder *builder)
     {
-        assert(false && "bc_print is not implemented!!!");
+        String_Builder sb = {};
+        string_builder_init(allocator, &sb);
+
+        for (int64_t i = 0; i < builder->functions.count; i++) {
+            bc_print_function(&sb, builder->functions[i].bc_func);
+        }
+
+        String str = string_builder_to_string(allocator, &sb);
+        string_builder_free(&sb);
+
+        printf("%s\n", str.data);
+
+        free(allocator, str.data);
     }
 
     void bc_print_function(String_Builder *sb, BC_Function *func)
     {
-        assert(false && "bc_print_function is not implemented!!!");
+        bool is_foreign = func->flags & BC_FUNC_FLAG_FOREIGN;
+
+        if (is_foreign) string_builder_append(sb, "#foreign ");
+        string_builder_appendf(sb, "%s(", func->name.data);
+
+        for (int64_t i = 0; i < func->parameters.count; i++) {
+            if (i > 0) string_builder_append(sb, ", ");
+            auto param = func->parameters[i];
+            bc_print_value(sb, param);
+            string_builder_append(sb, " : ");
+            assert(param->type->kind == AST_Type_Kind::POINTER);
+            ast_print_type(sb, param->type->pointer.base);
+        }
+
+        string_builder_append(sb, ")\n");
+
+        if (is_foreign) return;
+
+        for (int64_t i = 0; i < func->blocks.count; i++) {
+            auto block = func->blocks[i];
+            string_builder_appendf(sb, " %s:\n", block->name.data);
+
+            for (int64_t j = 0; j < block->instructions.count; j++) {
+                auto inst = &block->instructions[j];
+                bc_print_instruction(sb, inst);
+            }
+        }
+
+        string_builder_append(sb, "\n");
     }
 
     void bc_print_instruction(String_Builder *sb, BC_Instruction *inst)
     {
-        assert(false && "bc_print_instruction is not implemented!!!");
+        string_builder_append(sb, "    ");
+
+        if (inst->result &&
+            inst->op != JUMP_IF &&
+            inst->op != SWITCH) {
+            bc_print_value(sb, inst->result);
+            string_builder_append(sb, " = ");
+        }
+
+        bool print_args = true;
+
+        switch (inst->op) {
+            case NOP: assert(false);
+
+            case ALLOCL: {
+                string_builder_append(sb, "ALLOCL ");
+                assert(inst->result->type->kind == AST_Type_Kind::POINTER);
+                ast_print_type(sb, inst->result->type->pointer.base);
+                break;
+            }
+
+            case STOREL: string_builder_append(sb, "STOREL "); break;
+            case STORE_ARG: string_builder_append(sb, "STORE_ARG "); break;
+            case STORE_GLOBAL: string_builder_append(sb, "STORE_GLOBAL "); break;
+            case STORE_PTR: string_builder_append(sb, "STORE_PTR "); break;
+
+            case LOADL: string_builder_append(sb, "LOADL "); break;
+            case LOAD_PARAM: string_builder_append(sb, "LOAD_PARAM "); break;
+            case LOAD_GLOBAL: string_builder_append(sb, "LOAD_GLOBAL "); break;
+            case LOAD_PTR: string_builder_append(sb, "LOAD_PTR "); break;
+
+            case ADD_S: string_builder_append(sb, "ADD_S "); break;
+            case SUB_S: string_builder_append(sb, "SUB_S "); break;
+            case REM_S: string_builder_append(sb, "REM_S "); break;
+            case MUL_S: string_builder_append(sb, "MUL_S "); break;
+            case DIV_S: string_builder_append(sb, "DIV_S "); break;
+
+            case EQ_S: string_builder_append(sb, "EQ_S "); break;
+            case NEQ_S: string_builder_append(sb, "NEQ_S "); break;
+            case LT_S: string_builder_append(sb, "LT_S "); break;
+            case LTEQ_S: string_builder_append(sb, "LTEQ_S "); break;
+            case GT_S: string_builder_append(sb, "GT_S "); break;
+            case GTEQ_S: string_builder_append(sb, "GTEQ_S "); break;
+
+            case ADD_U: string_builder_append(sb, "ADD_U "); break;
+            case SUB_U: string_builder_append(sb, "SUB_U "); break;
+            case REM_U: string_builder_append(sb, "REM_U "); break;
+            case MUL_U: string_builder_append(sb, "MUL_U "); break;
+            case DIV_U: string_builder_append(sb, "DIV_U "); break;
+
+            case EQ_U: string_builder_append(sb, "EQ_U "); break;
+            case NEQ_U: string_builder_append(sb, "NEQ_U "); break;
+            case LT_U: string_builder_append(sb, "LT_U "); break;
+            case LTEQ_U: string_builder_append(sb, "LTEQ_U "); break;
+            case GT_U: string_builder_append(sb, "GT_U "); break;
+            case GTEQ_U: string_builder_append(sb, "GTEQ_U "); break;
+
+            case ADD_F: string_builder_append(sb, "ADD_F "); break;
+            case SUB_F: string_builder_append(sb, "SUB_F "); break;
+            case MUL_F: string_builder_append(sb, "MUL_F "); break;
+            case DIV_F: string_builder_append(sb, "DIV_F "); break;
+
+            case EQ_F: string_builder_append(sb, "EQ_F "); break;
+            case NEQ_F: string_builder_append(sb, "NEQ_F "); break;
+            case LT_F: string_builder_append(sb, "LT_F "); break;
+            case LTEQ_F: string_builder_append(sb, "LTEQ_F "); break;
+            case GT_F: string_builder_append(sb, "GT_F "); break;
+            case GTEQ_F: string_builder_append(sb, "GTEQ_F "); break;
+
+            case NEG_LOG: string_builder_append(sb, "NEG_LOG "); break;
+
+            case PUSH_ARG: string_builder_append(sb, "PUSH_ARG "); break;
+
+            case CALL: {
+                print_args = false;
+                string_builder_append(sb, "CALL ");
+                bc_print_value(sb, inst->a);
+                string_builder_append(sb, "()");
+                string_builder_append(sb, ", ");
+                bc_print_value(sb, inst->b);
+                break;
+            }
+
+            case RETURN: string_builder_append(sb, "RETURN "); break;
+            case RETURN_VOID: string_builder_append(sb, "RETURN_VOID "); break;
+            case JUMP: string_builder_append(sb, "JUMP "); break;
+
+            case JUMP_IF: {
+                print_args = false;
+                string_builder_append(sb, "JUMP_IF ");
+                bc_print_value(sb, inst->a);
+                string_builder_append(sb, ", ");
+                bc_print_value(sb, inst->b);
+                string_builder_append(sb, ", ");
+                bc_print_value(sb, inst->result);
+                break;
+            }
+
+            case SWITCH: assert(false);
+
+            case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
+
+            case AGG_OFFSET: assert(false);
+
+            case ZEXT: string_builder_append(sb, "ZEXT "); break;
+            case SEXT: string_builder_append(sb, "SEXT "); break;
+            case TRUNC: string_builder_append(sb, "TRUNC "); break;
+            case F_TO_S: string_builder_append(sb, "F_TO_S "); break;
+            case S_TO_F: string_builder_append(sb, "S_TO_F "); break;
+            case U_TO_F: string_builder_append(sb, "U_TO_F "); break;
+            case F_TO_F: string_builder_append(sb, "F_TO_F "); break;
+
+
+            case PTR_TO_INT: string_builder_append(sb, "PTR_TO_INT "); break;
+            case PTR_TO_PTR: string_builder_append(sb, "PTR_TO_PTR "); break;
+
+            case SIZEOF: string_builder_append(sb, "SIZEOF "); break;
+            case OFFSETOF: string_builder_append(sb, "OFFSETOF "); break;
+
+            case EXIT: string_builder_append(sb, "EXIT "); break;
+            case SYSCALL: string_builder_append(sb, "SYSCALL "); break;
+        }
+
+        if (print_args && inst->a) {
+            bc_print_value(sb, inst->a);
+
+            if (inst->b) {
+                string_builder_append(sb, ", ");
+                bc_print_value(sb, inst->b);
+            }
+        } else if (!inst->a) {
+            assert(!inst->b);
+        }
+
+        string_builder_append(sb, "\n");
     }
 
     void bc_print_value(String_Builder *sb, BC_Value *value)
     {
-        assert(false && "bc_print_value is not implemented!!!");
+        switch (value->kind) {
+            case BC_Value_Kind::INVALID: assert(false);
+
+            case BC_Value_Kind::INTEGER_LITERAL:
+            {
+                if (value->type->integer.sign) {
+                    switch (value->type->bit_size) {
+                        default: assert(false);
+                        case 8: {
+                             string_builder_appendf(sb, "%" PRId8 " ('",
+                                                    value->integer_literal.s8);
+                             char c;
+                             if (parser_make_escape_char(value->integer_literal.s8, &c)) {
+                                 string_builder_appendf(sb, "\\%c')", c);
+                             } else {
+                                 string_builder_appendf(sb, "%c')", c);
+                             }
+                             break;
+                        }
+                        case 16: {
+                             string_builder_appendf(sb, "%" PRId16,
+                                                    value->integer_literal.s16);
+                             break;
+                         }
+                        case 32: {
+                             string_builder_appendf(sb, "%" PRId32,
+                                                    value->integer_literal.s32);
+                             break;
+                         }
+                        case 64: {
+                             string_builder_appendf(sb, "%" PRId64,
+                                                    value->integer_literal.s64);
+                             break;
+                         }
+                    }
+                } else {
+                    switch (value->type->bit_size) {
+                        default: assert(false);
+                        case 8: {
+                             string_builder_appendf(sb, "%" PRIu8 " ('",
+                                                    value->integer_literal.u8);
+                             char c;
+                             if (parser_make_escape_char(value->integer_literal.u8, &c)) {
+                                 string_builder_appendf(sb, "\\%c')", c);
+                             } else {
+                                 string_builder_appendf(sb, "%c')", c);
+                             }
+                             break;
+                         }
+                        case 16: {
+                             string_builder_appendf(sb, "%" PRIu16,
+                                                    value->integer_literal.u16);
+                             break;
+                         }
+                        case 32: {
+                             string_builder_appendf(sb, "%" PRIu32,
+                                                    value->integer_literal.u32);
+                             break;
+                         }
+                        case 64: {
+                             string_builder_appendf(sb, "%" PRIu64,
+                                                    value->integer_literal.u64);
+                             break;
+                         }
+                    }
+                }
+                break;
+            }
+
+            case BC_Value_Kind::FLOAT_LITERAL: {
+                if (value->type == Builtin::type_float) {
+                    string_builder_appendf(sb, "%f", value->float_literal.r32);
+                } else if (value->type == Builtin::type_double) {
+                    string_builder_appendf(sb, "%f", value->float_literal.r64);
+                } else {
+                    assert(false);
+                }
+                break;
+            }
+
+            case BC_Value_Kind::STRING_LITERAL: {
+                string_builder_append(sb, "\"");
+
+                for (uint64_t i = 0; i < value->string_literal.length; i++) {
+                    char c;
+                    if (parser_make_escape_char(value->string_literal.data[i], &c)) {
+                        string_builder_appendf(sb, "\\%c", c);
+                    } else {
+                        string_builder_appendf(sb, "%c", c);
+                    }
+                }
+
+                string_builder_append(sb, "\"");
+
+                break;
+            }
+
+            case BC_Value_Kind::BOOL_LITERAL: {
+                string_builder_append(sb, value->bool_literal ? "true" : "false");
+                break;
+            }
+
+            case BC_Value_Kind::NULL_LITERAL: {
+                string_builder_append(sb, "null");
+            }
+
+            case BC_Value_Kind::TEMP: {
+                string_builder_appendf(sb, "%%%" PRId64, value->temp.index);
+                break;
+            }
+
+            case BC_Value_Kind::ALLOCL:
+            case BC_Value_Kind::PARAM: {
+                string_builder_appendf(sb, "%%%s", value->global.name.data);
+                break;
+            }
+
+            case BC_Value_Kind::GLOBAL: assert(false);
+
+            case BC_Value_Kind::FUNCTION: {
+                string_builder_appendf(sb, "%s", value->function->name.data);
+                break;
+            }
+
+            case BC_Value_Kind::BLOCK: {
+                string_builder_appendf(sb, "%s", value->block->name.data);
+                break;
+            }
+
+            case BC_Value_Kind::TYPE: assert(false);
+            case BC_Value_Kind::SWITCH_DATA: assert(false);
+        }
     }
 
 }
