@@ -119,11 +119,30 @@ namespace Zodiac
 
     struct BC_Block;
     struct BC_Value;
+    struct BC_Function_Info;
+    struct BC_Local_Variable_Info;
+    struct BC_Global_Info;
+    struct BC_Instruction;
 
     struct BC_Builder
     {
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
+
+        BC_Function *current_function = nullptr;
+        Array<BC_Local_Variable_Info> parameters = {};
+        Array<BC_Local_Variable_Info> locals = {};
+        Array<BC_Global_Info> globals = {};
+        Array<BC_Value *> string_literals = {};
+        int64_t next_temp_index = 0;
+        int64_t run_wrapper_count = 0;
+
+        BC_Block *insert_block = nullptr;
+
+        Array<BC_Function_Info> functions = {};
+        Array<BC_Function *> foreign_functions = {};
+
+        Stack<BC_Block *> break_block_stack = {};
     };
 
     typedef uint64_t Bytecode_Function_Flags;
@@ -154,16 +173,39 @@ namespace Zodiac
 
         Array<BC_Value *> parameters = {};
         Array<BC_Value *> locals = {};
+        Array<BC_Value *> temps = {};
+    };
+
+    struct BC_Function_Info
+    {
+        AST_Declaration *declaration = nullptr;
+        BC_Function *bc_func = nullptr;
+        int64_t index = -1;
     };
 
     struct BC_Block
     {
-        String name = {};
+        Atom name = {};
+        BC_Function *function = nullptr;
+
+        Array<BC_Instruction> instructions = {};
+    };
+
+    struct BC_Switch_Case
+    {
+        BC_Value *case_value = nullptr;
+        BC_Block *target_block = nullptr;
     };
 
     struct BC_Switch_Data
     {
+        Array<BC_Switch_Case> cases = {};
+    };
 
+    struct BC_Local_Variable_Info
+    {
+        AST_Declaration *declaration = nullptr;
+        BC_Value *allocl_value = nullptr;
     };
 
     struct BC_Value
@@ -172,18 +214,18 @@ namespace Zodiac
 
         AST_Type *type = nullptr;
 
-        union 
+        union
         {
             struct
             {
-                Atom name;
-            } parameter, allocl;
+                int64_t index;
+            } temp;
 
             struct
             {
                 Atom name;
                 int64_t index;
-            } global;
+            } parameter, allocl, global;
 
             BC_Function *function;
             BC_Block *block;
@@ -191,24 +233,18 @@ namespace Zodiac
             Float_Literal float_literal;
             Atom string_literal;
             bool bool_literal;
-            BC_Switch_Data switch_data;
+
+            BC_Switch_Data switch_data = {};
         };
     };
 
     struct BC_Instruction
     {
-        BC_Opcode op = NOP; 
+        BC_Opcode op = NOP;
 
         BC_Value *a = nullptr;
         BC_Value *b = nullptr;
         BC_Value *result = nullptr;
-    };
-
-    struct BC_Instruction_Pointer
-    {
-        BC_Function *function = nullptr;
-        int64_t block_index = 0;
-        int64_t instruction_index = 0;
     };
 
     struct BC_Global_Info
@@ -289,8 +325,8 @@ namespace Zodiac
     BC_Value *bc_emit_zero_value(BC_Builder *builder, AST_Type *type);
 
     BC_Instruction *bc_emit_instruction(BC_Builder *builder, BC_Opcode op,
-                                                    BC_Value *a, BC_Value *b,
-                                                    BC_Value *result_value);
+                                        BC_Value *a, BC_Value *b,
+                                        BC_Value *result_value);
 
     void bc_add_default_switch_case(BC_Instruction *inst, BC_Block *block);
     void bc_add_switch_case(BC_Instruction *inst, BC_Value *case_value,
