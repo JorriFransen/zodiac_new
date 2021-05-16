@@ -160,23 +160,18 @@ namespace Zodiac
             builder->llvm_builder->CreateStore(param_val, param_alloca);
         }
 
-        assert(false);
-        // auto inst_loc = bucket_array_first(&bc_func->instructions);
+        for (int64_t i = 0; i < bc_func->blocks.count; i++) {
+            builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
 
-        // for (int64_t i = 0; i < bc_func->blocks.count; i++) {
-        //     builder->llvm_builder->SetInsertPoint(&*llvm_block_it);
+            auto block = bc_func->blocks[i];
 
-        //     auto block = bc_func->blocks[i];
+            for (int64_t j = 0; j < block->instructions.count; j++) {
+                BC_Instruction *inst = &block->instructions[j];
+                llvm_emit_instruction(builder, inst);
+            }
 
-        //     for (int64_t j = 0; j < block->instruction_count; j++) {
-
-        //         BC_Instruction *inst = bucket_locator_get_ptr(inst_loc);
-        //         llvm_emit_instruction(builder, inst);
-        //         bucket_locator_advance(&inst_loc);
-        //     }
-
-        //     llvm_block_it++;
-        // }
+            llvm_block_it++;
+        }
 
         bc_func->flags |= BC_FUNC_FLAG_EMITTED;
     }
@@ -816,8 +811,7 @@ namespace Zodiac
                 assert(inst->result->kind == BC_Value_Kind::TEMP);
                 assert(result);
 
-                assert(false);
-                // assert(builder->temps.count == inst->result->temp.index);
+                assert(builder->temps.count == inst->result->temp.index);
                 array_append(&builder->temps, result);
             }
         }
@@ -908,23 +902,20 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::TEMP: {
-                assert(false);
-                // assert(bc_value->temp.index < builder->temps.count);
-                // return builder->temps[bc_value->temp.index];
+                assert(bc_value->temp.index < builder->temps.count);
+                return builder->temps[bc_value->temp.index];
                 break;
             }
 
             case BC_Value_Kind::ALLOCL: {
-                assert(false);
-                // assert(bc_value->allocl.index < builder->locals.count);
-                // return builder->locals[bc_value->allocl.index];
+                assert(bc_value->allocl.index < builder->locals.count);
+                return builder->locals[bc_value->allocl.index];
                 break;
             }
 
             case BC_Value_Kind::PARAM: {
-                assert(false);
-                // assert(bc_value->allocl.index < builder->parameters.count);
-                // return builder->parameters[bc_value->parameter.index];
+                assert(bc_value->allocl.index < builder->parameters.count);
+                return builder->parameters[bc_value->parameter.index];
                 break;
             }
 
