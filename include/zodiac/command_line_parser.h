@@ -3,6 +3,8 @@
 #include "array.h"
 #include "zodiac_string.h"
 
+#include <cstddef>
+
 namespace Zodiac
 {
 
@@ -26,7 +28,6 @@ namespace Zodiac
     DEFINE_OPTION(bool, link_c, false, "Link with libc (creates a dynamic executable)")  \
     DEFINE_OPTION(String, exe_file_name, EMPTY_STRING, "Output executable name")         \
     DEFINE_OPTION(bool, run_tests, false, "Run tests")                                   \
-
 
 
 enum Option_Template_Kind
@@ -59,10 +60,11 @@ struct Options
     String zodiac_exe_path = {};
 
 #define DEFINE_OPTION(type, name, default_value, desc) type name = (default_value);
+
     CMD_OPTION_LIST
+
 #undef DEFINE_OPTION
 };
-
 
 static const Option_Template option_templates[] = {
 

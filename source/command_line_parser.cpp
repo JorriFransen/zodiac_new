@@ -8,7 +8,6 @@
 
 namespace Zodiac
 {
-
     struct OPC
     {
         Array<String> tokens = {};
