@@ -1480,8 +1480,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT:
-            {
+            case AST_Type_Kind::FLOAT: {
                 assert(operand_expr->type != target_type);
                 bc_emit_instruction(builder, F_TO_F, operand_value, nullptr, result);
                 break;
