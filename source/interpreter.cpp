@@ -113,84 +113,78 @@ namespace Zodiac
                     break;
                 }
 
-#define BINOP_ARITHMETIC_INT(op) { \
+#define MAKE_INT_NAME(sign, size) sign##size
+
+#define BINOP_INT_CASE(sign, size, op) \
+    case size: {  (r.integer_literal. MAKE_INT_NAME(sign, size))  = \
+                   (lhs.integer_literal. MAKE_INT_NAME(sign, size)) op \
+                   (rhs.integer_literal. MAKE_INT_NAME(sign, size)); \
+               break; }
+
+
+#define BINOP_INT_CASES(sign, op) \
+    BINOP_INT_CASE(sign, 8, op); \
+    BINOP_INT_CASE(sign, 16, op); \
+    BINOP_INT_CASE(sign, 32, op); \
+    BINOP_INT_CASE(sign, 64, op);
+
+
+#define BINOP_INT_(sign_, op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
     Interpreter_Value rhs = interp_load_value(interp, inst.b); \
     Interpreter_LValue dest = interp_push_temp(interp, inst.result); \
     assert(lhs.type == rhs.type); \
     assert(lhs.type == dest.type); \
     auto type = lhs.type; \
-    assert(type->integer.sign); \
+    if (#sign_[0] == 's') { assert(type->integer.sign); } \
     Interpreter_Value r = { \
         .type = type, \
     }; \
     switch (type->bit_size) { \
-        case 8: r.integer_literal.s8 = lhs.integer_literal.s8 * rhs.integer_literal.s8; break; \
-        case 16: r.integer_literal.s16 = lhs.integer_literal.s16 * rhs.integer_literal.s16; break; \
-        case 32: r.integer_literal.s32 = lhs.integer_literal.s32 * rhs.integer_literal.s32; break; \
-        case 64: r.integer_literal.s64 = lhs.integer_literal.s64 * rhs.integer_literal.s64; break; \
+        BINOP_INT_CASES(sign_, op); \
         default: assert(false); \
     } \
     interp_store(interp, r, dest); \
     break; \
 }
 
+#define BINOP_INT(op) BINOP_INT_(s, op)
+#define BINOP_UINT(op) BINOP_INT_(u, op)
 
-                case ADD_S: BINOP_ARITHMETIC_INT(+);
-                case SUB_S: BINOP_ARITHMETIC_INT(-);
-                case REM_S: BINOP_ARITHMETIC_INT(%);
-                case MUL_S: BINOP_ARITHMETIC_INT(*);
-                case DIV_S: BINOP_ARITHMETIC_INT(/);
 
-                case EQ_S: assert(false);
-                case NEQ_S: assert(false);
-                case LT_S: assert(false);
-                case LTEQ_S: assert(false);
-                case GT_S: assert(false);
-                case GTEQ_S: assert(false);
-                case ADD_U: assert(false);
-                case SUB_U: assert(false);
-                case REM_U: assert(false);
-                case MUL_U: assert(false);
-                case DIV_U: assert(false);
-                case EQ_U: assert(false);
+                case ADD_S: BINOP_INT(+);
+                case SUB_S: BINOP_INT(-);
+                case REM_S: BINOP_INT(%);
+                case MUL_S: BINOP_INT(*);
+                case DIV_S: BINOP_INT(/);
 
-                case NEQ_U:
-                {
-                    auto lhs = interp_load_value(interp, inst.a);
-                    auto rhs = interp_load_value(interp, inst.b);
+                case ADD_U: BINOP_UINT(+);
+                case SUB_U: BINOP_UINT(-);
+                case REM_U: BINOP_UINT(%);
+                case MUL_U: BINOP_UINT(*);
+                case DIV_U: BINOP_UINT(/);
 
-                    assert(lhs.type == rhs.type);
-                    auto type = lhs.type;
-                    assert(lhs.type->kind == AST_Type_Kind::INTEGER);
-                    assert(lhs.type->integer.sign == false);
+                case EQ_S:   BINOP_INT(==);
+                case NEQ_S:  BINOP_INT(!=);
+                case LT_S:   BINOP_INT(<);
+                case LTEQ_S: BINOP_INT(<=);
+                case GT_S:   BINOP_INT(>);
+                case GTEQ_S: BINOP_INT(>=);
 
-                    bool result;
+                case EQ_U:   BINOP_UINT(==);
+                case NEQ_U:  BINOP_UINT(!=);
+                case LT_U:   BINOP_UINT(<);
+                case LTEQ_U: BINOP_UINT(<=);
+                case GT_U:   BINOP_UINT(>);
+                case GTEQ_U: BINOP_UINT(>=);
 
-                    switch (type->bit_size) {
-                        default: assert(false);
-                        case 8: result = lhs.integer_literal.u8 != rhs.integer_literal.u8;
-                        case 16: result = lhs.integer_literal.u16 != rhs.integer_literal.u16;
-                        case 32: result = lhs.integer_literal.u32 != rhs.integer_literal.u32;
-                        case 64: result = lhs.integer_literal.u64 != rhs.integer_literal.u64;
-                    }
+#undef MAKE_INT_NAME
+#undef BINOP_INT_CASE
+#undef BINOP_INT_CASES
+#undef BINOP_INT_
+#undef BINOP_INT
+#undef BINOP_UINT
 
-                    auto result_dest_value = interp_push_temp(interp, inst.result);
-
-                    Interpreter_Value result_source_value = {
-                        .type = inst.result->type,
-                        .boolean_literal = result,
-                    };
-
-                    interp_store(interp, result_source_value, result_dest_value);
-
-                    break;
-                }
-
-                case LT_U: assert(false);
-                case LTEQ_U: assert(false);
-                case GT_U: assert(false);
-                case GTEQ_U: assert(false);
                 case ADD_F: assert(false);
                 case SUB_F: assert(false);
                 case MUL_F: assert(false);
@@ -288,7 +282,7 @@ namespace Zodiac
                     }
 
                     if (old_frame.function->locals.count) {
-                        assert(false);
+                        stack_pop(&interp->alloc_stack, old_frame.function->locals.count);
                     }
 
                     assert(old_frame.result_index >= 0);
