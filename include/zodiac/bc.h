@@ -1,8 +1,7 @@
 #pragma once
 
-#include "build_data.h"
-
 #include "array_ref.h"
+#include "build_data.h"
 
 #include <inttypes.h>
 

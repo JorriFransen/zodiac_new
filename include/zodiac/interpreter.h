@@ -6,9 +6,49 @@
 
 namespace Zodiac
 {
+    struct Interp_Instruction_Pointer
+    {
+        int64_t index = 0;
+        BC_Block *block = nullptr;
+    };
+
+    struct Interp_Stack_Frame
+    {
+        BC_Function *function = nullptr;
+        Interp_Instruction_Pointer ip = {};
+        int64_t first_arg_index = 0;
+        int64_t first_temp_index = 0;
+        int64_t result_index = -1;
+    };
+
+    struct Interpreter_Value
+    {
+        AST_Type *type = nullptr;
+
+        Integer_Literal integer_literal = {};
+    };
+
+    enum class Interp_LValue_Kind
+    {
+        INVALID,
+        TEMP,
+    };
+
+    struct Interpreter_LValue
+    {
+        Interp_LValue_Kind kind = Interp_LValue_Kind::INVALID;
+        AST_Type *type = nullptr;
+        int64_t index = 0;
+    };
+
     struct Interpreter
     {
+        Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
+
+        Stack<Interpreter_Value> temp_stack = {};
+        Stack<Interpreter_Value> arg_stack = {};
+        Stack<Interp_Stack_Frame> frames = {};
 
         int64_t exit_code = 0;
     };
@@ -16,6 +56,13 @@ namespace Zodiac
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data);
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func);
+
+    Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
+    Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
+
+    Interpreter_LValue interp_push_temp(Interpreter *interp, BC_Value *bc_val);
+
+    void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest);
 
     // void interpreter_start(Interpreter *interp, BC_Function *entry_func,
     //                        int64_t global_data_size, Array<BC_Global_Info> global_info,
