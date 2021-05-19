@@ -18,6 +18,7 @@ namespace Zodiac
         Interp_Instruction_Pointer ip = {};
         int64_t first_arg_index = 0;
         int64_t first_temp_index = 0;
+        int64_t first_alloc_index = 0;
         int64_t result_index = -1;
     };
 
@@ -32,6 +33,7 @@ namespace Zodiac
     {
         INVALID,
         TEMP,
+        ALLOCL,
     };
 
     struct Interpreter_LValue
@@ -47,6 +49,7 @@ namespace Zodiac
         Build_Data *build_data = nullptr;
 
         Stack<Interpreter_Value> temp_stack = {};
+        Stack<Interpreter_Value> alloc_stack = {};
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 

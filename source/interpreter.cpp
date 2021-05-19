@@ -14,6 +14,7 @@ namespace Zodiac
         };
 
         stack_init(allocator, &result.temp_stack);
+        stack_init(allocator, &result.alloc_stack);
         stack_init(allocator, &result.arg_stack);
         stack_init(allocator, &result.frames);
 
@@ -54,23 +55,47 @@ namespace Zodiac
                 case NOP: assert(false);
 
                 case ALLOCL: {
+                    assert(stack_count(&interp->alloc_stack) ==
+                           inst.result->allocl.index + frame->first_alloc_index);
+
+                    assert(inst.result->type->kind == AST_Type_Kind::POINTER);
+                    Interpreter_Value alloc_value = {
+                        .type = inst.result->type->pointer.base,
+                    };
+                    stack_push(&interp->alloc_stack, alloc_value);
                     break;
                 }
 
-                case STOREL: assert(false);
+                case STOREL: {
+                    assert(inst.a->kind == BC_Value_Kind::ALLOCL);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.a);
+                    Interpreter_Value source = interp_load_value(interp, inst.b);
+
+                    assert(dest.type == source.type);
+                    interp_store(interp, source, dest);
+                    break;
+                }
+
                 case STORE_ARG: assert(false);
                 case STORE_GLOBAL: assert(false);
                 case STORE_PTR: assert(false);
-                case LOADL: assert(false);
+
+                case LOADL: {
+                    Interpreter_Value value = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest = interp_push_temp(interp, inst.result);
+
+                    assert(dest.type == value.type);
+                    interp_store(interp, value, dest);
+                    break;
+                }
 
                 case LOAD_PARAM: {
 
                     Interpreter_Value param_val = interp_load_value(interp, inst.a);
-                    // Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
                     Interpreter_LValue dest = interp_push_temp(interp, inst.result);
 
+                    assert(dest.type == param_val.type);
                     interp_store(interp, param_val, dest);
-
                     break;
                 }
 
@@ -209,6 +234,7 @@ namespace Zodiac
                     }
 
                     new_frame.first_temp_index = stack_count(&interp->temp_stack);
+                    new_frame.first_alloc_index = stack_count(&interp->alloc_stack);
 
                     stack_push(&interp->frames, new_frame);
 
@@ -330,7 +356,13 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::ALLOCL: assert(false);
+            case BC_Value_Kind::ALLOCL: {
+                auto frame = stack_top_ptr(&interp->frames);
+                auto alloc_index = frame->first_alloc_index + bc_val->allocl.index;
+                assert(stack_count(&interp->temp_stack) > alloc_index);
+                result = interp->alloc_stack.buffer[alloc_index];
+                break;
+            }
 
             case BC_Value_Kind::PARAM: {
                 auto frame = stack_top_ptr(&interp->frames);
@@ -369,10 +401,24 @@ namespace Zodiac
 
                 result.kind = Interp_LValue_Kind::TEMP;
                 result.index = index;
+                assert(false);
                 break;
             }
 
-            case BC_Value_Kind::ALLOCL: assert(false);
+            case BC_Value_Kind::ALLOCL: {
+                assert(bc_val->type->kind == AST_Type_Kind::POINTER);
+
+                auto frame = stack_top_ptr(&interp->frames);
+                auto index = frame->first_alloc_index + bc_val->allocl.index;
+                assert(stack_count(&interp->alloc_stack) > index);
+
+
+                result.kind = Interp_LValue_Kind::ALLOCL;
+                result.index = index;
+                result.type = bc_val->type->pointer.base;
+                break;
+            }
+
             case BC_Value_Kind::PARAM: assert(false);
             case BC_Value_Kind::GLOBAL: assert(false);
             case BC_Value_Kind::FUNCTION: assert(false);
@@ -422,7 +468,12 @@ namespace Zodiac
             case Interp_LValue_Kind::TEMP: {
                 dest_ptr = &interp->temp_stack.buffer[dest.index];
                 assert(stack_count(&interp->temp_stack) > dest.index);
+                break;
+            }
 
+            case Interp_LValue_Kind::ALLOCL: {
+                dest_ptr = &interp->alloc_stack.buffer[dest.index];
+                assert(stack_count(&interp->alloc_stack) > dest.index);
                 break;
             }
         }

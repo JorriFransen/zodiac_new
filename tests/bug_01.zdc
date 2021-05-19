@@ -5,11 +5,9 @@ std :: import std;
 
 main :: func () -> int
 {
-    // result := times_two(25);
+    result := times_two(42);
     // // std.println("returned from times_two...");
-    // return result;
-
-    return times_two(42);
+    return result;
 }
 
 times_two :: func (x: int) -> int
