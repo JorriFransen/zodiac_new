@@ -27,7 +27,7 @@ jobs:
     #   run: sudo apt upgrade
 
     - name: Install apt packages
-      run: sudo apt install ninja-build
+      run: sudo apt install ninja-build llvm-11-dev
 
     - name: Configure Dependencies
       shell: bash
