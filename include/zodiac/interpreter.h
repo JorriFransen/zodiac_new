@@ -20,6 +20,7 @@ namespace Zodiac
         int64_t first_temp_index = 0;
         int64_t first_alloc_index = 0;
         int64_t result_index = -1;
+        uint8_t *previous_alloc_sp = nullptr;
     };
 
     struct Interpreter_Value
@@ -59,10 +60,19 @@ namespace Zodiac
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 
+        // @TODO: @CLEANUP: This should really be a stack allocator, we can
+        //                   'save' restore points in the stack frames.
+        //                   This way we can keep growing, without invalidating
+         //                  previously allocated stack space.
+        uint8_t *alloc_stack = nullptr;
+        uint8_t *alloc_sp = nullptr;
+        uint8_t *alloc_stack_end = nullptr;
+
         int64_t exit_code = 0;
     };
 
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data);
+    void interpreter_free(Interpreter *interp);
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func);
 

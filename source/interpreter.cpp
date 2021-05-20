@@ -20,7 +20,25 @@ namespace Zodiac
         stack_init(allocator, &result.arg_stack);
         stack_init(allocator, &result.frames);
 
+        const auto mb = 1024 * 1024;
+        auto stack_size = 1 * mb;
+        result.alloc_stack = alloc_array<uint8_t>(allocator, stack_size);
+        result.alloc_sp = result.alloc_stack;
+        result.alloc_stack_end = result.alloc_stack + stack_size;
+
         return result;
+    }
+
+    void interpreter_free(Interpreter *interp)
+    {
+        stack_free(&interp->temp_stack);
+        stack_free(&interp->local_stack);
+        stack_free(&interp->arg_stack);
+        stack_free(&interp->frames);
+
+        free(interp->allocator, interp->alloc_stack);
+
+        *interp = {};
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func)
@@ -33,6 +51,7 @@ namespace Zodiac
             },
             .first_temp_index = 1,
             .result_index = 0,
+            .previous_alloc_sp = interp->alloc_sp,
         };
 
         stack_push(&interp->frames, first_frame);
@@ -308,6 +327,7 @@ namespace Zodiac
                             .block = callee->blocks[0],
                         },
                         .result_index = result_index,
+                        .previous_alloc_sp = interp->alloc_sp,
                     };
 
                     if (arg_count) {
@@ -339,7 +359,12 @@ namespace Zodiac
                         if (allocl_type->kind == AST_Type_Kind::ARRAY ||
                             allocl_type->kind == AST_Type_Kind::STRUCTURE ||
                             allocl_type->kind == AST_Type_Kind::UNION) {
-                            assert(false);
+
+                            assert(allocl_type->bit_size % 8 == 0);
+                            auto byte_size = allocl_type->bit_size / 8;
+                            assert(interp->alloc_sp + byte_size < interp->alloc_stack_end);
+                            alloc_value.pointer = interp->alloc_sp;
+                            interp->alloc_sp += byte_size;
                         }
 
                         stack_push(&interp->local_stack, alloc_value);
@@ -378,6 +403,8 @@ namespace Zodiac
                         stack_pop(&interp->temp_stack, old_frame.function->temps.count);
                     }
 
+                    interp->alloc_sp = old_frame.previous_alloc_sp;
+
                     Interpreter_LValue dest = {
                         .kind = Interp_LValue_Kind::TEMP,
                         .type = return_value.type,
@@ -404,6 +431,8 @@ namespace Zodiac
                     if (old_frame.function->locals.count) {
                         stack_pop(&interp->local_stack, old_frame.function->locals.count);
                     }
+
+                    interp->alloc_sp = old_frame.previous_alloc_sp;
                     break;
                 }
 

@@ -35,6 +35,7 @@ namespace Zodiac
     {
         assert(stack);
         free(stack->allocator, stack->buffer);
+        *stack = {};
     }
 
     template <typename Element_Type>

@@ -68,9 +68,7 @@ void array_free(Array<Element_Type> *array)
     {
         free(array->allocator, array->data);
     }
-    array->count = 0;
-    array->capacity = 0;
-    array->allocator = nullptr;
+    *array = {};
 }
 
 template <typename Element_Type>

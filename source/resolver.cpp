@@ -422,6 +422,8 @@ Resolve_Result finish_resolving(Resolver *resolver)
                          interp.exit_code);
                 }
 
+                interpreter_free(&interp);
+
                 progressed = true;
             } else {
                 queue_enqueue(&resolver->run_jobs, job);
