@@ -2,14 +2,13 @@
 #include "ast.h"
 
 #include "builtin.h"
-#include "parse_tree_node.h"
-#include "string_builder.h"
-#include "scope.h"
 #include "parser.h"
+#include "parse_tree_node.h"
+#include "scope.h"
+#include "string_builder.h"
 #include "temp_allocator.h"
 
 #include <inttypes.h>
-
 #include <tracy/Tracy.hpp>
 
 namespace Zodiac

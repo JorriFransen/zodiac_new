@@ -2,10 +2,10 @@
 
 #include "allocator.h"
 #include "build_data.h"
-#include "parse_tree_node.h"
-#include "token_stream.h"
 #include "operator.h"
+#include "parse_tree_node.h"
 #include "struct_predecls.h"
+#include "token_stream.h"
 
 namespace Zodiac
 {

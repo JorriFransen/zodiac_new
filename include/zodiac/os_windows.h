@@ -3,8 +3,8 @@
 
 #ifdef _WIN32
 
-#include "zodiac_string.h"
 #include "os.h"
+#include "zodiac_string.h"
 
 namespace Zodiac
 {

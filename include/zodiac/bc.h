@@ -5,7 +5,6 @@
 
 #include <inttypes.h>
 
-
 namespace Zodiac
 {
     enum BC_Opcode : uint8_t

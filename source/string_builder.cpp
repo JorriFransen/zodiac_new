@@ -1,7 +1,7 @@
 
+#include "common.h"
 #include "string_builder.h"
 #include "zodiac_string.h"
-#include "common.h"
 
 #include <stdio.h>
 

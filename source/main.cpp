@@ -1,12 +1,12 @@
 
+#include "ast.h"
 #include "builtin.h"
-#include "lexer.h"
-#include "parser.h"
 #include "c_allocator.h"
 #include "command_line_parser.h"
-#include "ast.h"
-#include "scope.h"
+#include "lexer.h"
+#include "parser.h"
 #include "resolver.h"
+#include "scope.h"
 
 #include <tracy/TracyC.h>
 

@@ -1,9 +1,9 @@
 
 #pragma once
 
-#include "os.h"
 #include "allocator.h"
 #include "array.h"
+#include "os.h"
 #include "zodiac_string.h"
 
 namespace Zodiac

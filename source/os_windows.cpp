@@ -4,10 +4,9 @@
 
 #include "temp_allocator.h"
 
+#include <shlwapi.h>
 #include <stdio.h>
-
-#include "windows.h"
-#include "shlwapi.h"
+#include <windows.h>
 
 namespace Zodiac
 {

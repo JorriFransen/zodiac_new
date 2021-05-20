@@ -1,5 +1,10 @@
 #pragma once
 
+#include "allocator.h"
+
+#include <cassert>
+#include <inttypes.h>
+
 namespace Zodiac
 {
 
@@ -33,16 +38,12 @@ namespace Zodiac
         queue_ensure_capacity(queue);
 
         int64_t target_index = -1;
-        if (queue->front == -1)
-        {
+        if (queue->front == -1) {
             target_index = 0;
             queue->front = 0;
-        } 
-        else
-        {
+        } else {
             target_index = queue->front + queue->used;
-            if (target_index >= queue->capacity)
-            {
+            if (target_index >= queue->capacity) {
                 target_index -= queue->capacity;
             }
         }
@@ -57,8 +58,7 @@ namespace Zodiac
     template <typename Element_Type>
     void queue_ensure_capacity(Queue<Element_Type> *queue)
     {
-        if (queue->used >= queue->capacity)
-        {
+        if (queue->used >= queue->capacity) {
             assert(queue->front >= 0);
 
             auto new_cap = queue->capacity * 2;
@@ -72,8 +72,7 @@ namespace Zodiac
             auto front_to_end_size = front_to_end_count * sizeof(Element_Type);
             memcpy(new_buffer, queue->buffer + queue->front, front_to_end_size);
 
-            if (front_to_end_size < (queue->used * sizeof(Element_Type)))
-            {
+            if (front_to_end_size < (queue->used * sizeof(Element_Type))) {
                 // Copy remaining
                 auto remaining_size = queue->used * sizeof(Element_Type) - front_to_end_size;
                 memcpy(new_buffer + front_to_end_count, queue->buffer, remaining_size);

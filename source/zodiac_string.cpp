@@ -2,8 +2,8 @@
 #include "zodiac_string.h"
 
 #include <cwchar>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 namespace Zodiac
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "build_data.h"
 #include "bc.h"
+#include "build_data.h"
 #include "stack.h"
 
 #include <llvm/IR/IRBuilder.h>

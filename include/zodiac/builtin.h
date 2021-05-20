@@ -1,8 +1,8 @@
 #pragma once
 
+#include "atom.h"
 #include "build_data.h"
 #include "struct_predecls.h"
-#include "atom.h"
 
 enum class Builtin_Type_Kind
 {

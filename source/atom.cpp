@@ -1,7 +1,7 @@
 #include "atom.h"
 
-#include <stdio.h>
 #include <cstdlib>
+#include <stdio.h>
 
 namespace Zodiac
 {

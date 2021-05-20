@@ -1,6 +1,7 @@
 #include "interpreter.h"
 
 #include "builtin.h"
+#include "os.h"
 
 #include <stdio.h>
 

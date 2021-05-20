@@ -1,7 +1,8 @@
 #include "parse_tree_node.h"
 
-#include <inttypes.h>
 #include "parser.h"
+
+#include <inttypes.h>
 
 namespace Zodiac
 {

@@ -2,13 +2,13 @@
 #pragma once
 
 #include "allocator.h"
-#include "atom.h"
 #include "array.h"
+#include "atom.h"
 #include "build_data.h"
+#include "file_pos.h"
 #include "hash_table.h"
 #include "token.h"
 #include "token_stream.h"
-#include "file_pos.h"
 #include "zodiac_string.h"
 
 using namespace Zodiac;

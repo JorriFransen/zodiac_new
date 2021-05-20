@@ -1,8 +1,8 @@
 
 #include "llvm_builder.h"
 
-#include "builtin.h"
 #include "bc.h"
+#include "builtin.h"
 #include "os.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -10,12 +10,12 @@
 #include <llvm/IR/InlineAsm.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Host.h>
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#include <llvm/Support/FileSystem.h>
 
 #include <tracy/Tracy.hpp>
 

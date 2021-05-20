@@ -1,8 +1,7 @@
 #include "temp_allocator.h"
 
-#include "common.h"
-
 #include "c_allocator.h"
+#include "common.h"
 
 namespace Zodiac
 {

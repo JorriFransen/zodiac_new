@@ -1,8 +1,8 @@
 #include "command_line_parser.h"
 
+#include "lexer.h"
 #include "os.h"
 #include "temp_allocator.h"
-#include "lexer.h"
 
 #include <stdio.h>
 

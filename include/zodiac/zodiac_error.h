@@ -3,8 +3,8 @@
 #include "file_pos.h"
 #include "struct_predecls.h"
 
-#include <stdint.h>
 #include <cstdarg>
+#include <stdint.h>
 
 namespace Zodiac
 {

@@ -2,8 +2,8 @@
 
 
 #include "allocator.h"
-#include "build_data.h"
 #include "bc.h"
+#include "build_data.h"
 #include "lexer.h"
 #include "llvm_builder.h"
 #include "parser.h"

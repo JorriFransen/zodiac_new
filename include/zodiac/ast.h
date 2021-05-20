@@ -4,9 +4,9 @@
 #include "atom.h"
 #include "bucket_array.h"
 #include "file_pos.h"
+#include "operator.h"
 #include "stack.h"
 #include "struct_predecls.h"
-#include "operator.h"
 
 namespace Zodiac
 {

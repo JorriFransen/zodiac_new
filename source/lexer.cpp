@@ -5,8 +5,8 @@
 #include "temp_allocator.h"
 #include "zodiac_string.h"
 
-#include <stdio.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include <tracy/Tracy.hpp>
 

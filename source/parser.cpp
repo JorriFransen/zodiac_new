@@ -1,14 +1,13 @@
 #include "parser.h"
 
 #include "allocator.h"
-#include "temp_allocator.h"
 #include "builtin.h"
 #include "resolver.h"
+#include "temp_allocator.h"
 
-#include <stdio.h>
 #include <cstdarg>
 #include <inttypes.h>
-
+#include <stdio.h>
 #include <tracy/Tracy.hpp>
 
 namespace Zodiac

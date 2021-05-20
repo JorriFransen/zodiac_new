@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <new>
+#include <stdint.h>
 
 namespace Zodiac
 {
