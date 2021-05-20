@@ -55,7 +55,7 @@ namespace Zodiac
         Build_Data *build_data = nullptr;
 
         Stack<Interpreter_Value> temp_stack = {};
-        Stack<Interpreter_Value> alloc_stack = {};
+        Stack<Interpreter_Value> local_stack = {};
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 

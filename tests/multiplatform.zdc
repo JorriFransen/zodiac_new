@@ -7,28 +7,34 @@ os :: import os;
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
+    ints : [5]u16;
+    ints[0] = 1;
+    ints[1] = 2;
+    ints[2] = 4;
+    ints[3] = 8;
+    ints[4] = 16;
     // @assert(false);
-    // return 0;
+    return ints[0];
 
     // @syscall(1, 1, "Test!\n", 6);
 
-    std.print_num(42);
-    std.print("\n");
+    // std.print_num(42);
+    // std.print("\n");
 
-    std.print_float(4.2);
-    std.print("\n");
+    // std.print_float(4.2);
+    // std.print("\n");
 
-    std.print_double(44.22);
-    std.print("\n");
+    // std.print_double(44.22);
+    // std.print("\n");
 
-    std.print_char('x');
-    std.print_char('\n');
+    // std.print_char('x');
+    // std.print_char('\n');
 
-    _48 := add(return_46(), 2);
-    @assert(_48 == 48);
-    result := addone(sub(add(_48, 3), 9));
-    @assert(result == 43);
-    return result;
+    // _48 := add(return_46(), 2);
+    // @assert(_48 == 48);
+    // result := addone(sub(add(_48, 3), 9));
+    // @assert(result == 43);
+    // return result;
 }
 
 addone :: func (x: s64) -> s64
