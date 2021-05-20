@@ -238,7 +238,34 @@ namespace Zodiac
                 case LTEQ_F: assert(false);
                 case GT_F: assert(false);
                 case GTEQ_F: assert(false);
-                case NEG_LOG: assert(false);
+
+                case NEG_LOG:
+                {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
+
+                    assert(operand.type->kind == AST_Type_Kind::BOOL ||
+                           operand.type->kind == AST_Type_Kind::INTEGER ||
+                           operand.type->kind == AST_Type_Kind::POINTER);
+                    assert(dest_lval.type->kind == AST_Type_Kind::BOOL);
+
+                    bool result_value;
+
+                    if (operand.type->kind == AST_Type_Kind::BOOL ||
+                        operand.type->kind == AST_Type_Kind::INTEGER) {
+                        // @TODO: @Cleanup: I think we should check all sizes and the sign here?
+                        result_value = operand.integer_literal.s64 == 0;
+                    } else if (operand.type->kind == AST_Type_Kind::POINTER) {
+                        // @Cleanup: this could be merged with the case above?
+                        result_value = operand.pointer == nullptr;
+                    }
+
+                    AST_Type *source_type = dest_lval.type->pointer_to;
+                    assert(source_type);
+                    interp_store(interp, &result_value, source_type, dest_lval);
+
+                    break;
+                }
 
                 case PUSH_ARG: {
                     Interpreter_Value arg_val = interp_load_value(interp, inst.a);
@@ -468,10 +495,8 @@ namespace Zodiac
                     if (inst.a->kind == BC_Value_Kind::ALLOCL) {
                         Interpreter_LValue allocl_lval = interp_load_lvalue(interp, inst.a);
                         assert(allocl_lval.kind);
-                        pointer_type =
-                            build_data_find_or_create_pointer_type(interp->allocator,
-                                                                   interp->build_data,
-                                                                   allocl_lval.type);
+                        pointer_type = allocl_lval.type->pointer_to;
+                        assert(pointer_type);
                         auto index = frame->first_alloc_index + inst.a->allocl.index;
                         Interpreter_Value *val_ptr = &interp->alloc_stack.buffer[index];
                         ptr = &val_ptr->pointer;
@@ -582,7 +607,11 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::BOOL_LITERAL: assert(false);
+            case BC_Value_Kind::BOOL_LITERAL: {
+                result.boolean_literal = bc_val->bool_literal;
+                break;
+            }
+
             case BC_Value_Kind::NULL_LITERAL: assert(false);
 
             case BC_Value_Kind::TEMP: {
@@ -784,7 +813,12 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FLOAT: assert(false);
-            case AST_Type_Kind::BOOL: assert(false);
+
+            case AST_Type_Kind::BOOL: {
+                dest_ptr->boolean_literal = *(bool*)source_ptr;
+                break;
+            }
+
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
