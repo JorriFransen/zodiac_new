@@ -514,9 +514,6 @@ namespace Zodiac
                     Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
                     assert(dest_lval.type->kind == AST_Type_Kind::INTEGER);
 
-                    AST_Type *dest_type = dest_lval.type;
-                    assert(dest_type->bit_size <= Builtin::pointer_size);
-
                     interp_store(interp, &ptr, pointer_type, dest_lval, true);
                     break;
                 }
