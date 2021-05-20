@@ -37,8 +37,17 @@ namespace Zodiac
 
         AST_Type *return_type = entry_func->type->function.return_type;
         assert(return_type->kind == AST_Type_Kind::INTEGER);
+
         Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
         stack_push(&interp->temp_stack, return_val);
+
+        assert(entry_func->locals.count == 0);
+        assert(entry_func->parameters.count == 0);
+
+        for (int64_t i = 0; i < entry_func->temps.count; i++) {
+            Interpreter_Value temp { .type = entry_func->temps[i]->type };
+            stack_push(&interp->temp_stack, temp);
+        }
 
         bool running = true;
 
@@ -82,7 +91,7 @@ namespace Zodiac
 
                 case LOADL: {
                     Interpreter_Value value = interp_load_value(interp, inst.a);
-                    Interpreter_LValue dest = interp_push_temp(interp, inst.result);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
 
                     assert(dest.type == value.type);
                     interp_store(interp, value, dest);
@@ -92,7 +101,7 @@ namespace Zodiac
                 case LOAD_PARAM: {
 
                     Interpreter_Value param_val = interp_load_value(interp, inst.a);
-                    Interpreter_LValue dest = interp_push_temp(interp, inst.result);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
 
                     assert(dest.type == param_val.type);
                     interp_store(interp, param_val, dest);
@@ -106,7 +115,7 @@ namespace Zodiac
                     auto ptr_val = interp_load_value(interp, inst.a);
                     assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
 
-                    auto dest_val = interp_push_temp(interp, inst.result);
+                    auto dest_val = interp_load_lvalue(interp, inst.result);
                     assert(dest_val.type == ptr_val.type->pointer.base);
 
                     interp_store(interp, ptr_val.pointer, ptr_val.type, dest_val);
@@ -121,27 +130,34 @@ namespace Zodiac
                    (rhs.integer_literal. MAKE_INT_NAME(sign, size)); \
                break; }
 
+#define IS_CMP_OP(op) \
+    ((#op[0] == '=' && #op[1] == '=') || \
+     (#op[0] == '!' && #op[1] == '=') || \
+     (#op[0] == '<') || \
+     (#op[0] == '>'))
 
-#define BINOP_INT_CASES(sign, op) \
-    BINOP_INT_CASE(sign, 8, op); \
-    BINOP_INT_CASE(sign, 16, op); \
-    BINOP_INT_CASE(sign, 32, op); \
-    BINOP_INT_CASE(sign, 64, op);
-
+#ifndef NDEBUG
+#define TEST_BINOP_RESULT(op) { if (!IS_CMP_OP(op)) { assert(lhs.type == dest.type ); } }
+#else
+#define TEST_BINOP_RESULT(op)
+#endif
 
 #define BINOP_INT_(sign_, op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
     Interpreter_Value rhs = interp_load_value(interp, inst.b); \
-    Interpreter_LValue dest = interp_push_temp(interp, inst.result); \
+    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
     assert(lhs.type == rhs.type); \
-    assert(lhs.type == dest.type); \
-    auto type = lhs.type; \
-    if (#sign_[0] == 's') { assert(type->integer.sign); } \
+    TEST_BINOP_RESULT(op); \
+    auto type = dest.type; \
+    if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
     Interpreter_Value r = { \
         .type = type, \
     }; \
     switch (type->bit_size) { \
-        BINOP_INT_CASES(sign_, op); \
+        BINOP_INT_CASE(sign_, 8, op) \
+        BINOP_INT_CASE(sign_, 16, op) \
+        BINOP_INT_CASE(sign_, 32, op) \
+        BINOP_INT_CASE(sign_, 64, op) \
         default: assert(false); \
     } \
     interp_store(interp, r, dest); \
@@ -155,7 +171,30 @@ namespace Zodiac
                 case ADD_S: BINOP_INT(+);
                 case SUB_S: BINOP_INT(-);
                 case REM_S: BINOP_INT(%);
-                case MUL_S: BINOP_INT(*);
+
+                case MUL_S:
+                {
+                    Interpreter_Value lhs = interp_load_value(interp, inst.a);
+                    Interpreter_Value rhs = interp_load_value(interp, inst.b);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
+                    assert(lhs.type == rhs.type);
+                    TEST_BINOP_RESULT(op);
+                    auto type = dest.type;
+                    assert(lhs.type->integer.sign);
+                    Interpreter_Value r = {
+                        .type = type,
+                    };
+                    switch (type->bit_size) {
+                        BINOP_INT_CASE(s, 8, *);
+                        BINOP_INT_CASE(s, 16, *);
+                        BINOP_INT_CASE(s, 32, *);
+                        BINOP_INT_CASE(s, 64, *);
+                        default: assert(false);
+                    }
+                    interp_store(interp, r, dest);
+                    break;
+                }
+
                 case DIV_S: BINOP_INT(/);
 
                 case ADD_U: BINOP_UINT(+);
@@ -184,6 +223,8 @@ namespace Zodiac
 #undef BINOP_INT_
 #undef BINOP_INT
 #undef BINOP_UINT
+#undef TEST_BINOP_RESULT
+#undef IS_CMP_OP
 
                 case ADD_F: assert(false);
                 case SUB_F: assert(false);
@@ -233,10 +274,11 @@ namespace Zodiac
                     int64_t result_index = -1;
 
                     if (inst.result) {
-                        Interpreter_LValue result_value = interp_push_temp(interp, inst.result);
+                        Interpreter_LValue result_value = interp_load_lvalue(interp, inst.result);
                         result_index = result_value.index;
                     }
 
+                    assert(stack_count(&interp->temp_stack) > result_index);
 
                     Interp_Stack_Frame new_frame = {
                         .function = callee,
@@ -254,6 +296,14 @@ namespace Zodiac
 
                     new_frame.first_temp_index = stack_count(&interp->temp_stack);
                     new_frame.first_alloc_index = stack_count(&interp->alloc_stack);
+
+                    for (int64_t i = 0; i < callee->temps.count; i++) {
+                        Interpreter_Value new_temp = {
+                            .type = callee->temps[i]->type,
+                        };
+                        stack_push(&interp->temp_stack, new_temp);
+                    }
+
 
                     stack_push(&interp->frames, new_frame);
 
@@ -277,16 +327,16 @@ namespace Zodiac
                         stack_pop(&interp->arg_stack, old_frame.function->parameters.count);
                     }
 
-                    if (old_frame.function->temps.count) {
-                        stack_pop(&interp->temp_stack, old_frame.function->temps.count);
-                    }
-
                     if (old_frame.function->locals.count) {
                         stack_pop(&interp->alloc_stack, old_frame.function->locals.count);
                     }
 
                     assert(old_frame.result_index >= 0);
                     assert(stack_count(&interp->temp_stack) > old_frame.result_index);
+
+                    if (old_frame.function->temps.count) {
+                        stack_pop(&interp->temp_stack, old_frame.function->temps.count);
+                    }
 
                     Interpreter_LValue dest = {
                         .kind = Interp_LValue_Kind::TEMP,
@@ -364,7 +414,7 @@ namespace Zodiac
 
                     assert(offset_val.type->kind == AST_Type_Kind::INTEGER);
 
-                    auto result_val = interp_push_temp(interp, inst.result);
+                    auto result_val = interp_load_lvalue(interp, inst.result);
 
                     void *ptr = nullptr;
 
@@ -542,27 +592,27 @@ namespace Zodiac
         return result;
     }
 
-    Interpreter_LValue interp_push_temp(Interpreter *interp, BC_Value *bc_val)
-    {
-        assert(bc_val->kind == BC_Value_Kind::TEMP);
+    // Interpreter_LValue interp_push_temp(Interpreter *interp, BC_Value *bc_val)
+    // {
+    //     assert(bc_val->kind == BC_Value_Kind::TEMP);
 
-        auto frame = stack_top_ptr(&interp->frames);
+    //     auto frame = stack_top_ptr(&interp->frames);
 
-        auto index = bc_val->temp.index + frame->first_temp_index;
+    //     auto index = bc_val->temp.index + frame->first_temp_index;
 
-        assert(stack_count(&interp->temp_stack) == index);
+    //     assert(stack_count(&interp->temp_stack) == index);
 
-        Interpreter_Value new_temp_value = { .type = bc_val->type };
-        stack_push(&interp->temp_stack, new_temp_value);
+    //     Interpreter_Value new_temp_value = { .type = bc_val->type };
+    //     stack_push(&interp->temp_stack, new_temp_value);
 
-        Interpreter_LValue result = {
-            .kind = Interp_LValue_Kind::TEMP,
-            .type = bc_val->type,
-            .index = index,
-        };
+    //     Interpreter_LValue result = {
+    //         .kind = Interp_LValue_Kind::TEMP,
+    //         .type = bc_val->type,
+    //         .index = index,
+    //     };
 
-        return result;
-    }
+    //     return result;
+    // }
 
     void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest)
     {

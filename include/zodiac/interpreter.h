@@ -69,8 +69,6 @@ namespace Zodiac
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
 
-    Interpreter_LValue interp_push_temp(Interpreter *interp, BC_Value *bc_val);
-
     void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest);
     void interp_store(Interpreter *interp, void *source_ptr, AST_Type *source_type,
                       Interpreter_LValue dest);
