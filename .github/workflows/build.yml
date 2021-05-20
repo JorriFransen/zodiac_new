@@ -29,6 +29,9 @@ jobs:
     - name: Install apt packages
       run: sudo apt install ninja-build llvm-11-dev
 
+    - name: List installed llvm packages
+      run: apt list --installed | grep llvm
+
     - name: Configure Dependencies
       shell: bash
       run: ./create_linux_build.sh
