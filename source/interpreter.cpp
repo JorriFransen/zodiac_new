@@ -10,6 +10,7 @@ namespace Zodiac
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data)
     {
         Interpreter result = {
+            .allocator = allocator,
             .build_data = build_data,
             .exit_code = 0,
         };
@@ -354,17 +355,16 @@ namespace Zodiac
                     auto old_frame = stack_pop(&interp->frames);
                     assert(old_frame.result_index == -1);
 
-                    // printf("Returning from: %s\n", frame->function->name.data);
                     if (old_frame.function->parameters.count) {
-                        assert(false); // Pop parameters
+                        stack_pop(&interp->arg_stack, old_frame.function->parameters.count);
                     }
 
                     if (old_frame.function->temps.count) {
-                        assert(false);
+                        stack_pop(&interp->temp_stack, old_frame.function->temps.count);
                     }
 
                     if (old_frame.function->locals.count) {
-                        assert(false);
+                        stack_pop(&interp->alloc_stack, old_frame.function->locals.count);
                     }
                     break;
                 }
@@ -461,12 +461,86 @@ namespace Zodiac
                 case S_TO_F: assert(false);
                 case U_TO_F: assert(false);
                 case F_TO_F: assert(false);
-                case PTR_TO_INT: assert(false);
+
+                case PTR_TO_INT: {
+                    AST_Type *pointer_type = nullptr;
+                    void *ptr;
+                    if (inst.a->kind == BC_Value_Kind::ALLOCL) {
+                        Interpreter_LValue allocl_lval = interp_load_lvalue(interp, inst.a);
+                        assert(allocl_lval.kind);
+                        pointer_type =
+                            build_data_find_or_create_pointer_type(interp->allocator,
+                                                                   interp->build_data,
+                                                                   allocl_lval.type);
+                        auto index = frame->first_alloc_index + inst.a->allocl.index;
+                        Interpreter_Value *val_ptr = &interp->alloc_stack.buffer[index];
+                        ptr = &val_ptr->pointer;
+
+                    } else if (inst.a->kind == BC_Value_Kind::TEMP) {
+                        Interpreter_Value pointer_val = interp_load_value(interp, inst.a);
+                        assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
+                        pointer_type = pointer_val.type;
+                        ptr = pointer_val.pointer;
+                    } else {
+                        assert(false);
+                    }
+                    assert(pointer_type);
+
+                    Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
+                    assert(dest_lval.type->kind == AST_Type_Kind::INTEGER);
+
+                    AST_Type *dest_type = dest_lval.type;
+                    assert(dest_type->bit_size <= Builtin::pointer_size);
+
+                    interp_store(interp, &ptr, pointer_type, dest_lval, true);
+                    break;
+                }
+
                 case PTR_TO_PTR: assert(false);
                 case SIZEOF: assert(false);
                 case OFFSETOF: assert(false);
                 case EXIT: assert(false);
-                case SYSCALL: assert(false);
+
+                case SYSCALL: {
+                    assert(inst.a->kind == BC_Value_Kind::INTEGER_LITERAL);
+                    Interpreter_Value arg_count_val = interp_load_value(interp, inst.a);
+                    assert(arg_count_val.type == Builtin::type_u64);
+
+                    // @TODO: @CLEANUP: We are asserting the type is u64 but using the s64?
+                    auto arg_count = arg_count_val.integer_literal.s64;
+
+                    assert(arg_count >= 1);
+
+                    assert(stack_count(&interp->arg_stack) >= arg_count);
+
+                    Array<int64_t> args = {};
+                    array_init(interp->allocator, &args, arg_count);
+
+                    for (int64_t i = 0; i < arg_count; i++) {
+                        auto offset = arg_count - i - 1;
+                        Interpreter_Value param = stack_peek(&interp->arg_stack, offset);
+                        assert(param.type == Builtin::type_s64);
+                        array_append(&args, param.integer_literal.s64);
+                    }
+
+                    Interpreter_LValue result_lvalue = interp_load_lvalue(interp, inst.result);
+                    assert(result_lvalue.type == Builtin::type_s64);
+
+                    int64_t result = os_syscall(args);
+
+                    Interpreter_Value result_source_val = {
+                        .type = Builtin::type_s64,
+                        .integer_literal = { .s64 = result },
+                    };
+
+                    interp_store(interp, result_source_val, result_lvalue);
+
+                    array_free(&args);
+
+                    stack_pop(&interp->arg_stack, arg_count);
+
+                    break;
+                }
             }
 
             if (advance_ip) {
@@ -652,10 +726,13 @@ namespace Zodiac
     }
 
     void interp_store(Interpreter *interp, void *source_ptr, AST_Type *source_type,
-                      Interpreter_LValue dest)
+                      Interpreter_LValue dest, bool allow_type_mismatch /*= false*/)
     {
         assert(source_type->kind == AST_Type_Kind::POINTER);
-        assert(dest.type == source_type->pointer.base);
+
+        if (!allow_type_mismatch) {
+            assert(dest.type == source_type->pointer.base);
+        }
 
         Interpreter_Value *dest_ptr = nullptr;
 
@@ -676,7 +753,9 @@ namespace Zodiac
         }
 
         assert(dest_ptr);
-        assert(dest_ptr->type == source_type->pointer.base);
+        if (!allow_type_mismatch) {
+            assert(dest_ptr->type == source_type->pointer.base);
+        }
 
         switch(dest.type->kind) {
             case AST_Type_Kind::INVALID: assert(false);

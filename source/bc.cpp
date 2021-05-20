@@ -1223,13 +1223,11 @@ namespace Zodiac
             assert(false && "Syscall is only supported on linux");
 #endif
 
-            int64_t total_arg_size = 0;
             for (int64_t i = 0; i < args.count; i++) {
                 BC_Value *arg_val = bc_emit_expression(builder, args[i]);
                 bc_emit_instruction(builder, PUSH_ARG, arg_val, nullptr, nullptr);
 
                 assert(arg_val->type->bit_size % 8 == 0);
-                total_arg_size += arg_val->type->bit_size / 8;
             }
 
             auto arg_count_val = bc_integer_literal_new(builder, Builtin::type_u64,
@@ -1237,10 +1235,7 @@ namespace Zodiac
 
             auto result = bc_temporary_new(builder, expr->type);
 
-            auto arg_size_val = bc_integer_literal_new(builder, Builtin::type_s64,
-                                                       { .s64 = total_arg_size });
-
-            bc_emit_instruction(builder, SYSCALL, arg_count_val, arg_size_val, result);
+            bc_emit_instruction(builder, SYSCALL, arg_count_val, nullptr, result);
             return result;
 
         } else if (name == Builtin::atom_cast) {

@@ -71,7 +71,7 @@ namespace Zodiac
 
     void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest);
     void interp_store(Interpreter *interp, void *source_ptr, AST_Type *source_type,
-                      Interpreter_LValue dest);
+                      Interpreter_LValue dest, bool allow_type_mismatch = false);
 
     // void interpreter_start(Interpreter *interp, BC_Function *entry_func,
     //                        int64_t global_data_size, Array<BC_Global_Info> global_info,
