@@ -592,28 +592,6 @@ namespace Zodiac
         return result;
     }
 
-    // Interpreter_LValue interp_push_temp(Interpreter *interp, BC_Value *bc_val)
-    // {
-    //     assert(bc_val->kind == BC_Value_Kind::TEMP);
-
-    //     auto frame = stack_top_ptr(&interp->frames);
-
-    //     auto index = bc_val->temp.index + frame->first_temp_index;
-
-    //     assert(stack_count(&interp->temp_stack) == index);
-
-    //     Interpreter_Value new_temp_value = { .type = bc_val->type };
-    //     stack_push(&interp->temp_stack, new_temp_value);
-
-    //     Interpreter_LValue result = {
-    //         .kind = Interp_LValue_Kind::TEMP,
-    //         .type = bc_val->type,
-    //         .index = index,
-    //     };
-
-    //     return result;
-    // }
-
     void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest)
     {
         assert(source.type);
