@@ -100,7 +100,19 @@ namespace Zodiac
 
                 case STORE_ARG: assert(false);
                 case STORE_GLOBAL: assert(false);
-                case STORE_PTR: assert(false);
+
+                case STORE_PTR: {
+                    assert(inst.a->kind == BC_Value_Kind::TEMP);
+                    Interpreter_Value dest_pointer_val = interp_load_value(interp, inst.a);
+                    Interpreter_Value source_val = interp_load_value(interp, inst.b);
+
+                    assert(dest_pointer_val.type->kind == AST_Type_Kind::POINTER);
+                    assert(source_val.type == dest_pointer_val.type->pointer.base);
+
+                    interp_store(interp, source_val, dest_pointer_val.pointer,
+                                 dest_pointer_val.type);
+                    break;
+                }
 
                 case LOADL: {
                     Interpreter_Value value = interp_load_value(interp, inst.a);
@@ -826,6 +838,50 @@ namespace Zodiac
                 break;
             }
 
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::UNION: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+        }
+    }
+
+    void interp_store(Interpreter *interp, Interpreter_Value source, void *dest_ptr,
+                      AST_Type *dest_type)
+    {
+        assert(dest_ptr);
+        assert(dest_type->kind == AST_Type_Kind::POINTER);
+        assert(dest_type->pointer.base == source.type);
+
+        switch (source.type->kind) {
+            case AST_Type_Kind::INVALID: assert(false);
+            case AST_Type_Kind::VOID: assert(false);
+
+            case AST_Type_Kind::INTEGER:
+            {
+                if (source.type->integer.sign) {
+                    switch (source.type->bit_size) {
+                        default: assert(false);
+                        case 8: *(int8_t*)dest_ptr = source.integer_literal.s8; break;
+                        case 16: *(int16_t*)dest_ptr = source.integer_literal.s16; break;
+                        case 32: *(int32_t*)dest_ptr = source.integer_literal.s32; break;
+                        case 64: *(int64_t*)dest_ptr = source.integer_literal.s64; break;
+                    }
+                } else {
+                    switch (source.type->bit_size) {
+                        default: assert(false);
+                        case 8: *(uint8_t*)dest_ptr = source.integer_literal.u8; break;
+                        case 16: *(uint16_t*)dest_ptr = source.integer_literal.u16; break;
+                        case 32: *(uint32_t*)dest_ptr = source.integer_literal.u32; break;
+                        case 64: *(uint64_t*)dest_ptr = source.integer_literal.u64; break;
+                    }
+                }
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::BOOL: assert(false);
+            case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::UNION: assert(false);

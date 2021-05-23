@@ -80,6 +80,8 @@ namespace Zodiac
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
 
     void interp_store(Interpreter *interp, Interpreter_Value source, Interpreter_LValue dest);
+    void interp_store(Interpreter *interp, Interpreter_Value source, void *dest_ptr,
+                      AST_Type *dest_type);
     void interp_store(Interpreter *interp, void *source_ptr, AST_Type *source_type,
                       Interpreter_LValue dest, bool allow_type_mismatch = false);
 
