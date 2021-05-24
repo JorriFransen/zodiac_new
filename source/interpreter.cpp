@@ -98,7 +98,16 @@ namespace Zodiac
                     break;
                 }
 
-                case STORE_ARG: assert(false);
+                case STORE_ARG: {
+                    assert(inst.a->kind == BC_Value_Kind::PARAM);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.a);
+                    Interpreter_Value source = interp_load_value(interp, inst.b);
+
+                    assert(dest.type == source.type);
+                    interp_store(interp, source, dest);
+                    break;
+                }
+
                 case STORE_GLOBAL: assert(false);
 
                 case STORE_PTR: {

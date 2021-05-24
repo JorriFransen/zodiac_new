@@ -7,14 +7,8 @@ os :: import os;
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
-    ints : [3]u16;
-    ints[0] = 4;
-    ints[1] = 8;
-    ints[2] = 6;
-    // ints[3] = 8;
-    // ints[4] = 16;
-    // @assert(false);
-    return ints[2];
+    @assert(false);
+    return 0;
 
     // @syscall(1, 1, "Test!\n", 6);
 
