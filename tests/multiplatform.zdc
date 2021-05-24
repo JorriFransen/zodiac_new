@@ -6,7 +6,7 @@ os :: import os;
 
 main :: func() -> s64
 {
-    // std.print("Hello, World! from multiple platforms...\n");
+    std.print("Hello, World! from multiple platforms...\n");
     ints : [3]u16;
     ints[0] = 4;
     ints[1] = 8;

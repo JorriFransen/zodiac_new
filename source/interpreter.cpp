@@ -892,24 +892,13 @@ namespace Zodiac
             case AST_Type_Kind::INVALID: assert(false);
             case AST_Type_Kind::VOID: assert(false);
 
-            case AST_Type_Kind::INTEGER:
-            {
-                if (source.type->integer.sign) {
-                    switch (source.type->bit_size) {
-                        default: assert(false);
-                        case 8: *(int8_t*)dest_ptr = source.integer_literal.s8; break;
-                        case 16: *(int16_t*)dest_ptr = source.integer_literal.s16; break;
-                        case 32: *(int32_t*)dest_ptr = source.integer_literal.s32; break;
-                        case 64: *(int64_t*)dest_ptr = source.integer_literal.s64; break;
-                    }
-                } else {
-                    switch (source.type->bit_size) {
-                        default: assert(false);
-                        case 8: *(uint8_t*)dest_ptr = source.integer_literal.u8; break;
-                        case 16: *(uint16_t*)dest_ptr = source.integer_literal.u16; break;
-                        case 32: *(uint32_t*)dest_ptr = source.integer_literal.u32; break;
-                        case 64: *(uint64_t*)dest_ptr = source.integer_literal.u64; break;
-                    }
+            case AST_Type_Kind::INTEGER: {
+                switch (source.type->bit_size) {
+                    default: assert(false);
+                    case 8: *(uint8_t*)dest_ptr = source.integer_literal.u8; break;
+                    case 16: *(uint16_t*)dest_ptr = source.integer_literal.u16; break;
+                    case 32: *(uint32_t*)dest_ptr = source.integer_literal.u32; break;
+                    case 64: *(uint64_t*)dest_ptr = source.integer_literal.u64; break;
                 }
                 break;
             }
@@ -961,24 +950,13 @@ namespace Zodiac
             case AST_Type_Kind::INVALID: assert(false);
             case AST_Type_Kind::VOID: assert(false);
 
-            case AST_Type_Kind::INTEGER:
-            {
-                if (dest.type->integer.sign) {
-                    switch (dest.type->bit_size) {
-                        default: assert(false);
-                        case 8: dest_ptr->integer_literal.s8 = *((int8_t*)source_ptr); break;
-                        case 16: dest_ptr->integer_literal.s16 = *((int16_t*)source_ptr); break;
-                        case 32: dest_ptr->integer_literal.s32 = *((int32_t*)source_ptr); break;
-                        case 64: dest_ptr->integer_literal.s64 = *((int64_t*)source_ptr); break;
-                    }
-                } else {
-                    switch (dest.type->bit_size) {
-                        default: assert(false);
-                        case 8: dest_ptr->integer_literal.u8 = *((uint8_t*)source_ptr); break;
-                        case 16: dest_ptr->integer_literal.u16 = *((uint16_t*)source_ptr); break;
-                        case 32: dest_ptr->integer_literal.u32 = *((uint32_t*)source_ptr); break;
-                        case 64: dest_ptr->integer_literal.u64 = *((uint64_t*)source_ptr); break;
-                    }
+            case AST_Type_Kind::INTEGER: {
+                switch (dest.type->bit_size) {
+                    default: assert(false);
+                    case 8: dest_ptr->integer_literal.u8 = *((uint8_t*)source_ptr); break;
+                    case 16: dest_ptr->integer_literal.u16 = *((uint16_t*)source_ptr); break;
+                    case 32: dest_ptr->integer_literal.u32 = *((uint32_t*)source_ptr); break;
+                    case 64: dest_ptr->integer_literal.u64 = *((uint64_t*)source_ptr); break;
                 }
                 break;
             }
