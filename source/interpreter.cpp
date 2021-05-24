@@ -541,7 +541,42 @@ namespace Zodiac
                 }
 
                 case AGG_OFFSET: assert(false);
-                case ZEXT: assert(false);
+
+                case ZEXT: {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    assert(operand.type->kind == AST_Type_Kind::INTEGER);
+                    assert(operand.type->integer.sign == false);
+
+                    Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
+                    assert(dest_lval.type->kind == AST_Type_Kind::INTEGER);
+                    assert(dest_lval.type->pointer_to);
+
+                    assert(dest_lval.type->bit_size > operand.type->bit_size);
+
+#define ZEXT_CASE(size) case size: { \
+    uint##size##_t new_val = 0; \
+    switch (operand.type->bit_size) { \
+        default: assert(false); \
+        case 8: new_val = operand.integer_literal.u8; \
+        case 16: new_val = operand.integer_literal.u16; \
+        case 32: new_val = operand.integer_literal.u32; \
+        case 64: new_val = operand.integer_literal.u64; \
+    } \
+    interp_store(interp, &new_val, dest_lval.type->pointer_to, dest_lval); \
+    break; \
+}
+                    switch (dest_lval.type->bit_size) {
+                        default: assert(false);
+                        ZEXT_CASE(8)
+                        ZEXT_CASE(16)
+                        ZEXT_CASE(32)
+                        ZEXT_CASE(64)
+                    }
+
+#undef ZEXT_CASE
+                    break;
+                }
+
                 case SEXT: assert(false);
 
                 case TRUNC: {
