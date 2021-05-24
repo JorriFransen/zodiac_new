@@ -966,18 +966,18 @@ namespace Zodiac
                 if (dest.type->integer.sign) {
                     switch (dest.type->bit_size) {
                         default: assert(false);
-                        case 8: dest_ptr->integer_literal.s8 = *((int8_t*)source_ptr);
-                        case 16: dest_ptr->integer_literal.s16 = *((int16_t*)source_ptr);
-                        case 32: dest_ptr->integer_literal.s32 = *((int32_t*)source_ptr);
-                        case 64: dest_ptr->integer_literal.s64 = *((int64_t*)source_ptr);
+                        case 8: dest_ptr->integer_literal.s8 = *((int8_t*)source_ptr); break;
+                        case 16: dest_ptr->integer_literal.s16 = *((int16_t*)source_ptr); break;
+                        case 32: dest_ptr->integer_literal.s32 = *((int32_t*)source_ptr); break;
+                        case 64: dest_ptr->integer_literal.s64 = *((int64_t*)source_ptr); break;
                     }
                 } else {
                     switch (dest.type->bit_size) {
                         default: assert(false);
-                        case 8: dest_ptr->integer_literal.u8 = *((uint8_t*)source_ptr);
-                        case 16: dest_ptr->integer_literal.u16 = *((uint16_t*)source_ptr);
-                        case 32: dest_ptr->integer_literal.u32 = *((uint32_t*)source_ptr);
-                        case 64: dest_ptr->integer_literal.u64 = *((uint64_t*)source_ptr);
+                        case 8: dest_ptr->integer_literal.u8 = *((uint8_t*)source_ptr); break;
+                        case 16: dest_ptr->integer_literal.u16 = *((uint16_t*)source_ptr); break;
+                        case 32: dest_ptr->integer_literal.u32 = *((uint32_t*)source_ptr); break;
+                        case 64: dest_ptr->integer_literal.u64 = *((uint64_t*)source_ptr); break;
                     }
                 }
                 break;
