@@ -41,6 +41,7 @@ namespace Zodiac
         INVALID,
         TEMP,
         ALLOCL,
+        PARAM,
     };
 
     struct Interpreter_LValue

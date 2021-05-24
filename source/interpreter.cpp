@@ -821,7 +821,20 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::PARAM: assert(false);
+            case BC_Value_Kind::PARAM: {
+                assert(bc_val->type->kind == AST_Type_Kind::POINTER);
+
+                auto frame = stack_top_ptr(&interp->frames);
+                auto index = frame->first_arg_index + bc_val->parameter.index;
+                assert(stack_count(&interp->arg_stack) > index);
+
+
+                result.kind = Interp_LValue_Kind::PARAM;
+                result.index = index;
+                result.type = bc_val->type->pointer.base;
+                break;
+            }
+
             case BC_Value_Kind::GLOBAL: assert(false);
             case BC_Value_Kind::FUNCTION: assert(false);
             case BC_Value_Kind::BLOCK: assert(false);
@@ -854,6 +867,12 @@ namespace Zodiac
             case Interp_LValue_Kind::ALLOCL: {
                 dest_ptr = &interp->local_stack.buffer[dest.index];
                 assert(stack_count(&interp->local_stack) > dest.index);
+                break;
+            }
+
+            case Interp_LValue_Kind::PARAM: {
+                dest_ptr = &interp->arg_stack.buffer[dest.index];
+                assert(stack_count(&interp->arg_stack) > dest.index);
                 break;
             }
         }
@@ -946,6 +965,12 @@ namespace Zodiac
             case Interp_LValue_Kind::ALLOCL: {
                 dest_ptr = &interp->local_stack.buffer[dest.index];
                 assert(stack_count(&interp->local_stack) > dest.index);
+                break;
+            }
+
+            case Interp_LValue_Kind::PARAM: {
+                dest_ptr = &interp->arg_stack.buffer[dest.index];
+                assert(stack_count(&interp->arg_stack) > dest.index);
                 break;
             }
         }
