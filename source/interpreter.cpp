@@ -170,18 +170,13 @@ namespace Zodiac
      (#op[0] == '<') || \
      (#op[0] == '>'))
 
-#ifndef NDEBUG
-#define TEST_BINOP_RESULT(op) { if (!IS_CMP_OP(op)) { assert(lhs.type == dest.type ); } }
-#else
-#define TEST_BINOP_RESULT(op)
-#endif
-
 #define BINOP_INT_(sign_, op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
     Interpreter_Value rhs = interp_load_value(interp, inst.b); \
     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
     assert(lhs.type == rhs.type); \
-    TEST_BINOP_RESULT(op); \
+    assert(!IS_CMP_OP(op)); \
+    assert(dest.type == lhs.type); \
     auto type = dest.type; \
     if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
     Interpreter_Value r = { \
@@ -201,6 +196,38 @@ namespace Zodiac
 #define BINOP_INT(op) BINOP_INT_(s, op)
 #define BINOP_UINT(op) BINOP_INT_(u, op)
 
+#define BINOP_CMP_INT_CASE(sign, size, op) \
+    case size: {  (r.boolean_literal)  = \
+                   (lhs.integer_literal. MAKE_INT_NAME(sign, size)) op \
+                   (rhs.integer_literal. MAKE_INT_NAME(sign, size)); \
+               break; }
+
+#define BINOP_CMP_INT_(sign_, op) { \
+    Interpreter_Value lhs = interp_load_value(interp, inst.a); \
+    Interpreter_Value rhs = interp_load_value(interp, inst.b); \
+    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
+    assert(lhs.type == rhs.type); \
+    assert(IS_CMP_OP(op)); \
+    assert(dest.type->kind == AST_Type_Kind::BOOL); \
+    auto type = dest.type; \
+    if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
+    Interpreter_Value r = { \
+        .type = type, \
+    }; \
+    switch (type->bit_size) { \
+        BINOP_CMP_INT_CASE(sign_, 8, op) \
+        BINOP_CMP_INT_CASE(sign_, 16, op) \
+        BINOP_CMP_INT_CASE(sign_, 32, op) \
+        BINOP_CMP_INT_CASE(sign_, 64, op) \
+        default: assert(false); \
+    } \
+    interp_store(interp, r, dest); \
+    break; \
+}
+
+#define BINOP_CMP_INT(op) BINOP_CMP_INT_(s, op)
+#define BINOP_CMP_UINT(op) BINOP_CMP_INT_(u, op)
+
 
                 case ADD_S: BINOP_INT(+);
                 case SUB_S: BINOP_INT(-);
@@ -214,19 +241,19 @@ namespace Zodiac
                 case MUL_U: BINOP_UINT(*);
                 case DIV_U: BINOP_UINT(/);
 
-                case EQ_S:   BINOP_INT(==);
-                case NEQ_S:  BINOP_INT(!=);
-                case LT_S:   BINOP_INT(<);
-                case LTEQ_S: BINOP_INT(<=);
-                case GT_S:   BINOP_INT(>);
-                case GTEQ_S: BINOP_INT(>=);
+                case EQ_S:   BINOP_CMP_INT(==);
+                case NEQ_S:  BINOP_CMP_INT(!=);
+                case LT_S:   BINOP_CMP_INT(<);
+                case LTEQ_S: BINOP_CMP_INT(<=);
+                case GT_S:   BINOP_CMP_INT(>);
+                case GTEQ_S: BINOP_CMP_INT(>=);
 
-                case EQ_U:   BINOP_UINT(==);
-                case NEQ_U:  BINOP_UINT(!=);
-                case LT_U:   BINOP_UINT(<);
-                case LTEQ_U: BINOP_UINT(<=);
-                case GT_U:   BINOP_UINT(>);
-                case GTEQ_U: BINOP_UINT(>=);
+                case EQ_U:   BINOP_CMP_UINT(==);
+                case NEQ_U:  BINOP_CMP_UINT(!=);
+                case LT_U:   BINOP_CMP_UINT(<);
+                case LTEQ_U: BINOP_CMP_UINT(<=);
+                case GT_U:   BINOP_CMP_UINT(>);
+                case GTEQ_U: BINOP_CMP_UINT(>=);
 
 #undef MAKE_INT_NAME
 #undef BINOP_INT_CASE
@@ -234,22 +261,27 @@ namespace Zodiac
 #undef BINOP_INT_
 #undef BINOP_INT
 #undef BINOP_UINT
-#undef TEST_BINOP_RESULT
-#undef IS_CMP_OP
+#undef BINOP_CMP_INT_
+#undef BINOP_CMP_INT
+#undef BINOP_CMP_UINT
 
                 case ADD_F: assert(false);
                 case SUB_F: assert(false);
                 case MUL_F: assert(false);
                 case DIV_F: assert(false);
+
                 case EQ_F: assert(false);
                 case NEQ_F: assert(false);
                 case LT_F: assert(false);
                 case LTEQ_F: assert(false);
+
                 case GT_F: assert(false);
+
                 case GTEQ_F: assert(false);
 
-                case NEG_LOG:
-                {
+#undef IS_CMP_OP
+
+                case NEG_LOG: {
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
                     Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
 
