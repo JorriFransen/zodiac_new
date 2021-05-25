@@ -629,8 +629,13 @@ namespace Zodiac
                 case F_TO_F: assert(false);
 
                 case PTR_TO_INT: {
+                    assert(inst.a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst.result->type->kind == AST_Type_Kind::INTEGER);
+
                     AST_Type *pointer_type = nullptr;
                     void *ptr;
+
+                    // @TODO: @Cleanup: There should be a general way to get a pointer from an lvalue
                     if (inst.a->kind == BC_Value_Kind::ALLOCL) {
                         Interpreter_LValue allocl_lval = interp_load_lvalue(interp, inst.a);
                         assert(allocl_lval.kind);
@@ -645,6 +650,13 @@ namespace Zodiac
                         assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
                         pointer_type = pointer_val.type;
                         ptr = pointer_val.pointer;
+
+                    } else if (inst.a->kind == BC_Value_Kind::STRING_LITERAL) {
+                        Interpreter_Value pointer_val = interp_load_value(interp, inst.a);
+                        assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
+                        pointer_type = pointer_val.type;
+                        ptr = pointer_val.pointer;
+
                     } else {
                         assert(false);
                     }

@@ -7,13 +7,13 @@ os :: import os;
 main :: func() -> s64
 {
     std.print("Hello, World! from multiple platforms...\n");
-    @assert(false);
+    // @assert(false);
+
+    @syscall(1, 1, "Test!\n", 6);
+
+    std.print_num(42);
+    std.print("\n");
     return 0;
-
-    // @syscall(1, 1, "Test!\n", 6);
-
-    // std.print_num(42);
-    // std.print("\n");
 
     // std.print_float(4.2);
     // std.print("\n");
