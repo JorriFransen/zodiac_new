@@ -661,7 +661,7 @@ namespace Zodiac
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
                     Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
 
-                    assert(operand.type->kind == AST_Type_Kind::FLOAT);
+                    assert(operand.type == Builtin::type_float);
                     assert(dest_lvalue.type->kind == AST_Type_Kind::INTEGER);
                     assert(dest_lvalue.type->integer.sign);
 
@@ -686,7 +686,28 @@ namespace Zodiac
                     break;
                 }
 
-                case S_TO_F: assert(false);
+                case S_TO_F: {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
+
+                    assert(operand.type->kind == AST_Type_Kind::INTEGER);
+                    assert(operand.type->integer.sign);
+                    assert(dest_lvalue.type == Builtin::type_float);
+
+                    float new_val;
+                    switch (operand.type->bit_size) {
+                        default: assert(false);
+                        case 8: new_val = operand.integer_literal.s8; break;
+                        case 16: new_val = operand.integer_literal.s16; break;
+                        case 32: new_val = operand.integer_literal.s32; break;
+                        case 64: new_val = operand.integer_literal.s64; break;
+                    }
+                    auto source_type = dest_lvalue.type->pointer_to;
+                    assert(source_type);
+                    interp_store(interp, &new_val, source_type, dest_lvalue);
+                    break;
+                }
+
                 case U_TO_F: assert(false);
                 case F_TO_F: assert(false);
 
@@ -1075,7 +1096,16 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT: {
+                if (dest.type == Builtin::type_float) {
+                    dest_ptr->float_literal.r32 = *((float*)source_ptr); break;
+                } else if (dest.type == Builtin::type_double) {
+                    dest_ptr->float_literal.r64 = *((double*)source_ptr); break;
+                } else {
+                    assert(false);
+                }
+                break;
+            }
 
             case AST_Type_Kind::BOOL: {
                 dest_ptr->boolean_literal = *(bool*)source_ptr;
