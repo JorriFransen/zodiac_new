@@ -586,7 +586,41 @@ namespace Zodiac
                     break;
                 }
 
-                case SEXT: assert(false);
+                case SEXT: {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
+
+                    assert(operand.type->kind == AST_Type_Kind::INTEGER);
+                    assert(operand.type->integer.sign);
+                    assert(dest_lvalue.type->kind == AST_Type_Kind::INTEGER);
+                    assert(dest_lvalue.type->integer.sign);
+
+#define SEXT_CASE(size) case size: { \
+    int##size##_t new_val; \
+    switch (dest_lvalue.type->bit_size) { \
+        default: assert(false); \
+        case 8: new_val = operand.integer_literal.s8; \
+        case 16: new_val = operand.integer_literal.s16; \
+        case 32: new_val = operand.integer_literal.s32; \
+        case 64: new_val = operand.integer_literal.s64; \
+    } \
+    auto source_type = dest_lvalue.type->pointer_to; \
+    assert(source_type); \
+    interp_store(interp, &new_val, source_type, dest_lvalue); \
+    break; \
+}
+
+                    switch (dest_lvalue.type->bit_size) {
+                        default: assert(false);
+                        SEXT_CASE(8);
+                        SEXT_CASE(16);
+                        SEXT_CASE(32);
+                        SEXT_CASE(64);
+                    }
+                    break;
+
+#undef SEXT_CASE
+                }
 
                 case TRUNC: {
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
