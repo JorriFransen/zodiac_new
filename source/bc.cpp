@@ -1,6 +1,7 @@
 #include "bc.h"
 
 #include "builtin.h"
+#include "const_interpreter.h"
 #include "resolver.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -182,15 +183,35 @@ namespace Zodiac
 
     }
 
-    BC_Global_Info bc_emit_global_variable(BC_Builder *builder,
-                                                  AST_Declaration *decl)
+    BC_Global_Info bc_emit_global_variable(BC_Builder *builder, AST_Declaration *decl)
     {
-        assert(false && "bc_emit_global_variable is not implemented!!!");
-        return {};
+        assert(decl->decl_flags & AST_DECL_FLAG_GLOBAL);
+
+        Const_Value init_const_val = {};
+        bool has_initializer = false;
+
+        auto init_expr = decl->variable.init_expression;
+
+        if (init_expr) {
+            has_initializer = true;
+            assert(init_expr->expr_flags & AST_EXPR_FLAG_CONST);
+            init_const_val = const_interpret_expression(init_expr);
+        }
+
+        BC_Global_Info result = {
+            .declaration = decl,
+            .has_initializer = has_initializer,
+            .init_const_val = init_const_val,
+            .global_value = bc_global_new(builder, decl->type, decl->identifier->atom),
+        };
+
+        array_append(&builder->globals, result);
+
+        return result;
     }
 
     BC_Function *bc_emit_run_wrapper(BC_Builder *builder, AST_Declaration *decl,
-                                                 BC_Function *pre_main_func)
+                                     BC_Function *pre_main_func)
     {
         assert(decl->kind == AST_Declaration_Kind::RUN);
 
@@ -1870,8 +1891,18 @@ namespace Zodiac
 
     BC_Value *bc_global_new(BC_Builder *builder, AST_Type *type, Atom name)
     {
-        assert(false && "bc_global_new is not implemented!!!");
-        return nullptr;
+        auto pointer_type = type->pointer_to;
+        if (!pointer_type) {
+            pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
+                                                                  builder->build_data,
+                                                                  type);
+        }
+
+        assert(pointer_type);
+        auto result = bc_value_new(builder, BC_Value_Kind::GLOBAL, pointer_type);
+        result->global.name = name;
+
+        return result;
     }
 
     BC_Value *bc_temporary_new(BC_Builder *builder, AST_Type *type)

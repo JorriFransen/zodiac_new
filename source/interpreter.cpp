@@ -135,7 +135,6 @@ namespace Zodiac
                 }
 
                 case LOAD_PARAM: {
-
                     Interpreter_Value param_val = interp_load_value(interp, inst.a);
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
 
@@ -144,7 +143,14 @@ namespace Zodiac
                     break;
                 }
 
-                case LOAD_GLOBAL: assert(false);
+                case LOAD_GLOBAL: {
+                    Interpreter_Value value = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
+
+                    assert(value.type == dest.type);
+                    interp_store(interp, value, dest);
+                    break;
+                }
 
                 case LOAD_PTR: {
                     assert(inst.a->kind == BC_Value_Kind::TEMP);

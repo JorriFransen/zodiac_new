@@ -128,10 +128,13 @@ namespace Zodiac
         Build_Data *build_data = nullptr;
 
         BC_Function *current_function = nullptr;
+
         Array<BC_Local_Variable_Info> parameters = {};
         Array<BC_Local_Variable_Info> locals = {};
         Array<BC_Global_Info> globals = {};
+
         Array<BC_Value *> string_literals = {};
+
         int64_t next_temp_index = 0;
         int64_t run_wrapper_count = 0;
 
@@ -250,11 +253,8 @@ namespace Zodiac
         AST_Declaration *declaration = nullptr;
         bool has_initializer = false;
 
-        union
-        {
-            Const_Value init_const_val;
-            BC_Value *global_value;
-        };
+        Const_Value init_const_val;
+        BC_Value *global_value;
     };
 
     BC_Builder bc_builder_create(Allocator *allocator, Build_Data *build_data);
