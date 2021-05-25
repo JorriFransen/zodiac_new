@@ -14,7 +14,7 @@ main :: func() -> s64
     std.print_num(42);
     std.print("\n");
 
-    std.print_float(4.2);
+    // std.print_float(4.2);
     std.print("\n");
     return 0;
 

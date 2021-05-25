@@ -205,30 +205,7 @@ namespace Zodiac
                 case ADD_S: BINOP_INT(+);
                 case SUB_S: BINOP_INT(-);
                 case REM_S: BINOP_INT(%);
-
-                case MUL_S:
-                {
-                    Interpreter_Value lhs = interp_load_value(interp, inst.a);
-                    Interpreter_Value rhs = interp_load_value(interp, inst.b);
-                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
-                    assert(lhs.type == rhs.type);
-                    TEST_BINOP_RESULT(op);
-                    auto type = dest.type;
-                    assert(lhs.type->integer.sign);
-                    Interpreter_Value r = {
-                        .type = type,
-                    };
-                    switch (type->bit_size) {
-                        BINOP_INT_CASE(s, 8, *);
-                        BINOP_INT_CASE(s, 16, *);
-                        BINOP_INT_CASE(s, 32, *);
-                        BINOP_INT_CASE(s, 64, *);
-                        default: assert(false);
-                    }
-                    interp_store(interp, r, dest);
-                    break;
-                }
-
+                case MUL_S: BINOP_INT(*);
                 case DIV_S: BINOP_INT(/);
 
                 case ADD_U: BINOP_UINT(+);
