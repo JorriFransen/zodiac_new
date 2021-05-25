@@ -208,7 +208,7 @@ namespace Zodiac
     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
     assert(lhs.type == rhs.type); \
     assert(IS_CMP_OP(op)); \
-    assert(dest.type->kind == AST_Type_Kind::BOOL); \
+    assert(dest.type == Builtin::type_bool); \
     auto type = dest.type; \
     if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
     Interpreter_Value r = { \
@@ -265,21 +265,49 @@ namespace Zodiac
 #undef BINOP_CMP_INT
 #undef BINOP_CMP_UINT
 
-                case ADD_F: assert(false);
-                case SUB_F: assert(false);
-                case MUL_F: assert(false);
-                case DIV_F: assert(false);
+#define BINOP_FLOAT(op) { \
+    Interpreter_Value lhs = interp_load_value(interp, inst.a); \
+    Interpreter_Value rhs = interp_load_value(interp, inst.b); \
+    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
+    assert(!IS_CMP_OP(op)); \
+    assert(lhs.type == rhs.type); \
+    assert(lhs.type == dest.type); \
+    assert(lhs.type == Builtin::type_float); \
+    Interpreter_Value r = { .type = lhs.type }; \
+    r.float_literal.r32 = lhs.float_literal.r32 op rhs.float_literal.r32; \
+    interp_store(interp, r, dest); \
+    break; \
+}
 
-                case EQ_F: assert(false);
-                case NEQ_F: assert(false);
-                case LT_F: assert(false);
-                case LTEQ_F: assert(false);
+#define BINOP_CMP_FLOAT(op) { \
+    Interpreter_Value lhs = interp_load_value(interp, inst.a); \
+    Interpreter_Value rhs = interp_load_value(interp, inst.b); \
+    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
+    assert(IS_CMP_OP(op)); \
+    assert(lhs.type == rhs.type); \
+    assert(lhs.type == Builtin::type_float); \
+    assert(dest.type == Builtin::type_bool); \
+    Interpreter_Value r = { .type = dest.type }; \
+    r.boolean_literal = lhs.float_literal.r32 op rhs.float_literal.r32; \
+    interp_store(interp, r, dest); \
+    break; \
+}
 
-                case GT_F: assert(false);
+                case ADD_F: BINOP_FLOAT(+);
+                case SUB_F: BINOP_FLOAT(-);
+                case MUL_F: BINOP_FLOAT(*);
+                case DIV_F: BINOP_FLOAT(/);
 
-                case GTEQ_F: assert(false);
+                case EQ_F:   BINOP_CMP_FLOAT(==);
+                case NEQ_F:  BINOP_CMP_FLOAT(!=);
+                case LT_F:   BINOP_CMP_FLOAT(<);
+                case LTEQ_F: BINOP_CMP_FLOAT(<=);
+                case GT_F:   BINOP_CMP_FLOAT(>);
+                case GTEQ_F: BINOP_CMP_FLOAT(>=);
 
 #undef IS_CMP_OP
+#undef BINOP_FLOAT
+#undef BINOP_CMP_FLOAT
 
                 case NEG_LOG: {
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
