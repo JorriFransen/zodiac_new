@@ -13,10 +13,10 @@ main :: func() -> s64
 
     std.print_num(42);
     std.print("\n");
-    return 0;
 
-    // std.print_float(4.2);
-    // std.print("\n");
+    std.print_float(4.2);
+    std.print("\n");
+    return 0;
 
     // std.print_double(44.22);
     // std.print("\n");

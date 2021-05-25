@@ -623,7 +623,35 @@ namespace Zodiac
                     break;
                 }
 
-                case F_TO_S: assert(false);
+                case F_TO_S: {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
+
+                    assert(operand.type->kind == AST_Type_Kind::FLOAT);
+                    assert(dest_lvalue.type->kind == AST_Type_Kind::INTEGER);
+                    assert(dest_lvalue.type->integer.sign);
+
+#define F_TO_S_CASE(size) case size: { \
+    int##size##_t new_value = operand.float_literal.r32; \
+    assert(dest_lvalue.type->pointer_to); \
+    interp_store(interp, &new_value, dest_lvalue.type->pointer_to, \
+                 dest_lvalue); \
+    break; \
+}
+
+                    switch (dest_lvalue.type->bit_size) {
+                        default: assert(false);
+                        F_TO_S_CASE(8)
+                        F_TO_S_CASE(16)
+                        F_TO_S_CASE(32)
+                        F_TO_S_CASE(64)
+                    }
+
+#undef F_TO_S_CASE
+
+                    break;
+                }
+
                 case S_TO_F: assert(false);
                 case U_TO_F: assert(false);
                 case F_TO_F: assert(false);
@@ -748,7 +776,10 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::FLOAT_LITERAL: assert(false);
+            case BC_Value_Kind::FLOAT_LITERAL: {
+                result.float_literal = bc_val->float_literal;
+                break;
+            }
 
             case BC_Value_Kind::STRING_LITERAL: {
                 result.string_literal = bc_val->string_literal.data;
@@ -901,7 +932,10 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT: {
+                dest_ptr->float_literal = source.float_literal;
+                break;
+            }
 
             case AST_Type_Kind::BOOL: {
                 dest_ptr->boolean_literal = source.boolean_literal;

@@ -30,6 +30,7 @@ namespace Zodiac
         union
         {
             Integer_Literal integer_literal = {};
+            Float_Literal float_literal;
             const char *string_literal;
             void *pointer;
             bool boolean_literal;
