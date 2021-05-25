@@ -12,6 +12,8 @@ namespace Zodiac
         Interpreter result = {
             .allocator = allocator,
             .build_data = build_data,
+            .running = false,
+            .aborted = false,
             .exit_code = 0,
         };
 
@@ -70,11 +72,11 @@ namespace Zodiac
             stack_push(&interp->temp_stack, temp);
         }
 
-        bool running = true;
-
         Interp_Stack_Frame *frame = nullptr;
 
-        while (running) {
+        interp->running = true;
+
+        while (interp->running) {
 
             bool advance_ip = true;
 
@@ -379,9 +381,7 @@ namespace Zodiac
                     }
 
                     if (callee->flags & BC_FUNC_FLAG_COMPILER_FUNC) {
-                        assert(false);
-                        // interpreter_execute_compiler_function(interp, func, arg_count,
-                        //                                       inst->result);
+                        interpreter_execute_compiler_function(interp, callee, arg_count);
                         break;
                     }
 
@@ -880,16 +880,20 @@ namespace Zodiac
             }
 
             if (stack_count(&interp->frames) < 1) {
-                running = false;
+                interp->running = false;
             }
         }
 
-        assert(stack_count(&interp->temp_stack));
-        auto exit_val = stack_pop(&interp->temp_stack);
-        assert(exit_val.type->kind == AST_Type_Kind::INTEGER);
-        assert(exit_val.type == Builtin::type_s64);
+        if (!interp->aborted) {
+            assert(stack_count(&interp->temp_stack));
+            auto exit_val = stack_pop(&interp->temp_stack);
+            assert(exit_val.type->kind == AST_Type_Kind::INTEGER);
+            assert(exit_val.type == Builtin::type_s64);
 
-        interp->exit_code = exit_val.integer_literal.s64;
+            interp->exit_code = exit_val.integer_literal.s64;
+        } else {
+            fprintf(stderr, "Bytecode aborted!\n");
+        }
     }
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val)
@@ -1193,6 +1197,22 @@ namespace Zodiac
             case AST_Type_Kind::UNION: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
+        }
+    }
+
+    void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
+                                               int64_t arg_count)
+    {
+        assert(func->flags & BC_FUNC_FLAG_COMPILER_FUNC);
+
+        assert(arg_count == 0);
+
+        if (func->name == Builtin::atom_abort) {
+            interp->aborted = true;
+            interp->running = false;
+            interp->exit_code = 134;
+        } else {
+            assert(false && "Unimplemented compiler function!");
         }
     }
 }

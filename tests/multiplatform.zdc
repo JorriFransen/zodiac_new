@@ -20,16 +20,14 @@ main :: func() -> s64
     std.print_double(44.22);
     std.print("\n");
 
-    return 0;
+    std.print_char('x');
+    std.print_char('\n');
 
-    // std.print_char('x');
-    // std.print_char('\n');
-
-    // _48 := add(return_46(), 2);
-    // @assert(_48 == 48);
-    // result := addone(sub(add(_48, 3), 9));
-    // @assert(result == 43);
-    // return result;
+    _48 := add(return_46(), 2);
+    @assert(_48 == 48);
+    result := addone(sub(add(_48, 3), 9));
+    @assert(result == 43);
+    return result;
 }
 
 addone :: func (x: s64) -> s64

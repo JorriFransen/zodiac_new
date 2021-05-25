@@ -57,6 +57,9 @@ namespace Zodiac
         Allocator *allocator = nullptr;
         Build_Data *build_data = nullptr;
 
+        bool running = false;
+        bool aborted = false;
+
         Stack<Interpreter_Value> temp_stack = {};
         Stack<Interpreter_Value> local_stack = {};
         Stack<Interpreter_Value> arg_stack = {};
@@ -100,8 +103,8 @@ namespace Zodiac
     //                                           int64_t arg_count, BC_Value *result_value);
     // void interpreter_push_foreign_arg(Interpreter *interp, uint8_t *arg_ptr, AST_Type *type);
 
-    // void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
-    //                                            int64_t arg_count, BC_Value *result_value);
+    void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
+                                               int64_t arg_count);
 
     // void *interpreter_load_lvalue(Interpreter *interp, BC_Value *value);
 
