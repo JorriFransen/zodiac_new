@@ -265,6 +265,9 @@ namespace Zodiac
 #undef BINOP_CMP_INT
 #undef BINOP_CMP_UINT
 
+#define BINOP_FLOAT_CASE(op, size) case size: \
+    r.float_literal.r##size = lhs.float_literal.r##size op rhs.float_literal.r##size;
+
 #define BINOP_FLOAT(op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
     Interpreter_Value rhs = interp_load_value(interp, inst.b); \
@@ -272,12 +275,19 @@ namespace Zodiac
     assert(!IS_CMP_OP(op)); \
     assert(lhs.type == rhs.type); \
     assert(lhs.type == dest.type); \
-    assert(lhs.type == Builtin::type_float); \
+    assert(lhs.type->kind == AST_Type_Kind::FLOAT); \
     Interpreter_Value r = { .type = lhs.type }; \
-    r.float_literal.r32 = lhs.float_literal.r32 op rhs.float_literal.r32; \
+    switch (lhs.type->bit_size) { \
+        default: assert(false); \
+        BINOP_FLOAT_CASE(op, 32); \
+        BINOP_FLOAT_CASE(op, 64); \
+    } \
     interp_store(interp, r, dest); \
     break; \
 }
+
+#define BINOP_CMP_FLOAT_CASE(op, size) case size: \
+    r.boolean_literal = lhs.float_literal.r##size op rhs.float_literal.r##size; break;
 
 #define BINOP_CMP_FLOAT(op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
@@ -285,10 +295,14 @@ namespace Zodiac
     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result); \
     assert(IS_CMP_OP(op)); \
     assert(lhs.type == rhs.type); \
-    assert(lhs.type == Builtin::type_float); \
+    assert(lhs.type->kind == AST_Type_Kind::FLOAT); \
     assert(dest.type == Builtin::type_bool); \
     Interpreter_Value r = { .type = dest.type }; \
-    r.boolean_literal = lhs.float_literal.r32 op rhs.float_literal.r32; \
+    switch (lhs.type->bit_size) { \
+        default: assert(false); \
+        BINOP_CMP_FLOAT_CASE(op, 32) \
+        BINOP_CMP_FLOAT_CASE(op, 64) \
+    } \
     interp_store(interp, r, dest); \
     break; \
 }
@@ -306,7 +320,9 @@ namespace Zodiac
                 case GTEQ_F: BINOP_CMP_FLOAT(>=);
 
 #undef IS_CMP_OP
+#undef BINOP_FLOAT_CASE
 #undef BINOP_FLOAT
+#undef BINOP_CMP_FLOAT_CASE
 #undef BINOP_CMP_FLOAT
 
                 case NEG_LOG: {
@@ -698,27 +714,39 @@ namespace Zodiac
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
                     Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
 
-                    assert(operand.type == Builtin::type_float);
+                    assert(operand.type->kind == AST_Type_Kind::FLOAT);
                     assert(dest_lvalue.type->kind == AST_Type_Kind::INTEGER);
                     assert(dest_lvalue.type->integer.sign);
 
-#define F_TO_S_CASE(size) case size: { \
-    int##size##_t new_value = operand.float_literal.r32; \
+#define F_TO_S_CASE_INT_SIZE(size) case size: { \
+    int##size##_t new_value = v; \
     assert(dest_lvalue.type->pointer_to); \
     interp_store(interp, &new_value, dest_lvalue.type->pointer_to, \
                  dest_lvalue); \
     break; \
 }
 
-                    switch (dest_lvalue.type->bit_size) {
+#define F_TO_S_CASE_FLOAT_SIZE(size) case size: { \
+    auto v = operand.float_literal.r##size; \
+    switch (dest_lvalue.type->bit_size) { \
+        default: assert(false); \
+        F_TO_S_CASE_INT_SIZE(8) \
+        F_TO_S_CASE_INT_SIZE(16) \
+        F_TO_S_CASE_INT_SIZE(32) \
+        F_TO_S_CASE_INT_SIZE(64) \
+    } \
+    break; \
+}
+
+                    switch (operand.type->bit_size) {
                         default: assert(false);
-                        F_TO_S_CASE(8)
-                        F_TO_S_CASE(16)
-                        F_TO_S_CASE(32)
-                        F_TO_S_CASE(64)
+                        F_TO_S_CASE_FLOAT_SIZE(32);
+                        F_TO_S_CASE_FLOAT_SIZE(64);
                     }
 
-#undef F_TO_S_CASE
+
+#undef F_TO_S_CASE_INT_SIZE
+#undef F_TO_S_CASE_FLOAT_SIZE
 
                     break;
                 }
@@ -729,19 +757,29 @@ namespace Zodiac
 
                     assert(operand.type->kind == AST_Type_Kind::INTEGER);
                     assert(operand.type->integer.sign);
-                    assert(dest_lvalue.type == Builtin::type_float);
+                    assert(dest_lvalue.type->kind == AST_Type_Kind::FLOAT);
 
-                    float new_val;
-                    switch (operand.type->bit_size) {
+#define S_TO_F_CASE(size) case size: { \
+    Float_Literal fl; \
+    switch (operand.type->bit_size) { \
+        default: assert(false); \
+        case 8: fl.r##size = operand.integer_literal.s8; break; \
+        case 16: fl.r##size = operand.integer_literal.s16; break; \
+        case 32: fl.r##size = operand.integer_literal.s32; break; \
+        case 64: fl.r##size = operand.integer_literal.s64; break; \
+    } \
+    auto source_type = dest_lvalue.type->pointer_to; \
+    assert(source_type); \
+    interp_store(interp, &fl.r##size, source_type, dest_lvalue); \
+    break; \
+}
+
+                    switch (dest_lvalue.type->bit_size) {
                         default: assert(false);
-                        case 8: new_val = operand.integer_literal.s8; break;
-                        case 16: new_val = operand.integer_literal.s16; break;
-                        case 32: new_val = operand.integer_literal.s32; break;
-                        case 64: new_val = operand.integer_literal.s64; break;
+                        S_TO_F_CASE(32);
+                        S_TO_F_CASE(64);
                     }
-                    auto source_type = dest_lvalue.type->pointer_to;
-                    assert(source_type);
-                    interp_store(interp, &new_val, source_type, dest_lvalue);
+
                     break;
                 }
 
