@@ -1706,6 +1706,13 @@ bool try_resolve_statement(Resolver *resolver, AST_Statement *statement)
             assert(rhs_expr->flags & AST_NODE_FLAG_TYPED);
 #endif
 
+            if (ident_expr->expr_flags & AST_EXPR_FLAG_CONST) {
+                zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::ASSIGNING_TO_CONST,
+                                    statement, "Cannot assign to constant: '%s'",
+                                    ident_expr->identifier->atom);
+                return false;
+            }
+
             if (ident_expr->type != rhs_expr->type) {
                 if (is_valid_type_conversion(rhs_expr, ident_expr->type)) {
                     do_type_conversion(resolver, p_rhs_expr, ident_expr->type);

@@ -44,28 +44,28 @@ main :: func () -> s64
     std.print_num(<int_ptr);
     std.print("\n");
 
-    // std.print("glob_int_const: ");
-    // @assert(glob_int_const == 5);
-    // std.print_num(glob_int_const);
-    // std.println(" ");
-    // //glob_int_const = 4; // Illegal
+    std.print("glob_int_const: ");
+    @assert(glob_int_const == 5);
+    std.print_num(glob_int_const);
+    std.println(" ");
+    // glob_int_const = 4; // Illegal
 
-    // loc_int_const :: 14;
-    // std.print("loc_int_const: ");
-    // std.print_num(loc_int_const);
-    // std.println(" ");
-    // //loc_int_const = 1; // Illegal
+    loc_int_const :: 14;
+    std.print("loc_int_const: ");
+    std.print_num(loc_int_const);
+    std.println(" ");
+    // loc_int_const = 1; // Illegal
 
-    // @assert(global_int == 0);
-    // std.print("global_int: ");
-    // std.print_num(global_int);
-    // std.println(" ");
+    @assert(global_int == 0);
+    std.print("global_int: ");
+    std.print_num(global_int);
+    std.println(" ");
 
-    // global_int = global_int * 3 + 1;
-    // @assert(global_int == 1);
-    // std.print("global_int: ");
-    // std.print_num(global_int);
-    // std.println(" ");
+    global_int = global_int * 3 + 1;
+    @assert(global_int == 1);
+    std.print("global_int: ");
+    std.print_num(global_int);
+    std.println(" ");
 
     // count := 4;
     // while (count > 0) {

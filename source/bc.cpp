@@ -1014,9 +1014,10 @@ namespace Zodiac
                 BC_Value *source_val = nullptr;
                 if (decl->kind == AST_Declaration_Kind::VARIABLE) {
                     source_val = bc_find_variable(builder, decl);
-                }
-                else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
+                } else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
                     source_val = bc_find_parameter(builder, decl);
+                } else if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+                    assert(false && "Cannot take the lvalue of a constant declaration.");
                 } else {
                     assert(false);
                 }
