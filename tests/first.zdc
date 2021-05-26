@@ -67,19 +67,19 @@ main :: func () -> s64
     std.print_num(global_int);
     std.println(" ");
 
-    // count := 4;
-    // while (count > 0) {
-    //     if (count == 4) {
-    //         std.println("Welcome!");
-    //     } else if (count == 3) {
-    //         std.println("Welcome 2");
-    //     } else {
-    //         std.println("Again...??");
-    //     }
+    count := 4;
+    while (count > 0) {
+        if (count == 4) {
+            std.println("Welcome!");
+        } else if (count == 3) {
+            std.println("Welcome 2");
+        } else {
+            std.println("Again...??");
+        }
 
-    //     std.print("Hello World!\n");
-    //     count = count - 1;
-    // }
+        std.print("Hello World!\n");
+        count = count - 1;
+    }
 
     // print_alphabet := true;
     // print_vector : bool = true;
