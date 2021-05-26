@@ -14,7 +14,6 @@ namespace Zodiac
             .build_data = build_data,
             .running = false,
             .aborted = false,
-            .global_data = nullptr,
             .exit_code = 0,
         };
 
@@ -22,8 +21,6 @@ namespace Zodiac
         stack_init(allocator, &result.local_stack);
         stack_init(allocator, &result.arg_stack);
         stack_init(allocator, &result.frames);
-
-        array_init(allocator, &result.globals);
 
         const auto mb = 1024 * 1024;
         auto stack_size = 1 * mb;
@@ -41,18 +38,15 @@ namespace Zodiac
         stack_free(&interp->arg_stack);
         stack_free(&interp->frames);
 
-        array_free(&interp->globals);
-
         free(interp->allocator, interp->alloc_stack);
-        free(interp->allocator, interp->global_data);
 
         *interp = {};
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-                           Array<BC_Global_Info> globals, int64_t global_data_size)
+                           Array<BC_Global_Info> global_info, int64_t global_size)
     {
-        interpreter_initialize_globals(interp, globals, global_data_size);
+        interpreter_initialize_globals(interp, global_info, global_size);
 
         Interp_Stack_Frame first_frame = {
             .function = entry_func,
@@ -119,7 +113,14 @@ namespace Zodiac
                     break;
                 }
 
-                case STORE_GLOBAL: assert(false);
+                case STORE_GLOBAL: {
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.a);
+                    Interpreter_Value source = interp_load_value(interp, inst.b);
+
+                    assert(dest.type == source.type);
+                    interp_store(interp, source, dest);
+                    break;
+                }
 
                 case STORE_PTR: {
                     assert(inst.a->kind == BC_Value_Kind::TEMP);
@@ -967,33 +968,8 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::GLOBAL: {
-                Interpreter_LValue global_lval = interp_load_lvalue(interp, bc_val);
-                result.type = global_lval.type;
-                auto ptr  = interp->global_data + global_lval.index;
-                switch (global_lval.type->kind) {
-                    case AST_Type_Kind::INVALID: assert(false);
-                    case AST_Type_Kind::VOID: assert(false);
-
-                    case AST_Type_Kind::INTEGER: {
-                        switch (global_lval.type->bit_size) {
-                            default: assert(false);
-                            case 8: result.integer_literal.u8 = *(uint8_t*)ptr;
-                            case 16: result.integer_literal.u16 = *(uint16_t*)ptr;
-                            case 32: result.integer_literal.u32 = *(uint32_t*)ptr;
-                            case 64: result.integer_literal.u64 = *(uint64_t*)ptr;
-                        }
-                        break;
-                    }
-
-                    case AST_Type_Kind::FLOAT: assert(false);
-                    case AST_Type_Kind::BOOL: assert(false);
-                    case AST_Type_Kind::POINTER: assert(false);
-                    case AST_Type_Kind::FUNCTION: assert(false);
-                    case AST_Type_Kind::STRUCTURE: assert(false);
-                    case AST_Type_Kind::UNION: assert(false);
-                    case AST_Type_Kind::ENUM: assert(false);
-                    case AST_Type_Kind::ARRAY: assert(false);
-                }
+                assert(interp->globals.count > bc_val->global.index);
+                result = interp->globals[bc_val->global.index];
                 break;
             }
 
@@ -1061,7 +1037,9 @@ namespace Zodiac
                 assert(bc_val->type->kind == AST_Type_Kind::POINTER);
                 assert(interp->globals.count > bc_val->global.index);
 
-                result = interp->globals[bc_val->global.index];
+                result.kind = Interp_LValue_Kind::GLOBAL;
+                result.index = bc_val->global.index;
+                result.type = bc_val->type->pointer.base;
                 break;
             }
 
@@ -1088,25 +1066,26 @@ namespace Zodiac
             case Interp_LValue_Kind::INVALID: assert(false);
 
             case Interp_LValue_Kind::TEMP: {
-                dest_ptr = &interp->temp_stack.buffer[dest.index];
                 assert(stack_count(&interp->temp_stack) > dest.index);
-                break;
-            }
-
-            case Interp_LValue_Kind::GLOBAL: {
-                assert(false);
+                dest_ptr = &interp->temp_stack.buffer[dest.index];
                 break;
             }
 
             case Interp_LValue_Kind::ALLOCL: {
-                dest_ptr = &interp->local_stack.buffer[dest.index];
                 assert(stack_count(&interp->local_stack) > dest.index);
+                dest_ptr = &interp->local_stack.buffer[dest.index];
                 break;
             }
 
             case Interp_LValue_Kind::PARAM: {
-                dest_ptr = &interp->arg_stack.buffer[dest.index];
                 assert(stack_count(&interp->arg_stack) > dest.index);
+                dest_ptr = &interp->arg_stack.buffer[dest.index];
+                break;
+            }
+
+            case Interp_LValue_Kind::GLOBAL: {
+                assert(interp->globals.count > dest.index);
+                dest_ptr = &interp->globals[dest.index];
                 break;
             }
         }
@@ -1265,48 +1244,56 @@ namespace Zodiac
     void interpreter_initialize_globals(Interpreter *interp, Array<BC_Global_Info> global_info,
                                         int64_t global_data_size)
     {
-        if (global_info.count < 1) {
-            assert(global_data_size == 0);
-            return;
-        }
+        if (global_info.count < 1) return;
 
-        assert(global_data_size > 0);
+        array_init(interp->allocator, &interp->globals, global_info.count);
 
-        assert(interp->global_data == nullptr);
-
-        interp->global_data = alloc_array<uint8_t>(interp->allocator, global_data_size);
-        int64_t offset = 0;
+        assert(global_data_size == 0);
 
         for (int64_t i = 0; i < global_info.count; i++) {
-            auto global = global_info[i];
+            auto info = global_info[i];
+            auto type = info.declaration->type;
+            Interpreter_Value global_value = { };
+            global_value.type = type;
 
-            Interpreter_LValue global_val = {
-                .kind = Interp_LValue_Kind::GLOBAL,
-                .type = global.declaration->type,
-                .index = offset,
-            };
+            array_append(&interp->globals, global_value);
 
-            auto ptr = interp->global_data + offset;
+            if (type->kind == AST_Type_Kind::ARRAY ||
+                type->kind == AST_Type_Kind::STRUCTURE ||
+                type->kind == AST_Type_Kind::UNION) {
 
-            assert(global_val.type->bit_size % 8 == 0);
-            auto byte_size = global_val.type->bit_size / 8;
-            offset += byte_size;
-
-            if (global.has_initializer) {
-                interp_store_constant(interp, global.init_const_val, ptr);
-            } else {
-                memset(ptr, 0, byte_size);
+                assert(false);
+                // if (info.has_initializer) {
+                //     interp_store_constant(interp, info.init_const_val, dest_ptr);
+                // } else {
+                //     assert(type->bit_size % 8 == 0);
+                //     auto byte_size = type->bit_size / 8;
+                //     memset(dest_ptr, 0 , byte_size);
+                // }
+            } else  if (info.has_initializer) {
+                Interpreter_LValue dest_lval = {
+                    .kind = Interp_LValue_Kind::GLOBAL,
+                    .type = type,
+                    .index = i,
+                };
+                interp_store_constant(interp, info.init_const_val, dest_lval);
             }
 
-            array_append(&interp->globals, global_val);
         }
+    }
 
+    void interp_store_constant(Interpreter *interp, Const_Value const_val,
+                               Interpreter_LValue dest)
+    {
+        assert(const_val.type->kind == AST_Type_Kind::INTEGER);
+
+        Interpreter_Value val = { .type = const_val.type, .integer_literal = const_val.integer };
+        interp_store(interp, val, dest);
     }
 
     void interp_store_constant(Interpreter *interp, Const_Value const_val, void *dest_ptr)
     {
         assert(const_val.type->kind == AST_Type_Kind::INTEGER);
-
         assert(const_val.type->pointer_to);
 
         Interpreter_Value val = { .type = const_val.type, .integer_literal = const_val.integer };

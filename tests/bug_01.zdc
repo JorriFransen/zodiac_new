@@ -4,13 +4,22 @@ std :: import std;
 #run main();
 
 uninitialized_global : s64;
-initialized_global : s64 = 101;
+initialized_global : s64 = 302;
 
 main :: func () -> int
 {
     std.print("uninitialized_global: ");
     std.print_numln(uninitialized_global);
+    std.print("initialized_global: ");
+    std.print_numln(initialized_global);
+
+    t := initialized_global;
+    uninitialized_global = initialized_global * 2;
+    initialized_global = initialized_global / 3;
+    
     std.print("uninitialized_global: ");
+    std.print_numln(uninitialized_global);
+    std.print("initialized_global: ");
     std.print_numln(initialized_global);
 
     return 0;

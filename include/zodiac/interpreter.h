@@ -66,8 +66,7 @@ namespace Zodiac
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 
-        Array<Interpreter_LValue> globals = {};
-        uint8_t *global_data = nullptr;
+        Array<Interpreter_Value> globals = {};
 
         // @TODO: @CLEANUP: This should really be a stack allocator, we can
         //                   'save' restore points in the stack frames.
@@ -84,7 +83,7 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp);
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-                           Array<BC_Global_Info> globals, int64_t global_data_size);
+                           Array<BC_Global_Info> global_info, int64_t global_size);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
@@ -98,6 +97,7 @@ namespace Zodiac
     void interpreter_initialize_globals(Interpreter *interp, Array<BC_Global_Info> global_info,
                                         int64_t global_data_size);
 
+    void interp_store_constant(Interpreter *interp, Const_Value const_val, Interpreter_LValue dest);
     void interp_store_constant(Interpreter *interp, Const_Value const_val, void *dest_ptr);
     // void interpreter_initialize_foreigns(Interpreter *interp,
     //                                      Array<BC_Function *> foreign_functions);

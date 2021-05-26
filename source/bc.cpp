@@ -210,8 +210,15 @@ namespace Zodiac
 
         array_append(&builder->globals, result);
 
-        assert(result.declaration->type->bit_size % 8 == 0);
-        builder->global_data_size += (result.declaration->type->bit_size / 8);
+        auto type = result.declaration->type;
+        assert(type->bit_size % 8 == 0);
+
+        if (type->kind == AST_Type_Kind::ARRAY ||
+            type->kind == AST_Type_Kind::STRUCTURE ||
+            type->kind == AST_Type_Kind::UNION) {
+
+            builder->global_data_size += (type->bit_size / 8);
+        }
 
         return result;
     }
