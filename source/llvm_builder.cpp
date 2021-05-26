@@ -920,9 +920,8 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::GLOBAL: {
-                assert(false);
-                // assert(bc_value->global.index < builder->globals.count);
-                // return builder->globals[bc_value->global.index];
+                assert(bc_value->global.index < builder->globals.count);
+                return builder->globals[bc_value->global.index];
                 break;
             }
 

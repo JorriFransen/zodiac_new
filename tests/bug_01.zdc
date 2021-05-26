@@ -4,7 +4,8 @@ std :: import std;
 #run main();
 
 uninitialized_global : s64;
-initialized_global : s64 = 302;
+// initialized_global : s64 = 302;
+initialized_global : s64 = 101;
 
 main :: func () -> int
 {
@@ -13,7 +14,6 @@ main :: func () -> int
     std.print("initialized_global: ");
     std.print_numln(initialized_global);
 
-    t := initialized_global;
     uninitialized_global = initialized_global * 2;
     initialized_global = initialized_global / 3;
     
