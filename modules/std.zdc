@@ -143,3 +143,9 @@ print_double :: func (d: double)
 
     return;
 }
+
+print_doubleln :: func (d: double)
+{
+    print_double(d);
+    print_char('\n');
+}

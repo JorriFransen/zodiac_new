@@ -871,7 +871,28 @@ namespace Zodiac
                 }
 
                 case U_TO_F: assert(false);
-                case F_TO_F: assert(false);
+
+                case F_TO_F: {
+                    Interpreter_Value operand = interp_load_value(interp, inst.a);
+                    Interpreter_LValue dest_lvalue = interp_load_lvalue(interp, inst.result);
+
+                    assert(operand.type->kind == AST_Type_Kind::FLOAT);
+                    assert(dest_lvalue.type->kind == AST_Type_Kind::FLOAT);
+                    assert(operand.type != dest_lvalue.type);
+
+                    Interpreter_Value result_value = {
+                        .type = dest_lvalue.type,
+                    };
+
+                    switch (dest_lvalue.type->bit_size) {
+                        default: assert(false);
+                        case 32: result_value.float_literal.r32 = operand.float_literal.r64; break;
+                        case 64: result_value.float_literal.r64 = operand.float_literal.r32; break;
+                    }
+
+                    interp_store(interp, result_value, dest_lvalue);
+                    break;
+                }
 
                 case PTR_TO_INT: {
                     assert(inst.a->type->kind == AST_Type_Kind::POINTER);
