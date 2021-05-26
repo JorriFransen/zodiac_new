@@ -1236,7 +1236,15 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT: assert(false);
+            case AST_Type_Kind::FLOAT: {
+                switch (source.type->bit_size) {
+                    default: assert(false);
+                    case 32: *(float*)dest_ptr = source.float_literal.r32;
+                    case 64: *(float*)dest_ptr = source.float_literal.r64;
+                }
+                break;
+            }
+
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
