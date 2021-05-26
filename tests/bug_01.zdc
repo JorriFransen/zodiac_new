@@ -3,13 +3,13 @@ std :: import std;
 
 #run main();
 
-// uninitialized_global : s64;
+uninitialized_global : s64;
 initialized_global : s64 = 101;
 
 main :: func () -> int
 {
-    // std.print("uninitialized_global: ");
-    // std.print_numln(uninitialized_global);
+    std.print("uninitialized_global: ");
+    std.print_numln(uninitialized_global);
     std.print("uninitialized_global: ");
     std.print_numln(initialized_global);
 

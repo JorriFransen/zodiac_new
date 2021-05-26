@@ -414,7 +414,8 @@ Resolve_Result finish_resolving(Resolver *resolver)
                 Interpreter interp =
                     interpreter_create(resolver->allocator, resolver->build_data);
 
-                interpreter_start(&interp, job.wrapper);
+                interpreter_start(&interp, job.wrapper, resolver->bytecode_builder.globals,
+                                  resolver->bytecode_builder.global_data_size);
 
                 if (interp.build_data->options->verbose) {
                     printf("Interpreter exited with code: %" PRId64

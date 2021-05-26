@@ -131,7 +131,9 @@ namespace Zodiac
 
         Array<BC_Local_Variable_Info> parameters = {};
         Array<BC_Local_Variable_Info> locals = {};
+
         Array<BC_Global_Info> globals = {};
+        int64_t global_data_size = 0;
 
         Array<BC_Value *> string_literals = {};
 

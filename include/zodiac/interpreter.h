@@ -43,6 +43,7 @@ namespace Zodiac
         TEMP,
         ALLOCL,
         PARAM,
+        GLOBAL,
     };
 
     struct Interpreter_LValue
@@ -65,6 +66,9 @@ namespace Zodiac
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 
+        Array<Interpreter_LValue> globals = {};
+        uint8_t *global_data = nullptr;
+
         // @TODO: @CLEANUP: This should really be a stack allocator, we can
         //                   'save' restore points in the stack frames.
         //                   This way we can keep growing, without invalidating
@@ -79,7 +83,8 @@ namespace Zodiac
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data);
     void interpreter_free(Interpreter *interp);
 
-    void interpreter_start(Interpreter *interp, BC_Function *entry_func);
+    void interpreter_start(Interpreter *interp, BC_Function *entry_func,
+                           Array<BC_Global_Info> globals, int64_t global_data_size);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
@@ -90,12 +95,10 @@ namespace Zodiac
     void interp_store(Interpreter *interp, void *source_ptr, AST_Type *source_type,
                       Interpreter_LValue dest, bool allow_type_mismatch = false);
 
-    // void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-    //                        int64_t global_data_size, Array<BC_Global_Info> global_info,
-    //                        Array<BC_Function *> foreign_functions);
+    void interpreter_initialize_globals(Interpreter *interp, Array<BC_Global_Info> global_info,
+                                        int64_t global_data_size);
 
-    // void interpreter_initialize_globals(Interpreter *interp, int64_t global_data_size,
-    //                                     Array<BC_Global_Info> global_info);
+    void interp_store_constant(Interpreter *interp, Const_Value const_val, void *dest_ptr);
     // void interpreter_initialize_foreigns(Interpreter *interp,
     //                                      Array<BC_Function *> foreign_functions);
 
@@ -105,13 +108,4 @@ namespace Zodiac
 
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
                                                int64_t arg_count);
-
-    // void *interpreter_load_lvalue(Interpreter *interp, BC_Value *value);
-
-    // void interpreter_free(Interpreter *interp);
-
-    // void interp_store(AST_Type *type, void *dest_ptr, void *source_ptr);
-    // void interp_store_constant(void *dest, Const_Value val);
-
-    // void *interp_stack_ptr(Interpreter *interp, int64_t index, int64_t byte_size);
 }

@@ -22,6 +22,7 @@ namespace Zodiac
         array_init(allocator, &result.string_literals);
         stack_init(allocator, &result.break_block_stack);
 
+        result.global_data_size = 0;
         result.next_temp_index = 0;
         result.run_wrapper_count = 0;
 
@@ -205,7 +206,12 @@ namespace Zodiac
             .global_value = bc_global_new(builder, decl->type, decl->identifier->atom),
         };
 
+        result.global_value->global.index = builder->globals.count;
+
         array_append(&builder->globals, result);
+
+        assert(result.declaration->type->bit_size % 8 == 0);
+        builder->global_data_size += (result.declaration->type->bit_size / 8);
 
         return result;
     }
