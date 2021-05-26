@@ -227,10 +227,10 @@ namespace Zodiac
     assert(lhs.type == rhs.type); \
     assert(IS_CMP_OP(op)); \
     assert(dest.type == Builtin::type_bool); \
-    auto type = dest.type; \
+    auto type = lhs.type; \
     if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
     Interpreter_Value r = { \
-        .type = type, \
+        .type = dest.type, \
     }; \
     switch (type->bit_size) { \
         BINOP_CMP_INT_CASE(sign_, 8, op) \
@@ -261,6 +261,7 @@ namespace Zodiac
 
                 case EQ_S:   BINOP_CMP_INT(==);
                 case NEQ_S:  BINOP_CMP_INT(!=);
+
                 case LT_S:   BINOP_CMP_INT(<);
                 case LTEQ_S: BINOP_CMP_INT(<=);
                 case GT_S:   BINOP_CMP_INT(>);

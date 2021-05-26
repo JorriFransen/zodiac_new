@@ -15,7 +15,7 @@ main :: func () -> int
     std.print_numln(initialized_global);
 
     uninitialized_global = initialized_global * 2;
-    initialized_global = initialized_global / 3;
+    initialized_global = initialized_global / 2;
     
     std.print("uninitialized_global: ");
     std.print_numln(uninitialized_global);
