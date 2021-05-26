@@ -625,7 +625,71 @@ namespace Zodiac
                     break;
                 }
 
-                case AGG_OFFSET: assert(false);
+                case AGG_OFFSET: {
+                    auto index_val = interp_load_value(interp, inst.b);
+                    assert(index_val.type->kind == AST_Type_Kind::INTEGER);
+
+                    auto result_val = interp_load_lvalue(interp, inst.result);
+                    assert(result_val.type);
+
+                    AST_Type *struct_type = nullptr;
+
+                    void *ptr = nullptr;
+
+                    if (inst.a->kind == BC_Value_Kind::ALLOCL) {
+                        Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
+                        if (pointer_lval.type->kind == AST_Type_Kind::STRUCTURE) {
+                            Interpreter_Value *pointer_val =
+                                &interp->local_stack.buffer[pointer_lval.index];
+                            assert(pointer_val->pointer);
+                            ptr = pointer_val->pointer;
+                            struct_type = pointer_lval.type;
+                        } else {
+                            assert(false);
+                        }
+                    } else if (inst.a->kind == BC_Value_Kind::TEMP) {
+                        auto pointer_val = interp_load_value(interp, inst.a);
+                        assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
+                        assert(pointer_val.type->pointer.base->kind == AST_Type_Kind::STRUCTURE);
+                        ptr = pointer_val.pointer;
+                        struct_type = pointer_val.type->pointer.base;
+                    } else {
+                        assert(false);
+                        // ptr = *(void**)_ptr_ptr;
+                    }
+
+                    assert(ptr);
+                    assert(struct_type);
+
+                    assert(result_val.type->kind == AST_Type_Kind::POINTER);
+#ifndef NDEBUG
+                    AST_Type *member_type = result_val.type->pointer.base;
+#endif
+
+                    assert(index_val.type == Builtin::type_u32);
+                    auto index = index_val.integer_literal.u32;
+
+                    assert(struct_type->structure.member_types.count > index);
+                    assert(struct_type->structure.member_types[index] == member_type);
+
+                    int64_t offset = 0;
+                    for (int64_t i = 0; i < index; i++) {
+                        auto mem_type = struct_type->structure.member_types[i];
+                        assert(mem_type->bit_size % 8 == 0);
+                        auto byte_size = mem_type->bit_size / 8;
+                        offset += byte_size;
+                    }
+
+                    void *result_ptr = ((uint8_t*)ptr) + offset;
+
+                    Interpreter_Value result_ptr_val = {
+                        .type = result_val.type,
+                        .pointer = result_ptr,
+                    };
+
+                    interp_store(interp, result_ptr_val, result_val);
+                    break;
+                }
 
                 case ZEXT: {
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
@@ -969,7 +1033,18 @@ namespace Zodiac
                 assert(stack_count(&interp->temp_stack) > alloc_index);
 
                 Interpreter_Value *value = &interp->local_stack.buffer[alloc_index];
-                result.pointer = &value->integer_literal;
+
+                AST_Type *base_type = bc_val->type->pointer.base;
+
+                if (base_type->kind == AST_Type_Kind::ARRAY ||
+                    base_type->kind == AST_Type_Kind::STRUCTURE ||
+                    base_type->kind == AST_Type_Kind::UNION) {
+
+                    assert(value->pointer);
+                    result.pointer = value->pointer;
+                } else {
+                    result.pointer = &value->integer_literal;
+                }
                 break;
             }
 
