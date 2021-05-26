@@ -3,33 +3,14 @@ std :: import std;
 
 #run main();
 
-uninitialized_global : s64;
-// initialized_global : s64 = 302;
-initialized_global : s64 = 101;
-
 main :: func () -> int
 {
-    std.print("uninitialized_global: ");
-    std.print_numln(uninitialized_global);
-    std.print("initialized_global: ");
-    std.print_numln(initialized_global);
-
-    uninitialized_global = initialized_global * 2;
-    initialized_global = initialized_global / 2;
-    
-    std.print("uninitialized_global: ");
-    std.print_numln(uninitialized_global);
-    std.print("initialized_global: ");
-    std.print_numln(initialized_global);
-
-    return 0;
-
-    // result := times_two(42);
-    // std.println("returned from times_two...");
-    // return result;
+    result := times_two(42);
+    std.println("returned from times_two...");
+    return result;
 }
 
-// times_two :: func (x: int) -> int
-// {
-//     return x * 2;
-// }
+times_two :: func (x: int) -> int
+{
+    return x * 2;
+}

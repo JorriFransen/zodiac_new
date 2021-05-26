@@ -2143,8 +2143,7 @@ namespace Zodiac
             case SWITCH: assert(false);
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
-
-            case AGG_OFFSET: assert(false);
+            case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
 
             case ZEXT: string_builder_append(sb, "ZEXT "); break;
             case SEXT: string_builder_append(sb, "SEXT "); break;
@@ -2285,6 +2284,7 @@ namespace Zodiac
 
             case BC_Value_Kind::NULL_LITERAL: {
                 string_builder_append(sb, "null");
+                break;
             }
 
             case BC_Value_Kind::TEMP: {

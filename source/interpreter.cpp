@@ -95,16 +95,19 @@ namespace Zodiac
 
                 case STOREL: {
                     assert(inst.a->kind == BC_Value_Kind::ALLOCL);
+
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.a);
                     Interpreter_Value source = interp_load_value(interp, inst.b);
 
                     assert(dest.type == source.type);
                     interp_store(interp, source, dest);
+
                     break;
                 }
 
                 case STORE_ARG: {
                     assert(inst.a->kind == BC_Value_Kind::PARAM);
+
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.a);
                     Interpreter_Value source = interp_load_value(interp, inst.b);
 
@@ -136,8 +139,11 @@ namespace Zodiac
                 }
 
                 case LOADL: {
-                    Interpreter_Value value = interp_load_value(interp, inst.a);
+                    Interpreter_LValue source_lval = interp_load_lvalue(interp, inst.a);
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
+
+                    assert(source_lval.type == dest.type);
+                    Interpreter_Value value = interp->local_stack.buffer[source_lval.index];
 
                     assert(dest.type == value.type);
                     interp_store(interp, value, dest);
@@ -942,7 +948,10 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::NULL_LITERAL: assert(false);
+            case BC_Value_Kind::NULL_LITERAL: {
+                result.pointer = nullptr;
+                break;
+            }
 
             case BC_Value_Kind::TEMP: {
                 auto frame = stack_top_ptr(&interp->frames);
@@ -953,10 +962,14 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::ALLOCL: {
+                assert(bc_val->type->kind == AST_Type_Kind::POINTER);
+
                 auto frame = stack_top_ptr(&interp->frames);
                 auto alloc_index = frame->first_alloc_index + bc_val->allocl.index;
                 assert(stack_count(&interp->temp_stack) > alloc_index);
-                result = interp->local_stack.buffer[alloc_index];
+
+                Interpreter_Value *value = &interp->local_stack.buffer[alloc_index];
+                result.pointer = &value->integer_literal;
                 break;
             }
 
@@ -1233,7 +1246,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::POINTER: assert(false);
+            case AST_Type_Kind::POINTER:
+            {
+                dest_ptr->pointer = *(void**)source_ptr;
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
             case AST_Type_Kind::STRUCTURE: assert(false);
             case AST_Type_Kind::UNION: assert(false);
