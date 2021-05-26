@@ -625,7 +625,45 @@ namespace Zodiac
 
     void bc_emit_for_statement(BC_Builder *builder, AST_Statement *stmt)
     {
-        assert(false && "bc_emit_for_statement is not implemented!!!");
+        assert(stmt->kind == AST_Statement_Kind::FOR);
+
+        auto func = builder->current_function;
+
+        BC_Block *cond_block = bc_new_block(builder, "for_cond");
+        BC_Block *body_block = bc_new_block(builder, "for_body");
+        BC_Block *post_for_block = bc_new_block(builder, "post_for");
+
+        for (int64_t i = 0; i < stmt->for_stmt.init_statements.count; i++) {
+            auto init_stmt = stmt->for_stmt.init_statements[i];
+            bc_emit_statement(builder, init_stmt);
+        }
+        bc_emit_jump(builder, cond_block);
+
+        bc_append_block(builder, func, cond_block);
+        bc_set_insert_point(builder, cond_block);
+
+        BC_Value *cond_val = bc_emit_expression(builder, stmt->for_stmt.cond_expr);
+        bc_emit_jump_if(builder, cond_val, body_block, post_for_block);
+
+        bc_append_block(builder, func, body_block);
+        bc_set_insert_point(builder, body_block);
+
+        if (stmt->for_stmt.it_decl) {
+            auto it_allocl = bc_find_variable(builder, stmt->for_stmt.it_decl);
+            auto it_init_expr = stmt->for_stmt.it_decl->variable.init_expression;
+            auto it_val = bc_emit_expression(builder, it_init_expr);
+            bc_emit_store(builder, it_allocl, it_val);
+        }
+
+        bc_emit_statement(builder, stmt->for_stmt.body_stmt);
+        for (int64_t i = 0; i < stmt->for_stmt.step_statements.count; i++) {
+            auto step_stmt = stmt->for_stmt.step_statements[i];
+            bc_emit_statement(builder, step_stmt);
+        }
+        bc_emit_jump(builder, cond_block);
+
+        bc_append_block(builder, func, post_for_block);
+        bc_set_insert_point(builder, post_for_block);
     }
 
     void bc_emit_if_statement(BC_Builder *builder, AST_Statement *stmt)
