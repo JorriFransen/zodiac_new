@@ -960,7 +960,20 @@ namespace Zodiac
                 }
 
                 case PTR_TO_PTR: assert(false);
-                case SIZEOF: assert(false);
+
+                case SIZEOF: {
+                    assert(inst.a->kind == BC_Value_Kind::TYPE);
+                    auto dest = interp_load_lvalue(interp, inst.result);
+
+                    assert(dest.type == Builtin::type_s64);
+                    assert(inst.a->type->bit_size % 8 == 0);
+                    int64_t size = inst.a->type->bit_size / 8;
+
+                    assert(dest.type->pointer_to);
+                    interp_store(interp, &size, dest.type->pointer_to, dest);
+                    break;
+                }
+
                 case OFFSETOF: assert(false);
                 case EXIT: assert(false);
 

@@ -2038,8 +2038,8 @@ namespace Zodiac
 
     BC_Value *bc_type_value_new(BC_Builder *builder, AST_Type *type)
     {
-        assert(false && "bc_type_value_new is not implemented!!!");
-        return nullptr;
+        auto result = bc_value_new(builder, BC_Value_Kind::TYPE, type);
+        return result;
     }
 
     BC_Value *bc_get_string_literal(BC_Builder *builder, const String &str)
