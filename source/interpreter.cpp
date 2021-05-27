@@ -613,11 +613,16 @@ namespace Zodiac
                     } else if (inst.a->kind == BC_Value_Kind::TEMP) {
                         auto pointer_val = interp_load_value(interp, inst.a);
                         assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
-                        assert(result_val.type == pointer_val.type);
+                        if (pointer_val.type->pointer.base->kind == AST_Type_Kind::ARRAY) {
+                            auto array_type = pointer_val.type->pointer.base;
+                            assert(array_type->array.element_type->pointer_to);
+                            assert(result_val.type == array_type->array.element_type->pointer_to);
+                        } else {
+                            assert(result_val.type == pointer_val.type);
+                        }
                         ptr = pointer_val.pointer;
                     } else {
                         assert(false);
-                        // ptr = *(void**)_ptr_ptr;
                     }
 
                     AST_Type *element_type = result_val.type->pointer.base;

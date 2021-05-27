@@ -2939,8 +2939,11 @@ bool try_resolve_aggregate_dereference(Resolver *resolver,
     //     return false;
     // }
 
+    if (!(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID)) {
+        return false;
+    }
+
     assert(child_decl->type);
-    assert(child_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
     assert(child_decl->flags & AST_NODE_FLAG_TYPED);
 
     AST_Declaration *aggregate_decl = nullptr;
