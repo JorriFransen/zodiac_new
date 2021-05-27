@@ -99,7 +99,20 @@ namespace Zodiac
                     Interpreter_Value source = interp_load_value(interp, inst.b);
 
                     assert(dest.type == source.type);
-                    interp_store(interp, source, dest);
+
+                    if (dest.type->kind == AST_Type_Kind::ARRAY ||
+                        dest.type->kind == AST_Type_Kind::STRUCTURE ||
+                        dest.type->kind == AST_Type_Kind::ARRAY) {
+
+                        assert(dest.kind == Interp_LValue_Kind::ALLOCL);
+                        auto dest_ptr = interp->local_stack.buffer[dest.index];
+                        assert(dest_ptr.pointer);
+                        assert(dest.type->bit_size % 8 == 0);
+                        auto byte_size = dest.type->bit_size / 8;
+                        memcpy(dest_ptr.pointer, source.pointer, byte_size);
+                    } else {
+                        interp_store(interp, source, dest);
+                    }
 
                     break;
                 }
@@ -1228,7 +1241,12 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FUNCTION: assert(false);
-            case AST_Type_Kind::STRUCTURE: assert(false);
+
+            case AST_Type_Kind::STRUCTURE: {
+                dest_ptr->pointer = source.pointer;
+                break;
+            }
+
             case AST_Type_Kind::UNION: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
@@ -1269,7 +1287,9 @@ namespace Zodiac
             case AST_Type_Kind::BOOL: assert(false);
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
+
             case AST_Type_Kind::STRUCTURE: assert(false);
+
             case AST_Type_Kind::UNION: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
             case AST_Type_Kind::ARRAY: assert(false);
