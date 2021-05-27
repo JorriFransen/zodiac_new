@@ -624,7 +624,9 @@ namespace Zodiac
                         auto pointer_val = interp_load_value(interp, inst.a);
                         assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
                         if (pointer_val.type->pointer.base->kind == AST_Type_Kind::ARRAY) {
+#ifndef NDEBUG
                             auto array_type = pointer_val.type->pointer.base;
+#endif
                             assert(array_type->array.element_type->pointer_to);
                             assert(result_val.type == array_type->array.element_type->pointer_to);
                         } else {
