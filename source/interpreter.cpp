@@ -75,7 +75,6 @@ namespace Zodiac
             stack_push(&interp->temp_stack, temp);
         }
 
-        Interp_Stack_Frame *frame = nullptr;
 
         interp->running = true;
 
@@ -83,7 +82,7 @@ namespace Zodiac
 
             bool advance_ip = true;
 
-            frame = stack_top_ptr(&interp->frames);
+            auto frame = stack_top_ptr(&interp->frames);
             auto inst = frame->ip.block->instructions[frame->ip.index];
 
             switch (inst.op) {
@@ -291,7 +290,7 @@ namespace Zodiac
 #undef BINOP_CMP_UINT
 
 #define BINOP_FLOAT_CASE(op, size) case size: \
-    r.float_literal.r##size = lhs.float_literal.r##size op rhs.float_literal.r##size;
+    r.float_literal.r##size = lhs.float_literal.r##size op rhs.float_literal.r##size; break;
 
 #define BINOP_FLOAT(op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
@@ -467,11 +466,12 @@ namespace Zodiac
                         stack_push(&interp->local_stack, alloc_value);
                     }
 
-                    stack_push(&interp->frames, new_frame);
-
                     advance_ip = false;
                     frame->ip.index += 1;
                     assert(frame->ip.index <= frame->ip.block->instructions.count);
+
+                    stack_push(&interp->frames, new_frame);
+                    frame = stack_peek_ptr(&interp->frames, 1);
 
                     break;
                 }
@@ -483,29 +483,29 @@ namespace Zodiac
                     Interpreter_Value return_value = interp_load_value(interp, inst.a);
                     assert(return_value.type);
 
-                    auto old_frame = stack_pop(&interp->frames);
+                    auto current_frame = stack_pop(&interp->frames);
 
-                    if (old_frame.function->parameters.count) {
-                        stack_pop(&interp->arg_stack, old_frame.function->parameters.count);
+                    if (current_frame.function->parameters.count) {
+                        stack_pop(&interp->arg_stack, current_frame.function->parameters.count);
                     }
 
-                    if (old_frame.function->locals.count) {
-                        stack_pop(&interp->local_stack, old_frame.function->locals.count);
+                    if (current_frame.function->locals.count) {
+                        stack_pop(&interp->local_stack, current_frame.function->locals.count);
                     }
 
-                    assert(old_frame.result_index >= 0);
-                    assert(stack_count(&interp->temp_stack) > old_frame.result_index);
+                    assert(current_frame.result_index >= 0);
+                    assert(stack_count(&interp->temp_stack) > current_frame.result_index);
 
-                    if (old_frame.function->temps.count) {
-                        stack_pop(&interp->temp_stack, old_frame.function->temps.count);
+                    if (current_frame.function->temps.count) {
+                        stack_pop(&interp->temp_stack, current_frame.function->temps.count);
                     }
 
-                    interp->alloc_sp = old_frame.previous_alloc_sp;
+                    interp->alloc_sp = current_frame.previous_alloc_sp;
 
                     Interpreter_LValue dest = {
                         .kind = Interp_LValue_Kind::TEMP,
                         .type = return_value.type,
-                        .index = old_frame.result_index,
+                        .index = current_frame.result_index,
                     };
 
                     interp_store(interp, return_value, dest);
@@ -706,10 +706,10 @@ namespace Zodiac
     uint##size##_t new_val = 0; \
     switch (operand.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.u8; \
-        case 16: new_val = operand.integer_literal.u16; \
-        case 32: new_val = operand.integer_literal.u32; \
-        case 64: new_val = operand.integer_literal.u64; \
+        case 8: new_val = operand.integer_literal.u8; break; \
+        case 16: new_val = operand.integer_literal.u16; break; \
+        case 32: new_val = operand.integer_literal.u32; break; \
+        case 64: new_val = operand.integer_literal.u64; break; \
     } \
     interp_store(interp, &new_val, dest_lval.type->pointer_to, dest_lval); \
     break; \
@@ -739,10 +739,10 @@ namespace Zodiac
     int##size##_t new_val; \
     switch (dest_lvalue.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.s8; \
-        case 16: new_val = operand.integer_literal.s16; \
-        case 32: new_val = operand.integer_literal.s32; \
-        case 64: new_val = operand.integer_literal.s64; \
+        case 8: new_val = operand.integer_literal.s8; break;\
+        case 16: new_val = operand.integer_literal.s16; break;\
+        case 32: new_val = operand.integer_literal.s32; break;\
+        case 64: new_val = operand.integer_literal.s64; break;\
     } \
     auto source_type = dest_lvalue.type->pointer_to; \
     assert(source_type); \
@@ -773,10 +773,10 @@ namespace Zodiac
     uint##size##_t new_val; \
     switch (operand.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.u8; \
-        case 16: new_val = operand.integer_literal.u16; \
-        case 32: new_val = operand.integer_literal.u32; \
-        case 64: new_val = operand.integer_literal.u64; \
+        case 8: new_val = operand.integer_literal.u8; break;\
+        case 16: new_val = operand.integer_literal.u16; break;\
+        case 32: new_val = operand.integer_literal.u32; break;\
+        case 64: new_val = operand.integer_literal.u64; break;\
     } \
     auto source_type = dest_lvalue.type->pointer_to; \
     assert(source_type); \

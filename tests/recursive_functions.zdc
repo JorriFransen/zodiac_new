@@ -7,7 +7,11 @@ main :: func() -> s64 {
 
     std.print("Recursive functions test\n");
 
-    for (i : u64 = 0; i < 13; i += 1) {
+    iterate(10);
+
+    std.print_char('\n');
+
+    for (i : u64 = 0; i < 31; i += 1) {
         fi := fib_iterative(i);
         fr := fib_recursive(i);
 
@@ -24,6 +28,21 @@ main :: func() -> s64 {
     }
 
     return 0;
+}
+
+iterate :: func (i : u64)
+{
+    std.print("Calling iterate(");
+    std.print_num(@cast(s64, i));
+    std.println(")");
+
+    if (i > 1) {
+        iterate(i - 1);
+    }
+
+    std.print("Returning from iterate(");
+    std.print_num(@cast(s64, i));
+    std.println(")");
 }
 
 fib_recursive :: func (n: u64) -> u64 {

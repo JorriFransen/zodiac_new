@@ -96,7 +96,7 @@ namespace Zodiac
         return stack_peek_ptr(stack);
     }
 
-    // Returns the element that is popped of last
+    // Returns the element that is popped of first
     template <typename Element_Type>
     Element_Type stack_pop(Stack<Element_Type> *stack, int64_t count)
     {
