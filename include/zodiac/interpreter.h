@@ -67,6 +67,7 @@ namespace Zodiac
         Stack<Interp_Stack_Frame> frames = {};
 
         Array<Interpreter_Value> globals = {};
+        uint8_t *global_mem = nullptr;
 
         // @TODO: @CLEANUP: This should really be a stack allocator, we can
         //                   'save' restore points in the stack frames.

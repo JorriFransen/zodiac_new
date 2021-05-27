@@ -8,7 +8,6 @@ global_array : [5]s64;
 
 main :: func() -> s64
 {
-
     for (i := 0; i < global_array.count; i += 1) {
         @assert(global_array[i] == 0);
         global_array[i] = i + 1;

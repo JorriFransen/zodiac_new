@@ -40,6 +40,10 @@ namespace Zodiac
 
         free(interp->allocator, interp->alloc_stack);
 
+        if (interp->global_mem) {
+            free(interp->allocator, interp->global_mem);
+        }
+
         *interp = {};
     }
 
@@ -74,7 +78,6 @@ namespace Zodiac
             Interpreter_Value temp { .type = entry_func->temps[i]->type };
             stack_push(&interp->temp_stack, temp);
         }
-
 
         interp->running = true;
 
@@ -607,7 +610,14 @@ namespace Zodiac
                             assert(false);
                         }
                     } else if (inst.a->kind == BC_Value_Kind::GLOBAL) {
-                        assert(false);
+                        Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
+                        if (pointer_lval.type->kind == AST_Type_Kind::ARRAY) {
+                            auto global_val = &interp->globals[pointer_lval.index];
+                            assert(global_val->pointer);
+                            ptr = global_val->pointer;
+                        } else {
+                            assert(false);
+                        }
                     } else if (inst.a->kind == BC_Value_Kind::PARAM) {
                         assert(false);
                     } else if (inst.a->kind == BC_Value_Kind::TEMP) {
@@ -1432,7 +1442,12 @@ namespace Zodiac
 
         array_init(interp->allocator, &interp->globals, global_info.count);
 
-        assert(global_data_size == 0);
+        assert(interp->global_mem == nullptr);
+        uint8_t *gm_cursor = nullptr;
+        if (global_data_size > 0) {
+            interp->global_mem = alloc_array<uint8_t>(interp->allocator, global_data_size);
+            gm_cursor = interp->global_mem;
+        }
 
         for (int64_t i = 0; i < global_info.count; i++) {
             auto info = global_info[i];
@@ -1442,27 +1457,28 @@ namespace Zodiac
 
             array_append(&interp->globals, global_value);
 
-            if (type->kind == AST_Type_Kind::ARRAY ||
-                type->kind == AST_Type_Kind::STRUCTURE ||
-                type->kind == AST_Type_Kind::UNION) {
+            Interpreter_LValue dest_lval = {
+                .kind = Interp_LValue_Kind::GLOBAL,
+                .type = type,
+                .index = i,
+            };
 
-                assert(false);
-                // if (info.has_initializer) {
-                //     interp_store_constant(interp, info.init_const_val, dest_ptr);
-                // } else {
-                //     assert(type->bit_size % 8 == 0);
-                //     auto byte_size = type->bit_size / 8;
-                //     memset(dest_ptr, 0 , byte_size);
-                // }
-            } else  if (info.has_initializer) {
-                Interpreter_LValue dest_lval = {
-                    .kind = Interp_LValue_Kind::GLOBAL,
-                    .type = type,
-                    .index = i,
-                };
+            if (info.has_initializer) {
                 interp_store_constant(interp, info.init_const_val, dest_lval);
-            }
+            } else if (type->kind == AST_Type_Kind::ARRAY ||
+                       type->kind == AST_Type_Kind::STRUCTURE ||
+                       type->kind == AST_Type_Kind::UNION) {
 
+                assert(type->bit_size % 8 == 0);
+                auto byte_size = type->bit_size / 8;
+
+                auto val_ptr = &interp->globals[dest_lval.index];
+                assert(gm_cursor);
+                val_ptr->pointer = gm_cursor;
+                gm_cursor += byte_size;
+
+                memset(val_ptr->pointer, 0 , byte_size);
+            }
         }
     }
 

@@ -122,5 +122,5 @@ print_rect :: func (r : Rect)
     std.print_num(r.p2.x);
     std.print(", y: ");
     std.print_num(r.p2.y);
-    std.print(" }\n");
+    std.print("} }\n");
 }
