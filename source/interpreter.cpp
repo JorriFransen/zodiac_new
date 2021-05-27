@@ -1296,7 +1296,13 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::BOOL: assert(false);
-            case AST_Type_Kind::POINTER: assert(false);
+
+            case AST_Type_Kind::POINTER: {
+                assert(source.pointer);
+                *(void**)dest_ptr = source.pointer;
+                break;
+            }
+
             case AST_Type_Kind::FUNCTION: assert(false);
 
             case AST_Type_Kind::STRUCTURE: {
