@@ -660,6 +660,17 @@ namespace Zodiac
                         } else {
                             assert(false);
                         }
+                    } else if (inst.a->kind == BC_Value_Kind::PARAM) {
+                         Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
+                        if (pointer_lval.type->kind == AST_Type_Kind::STRUCTURE) {
+                            Interpreter_Value *pointer_val =
+                                &interp->arg_stack.buffer[pointer_lval.index];
+                            assert(pointer_val->pointer);
+                            ptr = pointer_val->pointer;
+                            struct_type = pointer_lval.type;
+                        } else {
+                            assert(false);
+                        }
                     } else if (inst.a->kind == BC_Value_Kind::TEMP) {
                         auto pointer_val = interp_load_value(interp, inst.a);
                         assert(pointer_val.type->kind == AST_Type_Kind::POINTER);
@@ -1288,7 +1299,13 @@ namespace Zodiac
             case AST_Type_Kind::POINTER: assert(false);
             case AST_Type_Kind::FUNCTION: assert(false);
 
-            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::STRUCTURE: {
+                assert(source.type->bit_size % 8 == 0);
+                auto byte_size = source.type->bit_size / 8;
+                assert(source.pointer);
+                memcpy(dest_ptr, source.pointer, byte_size);
+                break;
+            }
 
             case AST_Type_Kind::UNION: assert(false);
             case AST_Type_Kind::ENUM: assert(false);
