@@ -16,6 +16,7 @@ namespace Zodiac
         result.build_data = build_data;
 
         array_init(allocator, &result.functions);
+        array_init(allocator, &result.foreign_functions);
         array_init(allocator, &result.parameters);
         array_init(allocator, &result.locals);
         array_init(allocator, &result.globals);

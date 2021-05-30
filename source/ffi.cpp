@@ -1,5 +1,7 @@
 #include "ffi.h"
 
+#include "builtin.h"
+
 #include <cstdio>
 
 namespace Zodiac {
@@ -78,7 +80,9 @@ namespace Zodiac {
 
         // printf("Calling function '%s': %p\n", name.data, func_ptr);
 
-        assert(return_val_ptr);
+        if (return_type != Builtin::type_void) {
+            assert(return_val_ptr);
+        }
 
         switch (return_type->kind) {
             default: assert(false);

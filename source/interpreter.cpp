@@ -28,6 +28,8 @@ namespace Zodiac
         result.alloc_sp = result.alloc_stack;
         result.alloc_stack_end = result.alloc_stack + stack_size;
 
+        result.ffi = ffi_create(allocator, build_data);
+
         return result;
     }
 
@@ -48,9 +50,11 @@ namespace Zodiac
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-                           Array<BC_Global_Info> global_info, int64_t global_size)
+                           Array<BC_Global_Info> global_info, int64_t global_size,
+                           Array<BC_Function *> foreign_functions)
     {
         interpreter_initialize_globals(interp, global_info, global_size);
+        interpreter_initialize_foreigns(interp, foreign_functions);
 
         Interp_Stack_Frame first_frame = {
             .function = entry_func,
@@ -412,9 +416,8 @@ namespace Zodiac
                     auto arg_count = arg_count_val->integer_literal.s64;
 
                     if (callee->flags & BC_FUNC_FLAG_FOREIGN) {
-                        assert(false);
-                        // interpreter_execute_foreign_function(interp, func, arg_count,
-                        //                                      inst->result);
+                        interpreter_execute_foreign_function(interp, callee, arg_count,
+                                                             inst.result);
                         break;
                     }
 
@@ -1523,6 +1526,76 @@ namespace Zodiac
 
         Interpreter_Value val = { .type = const_val.type, .integer_literal = const_val.integer };
         interp_store(interp, val, dest_ptr, val.type->pointer_to);
+    }
+
+    void interpreter_initialize_foreigns(Interpreter *interp,
+                                         Array<BC_Function *> foreign_functions)
+    {
+        for (int64_t i = 0; i < foreign_functions.count; i++) {
+            auto func = foreign_functions[i];
+            bool found = ffi_load_function(&interp->ffi, func->name);
+            if (!found) {
+                fprintf(stderr, "Did not find foreign function: '%s'\n", func->name.data);
+            }
+            assert(found);
+        }
+    }
+
+    void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *func,
+                                              int64_t arg_count, BC_Value *result_value)
+    {
+        assert(func->parameters.count == arg_count);
+        assert(stack_count(&interp->arg_stack) >= arg_count);
+
+        if (result_value) {
+            assert(result_value->kind == BC_Value_Kind::TEMP);
+            assert(func->type->function.return_type);
+        }
+
+        ffi_reset(&interp->ffi);
+
+        for (int64_t i = 0; i < arg_count; i++) {
+            auto param = func->parameters[i];
+            auto param_type = param->type;
+            assert(param_type->kind == AST_Type_Kind::POINTER);
+            param_type = param_type->pointer.base;
+
+            void *arg_ptr = nullptr;
+
+            auto param_ptr = stack_peek_ptr(&interp->arg_stack, arg_count - 1 - i);
+
+            if (param_type->kind == AST_Type_Kind::ARRAY ||
+                param_type->kind == AST_Type_Kind::STRUCTURE ||
+                param_type->kind == AST_Type_Kind::UNION) {
+
+                assert(false);
+            } else {
+                arg_ptr = &param_ptr->pointer;
+            }
+
+            assert(arg_ptr);
+
+            ffi_push_arg(&interp->ffi, arg_ptr, param_type);
+        }
+
+        AST_Type *return_type = nullptr;
+        void *return_val_ptr = nullptr;
+
+        if (result_value) {
+            return_type = result_value->type;
+
+            assert(result_value->kind == BC_Value_Kind::TEMP);
+            assert(return_type->kind != AST_Type_Kind::ARRAY ||
+                   return_type->kind != AST_Type_Kind::STRUCTURE ||
+                   return_type->kind != AST_Type_Kind::UNION);
+            auto rv_lval = interp_load_lvalue(interp, result_value);
+            auto result_val_ptr = interp->temp_stack.buffer[rv_lval.index];
+            return_val_ptr = &result_val_ptr.pointer;
+        }
+
+        ffi_call(&interp->ffi, func->name, return_val_ptr, return_type);
+
+        stack_pop(&interp->arg_stack, arg_count);
     }
 
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
