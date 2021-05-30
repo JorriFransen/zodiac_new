@@ -3,8 +3,6 @@ std :: import std;
 
 #run main();
 
-global_array : [5]s64;
-
 main :: func() -> s64
 {
     std.println("Recursive struct test...");
