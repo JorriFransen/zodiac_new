@@ -56,6 +56,10 @@ namespace Zodiac
         interpreter_initialize_globals(interp, global_info, global_size);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
+        AST_Type *return_type = entry_func->type->function.return_type;
+        bool returns_void = return_type->kind == AST_Type_Kind::VOID;
+        assert(return_type->kind == AST_Type_Kind::INTEGER || returns_void);
+
         Interp_Stack_Frame first_frame = {
             .function = entry_func,
             .ip = {
@@ -63,17 +67,16 @@ namespace Zodiac
                 .block = entry_func->blocks[0],
             },
             .first_temp_index = 1,
-            .result_index = 0,
+            .result_index = returns_void ? -1 : 0,
             .previous_alloc_sp = interp->alloc_sp,
         };
 
         stack_push(&interp->frames, first_frame);
 
-        AST_Type *return_type = entry_func->type->function.return_type;
-        assert(return_type->kind == AST_Type_Kind::INTEGER);
-
-        Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
-        stack_push(&interp->temp_stack, return_val);
+        if (!returns_void) {
+            Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
+            stack_push(&interp->temp_stack, return_val);
+        }
 
         assert(entry_func->locals.count == 0);
         assert(entry_func->parameters.count == 0);
@@ -1073,12 +1076,14 @@ namespace Zodiac
         }
 
         if (!interp->aborted) {
-            assert(stack_count(&interp->temp_stack));
-            auto exit_val = stack_pop(&interp->temp_stack);
-            assert(exit_val.type->kind == AST_Type_Kind::INTEGER);
-            assert(exit_val.type == Builtin::type_s64);
+            if (!returns_void) {
+                assert(stack_count(&interp->temp_stack));
+                auto exit_val = stack_pop(&interp->temp_stack);
+                assert(exit_val.type->kind == AST_Type_Kind::INTEGER);
+                assert(exit_val.type == Builtin::type_s64);
 
-            interp->exit_code = exit_val.integer_literal.s64;
+                interp->exit_code = exit_val.integer_literal.s64;
+            }
         } else {
             fprintf(stderr, "Bytecode aborted!\n");
         }
