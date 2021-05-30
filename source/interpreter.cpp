@@ -991,7 +991,30 @@ namespace Zodiac
                     break;
                 }
 
-                case OFFSETOF: assert(false);
+                case OFFSETOF: {
+                    assert(inst.a->kind == BC_Value_Kind::TYPE);
+                    assert(inst.b->kind == BC_Value_Kind::INTEGER_LITERAL);
+                    Interpreter_Value index_val = interp_load_value(interp, inst.b);
+                    assert(index_val.type == Builtin::type_s64);
+
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
+
+                    int64_t index = index_val.integer_literal.s64;
+                    int64_t offset = 0;
+
+                    AST_Type *struct_type = inst.a->type;
+                    assert(struct_type->kind == AST_Type_Kind::STRUCTURE);
+
+                    for (int64_t i = 0; i < index; i++) {
+                        auto bit_size = struct_type->structure.member_types[i]->bit_size;
+                        assert(bit_size % 8 == 0);
+                        offset += (bit_size / 8);
+                    }
+
+                    interp_store(interp, &offset, dest.type->pointer_to, dest);
+                    break;
+                }
+
                 case EXIT: assert(false);
 
                 case SYSCALL: {
