@@ -104,17 +104,14 @@ print_day :: func(day: Day)
 {
     std.print("Day.");
 
-    switch (day)
-    {
-        case Day.Monday: std.print("Monday");
-        case Day.Tuesday: std.print("Tuesday");
-        case Day.Wednesday: std.print("Wednesday");
-        case Day.Thursday: std.print("Thursday");
-        case Day.Friday: std.print("Friday");
-        case Day.Saturday: std.print("Saturday");
-        case Day.Sunday: std.print("Sunday");
-        default: std.print("INVALID");
-    }
+    if      (day == Day.Monday)    std.print("Monday");
+    else if (day == Day.Tuesday)   std.print("Tuesday");
+    else if (day == Day.Wednesday) std.print("Wednesday");
+    else if (day == Day.Thursday)  std.print("Thursday");
+    else if (day == Day.Friday)    std.print("Friday");
+    else if (day == Day.Saturday)  std.print("Saturday");
+    else if (day == Day.Sunday)    std.print("Sunday");
+    else                           std.print("INVALID");
 
     std.print("\n");
     return;

@@ -256,7 +256,9 @@ namespace Zodiac
     assert(IS_CMP_OP(op)); \
     assert(dest.type == Builtin::type_bool); \
     auto type = lhs.type; \
-    if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
+    if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
+    assert(type->kind == AST_Type_Kind::INTEGER); \
+    if (#sign_[0] == 's') { assert(type->integer.sign); } \
     Interpreter_Value r = { \
         .type = dest.type, \
     }; \
@@ -740,8 +742,10 @@ namespace Zodiac
 
                 case ZEXT: {
                     Interpreter_Value operand = interp_load_value(interp, inst.a);
-                    assert(operand.type->kind == AST_Type_Kind::INTEGER);
-                    assert(operand.type->integer.sign == false);
+                    AST_Type *op_type = operand.type;
+                    if (op_type->kind == AST_Type_Kind::ENUM) op_type = op_type->enum_type.base_type;
+                    assert(op_type->kind == AST_Type_Kind::INTEGER);
+                    assert(op_type->integer.sign == false);
 
                     Interpreter_LValue dest_lval = interp_load_lvalue(interp, inst.result);
                     assert(dest_lval.type->kind == AST_Type_Kind::INTEGER);
@@ -1320,7 +1324,13 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::UNION: assert(false);
-            case AST_Type_Kind::ENUM: assert(false);
+
+            case AST_Type_Kind::ENUM: {
+                assert(type->enum_type.base_type->kind == AST_Type_Kind::INTEGER);
+                dest_ptr->integer_literal = source.integer_literal;
+                break;
+            }
+
             case AST_Type_Kind::ARRAY: assert(false);
         }
     }

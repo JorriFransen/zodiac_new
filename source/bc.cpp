@@ -858,6 +858,7 @@ namespace Zodiac
     result = bc_temporary_new(builder, Builtin::type_bool); \
     if (type->kind == AST_Type_Kind::INTEGER || type->kind == AST_Type_Kind::ENUM) { \
         if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
+        assert(type->kind == AST_Type_Kind::INTEGER); \
         if (type->integer.sign) { \
             bc_emit_instruction(builder, int_sign_op, lhs, rhs, result); \
         } else { \
