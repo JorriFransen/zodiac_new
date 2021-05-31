@@ -203,6 +203,7 @@ namespace Zodiac
     struct BC_Switch_Data
     {
         Array<BC_Switch_Case> cases = {};
+        BC_Block *default_block = nullptr;
     };
 
     struct BC_Local_Variable_Info

@@ -1797,22 +1797,12 @@ namespace Zodiac
         BC_Block *block = array_last(&func->blocks);
         assert(block == builder->insert_block);
 
-        // BC_Instruction *result =
-        //     bucket_array_add_uninitialized(&builder->current_function->instructions);
-        // assert(result);
-        // result->op = op;
-        // result->a = a;
-        // result->b = b;
-        // result->result = result_value;
-
         BC_Instruction result = {
             .op = op, .a = a, .b = b, .result = result_value,
         };
 
         array_append(&block->instructions, result);
 
-        // block->instruction_count += 1;
-        // block->last_instruction = result;
         builder->build_data->bytecode_instruction_count += 1;
 
         return &block->instructions[block->instructions.count - 1];
@@ -1820,13 +1810,26 @@ namespace Zodiac
 
     void bc_add_default_switch_case(BC_Instruction *inst, BC_Block *block)
     {
-        assert(false && "bc_add_default_switch_case is not implemented!!!");
+        assert(inst->op == SWITCH);
+
+        BC_Switch_Data *switch_data = &inst->b->switch_data;
+
+        assert(!switch_data->default_block);
+        switch_data->default_block = block;
+
+        BC_Switch_Case case_data = { nullptr, block };
+        array_append(&switch_data->cases, case_data);
     }
 
     void bc_add_switch_case(BC_Instruction *inst, BC_Value *case_value,
                                   BC_Block *case_block)
     {
-        assert(false && "bc_add_switch_case is not implemented!!!");
+        assert(inst->op == SWITCH);
+
+        BC_Switch_Data *switch_data = &inst->b->switch_data;
+
+        BC_Switch_Case case_data = { case_value, case_block };
+        array_append(&switch_data->cases, case_data);
     }
 
     void bc_push_break_block(BC_Builder *builder, BC_Block *block)
