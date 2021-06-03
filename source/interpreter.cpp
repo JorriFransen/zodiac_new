@@ -261,8 +261,12 @@ namespace Zodiac
     assert(IS_CMP_OP(op)); \
     assert(dest.type == Builtin::type_bool); \
     auto type = lhs.type; \
-    if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type; \
-    assert(type->kind == AST_Type_Kind::INTEGER); \
+    if (type->kind == AST_Type_Kind::ENUM) { \
+        type = type->enum_type.base_type; \
+        assert(type->kind == AST_Type_Kind::INTEGER); \
+    } else { \
+        assert(type->kind == AST_Type_Kind::INTEGER || type->kind == AST_Type_Kind::POINTER); \
+    } \
     if (#sign_[0] == 's') { assert(type->integer.sign); } \
     Interpreter_Value r = { \
         .type = dest.type, \
@@ -303,7 +307,29 @@ namespace Zodiac
                 case GTEQ_S: BINOP_CMP_INT(>=);
 
                 case EQ_U:   BINOP_CMP_UINT(==);
-                case NEQ_U:  BINOP_CMP_UINT(!=);
+                case NEQ_U: {
+                    Interpreter_Value lhs = interp_load_value(interp, inst.a);
+                    Interpreter_Value rhs = interp_load_value(interp, inst.b);
+                    Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
+                    assert(lhs.type == rhs.type);
+                    assert(IS_CMP_OP(!=));
+                    assert(dest.type == Builtin::type_bool);
+                    auto type = lhs.type;
+                    if (type->kind == AST_Type_Kind::ENUM) type = type->enum_type.base_type;
+                    Interpreter_Value r = {
+                        .type = dest.type,
+                    };
+                    switch (type->bit_size) {
+                        BINOP_CMP_INT_CASE(u, 8, !=)
+                        BINOP_CMP_INT_CASE(u, 16, !=)
+                        BINOP_CMP_INT_CASE(u, 32, !=)
+                        BINOP_CMP_INT_CASE(u, 64, !=)
+                        default: assert(false);
+                    }
+                    interp_store(interp, r, dest);
+                    break;
+                }
+
                 case LT_U:   BINOP_CMP_UINT(<);
                 case LTEQ_U: BINOP_CMP_UINT(<=);
                 case GT_U:   BINOP_CMP_UINT(>);
