@@ -577,35 +577,34 @@ namespace Zodiac
             }
 
             case SWITCH: {
-                assert(false);
-                // llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
+                llvm::Value *switch_val = llvm_emit_value(builder, inst->a);
 
-                // assert(inst->b->kind == BC_Value_Kind::SWITCH_DATA);
-                // BC_Switch_Data *switch_data = &inst->b->switch_data;
+                assert(inst->b->kind == BC_Value_Kind::SWITCH_DATA);
+                BC_Switch_Data *switch_data = &inst->b->switch_data;
 
-                // assert(switch_data->default_block);
-                // assert(switch_val);
+                assert(switch_data->default_block);
+                assert(switch_val);
 
-                // llvm::BasicBlock *default_block = llvm_find_block(builder,
-                //                                                   switch_data->default_block);
+                llvm::BasicBlock *default_block = llvm_find_block(builder,
+                                                                  switch_data->default_block);
 
-                // auto switch_inst = builder->llvm_builder->CreateSwitch(switch_val, default_block,
-                //                                                        switch_data->cases.count);
+                auto switch_inst = builder->llvm_builder->CreateSwitch(switch_val, default_block,
+                                                                       switch_data->cases.count);
 
-                // for (int64_t i = 0; i < switch_data->cases.count; i++) {
-                //     BC_Switch_Case switch_case = switch_data->cases[i];
-                //     if (switch_case.target_block == switch_data->default_block) continue;
+                for (int64_t i = 0; i < switch_data->cases.count; i++) {
+                    BC_Switch_Case switch_case = switch_data->cases[i];
+                    if (switch_case.target_block == switch_data->default_block) continue;
 
-                //     llvm::Value *_case_value = llvm_emit_value(builder, switch_case.case_value);
-                //     assert(_case_value->getType()->isIntegerTy());
-                //     llvm::ConstantInt *case_value =
-                //         llvm::dyn_cast<llvm::ConstantInt>(_case_value);
+                    llvm::Value *_case_value = llvm_emit_value(builder, switch_case.case_value);
+                    assert(_case_value->getType()->isIntegerTy());
+                    llvm::ConstantInt *case_value =
+                        llvm::dyn_cast<llvm::ConstantInt>(_case_value);
 
-                //     llvm::BasicBlock *dest_block = llvm_find_block(builder,
-                //                                                    switch_case.target_block);
+                    llvm::BasicBlock *dest_block = llvm_find_block(builder,
+                                                                   switch_case.target_block);
 
-                //     switch_inst->addCase(case_value, dest_block);
-                // }
+                    switch_inst->addCase(case_value, dest_block);
+                }
                 break;
             }
 

@@ -224,7 +224,12 @@ namespace Zodiac
     assert(!IS_CMP_OP(op)); \
     assert(dest.type == lhs.type); \
     auto type = dest.type; \
-    if (#sign_[0] == 's') { assert(lhs.type->integer.sign); } \
+    if (type->kind == AST_Type_Kind::ENUM) { \
+        type = type->enum_type.base_type; \
+        dest.type = type; \
+    } \
+    assert(type->kind == AST_Type_Kind::INTEGER); \
+    if (#sign_[0] == 's') { assert(type->integer.sign); } \
     Interpreter_Value r = { \
         .type = type, \
     }; \
@@ -596,7 +601,65 @@ namespace Zodiac
                     break;
                 }
 
-                case SWITCH: assert(false);
+                case SWITCH: {
+                    advance_ip = false;
+
+                    BC_Block *default_block = nullptr;
+                    BC_Block *target_block = nullptr;
+
+                    assert(inst.b->kind == BC_Value_Kind::SWITCH_DATA);
+                    auto switch_data = inst.b->switch_data;
+
+                    Interpreter_Value operand_val = interp_load_value(interp, inst.a);
+
+                    for (int64_t i = 0; i < switch_data.cases.count; i++) {
+                        auto case_info = switch_data.cases[i];
+
+                        if (case_info.case_value) {
+                            assert(inst.a->type == case_info.case_value->type);
+                            auto type = inst.a->type;
+
+                            if (type->kind == AST_Type_Kind::ENUM) {
+                                type = type->enum_type.base_type;
+                            }
+
+                            assert(type->kind == AST_Type_Kind::INTEGER);
+                            assert(type->bit_size == 64);
+
+                            bool match;
+                            if (type->integer.sign) {
+                                match = operand_val.integer_literal.s64 ==
+                                        case_info.case_value->integer_literal.s64;
+                            } else {
+                                match = operand_val.integer_literal.u64 ==
+                                        case_info.case_value->integer_literal.u64;
+                            }
+
+                            if (match) {
+                                target_block = case_info.target_block;
+                                break;
+                            }
+
+                        } else {
+                            assert(!default_block);
+                            default_block = case_info.target_block;
+                        }
+                    }
+
+                    assert(target_block || default_block);
+                    auto dest = target_block;
+                    if (!dest) dest = default_block;
+                    assert(dest);
+
+                    advance_ip = false;
+
+                    frame->ip = {
+                        .index = 0,
+                        .block = dest,
+                    };
+
+                    break;
+                }
 
                 case PTR_OFFSET: {
                     auto offset_val = interp_load_value(interp, inst.b);
@@ -1290,7 +1353,12 @@ namespace Zodiac
         }
 
         assert(dest_ptr);
-        assert(dest_ptr->type == source.type);
+        if (dest_ptr->type->kind == AST_Type_Kind::ENUM &&
+            source.type->kind != AST_Type_Kind::ENUM) {
+            assert(dest_ptr->type->enum_type.base_type == source.type);
+        } else {
+            assert(dest_ptr->type == source.type);
+        }
 
         switch (type->kind) {
             case AST_Type_Kind::INVALID: assert(false);

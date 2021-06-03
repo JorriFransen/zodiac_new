@@ -2236,7 +2236,29 @@ namespace Zodiac
                 break;
             }
 
-            case SWITCH: assert(false);
+            case SWITCH: {
+                print_args = false;
+                string_builder_append(sb, "SWITCH ");
+                bc_print_value(sb, inst->a);
+
+                auto switch_data = &inst->b->switch_data;
+
+                for (int64_t i = 0; i < switch_data->cases.count; i++) {
+                    auto case_info = switch_data->cases[i];
+
+                    string_builder_append(sb, "\n      ");
+
+                    if (case_info.case_value) {
+                        bc_print_value(sb, case_info.case_value);
+                    } else {
+                        string_builder_append(sb, "default");
+                    }
+
+                    string_builder_appendf(sb, " -> %s", case_info.target_block->name);
+
+                }
+                break;
+            }
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
             case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
