@@ -32,8 +32,8 @@ jobs:
     - name: List installed llvm packages
       run: apt list --installed | grep llvm
 
-    - name: Trying to remove unused llvm packages
-      run: sudo apt remove llvm-10-dev llvm-11-dev
+    # - name: Trying to remove unused llvm packages
+    #   run: sudo apt remove llvm-10-dev llvm-11-dev
 
     - name: Configure Dependencies
       shell: bash
