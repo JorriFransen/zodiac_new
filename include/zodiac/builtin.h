@@ -45,6 +45,7 @@ enum class Builtin_Type_Kind
     DEFINE_BUILTIN_ATOM(allow_incomplete)       \
     DEFINE_BUILTIN_ATOM(assert)                 \
     DEFINE_BUILTIN_ATOM(default_assert_handler) \
+    DEFINE_BUILTIN_ATOM(test_assert_handler)    \
     DEFINE_BUILTIN_ATOM(static_assert)          \
     DEFINE_BUILTIN_ATOM(syscall)                \
     DEFINE_BUILTIN_ATOM(exit)                   \

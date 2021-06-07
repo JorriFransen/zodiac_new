@@ -33,6 +33,8 @@ namespace Zodiac
         AST_NODE_FLAG_RESOLVED_ID = 0x01,
         AST_NODE_FLAG_TYPED       = 0x02,
         AST_NODE_FLAG_SIZED       = 0x04,
+
+        AST_NODE_FLAG_TEST        = 0x10,
     };
 
     struct AST_Node

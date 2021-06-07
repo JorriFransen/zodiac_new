@@ -2624,16 +2624,23 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 Scope *entry_scope = resolver->build_data->entry_module->module_scope;
                 assert(entry_scope);
 
-                auto default_handler_decl = scope_find_declaration(
-                    entry_scope, Builtin::atom_default_assert_handler);
+                AST_Declaration *assert_handler_decl = nullptr;
 
-                assert(default_handler_decl);
-                assert(default_handler_decl->kind == AST_Declaration_Kind::FUNCTION);
+                if (expression->flags & AST_NODE_FLAG_TEST) {
+                    assert_handler_decl =
+                        scope_find_declaration(entry_scope, Builtin::atom_test_assert_handler);
+                } else {
+                    assert_handler_decl =
+                        scope_find_declaration(entry_scope, Builtin::atom_default_assert_handler);
+                }
 
-                if (!(default_handler_decl->decl_flags &
+                assert(assert_handler_decl);
+                assert(assert_handler_decl->kind == AST_Declaration_Kind::FUNCTION);
+
+                if (!(assert_handler_decl->decl_flags &
                       AST_DECL_FLAG_REGISTERED_BYTECODE)) {
                     bc_register_function(&resolver->bytecode_builder,
-                               default_handler_decl);
+                               assert_handler_decl);
                 }
 
                 expression->type = Builtin::type_void;

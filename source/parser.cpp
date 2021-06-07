@@ -879,6 +879,7 @@ Declaration_PTN *parser_parse_test_declaration(Parser *parser, Token_Stream *ts)
 
     auto result = new_test_declaration_ptn(parser->allocator, test_ident, test_body, bfp, efp);
     result->self.flags |=PTN_FLAG_SEMICOLON;
+
     return result;
 }
 

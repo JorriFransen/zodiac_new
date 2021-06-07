@@ -1490,30 +1490,37 @@ namespace Zodiac
             Scope *entry_scope = builder->build_data->entry_module->module_scope;
             assert(entry_scope);
 
-            auto default_handler_decl = scope_find_declaration(entry_scope,
-                                                               Builtin::atom_default_assert_handler);
-            assert(default_handler_decl);
-            auto default_handler_func = bc_find_function(builder, default_handler_decl);
-            assert(default_handler_func);
+            AST_Declaration *handler_decl = nullptr;
+
+            if (expr->flags & AST_NODE_FLAG_TEST) {
+                handler_decl = scope_find_declaration(entry_scope,
+                                                      Builtin::atom_test_assert_handler);
+            } else {
+                handler_decl = scope_find_declaration(entry_scope,
+                                                      Builtin::atom_default_assert_handler);
+            }
+
+            assert(handler_decl);
+            assert(handler_decl->kind == AST_Declaration_Kind::FUNCTION);
+
+            auto handler_func = bc_find_function(builder, handler_decl);
+            assert(handler_func);
 
             auto fp = expr->begin_file_pos;
-            // printf("Inserting assert at: %s:%lu\n", fp.file_name.data, fp.line);
 
             BC_Value *cond_val = bc_emit_expression(builder, args[0]);
             BC_Value *file_name = bc_get_string_literal(builder, fp.file_name);
 
             Integer_Literal il = { .s64 = (int64_t)fp.line };
-            BC_Value *line_num = bc_integer_literal_new(builder, Builtin::type_s64,
-                                                                    il);
+            BC_Value *line_num = bc_integer_literal_new(builder, Builtin::type_s64, il);
 
             bc_emit_instruction(builder, PUSH_ARG, cond_val, nullptr, nullptr);
             bc_emit_instruction(builder, PUSH_ARG, file_name, nullptr, nullptr);
             bc_emit_instruction(builder, PUSH_ARG, line_num, nullptr, nullptr);
 
-            BC_Value *func_val = bc_function_value_new(builder, default_handler_func);
-            BC_Value *arg_count_val = bc_integer_literal_new(builder,
-                                                                         Builtin::type_s64,
-                                                                         { .s64 = 3 });
+            BC_Value *func_val = bc_function_value_new(builder, handler_func);
+            BC_Value *arg_count_val = bc_integer_literal_new(builder, Builtin::type_s64,
+                                                             { .s64 = 3 });
 
             bc_emit_instruction(builder, CALL, func_val, arg_count_val, nullptr);
             return nullptr;

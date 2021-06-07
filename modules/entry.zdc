@@ -20,6 +20,8 @@ test_result_reporter :: func(result: bool, name: *char)
     } else {
         _std_.print(" failed!\n");
     }
+
+    _std_.print_char('\n');
 }
 
 #if (PLATFORM_WINDOWS) {
@@ -59,5 +61,16 @@ default_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
         _std_.println("!\n");
 
         _os_.abort();
+    }
+}
+
+test_assert_handler :: func(cond: bool, file_name: *u8, line: s64)
+{
+    if (!cond) {
+        _std_.print("Assertion failed!!!: ");
+        _std_.print(file_name);
+        _std_.print(":");
+        _std_.print_num(line);
+        _std_.println("!\n");
     }
 }

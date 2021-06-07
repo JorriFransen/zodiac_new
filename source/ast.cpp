@@ -1891,8 +1891,13 @@ namespace Zodiac
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
 
             case AST_Declaration_Kind::TEST: {
+                auto first_node_index = nodes->count;
                 ast_flatten_declaration(builder, &decl->test.func_decl, nodes);
                 array_append(nodes, node);
+                for (int64_t i = first_node_index; i < nodes->count; i++) {
+                    auto node_ptr = (*nodes)[i];
+                    (*node_ptr)->flags |= AST_NODE_FLAG_TEST;
+                }
                 break;
             }
         }
