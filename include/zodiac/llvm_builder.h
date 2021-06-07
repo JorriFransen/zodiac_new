@@ -105,6 +105,8 @@ namespace Zodiac
     void llvm_finalize_union_type(LLVM_Builder *builder, llvm::StructType *llvm_type,
                                   AST_Type *ast_type);
 
+    llvm::StructType *llvm_struct_type_by_name(LLVM_Builder *builder, const char *name);
+
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count);
 
     bool llvm_ready_to_emit(LLVM_Builder *builder);

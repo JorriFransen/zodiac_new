@@ -1410,7 +1410,7 @@ namespace Zodiac
 
             case AST_Type_Kind::STRUCTURE: {
                 auto name = ast_type->structure.declaration->identifier->atom;
-                auto result = llvm::StructType::getTypeByName(*builder->llvm_context, name.data);
+                auto result = llvm_struct_type_by_name(builder, name.data);
 
                 bool just_created = false;
                 if (result) {
@@ -1437,7 +1437,7 @@ namespace Zodiac
 
             case AST_Type_Kind::UNION: {
                 auto name = ast_type->union_type.declaration->identifier->atom;
-                auto result = llvm::StructType::getTypeByName(*builder->llvm_context, name.data);
+                auto result = llvm_struct_type_by_name(builder, name.data);
 
                 bool just_created = false;
                 if (result) {
@@ -1511,6 +1511,21 @@ namespace Zodiac
             llvm_type_from_ast(builder, ast_type->union_type.biggest_member_type);
 
         llvm_type->setBody({ &llvm_mem_type, 1 }, false);
+    }
+
+    llvm::StructType *llvm_struct_type_by_name(LLVM_Builder *builder, const char *name)
+    {
+        llvm::StructType *result = nullptr;
+        #if LLVM_VERSION_MAJOR > 11
+            result = llvm::StructType::getTypeByName(*builder->llvm_context, name);
+        #else
+            result = builder->llvm_module->getTypeByName(name);
+        #endif
+
+        if (result) {
+            assert(result->isStructTy());
+        }
+        return result;
     }
 
     llvm::FunctionType *llvm_asm_function_type(LLVM_Builder *builder, int64_t arg_count)
