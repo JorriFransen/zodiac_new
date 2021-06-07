@@ -1410,7 +1410,7 @@ namespace Zodiac
 
             case AST_Type_Kind::STRUCTURE: {
                 auto name = ast_type->structure.declaration->identifier->atom;
-                llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
+                auto result = llvm::StructType::getTypeByName(*builder->llvm_context, name.data);
 
                 bool just_created = false;
                 if (result) {
@@ -1437,7 +1437,7 @@ namespace Zodiac
 
             case AST_Type_Kind::UNION: {
                 auto name = ast_type->union_type.declaration->identifier->atom;
-                llvm::StructType *result = builder->llvm_module->getTypeByName(name.data);
+                auto result = llvm::StructType::getTypeByName(*builder->llvm_context, name.data);
 
                 bool just_created = false;
                 if (result) {
