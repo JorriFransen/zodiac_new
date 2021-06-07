@@ -198,8 +198,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                     } else if (is_bytecode_entry_decl(decl)) {
                         // decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
                     } else if (decl->kind == AST_Declaration_Kind::TEST) {
-                        printf("Resolved test: %" PRIu64 "/%" PRIu64 "\n",
-                                ++resolved_test_count, parsed_test_count);
+                        resolved_test_count += 1;
                     }
                 }
             }
@@ -242,8 +241,7 @@ Resolve_Result finish_resolving(Resolver *resolver)
                         }
                     } else if (decl->kind == AST_Declaration_Kind::TEST) {
                         assert(decl->test.func_decl->flags & AST_NODE_FLAG_SIZED);
-                        printf("Sized test %" PRIu64 "/%" PRIu64 "\n",
-                                ++sized_test_count, parsed_test_count);
+                        sized_test_count += 1;
                         queue_bytecode_job(resolver, decl);
                     } else {
                         assert(decl->kind == AST_Declaration_Kind::IMPORT ||
@@ -347,23 +345,14 @@ Resolve_Result finish_resolving(Resolver *resolver)
 
                 array_append(&bc_tests, test_func);
 
-                printf("Emitted bytecode for test: %s\n",
-                       test_func_decl->identifier->atom.data);
-
                 bc_test_count++;
-
-                printf("Emitted bytecode for test %" PRIu64 "/%" PRIu64 "\n",
-                       bc_test_count, parsed_test_count);
 
                 if (!resolver->build_data->options->dont_emit_llvm) {
                     queue_llvm_job(resolver, test_func);
                 }
 
                 if (bc_test_count == parsed_test_count) {
-                    printf("Emitting test wrapper...\n");
-                    bc_test_wrapper =
-                        bc_emit_test_wrapper(&resolver->bytecode_builder,
-                                                   bc_tests);
+                    bc_test_wrapper = bc_emit_test_wrapper(&resolver->bytecode_builder, bc_tests);
                     assert(bc_test_wrapper);
 
                     queue_run_job(resolver, nullptr, bc_test_wrapper);

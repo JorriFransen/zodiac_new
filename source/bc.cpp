@@ -300,8 +300,57 @@ namespace Zodiac
     BC_Function *bc_emit_test_wrapper(BC_Builder *builder,
                                                   Array<BC_Function *> test_functions)
     {
-        assert(false && "bc_emit_test_wrapper is not implemented!!!");
-        return  nullptr;
+        assert(test_functions.count);
+
+        auto bd = builder->build_data;
+
+        auto reporter_decl = scope_find_declaration(bd, bd->entry_module->module_scope,
+                                                    "test_result_reporter");
+        assert(reporter_decl);
+
+        auto report_test_result_func = bc_find_function(builder, reporter_decl);
+        assert(report_test_result_func);
+
+        AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
+                                                               Builtin::type_s64);
+        assert(wrapper_type);
+
+        Atom name = atom_get(&builder->build_data->atom_table, "_test_wrapper_");
+
+        BC_Function *result = bc_new_function(builder, wrapper_type, {}, name);
+
+
+        builder->current_function = result;
+        builder->parameters.count = 0;
+        builder->locals.count = 0;
+        builder->next_temp_index = 0;
+
+        BC_Block *entry_block = bc_new_block(builder, "entry");
+        bc_append_block(builder, result, entry_block);
+        bc_set_insert_point(builder, entry_block);
+
+        for (int64_t i = 0; i < test_functions.count; i++) {
+            BC_Function *test_func = test_functions[i];
+            assert(test_func->flags & BC_FUNC_FLAG_IS_TEST);
+
+            BC_Value *test_result = bc_emit_call(builder, test_func, {});
+            assert(test_result->type == Builtin::type_bool);
+
+            BC_Value *test_name = bc_get_string_literal(builder, test_func->name);
+
+            BC_Value *args[] = { test_result, test_name };
+            bc_emit_call(builder, report_test_result_func, args);
+
+        }
+
+        auto return_val = bc_integer_literal_new(builder, Builtin::type_s64, { .s64 = 0 });
+        bc_emit_instruction(builder, RETURN, return_val, nullptr, nullptr);
+
+        auto index = builder->functions.count;
+        array_append(&builder->functions, { nullptr, result, index });
+        result->flags |= BC_FUNC_FLAG_EMITTED;
+
+        return result;
     }
 
     BC_Block *bc_new_block(BC_Builder *builder, const char *name)
@@ -1292,8 +1341,24 @@ namespace Zodiac
                                        BC_Function *callee,
                                        const Array_Ref<BC_Value *> args)
     {
-        assert(false && "bc_emit_call is not implemented!!!");
-        return nullptr;
+        assert(callee->type->function.param_types.count == args.count);
+
+        for (int64_t i = 0; i < args.count; i++) {
+            bc_emit_instruction(builder, PUSH_ARG, args[i], nullptr, nullptr);
+        }
+
+        auto callee_val = bc_function_value_new(builder, callee);
+        auto arg_count_val = bc_integer_literal_new(builder, Builtin::type_s64,
+                                                          { .s64 = args.count });
+
+        BC_Value *return_value = nullptr;
+        if (callee->type->function.return_type->kind != AST_Type_Kind::VOID) {
+            return_value = bc_temporary_new(builder, callee->type->function.return_type);
+        }
+
+        bc_emit_instruction(builder, CALL, callee_val, arg_count_val, return_value);
+
+        return return_value;
     }
 
     BC_Value *bc_emit_call(BC_Builder *builder, AST_Expression *expr)
