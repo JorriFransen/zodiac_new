@@ -16,12 +16,10 @@ test_result_reporter :: func(result: bool, name: *char)
     _std_.print(name);
 
     if (result) {
-        _std_.print(" succeeded!\n");
+        _std_.print(" [OK]\n");
     } else {
-        _std_.print(" failed!\n");
+        _std_.print(" [FAIL]\n");
     }
-
-    _std_.print_char('\n');
 }
 
 #if (PLATFORM_WINDOWS) {

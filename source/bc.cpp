@@ -309,6 +309,10 @@ namespace Zodiac
         assert(reporter_decl);
 
         auto report_test_result_func = bc_find_function(builder, reporter_decl);
+        if (!report_test_result_func) {
+            bc_register_function(builder, reporter_decl);
+            report_test_result_func = bc_find_function(builder, reporter_decl);
+        }
         assert(report_test_result_func);
 
         AST_Type *wrapper_type = build_data_find_function_type(builder->build_data, {},
