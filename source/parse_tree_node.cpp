@@ -292,38 +292,32 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
     assert(ptn);
     free_ptn(allocator, &ptn->self);
 
-    switch (ptn->kind)
-    {
+    switch (ptn->kind) {
         case Expression_PTN_Kind::INVALID: assert(false);
 
-        case Expression_PTN_Kind::CALL:
-        {
+        case Expression_PTN_Kind::CALL: {
             free_ptn(allocator, ptn->call.ident_expression);
             if (ptn->call.arg_list) free_ptn(allocator, ptn->call.arg_list);
             break;
         }
 
-        case Expression_PTN_Kind::IDENTIFIER:
-        {
+        case Expression_PTN_Kind::IDENTIFIER: {
             free_ptn(allocator, ptn->identifier);
             break;
         }
 
-        case Expression_PTN_Kind::BINARY:
-        {
+        case Expression_PTN_Kind::BINARY: {
             free_ptn(allocator, ptn->binary.lhs);
             free_ptn(allocator, ptn->binary.rhs);
             break;
         }
 
-        case Expression_PTN_Kind::UNARY:
-        {
+        case Expression_PTN_Kind::UNARY: {
             free_ptn(allocator, ptn->unary.operand_expression);
             break;
         }
 
-        case Expression_PTN_Kind::DOT:
-        {
+        case Expression_PTN_Kind::DOT: {
             free_ptn(allocator, ptn->dot.parent_expression);
             free_ptn(allocator, ptn->dot.child_identifier);
             break;
@@ -331,8 +325,7 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
 
         case Expression_PTN_Kind::COMPOUND: assert(false);
 
-        case Expression_PTN_Kind::SUBSCRIPT:
-        {
+        case Expression_PTN_Kind::SUBSCRIPT: {
             free_ptn(allocator, ptn->subscript.pointer_expression);
             free_ptn(allocator, ptn->subscript.index_expression);
             break;
@@ -345,20 +338,19 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
         case Expression_PTN_Kind::BOOL_LITERAL: break;;
         case Expression_PTN_Kind::NULL_LITERAL:break;
 
-        case Expression_PTN_Kind::ARRAY_TYPE:
-        {
+        case Expression_PTN_Kind::ARRAY_TYPE: {
             free_ptn(allocator, ptn->array_type.length_expression);
             free_ptn(allocator, ptn->array_type.element_type_expression);
             break;
         }
 
-        case Expression_PTN_Kind::POINTER_TYPE:
-        {
+        case Expression_PTN_Kind::POINTER_TYPE: {
             free_ptn(allocator, ptn->pointer_type.pointee_type_expression);
             break;
         }
 
         case Expression_PTN_Kind::POLY_TYPE: assert(false);
+        case Expression_PTN_Kind::FUNCTION_TYPE: assert(false);
     }
 }
 
@@ -906,6 +898,17 @@ Expression_PTN *new_poly_type_expression_ptn(Allocator *allocator, Identifier_PT
     return result;
 }
 
+Expression_PTN *new_function_type_expression_ptn(Allocator *allocator,
+                                                 Function_Proto_PTN *function_proto,
+                                                 const File_Pos &begin_fp,
+                                                 const File_Pos &end_fp)
+{
+    auto result = new_ptn<Expression_PTN>(allocator, begin_fp, end_fp);
+    result->kind = Expression_PTN_Kind::FUNCTION_TYPE;
+    result->function_proto = function_proto;
+    return result;
+}
+
 Parameter_PTN *new_parameter_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                  Expression_PTN *type_expression,
                                  const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -1009,13 +1012,11 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
     auto begin_fp = expr->self.begin_file_pos;
     auto end_fp = expr->self.end_file_pos;
 
-    switch (expr->kind)
-    {
+    switch (expr->kind) {
         case Expression_PTN_Kind::INVALID: assert(false);
         case Expression_PTN_Kind::CALL: assert(false);
 
-        case Expression_PTN_Kind::IDENTIFIER:
-        {
+        case Expression_PTN_Kind::IDENTIFIER: {
             Identifier_PTN *new_identifier = nullptr;
             if (flags & PTNC_FLAG_DONT_COPY_IDENTIFIERS)
                 new_identifier = expr->identifier;
@@ -1043,6 +1044,7 @@ Expression_PTN *copy_expression_ptn(Allocator *allocator, Expression_PTN *expr,
         case Expression_PTN_Kind::ARRAY_TYPE: assert(false);
         case Expression_PTN_Kind::POINTER_TYPE: assert(false);
         case Expression_PTN_Kind::POLY_TYPE: assert(false);
+        case Expression_PTN_Kind::FUNCTION_TYPE: assert(false);
     }
 
     assert(false);
@@ -1540,21 +1542,17 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
 
 void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
 {
-    switch (expression->kind)
-    {
+    switch (expression->kind) {
         case Expression_PTN_Kind::INVALID: assert(false);
 
-        case Expression_PTN_Kind::CALL:
-        {
+        case Expression_PTN_Kind::CALL: {
             print_indent(indent);
-            if (expression->call.is_builtin)
-            {
+            if (expression->call.is_builtin) {
                 printf("@");
             }
             print_expression_ptn(expression->call.ident_expression, 0);
             printf("(");
-            if (expression->call.arg_list)
-            {
+            if (expression->call.arg_list) {
                 print_ptn(&expression->call.arg_list->self, 0);
             }
              printf(")");
@@ -1563,20 +1561,17 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::IDENTIFIER:
-        {
+        case Expression_PTN_Kind::IDENTIFIER: {
             print_indent(indent);
             printf("%s", expression->identifier->atom.data);
             break;
         }
 
-        case Expression_PTN_Kind::BINARY:
-        {
+        case Expression_PTN_Kind::BINARY: {
             print_indent(indent);
             printf("(");
             print_expression_ptn(expression->binary.lhs, 0);
-            switch (expression->binary.op)
-            {
+            switch (expression->binary.op) {
                 case BINOP_INVALID:    assert(false);
                 case BINOP_EQ:         printf(" == "); break;
                 case BINOP_NEQ:        printf(" != "); break;
@@ -1595,12 +1590,10 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::UNARY:
-        {
+        case Expression_PTN_Kind::UNARY: {
             print_indent(indent);
             printf("(");
-            switch (expression->unary.op)
-            {
+            switch (expression->unary.op) {
                 case UNOP_INVALID: assert(false); break;
                 case UNOP_DEREF:   printf("<");   break;
                 case UNOP_MINUS:   printf("-");   break;
@@ -1611,8 +1604,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         };
 
-        case Expression_PTN_Kind::SUBSCRIPT:
-        {
+        case Expression_PTN_Kind::SUBSCRIPT: {
             print_indent(indent);
             print_expression_ptn(expression->subscript.pointer_expression, 0);
             printf("[");
@@ -1621,34 +1613,27 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::INTEGER_LITERAL:
-        {
+        case Expression_PTN_Kind::INTEGER_LITERAL: {
             print_indent(indent);
             printf("%" PRId64, expression->integer_literal.s64);
             break;
         }
 
-        case Expression_PTN_Kind::FLOAT_LITERAL:
-        {
+        case Expression_PTN_Kind::FLOAT_LITERAL: {
             print_indent(indent);
             printf("%f", expression->float_literal.r32);
             break;
         }
 
-        case Expression_PTN_Kind::STRING_LITERAL:
-        {
+        case Expression_PTN_Kind::STRING_LITERAL: {
             print_indent(indent);
 
             printf("\"");
-            for (uint64_t i = 0; i < expression->string_literal.atom.length; i++)
-            {
+            for (uint64_t i = 0; i < expression->string_literal.atom.length; i++) {
                 char c;
-                if (parser_make_escape_char(expression->string_literal.atom.data[i], &c))
-                {
+                if (parser_make_escape_char(expression->string_literal.atom.data[i], &c)) {
                     printf("\\%c", c);
-                }
-                else
-                {
+                } else {
                     printf("%c", c);
                 }
             }
@@ -1656,8 +1641,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::DOT:
-        {
+        case Expression_PTN_Kind::DOT: {
             print_indent(indent);
             print_expression_ptn(expression->dot.parent_expression, 0);
             printf(".");
@@ -1666,11 +1650,9 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         }
 
 
-        case Expression_PTN_Kind::COMPOUND:
-        {
+        case Expression_PTN_Kind::COMPOUND: {
             print_indent(indent);
-            if (expression->compound.type_expression)
-            {
+            if (expression->compound.type_expression) {
                 print_expression_ptn(expression->compound.type_expression, 0);
                 printf(" ");
             }
@@ -1681,37 +1663,30 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::CHAR_LITERAL:
-        {
+        case Expression_PTN_Kind::CHAR_LITERAL: {
             print_indent(indent);
             char c;
-            if (parser_make_escape_char(expression->char_literal.c, &c))
-            {
+            if (parser_make_escape_char(expression->char_literal.c, &c)) {
                 printf("'\\%c'", c);
-            }
-            else
-            {
+            } else {
                 printf("'%c'", c);
             }
             break;
         }
 
-        case Expression_PTN_Kind::BOOL_LITERAL:
-        {
+        case Expression_PTN_Kind::BOOL_LITERAL: {
             print_indent(indent);
             printf("%s", expression->bool_literal.value ? "true" : "false");
             break;
         }
 
-        case Expression_PTN_Kind::NULL_LITERAL:
-        {
+        case Expression_PTN_Kind::NULL_LITERAL: {
             print_indent(indent);
             printf("null");
             break;
         }
 
-        case Expression_PTN_Kind::ARRAY_TYPE:
-        {
+        case Expression_PTN_Kind::ARRAY_TYPE: {
             print_indent(indent);
             printf("[");
             if (expression->array_type.length_expression)
@@ -1723,24 +1698,26 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
             break;
         }
 
-        case Expression_PTN_Kind::POINTER_TYPE:
-        {
+        case Expression_PTN_Kind::POINTER_TYPE: {
             print_indent(indent);
             printf("*");
             print_expression_ptn(expression->pointer_type.pointee_type_expression, 0);
             break;
         }
 
-        case Expression_PTN_Kind::POLY_TYPE:
-        {
+        case Expression_PTN_Kind::POLY_TYPE: {
             print_indent(indent);
             printf("$");
             print_ptn(&expression->poly_type.identifier->self, 0);
-            if (expression->poly_type.specification_identifier)
-            {
+            if (expression->poly_type.specification_identifier) {
                 printf("/");
                 print_ptn(&expression->poly_type.specification_identifier->self, 0);
             }
+            break;
+        }
+
+        case Expression_PTN_Kind::FUNCTION_TYPE: {
+            assert(false);
             break;
         }
 

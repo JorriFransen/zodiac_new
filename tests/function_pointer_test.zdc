@@ -1,0 +1,27 @@
+std :: import std;
+
+#run main();
+
+main :: func() -> s64
+{
+    std.println("Function pointer test");
+
+    // f1 : func() = func1;
+    // f2 : *func() = *func2;
+
+    // f1();
+    // f2();
+
+    return 0;
+}
+
+void_func :: typedef func() -> void;
+// void_func_p :: typedef *func() -> void;
+
+func1 :: func() {
+    std.println("func1");
+}
+
+func2 :: func() {
+    std.println("func2");
+}

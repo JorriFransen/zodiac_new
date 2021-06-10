@@ -325,6 +325,7 @@ enum class Expression_PTN_Kind
     ARRAY_TYPE,
     POINTER_TYPE,
     POLY_TYPE,
+    FUNCTION_TYPE,
 };
 
 struct Expression_PTN
@@ -411,6 +412,8 @@ struct Expression_PTN
             Identifier_PTN *identifier;
             Identifier_PTN *specification_identifier;
         } poly_type;
+
+        Function_Proto_PTN *function_proto;
     };
 
     Expression_PTN() {}
@@ -612,6 +615,10 @@ Expression_PTN *new_poly_type_expression_ptn(Allocator *allocator, Identifier_PT
                                              Identifier_PTN *specification_identifier,
                                              const File_Pos &begin_file_pos,
                                              const File_Pos &end_file_pos);
+Expression_PTN *new_function_type_expression_ptn(Allocator *allocator,
+                                                 Function_Proto_PTN *function_proto,
+                                                 const File_Pos &begin_fp,
+                                                 const File_Pos &end_fp);
 
 Parameter_PTN *new_parameter_ptn(Allocator *allocator, Identifier_PTN *identifier,
                                  Expression_PTN *type_expression,

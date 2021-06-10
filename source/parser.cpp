@@ -851,13 +851,11 @@ Function_Proto_PTN *parser_parse_function_prototype(Parser *parser, Token_Stream
     auto begin_fp = ts->current_token().begin_file_pos;
     File_Pos end_fp = {};
 
-    if (!parser_expect_token(parser, ts, TOK_KW_FUNC))
-    {
+    if (!parser_expect_token(parser, ts, TOK_KW_FUNC)) {
         assert(false);
     }
 
-    if (!parser_expect_token(parser, ts, TOK_LPAREN))
-    {
+    if (!parser_expect_token(parser, ts, TOK_LPAREN)) {
         assert(false);
     }
 
@@ -1785,6 +1783,11 @@ Expression_PTN *parser_parse_base_expression(Parser *parser, Token_Stream *ts,
             break;
         }
 
+        case TOK_KW_FUNC: {
+            result = parser_parse_function_type_expression(parser, ts);
+            break;
+        }
+
         case TOK_MINUS: {
             assert(false);
             break;
@@ -1988,6 +1991,19 @@ Expression_PTN *parser_parse_poly_type_expression(Parser *parser,
 
     return new_poly_type_expression_ptn(parser->allocator, identifier, spec_ident,
                                         begin_fp, end_fp);
+}
+
+Expression_PTN *parser_parse_function_type_expression(Parser *parser, Token_Stream *ts)
+{
+    // auto begin_fp = ts->current_token().begin_file_pos;
+
+    auto func_proto = parser_parse_function_prototype(parser, ts);
+
+    assert(func_proto);
+
+    return new_function_type_expression_ptn(parser->allocator, func_proto,
+                                            func_proto->self.begin_file_pos,
+                                            func_proto->self.end_file_pos);
 }
 
 Expression_List_PTN *parser_parse_expression_list(Parser *parser,

@@ -1179,8 +1179,7 @@ namespace Zodiac
         auto begin_fp = ptn->self.begin_file_pos;
         auto end_fp = ptn->self.end_file_pos;
 
-        switch (ptn->kind)
-        {
+        switch (ptn->kind) {
             case Expression_PTN_Kind::INVALID: assert(false);
 
             case Expression_PTN_Kind::CALL: {
@@ -1228,8 +1227,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::BINARY:
-            {
+            case Expression_PTN_Kind::BINARY: {
                 auto ast_lhs_expr = ast_create_expression_from_ptn(ast_builder, ptn->binary.lhs,
                                                                    scope);
                 assert(ast_lhs_expr);
@@ -1276,12 +1274,10 @@ namespace Zodiac
 
             case Expression_PTN_Kind::COMPOUND: {
                 Array<AST_Expression*> ast_compound_exprs = {};
-                if (ptn->compound.list->expressions.count)
-                {
+                if (ptn->compound.list->expressions.count) {
                     array_init(ast_builder->allocator, &ast_compound_exprs);
 
-                    for (int64_t i = 0; i < ptn->compound.list->expressions.count; i++)
-                    {
+                    for (int64_t i = 0; i < ptn->compound.list->expressions.count; i++) {
                         auto ast_compound_expr =
                             ast_create_expression_from_ptn(ast_builder,
                                                            ptn->compound.list->expressions[i],
@@ -1408,6 +1404,11 @@ namespace Zodiac
                 assert(poly_type_decl);
                 return ast_poly_identifier_expression_new(ast_builder->allocator, poly_type_decl,
                                                           scope, begin_fp, end_fp);
+                break;
+            }
+
+            case Expression_PTN_Kind::FUNCTION_TYPE: {
+                assert(false);
                 break;
             }
         }
@@ -1603,6 +1604,11 @@ namespace Zodiac
                 return ast_poly_identifier_type_spec_new(ast_builder->allocator, ast_decl,
                                                          ast_spec_ident, scope,
                                                          begin_fp, end_fp);
+                break;
+            }
+
+            case Expression_PTN_Kind::FUNCTION_TYPE: {
+                assert(false);
                 break;
             }
         }

@@ -90,6 +90,7 @@ Expression_PTN *parser_parse_array_type_expression(Parser *parser, Token_Stream 
 Expression_PTN *parser_parse_pointer_type_expression(Parser *parser, Token_Stream *ts,
                                                      bool is_type = false);
 Expression_PTN *parser_parse_poly_type_expression(Parser *parser, Token_Stream *ts);
+Expression_PTN *parser_parse_function_type_expression(Parser *parser, Token_Stream *ts);
 
 Expression_List_PTN *parser_parse_expression_list(Parser *parser, Token_Stream *ts);
 
