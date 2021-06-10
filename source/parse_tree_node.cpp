@@ -290,7 +290,6 @@ void free_ptn(Allocator *allocator, Statement_PTN *ptn)
 void free_ptn(Allocator *allocator, Expression_PTN *ptn)
 {
     assert(ptn);
-    free_ptn(allocator, &ptn->self);
 
     switch (ptn->kind) {
         case Expression_PTN_Kind::INVALID: assert(false);
@@ -350,8 +349,17 @@ void free_ptn(Allocator *allocator, Expression_PTN *ptn)
         }
 
         case Expression_PTN_Kind::POLY_TYPE: assert(false);
-        case Expression_PTN_Kind::FUNCTION_TYPE: assert(false);
+
+        case Expression_PTN_Kind::FUNCTION_TYPE: {
+            if (ptn->function_proto->return_type_expression)
+                free_ptn(allocator, ptn->function_proto->return_type_expression);
+
+            array_free(&ptn->function_proto->parameters);
+            break;
+        }
     }
+
+    free_ptn(allocator, &ptn->self);
 }
 
 void free_ptn(Allocator *allocator, Expression_List_PTN *ptn)

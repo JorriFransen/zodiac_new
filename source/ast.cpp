@@ -1569,8 +1569,7 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::POINTER_TYPE:
-            {
+            case Expression_PTN_Kind::POINTER_TYPE: {
                 auto ptn_base_expr = ptn->pointer_type.pointee_type_expression;
                 auto ast_base_ts = ast_create_type_spec_from_expression_ptn(ast_builder,
                                                                             ptn_base_expr, scope);
@@ -1582,15 +1581,13 @@ namespace Zodiac
                 break;
             }
 
-            case Expression_PTN_Kind::POLY_TYPE:
-            {
+            case Expression_PTN_Kind::POLY_TYPE: {
                 auto ast_ident = ast_create_identifier_from_ptn(ast_builder,
                                                             ptn->poly_type.identifier, scope);
                 assert(ast_ident);
 
                 AST_Identifier *ast_spec_ident = nullptr;
-                if (ptn->poly_type.specification_identifier)
-                {
+                if (ptn->poly_type.specification_identifier) {
                     ast_spec_ident = ast_create_identifier_from_ptn(ast_builder,
                                             ptn->poly_type.specification_identifier, scope);
                     assert(ast_spec_ident);
@@ -1608,7 +1605,35 @@ namespace Zodiac
             }
 
             case Expression_PTN_Kind::FUNCTION_TYPE: {
-                assert(false);
+                auto proto = ptn->function_proto;
+                auto param_count = proto->parameters.count;
+                auto param_type_specs = array_create<AST_Type_Spec *>(ast_builder->allocator,
+                                                                      param_count);
+
+                for (int64_t i = 0; i < param_count; i++) {
+                    auto param = proto->parameters[i];
+                    auto param_type_spec =
+                        ast_create_type_spec_from_expression_ptn(ast_builder,
+                                                                 param->type_expression,
+                                                                 scope);
+
+                    array_append(&param_type_specs, param_type_spec);
+                }
+
+                AST_Type_Spec *return_ts = nullptr;
+
+                if (proto->return_type_expression) {
+                    return_ts = ast_create_type_spec_from_expression_ptn(ast_builder,
+                                                             proto->return_type_expression, scope);
+                } else {
+                    return_ts = ast_type_spec_from_type_new(ast_builder->allocator,
+                                                            Builtin::type_void, scope);
+                }
+
+                assert(return_ts);
+                return ast_function_type_spec_new(ast_builder->allocator, param_type_specs,
+                                                  return_ts, nullptr, scope,
+                                                  begin_fp, end_fp);
                 break;
             }
         }

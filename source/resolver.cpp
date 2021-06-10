@@ -138,6 +138,10 @@ Resolve_Result resolver_finish(Resolver *resolver)
                     resolver->build_data->entry_module = pm.ast;
                 }
 
+                if (resolver->build_data->options->print_ast) {
+                    ast_print(pm.ast);
+                }
+
                 assert(pm.ast->kind == AST_Node_Kind::MODULE);
                 AST_Module *ast_module = pm.ast;
 
