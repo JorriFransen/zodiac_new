@@ -1097,7 +1097,7 @@ namespace Zodiac
     void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent,
                              bool newline = false);
     void ast_print_expression(AST_Expression *ast_expr, uint64_t indent);
-    void ast_print_type_spec(AST_Type_Spec *type_spec);
+    void ast_print_type_spec(AST_Type_Spec *type_spec, bool newline = false);
 
     void ast_print_scope(Allocator *allocator, AST_Node *anode);
     void ast_print_scope(String_Builder *sb, AST_Node *anode, int64_t indent = 0);

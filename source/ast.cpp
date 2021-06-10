@@ -3367,7 +3367,7 @@ namespace Zodiac
             case AST_Declaration_Kind::TYPEDEF:
             {
                 printf(" :: typedef ");
-                ast_print_type_spec(ast_decl->typedef_decl.type_spec);
+                ast_print_type_spec(ast_decl->typedef_decl.type_spec, true);
                 break;
             }
 
@@ -3662,61 +3662,51 @@ namespace Zodiac
         }
     }
 
-    void ast_print_type_spec(AST_Type_Spec *type_spec)
+    void ast_print_type_spec(AST_Type_Spec *type_spec, bool newline /*=false*/)
     {
-        switch (type_spec->kind)
-        {
+        switch (type_spec->kind) {
             case AST_Type_Spec_Kind::INVALID: assert(false);
 
-            case AST_Type_Spec_Kind::IDENTIFIER:
-            {
+            case AST_Type_Spec_Kind::IDENTIFIER: {
                 printf("%s", type_spec->identifier->atom.data);
                 break;
             }
 
-            case AST_Type_Spec_Kind::POINTER:
-            {
+            case AST_Type_Spec_Kind::POINTER: {
                 printf("*");
                 ast_print_type_spec(type_spec->base_type_spec);
                 break;
             }
 
-            case AST_Type_Spec_Kind::DOT:
-            {
+            case AST_Type_Spec_Kind::DOT: {
                 ast_print_expression(type_spec->dot_expression, 0);
                 break;
             }
 
-            case AST_Type_Spec_Kind::FUNCTION:
-            {
+            case AST_Type_Spec_Kind::FUNCTION: {
                 printf("func (");
-                for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++)
-                {
+                for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
                     if (i > 0) printf(", ");
                     ast_print_type_spec(type_spec->function.parameter_type_specs[i]);
                 }
                 printf(")");
-                if (type_spec->function.return_type_spec)
-                {
+                if (type_spec->function.return_type_spec) {
                     printf(" -> ");
                     ast_print_type_spec(type_spec->function.return_type_spec);
                 }
                 break;
             }
 
-            case AST_Type_Spec_Kind::ARRAY:
-            {
+            case AST_Type_Spec_Kind::ARRAY: {
                 printf("[]");
                 ast_print_type_spec(type_spec->array.element_type_spec);
                 break;
             }
 
-            case AST_Type_Spec_Kind::TEMPLATED:
-            {
+            case AST_Type_Spec_Kind::TEMPLATED: {
                 ast_print_expression(type_spec->templated.ident_expression, 0);
                 printf("(");
-                for (int64_t i = 0; i < type_spec->templated.argument_expressions.count; i++)
-                {
+                for (int64_t i = 0; i < type_spec->templated.argument_expressions.count; i++) {
                     if (i > 0) printf(", ");
                     ast_print_expression(type_spec->templated.argument_expressions[i], 0);
                 }
@@ -3724,26 +3714,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Spec_Kind::POLY_IDENTIFIER:
-            {
+            case AST_Type_Spec_Kind::POLY_IDENTIFIER: {
                 printf("$");
                 ast_print(type_spec->poly_identifier.declaration);
-                if (type_spec->poly_identifier.specification_identifier)
-                {
+                if (type_spec->poly_identifier.specification_identifier) {
                     printf("/");
                     ast_print(type_spec->poly_identifier.specification_identifier);
                 }
                 break;
             }
 
-            case AST_Type_Spec_Kind::FROM_TYPE:
-            {
+            case AST_Type_Spec_Kind::FROM_TYPE: {
                 printf("type_spec_from_type(");
                 ast_print_type(type_spec->type);
                 printf(")");
                 break;
             }
         }
+
+        if (newline) printf("\n");
     }
 
     void ast_print_expression(AST_Expression *ast_expr, uint64_t indent)
