@@ -3424,7 +3424,12 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Declaration_Kind::RUN: assert(false);
+            case AST_Declaration_Kind::RUN: {
+                printf("#run ");
+                ast_print_expression(ast_decl->run.expression, 0);
+                printf("\n");
+                break;
+            }
 
             case AST_Declaration_Kind::STATIC_IF: {
                 printf("#if (");
