@@ -109,18 +109,6 @@ Resolve_Result resolver_finish(Resolver *resolver)
     bool progressed = false;
     uint64_t cycle_count = 0;
 
-    uint64_t parsed_test_count = 0;
-    uint64_t resolved_test_count = 0;
-    uint64_t sized_test_count = 0;
-    uint64_t bc_test_count = 0;
-
-    BC_Function *bc_test_wrapper = nullptr;
-    Array<BC_Function *> bc_tests = {};
-
-    if (bd->options->run_tests) {
-        array_init(resolver->allocator, &bc_tests);
-    }
-
     while (!done) {
 
         if (resolver->build_data->options->verbose) {
@@ -161,17 +149,6 @@ Resolve_Result resolver_finish(Resolver *resolver)
 
                     bucket_locator_advance(&bl);
                 }
-
-                auto tl = bucket_array_first(&ast_module->test_decls);
-                while (tl.bucket) {
-                    auto p_decl = bucket_locator_get_ptr(tl);
-                    auto decl = *p_decl;
-                    queue_resolve_job(resolver, decl);
-
-                    parsed_test_count += 1;
-
-                    bucket_locator_advance(&tl);
-                }
             }
         }
 
@@ -197,8 +174,6 @@ Resolve_Result resolver_finish(Resolver *resolver)
                         decl->decl_flags |= AST_DECL_FLAG_IS_ENTRY;
                     } else if (is_bytecode_entry_decl(decl)) {
                         // decl->decl_flags |= AST_DECL_FLAG_IS_BYTECODE_ENTRY;
-                    } else if (decl->kind == AST_Declaration_Kind::TEST) {
-                        resolved_test_count += 1;
                     }
                 }
             }
@@ -239,10 +214,6 @@ Resolve_Result resolver_finish(Resolver *resolver)
                             assert((decl->decl_flags & AST_DECL_FLAG_IS_STRUCT_MEMBER) ||
                                    (decl->decl_flags & AST_DECL_FLAG_IS_UNION_MEMBER));
                         }
-                    } else if (decl->kind == AST_Declaration_Kind::TEST) {
-                        assert(decl->test.func_decl->flags & AST_NODE_FLAG_SIZED);
-                        sized_test_count += 1;
-                        queue_bytecode_job(resolver, decl);
                     } else {
                         assert(decl->kind == AST_Declaration_Kind::IMPORT ||
                         decl->kind == AST_Declaration_Kind::USING         ||
@@ -337,32 +308,6 @@ Resolve_Result resolver_finish(Resolver *resolver)
                 } else {
                     queue_enqueue(&resolver->bytecode_jobs, job);
                 }
-            } else if (job.decl->kind == AST_Declaration_Kind::TEST) {
-                auto test_func_decl = job.decl->test.func_decl;
-                auto test_func = bc_emit_function_declaration(
-                                     &resolver->bytecode_builder,
-                                     test_func_decl);
-
-                array_append(&bc_tests, test_func);
-
-                bc_test_count++;
-
-                if (!resolver->build_data->options->dont_emit_llvm) {
-                    queue_llvm_job(resolver, test_func);
-                }
-
-                if (bc_test_count == parsed_test_count) {
-                    bc_test_wrapper = bc_emit_test_wrapper(&resolver->bytecode_builder, bc_tests);
-                    assert(bc_test_wrapper);
-
-                    queue_run_job(resolver, nullptr, bc_test_wrapper);
-
-                    if (!resolver->build_data->options->dont_emit_llvm) {
-                        llvm_register_function(&resolver->llvm_builder, bc_test_wrapper);
-                        queue_llvm_job(resolver, bc_test_wrapper);
-                    }
-                }
-
             } else {
                 assert(false);
             }
@@ -635,7 +580,6 @@ void queue_bytecode_job(Resolver *resolver, AST_Declaration *decl)
 {
     assert(decl->kind == AST_Declaration_Kind::FUNCTION ||
            decl->kind == AST_Declaration_Kind::RUN ||
-           decl->kind == AST_Declaration_Kind::TEST ||
            decl->kind == AST_Declaration_Kind::VARIABLE ||
            decl->kind == AST_Declaration_Kind::CONSTANT);
 
@@ -1458,27 +1402,7 @@ bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration)
             break;
         }
 
-        case AST_Declaration_Kind::IMPORT_LINK:
-            assert(false);
-
-        case AST_Declaration_Kind::TEST: {
-#ifndef NDEBUG
-            auto fn_decl = declaration->test.func_decl;
-#endif
-            assert(fn_decl->type);
-            assert(fn_decl->type->kind == AST_Type_Kind::FUNCTION);
-            assert(fn_decl->type->function.return_type == Builtin::type_bool);
-
-            assert(fn_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-            assert(fn_decl->flags & AST_NODE_FLAG_TYPED);
-
-            declaration->type = Builtin::type_bool;
-            declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
-            declaration->flags |= AST_NODE_FLAG_TYPED;
-            // printf("Resolved test: %s \n", fn_decl->identifier->atom.data);
-            return true;
-            break;
-        }
+        case AST_Declaration_Kind::IMPORT_LINK: assert(false);
     }
 
     assert(false);
@@ -3200,9 +3124,7 @@ bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
                 if (!resolver->build_data->options->dont_emit_llvm)
                     llvm_register_function(&resolver->llvm_builder, bc_func);
 
-                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE) &&
-                    !(decl->decl_flags & AST_DECL_FLAG_IS_TEST_FUNC)) {
-
+                if (!(decl->decl_flags & AST_DECL_FLAG_QUEUED_BYTECODE)) {
                     queue_bytecode_job(resolver, decl);
                 }
             }
@@ -3218,8 +3140,7 @@ bool try_size_declaration(Resolver *resolver, AST_Declaration *decl)
         case AST_Declaration_Kind::UNION:
         case AST_Declaration_Kind::ENUM:
         case AST_Declaration_Kind::RUN:
-        case AST_Declaration_Kind::STATIC_IF:
-        case AST_Declaration_Kind::TEST: {
+        case AST_Declaration_Kind::STATIC_IF: {
             assert(decl->type);
             if (!(decl->type->flags & AST_NODE_FLAG_SIZED)) {
 #ifndef NDEBUG

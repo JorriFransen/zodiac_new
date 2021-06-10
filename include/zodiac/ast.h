@@ -33,8 +33,6 @@ namespace Zodiac
         AST_NODE_FLAG_RESOLVED_ID = 0x01,
         AST_NODE_FLAG_TYPED       = 0x02,
         AST_NODE_FLAG_SIZED       = 0x04,
-
-        AST_NODE_FLAG_TEST        = 0x10,
     };
 
     struct AST_Node
@@ -68,9 +66,6 @@ namespace Zodiac
 
         Declarations declarations = {};
         Scope *module_scope = nullptr;
-
-        Declarations test_decls = {};
-        Scope *module_test_scope = nullptr;
     };
 
     enum class AST_Declaration_Kind
@@ -98,8 +93,6 @@ namespace Zodiac
         STATIC_ASSERT,
 
         IMPORT_LINK,
-
-        TEST,
     };
 
     typedef uint64_t AST_Declaration_Flag;
@@ -122,7 +115,6 @@ namespace Zodiac
         AST_DECL_FLAG_IS_STRUCT_MEMBER      = 0x1000,
         AST_DECL_FLAG_IS_UNION_MEMBER       = 0x2000,
         AST_DECL_FLAG_CHECKING_DEPENDECIES  = 0x4000,
-        AST_DECL_FLAG_IS_TEST_FUNC          = 0x8000,
     };
 
     struct AST_Flat_Declaration
@@ -241,12 +233,6 @@ namespace Zodiac
 
                 int64_t index_in_parent;
             } import_link;
-
-            struct
-            {
-                AST_Declaration *func_decl;
-            } test;
-
         };
     };
 
@@ -847,12 +833,6 @@ namespace Zodiac
                                                      AST_Declaration *using_member,
                                                      AST_Declaration *imported_member,
                                                      Scope *scope);
-
-    AST_Declaration *ast_test_declaration_new(Allocator *allocator,
-                                              AST_Declaration *func_decl,
-                                              Scope *scope,
-                                              const File_Pos &bfp,
-                                              const File_Pos &efp);
 
     AST_Switch_Case *ast_switch_case_new(Allocator *allocator,
                                          Bucket_Array<AST_Expression *, 4> case_exprs,

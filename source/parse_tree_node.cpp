@@ -144,12 +144,6 @@ void free_ptn(Allocator *allocator, Declaration_PTN *ptn)
             free_ptn(allocator, ptn->static_assert_decl.cond_expression);
             break;
         }
-
-        case Declaration_PTN_Kind::TEST: {
-            free_ptn(allocator, ptn->test.identifier);
-            free_ptn(allocator, ptn->test.body);
-            break;
-        }
     }
 }
 
@@ -711,18 +705,6 @@ Declaration_PTN *new_static_assert_declaration_ptn(Allocator *allocator,
     return result;
 }
 
-Declaration_PTN *new_test_declaration_ptn(Allocator *allocator, Identifier_PTN *identifier,
-                                          Statement_PTN *body,
-                                          const File_Pos &bfp, const File_Pos &efp)
-{
-    auto result = new_ptn<Declaration_PTN>(allocator, bfp, efp);
-    result->kind = Declaration_PTN_Kind::TEST;
-    result->test.identifier = identifier;
-    result->test.body = body;
-
-    return result;
-}
-
 Expression_List_PTN *new_expression_list_ptn(Allocator *allocator,
                                              Array<Expression_PTN*> expressions,
                                              const File_Pos &begin_fp, const File_Pos &end_fp)
@@ -1011,8 +993,6 @@ Declaration_PTN *copy_declaration_ptn(Allocator *allocator, Declaration_PTN *dec
 
         case Declaration_PTN_Kind::STATIC_IF: assert(false);
         case Declaration_PTN_Kind::STATIC_ASSERT: assert(false);
-
-        case Declaration_PTN_Kind::TEST: assert(false);
     }
 
     assert(false);
@@ -1555,8 +1535,6 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             printf(");\n");
             break;
         }
-
-        case Declaration_PTN_Kind::TEST: assert(false);
     }
 }
 

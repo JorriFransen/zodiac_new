@@ -14,7 +14,6 @@ namespace Zodiac
         BLOCK,
         AGGREGATE,
         STATIC_IF,
-        TEST,
     };
 
     struct Scope_Block

@@ -76,34 +76,6 @@ namespace Zodiac
             bucket_array_add(&global_decls, ast_decl);
         }
 
-        if (!valid) return nullptr;
-
-        Declarations test_decls = {};
-        Scope *module_test_scope = nullptr;
-
-        if (ast_builder->build_data->options->run_tests) {
-
-            bucket_array_init(ast_builder->allocator, &test_decls);
-            module_test_scope = scope_new(ast_builder->allocator, Scope_Kind::TEST, module_scope,
-                                          parsed_file->tests.count);
-
-            for (int64_t i = 0; i < parsed_file->tests.count; i++) {
-                assert(parsed_file->tests[i]->kind == Declaration_PTN_Kind::TEST);
-                AST_Declaration *ast_decl =
-                    ast_create_declaration_from_ptn(ast_builder, parsed_file->tests[i], nullptr,
-                                                    module_test_scope, ast_module);
-
-                assert(ast_decl->kind == AST_Declaration_Kind::TEST);
-
-                if (!ast_decl) {
-                    valid = false;
-                    // @TODO: @CLEANUP: Why don't we just break or return null here?
-                    continue;
-                }
-
-                bucket_array_add(&test_decls, ast_decl);
-            }
-        }
 
         if (!valid) return nullptr;
 
@@ -118,26 +90,9 @@ namespace Zodiac
             bucket_locator_advance(&dl);
         }
 
-        auto tl = bucket_array_first(&test_decls);
-        while (tl.bucket) {
-            AST_Declaration **p_decl = bucket_locator_get_ptr(tl);
-
-            assert((*p_decl)->kind == AST_Declaration_Kind::TEST);
-            assert((*p_decl)->test.func_decl);
-            assert((*p_decl)->test.func_decl->kind == AST_Declaration_Kind::FUNCTION);
-
-            ast_flatten_declaration(ast_builder, p_decl);
-
-            bucket_locator_advance(&tl);
-        }
-
-
         ast_module->declarations = global_decls;
         ast_module->module_scope = module_scope;
-        if (ast_builder->build_data->options->run_tests) {
-            ast_module->test_decls = test_decls;
-            ast_module->module_test_scope = module_test_scope;
-        }
+
         return ast_module;
     }
 
@@ -631,71 +586,6 @@ namespace Zodiac
                                                            ptn->self.begin_file_pos,
                                                            ptn->self.end_file_pos);
                 break;
-            }
-
-            case Declaration_PTN_Kind::TEST: {
-                assert(ast_builder->build_data->options->run_tests);
-                assert(ptn->kind == Declaration_PTN_Kind::TEST);
-
-                assert(parent_scope->kind == Scope_Kind::TEST);
-
-                auto fn_ident = ast_create_identifier_from_ptn(ast_builder,
-                                                               ptn->test.identifier,
-                                                               parent_scope);
-
-                auto module_name_atom = ast_module->name;
-
-                Array<AST_Type_Spec *> fn_ts_params = {};
-                AST_Type_Spec *fn_return_ts = ast_type_spec_from_type_new(ast_builder->allocator,
-                                                                          Builtin::type_bool,
-                                                                          parent_scope);
-
-                auto fn_ts = ast_function_type_spec_new(ast_builder->allocator,
-                                                        fn_ts_params,
-                                                        fn_return_ts,
-                                                        nullptr,
-                                                        parent_scope,
-                                                        ptn->self.begin_file_pos,
-                                                        ptn->self.end_file_pos);
-
-                Array<AST_Declaration *> fn_param_decls = {};
-                auto fn_var_decls = array_create<AST_Declaration *>(ast_builder->allocator, 4);
-
-                Scope *fn_param_scope = scope_new(ast_builder->allocator, Scope_Kind::PARAMETER,
-                                                  parent_scope);
-
-                auto fn_body = ast_create_statement_from_ptn(ast_builder,
-                                                             ptn->test.body,
-                                                             &fn_var_decls,
-                                                             fn_param_scope,
-                                                             ast_module);
-
-                auto test_func_decl =
-                    ast_function_declaration_new(ast_builder->allocator,
-                                                 fn_ident,
-                                                 module_name_atom,
-                                                 fn_ts,
-                                                 fn_param_decls,
-                                                 fn_var_decls,
-                                                 fn_body,
-                                                 false, /* is_naked */
-                                                 false, /* is_noreturn */
-                                                 false, /* is_foreign */
-                                                 false, /* is_compiler_func */
-                                                 parent_scope,
-                                                 fn_param_scope,
-                                                 ptn->self.begin_file_pos,
-                                                 ptn->self.end_file_pos);
-
-                test_func_decl->decl_flags |= AST_DECL_FLAG_IS_TEST_FUNC;
-
-                fn_param_scope->function_declaration = test_func_decl;
-
-                result = ast_test_declaration_new(ast_builder->allocator,
-                                                  test_func_decl,
-                                                  parent_scope,
-                                                  ptn->self.begin_file_pos,
-                                                  ptn->self.end_file_pos);
             }
         }
 
@@ -1889,17 +1779,6 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
-
-            case AST_Declaration_Kind::TEST: {
-                auto first_node_index = nodes->count;
-                ast_flatten_declaration(builder, &decl->test.func_decl, nodes);
-                array_append(nodes, node);
-                for (int64_t i = first_node_index; i < nodes->count; i++) {
-                    auto node_ptr = (*nodes)[i];
-                    (*node_ptr)->flags |= AST_NODE_FLAG_TEST;
-                }
-                break;
-            }
         }
     }
 
@@ -2206,9 +2085,6 @@ namespace Zodiac
 
         result->declarations = {};
         result->module_scope = nullptr;
-
-        result->test_decls = {};
-        result->module_test_scope = nullptr;
 
         return result;
     }
@@ -2545,22 +2421,6 @@ namespace Zodiac
         result->type = imported_member->type;
         result->flags |= AST_NODE_FLAG_RESOLVED_ID;
         result->flags |= AST_NODE_FLAG_TYPED;
-
-        return result;
-    }
-
-    AST_Declaration *ast_test_declaration_new(Allocator *allocator,
-                                              AST_Declaration *func_decl,
-                                              Scope *scope,
-                                              const File_Pos &bfp,
-                                              const File_Pos &efp)
-    {
-        assert(func_decl->kind == AST_Declaration_Kind::FUNCTION);
-
-        auto result = ast_declaration_new(allocator, AST_Declaration_Kind::TEST,
-                                          func_decl->identifier, scope, bfp, efp);
-
-        result->test.func_decl = func_decl;
 
         return result;
     }
@@ -3578,8 +3438,6 @@ namespace Zodiac
             }
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
-
-            case AST_Declaration_Kind::TEST: assert(false);
         }
     }
 
@@ -4161,8 +4019,6 @@ namespace Zodiac
             case AST_Declaration_Kind::STATIC_ASSERT: assert(false);
 
             case AST_Declaration_Kind::IMPORT_LINK: assert(false);
-
-            case AST_Declaration_Kind::TEST: assert(false);
         }
     }
 

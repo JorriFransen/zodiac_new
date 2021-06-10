@@ -1,8 +1,8 @@
 
 #include "llvm_builder.h"
 
-#include "bytecode.h"
 #include "builtin.h"
+#include "bytecode.h"
 #include "os.h"
 #include "string_builder.h"
 #include "temp_allocator.h"
@@ -1086,10 +1086,6 @@ namespace Zodiac
 
                 if ((func->flags & BC_FUNC_FLAG_CRT_ENTRY) &&
                     options->link_c) {
-                    continue;
-                }
-
-                if (func->flags & BC_FUNC_FLAG_IS_TEST) {
                     continue;
                 }
 

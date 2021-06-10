@@ -46,8 +46,8 @@ int main(int argc, char **argv)
 
     TracyCZoneEnd(tcz_init);
 
-    start_resolving(&resolver);
-    Resolve_Result rr = finish_resolving(&resolver);
+    resolver_start(&resolver);
+    Resolve_Result rr = resolver_finish(&resolver);
     assert(rr.error_count == 0);
     if (rr.parse_error || rr.llvm_error) return 1;
 

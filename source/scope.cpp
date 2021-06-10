@@ -173,11 +173,6 @@ namespace Zodiac
                 string_builder_append(sb, "STATIC_IF:\n");
                 break;
             }
-
-            case Scope_Kind::TEST: {
-                string_builder_append(sb, "TEST:\n");
-                break;
-            }
         }
 
         indent += 1;

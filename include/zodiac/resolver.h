@@ -109,8 +109,8 @@ namespace Zodiac
     void resolver_init(Allocator *allocator, Resolver *resolver, Build_Data *build_data,
                        String first_file_path);
 
-    void start_resolving(Resolver *resolver);
-    Resolve_Result finish_resolving(Resolver *resolver);
+    void resolver_start(Resolver *resolver);
+    Resolve_Result resolver_finish(Resolver *resolver);
 
     bool queue_parse_job(Resolver *resolver, String module_name, String module_path,
                          AST_Module **ast_module, bool insert_entry_module = false);

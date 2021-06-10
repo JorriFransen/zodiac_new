@@ -160,7 +160,6 @@ namespace Zodiac
         BC_FUNC_FLAG_NORETURN        = 0x010,
         BC_FUNC_FLAG_LLVM_REGISTERED = 0x020,
         BC_FUNC_FLAG_COMPILER_FUNC   = 0x040,
-        BC_FUNC_FLAG_IS_TEST         = 0x080,
     };
 
 
@@ -269,8 +268,6 @@ namespace Zodiac
 
     BC_Function *bc_emit_run_wrapper(BC_Builder *builder, AST_Declaration *decl,
                                      BC_Function *pre_main_func);
-
-    BC_Function *bc_emit_test_wrapper(BC_Builder *builder, Array<BC_Function *> test_functions);
 
     BC_Block *bc_new_block(BC_Builder *builder, const char *name);
     void bc_append_block(BC_Builder *builder, BC_Function *function, BC_Block *block);

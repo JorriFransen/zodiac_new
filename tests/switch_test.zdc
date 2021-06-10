@@ -66,8 +66,8 @@ main :: func() -> s64
     {
         switch (day) #allow_incomplete
         {
-            case Day.Tuesday: std.print("Handling tuesday...\n");
-            case Day.Saturday: std.print("Handling saturday...\n");
+            case Day.Tuesday: std.print("Handling tuesday!\n");
+            case Day.Saturday: std.print("Handling saturday!\n");
         }
         day = day + 1;
     }
