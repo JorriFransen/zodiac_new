@@ -1495,10 +1495,18 @@ void print_declaration_ptn(Declaration_PTN *decl, uint64_t indent, bool newline/
             print_indent(indent);
             printf("%s :: typedef ", decl->identifier->atom.data);
             print_expression_ptn(decl->typedef_decl.type_expression, 0);
+            if (newline) printf("\n");
             break;
         }
 
-        case Declaration_PTN_Kind::RUN: assert(false);
+        case Declaration_PTN_Kind::RUN: {
+            print_indent(indent);
+            printf("#run ");
+            print_expression_ptn(decl->run.expression, 0);
+            printf("\n");
+            if (newline) printf("\n");
+            break;
+        }
 
         case Declaration_PTN_Kind::STATIC_IF: {
             print_indent(indent);
