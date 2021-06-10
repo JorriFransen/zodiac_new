@@ -16,7 +16,7 @@ main :: func() -> s64
 }
 
 void_func :: typedef func() -> void;
-// void_func_p :: typedef *func() -> void;
+void_func_p :: typedef *func() -> void;
 
 func1 :: func() {
     std.println("func1");

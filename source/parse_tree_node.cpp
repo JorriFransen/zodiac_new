@@ -1725,7 +1725,7 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
         }
 
         case Expression_PTN_Kind::FUNCTION_TYPE: {
-            assert(false);
+            print_ptn(&expression->function_proto->self, 0);
             break;
         }
 
