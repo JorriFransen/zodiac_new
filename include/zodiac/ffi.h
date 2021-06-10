@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ast.h"
-#include "bc.h"
+#include "bytecode.h"
 
 #include <dyncall.h>
 #include <dynload.h>

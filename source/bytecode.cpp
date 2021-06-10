@@ -1,4 +1,4 @@
-#include "bc.h"
+#include "bytecode.h"
 
 #include "builtin.h"
 #include "const_interpreter.h"
@@ -1494,15 +1494,8 @@ namespace Zodiac
             Scope *entry_scope = builder->build_data->entry_module->module_scope;
             assert(entry_scope);
 
-            AST_Declaration *handler_decl = nullptr;
-
-            if (expr->flags & AST_NODE_FLAG_TEST) {
-                handler_decl = scope_find_declaration(entry_scope,
-                                                      Builtin::atom_test_assert_handler);
-            } else {
-                handler_decl = scope_find_declaration(entry_scope,
-                                                      Builtin::atom_default_assert_handler);
-            }
+            AST_Declaration *handler_decl =
+                scope_find_declaration(entry_scope, Builtin::atom_default_assert_handler);
 
             assert(handler_decl);
             assert(handler_decl->kind == AST_Declaration_Kind::FUNCTION);

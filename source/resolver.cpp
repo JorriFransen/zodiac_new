@@ -93,12 +93,12 @@ void resolver_init(Allocator *allocator, Resolver *resolver,
     queue_parse_job(resolver, first_file_name, first_file_path, nullptr, true);
 }
 
-void start_resolving(Resolver *resolver)
+void resolver_start(Resolver *resolver)
 {
     // Don't do anything when not running threaded
 }
 
-Resolve_Result finish_resolving(Resolver *resolver)
+Resolve_Result resolver_finish(Resolver *resolver)
 {
     bool done = false;
 
@@ -2624,15 +2624,8 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 Scope *entry_scope = resolver->build_data->entry_module->module_scope;
                 assert(entry_scope);
 
-                AST_Declaration *assert_handler_decl = nullptr;
-
-                if (expression->flags & AST_NODE_FLAG_TEST) {
-                    assert_handler_decl =
-                        scope_find_declaration(entry_scope, Builtin::atom_test_assert_handler);
-                } else {
-                    assert_handler_decl =
-                        scope_find_declaration(entry_scope, Builtin::atom_default_assert_handler);
-                }
+                AST_Declaration *assert_handler_decl =
+                    scope_find_declaration(entry_scope, Builtin::atom_default_assert_handler);
 
                 assert(assert_handler_decl);
                 assert(assert_handler_decl->kind == AST_Declaration_Kind::FUNCTION);

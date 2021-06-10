@@ -19,7 +19,7 @@ set (ZODIAC_COMPILER_SOURCE
     source/allocator.cpp
     source/ast.cpp
     source/atom.cpp
-    source/bc.cpp
+    source/bytecode.cpp
     source/bucket_array.cpp
     source/build_data.cpp
     source/builtin.cpp

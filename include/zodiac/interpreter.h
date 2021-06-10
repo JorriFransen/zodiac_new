@@ -1,7 +1,7 @@
 #pragma once
 
 #include "allocator.h"
-#include "bc.h"
+#include "bytecode.h"
 #include "build_data.h"
 #include "ffi.h"
 

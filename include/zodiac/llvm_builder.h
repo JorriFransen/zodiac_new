@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bc.h"
+#include "bytecode.h"
 #include "build_data.h"
 #include "stack.h"
 

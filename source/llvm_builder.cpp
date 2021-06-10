@@ -1,7 +1,7 @@
 
 #include "llvm_builder.h"
 
-#include "bc.h"
+#include "bytecode.h"
 #include "builtin.h"
 #include "os.h"
 #include "string_builder.h"
