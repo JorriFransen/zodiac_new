@@ -2,6 +2,7 @@
 #include "ast.h"
 
 #include "builtin.h"
+#include "c_allocator.h"
 #include "parser.h"
 #include "parse_tree_node.h"
 #include "scope.h"
@@ -3203,24 +3204,39 @@ namespace Zodiac
         return true;
     }
 
-    void ast_print_indent(uint64_t indent)
+    void ast_print_indent(String_Builder *sb, uint64_t indent)
     {
         for (uint64_t i = 0; i < indent; i++)
         {
-            printf("    ");
+            string_builder_append(sb, "    ");
         }
     }
 
     void ast_print(AST_Node *ast_node)
     {
+        auto ca = c_allocator_get();
+
+        String_Builder sb = {};
+        string_builder_init(ca, &sb);
+
+        ast_print(&sb, ast_node);
+
+        String result = string_builder_to_string(ca, &sb);
+
+        printf("%.*s", (int)result.length, result.data);
+
+        string_free(ca, result);
+        string_builder_free(&sb);
+    }
+
+    void ast_print(String_Builder *sb, AST_Node *ast_node)
+    {
         assert(ast_node);
 
-        switch (ast_node->kind)
-        {
+        switch (ast_node->kind) {
             case AST_Node_Kind::INVALID: assert(false);
 
-            case AST_Node_Kind::MODULE:
-            {
+            case AST_Node_Kind::MODULE: {
                 auto module = (AST_Module*)ast_node;
 
                 auto bl = bucket_array_first(&module->declarations);
@@ -3229,25 +3245,25 @@ namespace Zodiac
                     auto p_decl = bucket_locator_get_ptr(bl);
                     auto decl = *p_decl;
 
-                    ast_print_declaration(decl, 0);
-                    if (decl->kind == AST_Declaration_Kind::FUNCTION) printf("\n");
+                    ast_print_declaration(sb, decl, 0);
+                    if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                        string_builder_append(sb, "\n");
+                    }
 
                     bucket_locator_advance(&bl);
                 }
                 break;
             }
 
-            case AST_Node_Kind::IDENTIFIER:
-            {
+            case AST_Node_Kind::IDENTIFIER: {
                 auto ident = (AST_Identifier*)ast_node;
-                printf("%s", ident->atom.data);
+                string_builder_appendf(sb, "%s", ident->atom.data);
                 break;
             }
 
-            case AST_Node_Kind::DECLARATION:
-            {
+            case AST_Node_Kind::DECLARATION: {
                 auto ast_decl = static_cast<AST_Declaration*>(ast_node);
-                ast_print_declaration(ast_decl, 0);
+                ast_print_declaration(sb, ast_decl, 0);
                 break;
             }
 
@@ -3260,216 +3276,200 @@ namespace Zodiac
         }
     }
 
-    void ast_print_declaration(AST_Declaration *ast_decl, uint64_t indent,
+    void ast_print_declaration(String_Builder *sb, AST_Declaration *ast_decl, uint64_t indent,
                                bool newline/*=true*/)
     {
         if (ast_decl->kind == AST_Declaration_Kind::FUNCTION ||
-            ast_decl->kind == AST_Declaration_Kind::STRUCTURE)
-        {
-            printf("\n");
+            ast_decl->kind == AST_Declaration_Kind::STRUCTURE) {
+            string_builder_append(sb, "\n");
         }
 
-        ast_print_indent(indent);
+        ast_print_indent(sb, indent);
 
-        if (ast_decl->decl_flags & AST_DECL_FLAG_IS_NAKED)
-        {
-            printf("#naked ");
+        if (ast_decl->decl_flags & AST_DECL_FLAG_IS_NAKED) {
+            string_builder_append(sb, "#naked ");
         }
 
-        if (ast_decl->kind == AST_Declaration_Kind::POLY_TYPE)
-        {
-            printf("$");
+        if (ast_decl->kind == AST_Declaration_Kind::POLY_TYPE) {
+            string_builder_append(sb, "$");
         }
 
-        if (ast_decl->identifier) printf("%s", ast_decl->identifier->atom.data);
+        if (ast_decl->identifier) {
+            string_builder_appendf(sb, "%s", ast_decl->identifier->atom.data);
+        }
 
         switch (ast_decl->kind) {
             case AST_Declaration_Kind::INVALID: assert(false);
 
-            case AST_Declaration_Kind::IMPORT:
-            {
-                printf(" :: import ");
-                ast_print_expression(ast_decl->import.ident_expression, 0);
-                printf(";\n");
+            case AST_Declaration_Kind::IMPORT: {
+                string_builder_append(sb, " :: import ");
+                ast_print_expression(sb, ast_decl->import.ident_expression, 0);
+                string_builder_append(sb, ";\n");
                 break;
             }
 
-            case AST_Declaration_Kind::USING:
-            {
-                printf("using ");
-                ast_print_expression(ast_decl->using_decl.ident_expr, 0);
-                printf(";\n");
+            case AST_Declaration_Kind::USING: {
+                string_builder_append(sb, "using ");
+                ast_print_expression(sb, ast_decl->using_decl.ident_expr, 0);
+                string_builder_append(sb, ";\n");
                 break;
             }
 
             case AST_Declaration_Kind::VARIABLE:
-            case AST_Declaration_Kind::CONSTANT:
-            {
-                printf(" :");
-                if (ast_decl->variable.type_spec)
-                {
-                    printf(" ");
-                    ast_print_type_spec(ast_decl->variable.type_spec);
-                    if (ast_decl->variable.init_expression)
-                    {
-                        printf(" ");
+            case AST_Declaration_Kind::CONSTANT: {
+                string_builder_append(sb, " :");
+                if (ast_decl->variable.type_spec) {
+                    string_builder_append(sb, " ");
+                    ast_print_type_spec(sb, ast_decl->variable.type_spec);
+                    if (ast_decl->variable.init_expression) {
+                        string_builder_append(sb, " ");
                     }
                 }
 
-                if (ast_decl->variable.init_expression)
-                {
-                    if (ast_decl->kind == AST_Declaration_Kind::VARIABLE) printf("= ");
-                    else printf(": ");
+                if (ast_decl->variable.init_expression) {
+                    if (ast_decl->kind == AST_Declaration_Kind::VARIABLE) {
+                        string_builder_append(sb, "= ");
+                    } else {
+                        string_builder_append(sb, ": ");
+                    }
 
-                    ast_print_expression(ast_decl->variable.init_expression, 0);
+                    ast_print_expression(sb, ast_decl->variable.init_expression, 0);
                 }
-                printf(";");
-                if (newline) printf("\n");
+                string_builder_append(sb, ";");
+                if (newline) string_builder_append(sb, "\n");
                 break;
             }
 
-            case AST_Declaration_Kind::PARAMETER:
-            {
-                if (ast_decl->parameter.type_spec)
-                {
-                    printf(": ");
-                    ast_print_type_spec(ast_decl->parameter.type_spec);
+            case AST_Declaration_Kind::PARAMETER: {
+                if (ast_decl->parameter.type_spec) {
+                    string_builder_append(sb, ": ");
+                    ast_print_type_spec(sb, ast_decl->parameter.type_spec);
                 }
                 break;
             }
 
-            case AST_Declaration_Kind::FUNCTION:
-            {
-                printf(" :: func (");
+            case AST_Declaration_Kind::FUNCTION: {
+                string_builder_append(sb, " :: func (");
                 for (int64_t i = 0; i < ast_decl->function.parameter_declarations.count;
-                     i++)
-                {
-                    if (i > 0) printf(", ");
+                     i++) {
+                    if (i > 0) string_builder_append(sb, ", ");
                     auto param_decl = ast_decl->function.parameter_declarations[i];
-                    ast_print_declaration(param_decl, 0);
+                    ast_print_declaration(sb, param_decl, 0);
                 }
-                printf(")");
+                string_builder_append(sb, ")");
                 auto function_ts = ast_decl->function.type_spec;
-                if (function_ts->function.return_type_spec)
-                {
-                    printf(" -> ");
-                    ast_print_type_spec(function_ts->function.return_type_spec);
+                if (function_ts->function.return_type_spec) {
+                    string_builder_append(sb, " -> ");
+                    ast_print_type_spec(sb, function_ts->function.return_type_spec);
                 }
 
-                //ast_print_type_spec(ast_decl->function.type_spec);
                 if (ast_decl->function.body)
-                    ast_print_statement(ast_decl->function.body, indent);
+                    ast_print_statement(sb, ast_decl->function.body, indent);
                 break;
             }
 
             case AST_Declaration_Kind::TYPE: assert(false);
 
-            case AST_Declaration_Kind::TYPEDEF:
-            {
-                printf(" :: typedef ");
-                ast_print_type_spec(ast_decl->typedef_decl.type_spec, true);
+            case AST_Declaration_Kind::TYPEDEF: {
+                string_builder_append(sb, " :: typedef ");
+                ast_print_type_spec(sb, ast_decl->typedef_decl.type_spec, true);
                 break;
             }
 
-            case AST_Declaration_Kind::STRUCTURE:
-            {
-                printf(" :: struct");
-                if (ast_decl->structure.parameters.count)
-                {
-                    printf("(");
-                    for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++)
-                    {
-                        if (i > 0) printf(", ");
+            case AST_Declaration_Kind::STRUCTURE: {
+                string_builder_append(sb, " :: struct");
+                if (ast_decl->structure.parameters.count) {
+                    string_builder_append(sb, "(");
+                    for (int64_t i = 0; i < ast_decl->structure.parameters.count; i++) {
+                        if (i > 0) string_builder_append(sb, ", ");
                         auto param_decl = ast_decl->structure.parameters[i];
-                        ast_print_declaration(param_decl, 0);
+                        ast_print_declaration(sb, param_decl, 0);
                     }
-                    printf(")");
+                    string_builder_append(sb, ")");
                 }
-                printf("\n");
-                ast_print_indent(indent);
-                printf("{\n");
-                for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++)
-                {
+                string_builder_append(sb, "\n");
+                ast_print_indent(sb, indent);
+                string_builder_append(sb, "{\n");
+                for (int64_t i = 0; i < ast_decl->structure.member_declarations.count; i++) {
                     auto mem_decl = ast_decl->structure.member_declarations[i];
-                    ast_print_declaration(mem_decl, indent + 1);
+                    ast_print_declaration(sb, mem_decl, indent + 1);
                 }
-                ast_print_indent(indent);
-                printf("}\n");
+                ast_print_indent(sb, indent);
+                string_builder_append(sb, "}\n");
                 break;
             }
 
             case AST_Declaration_Kind::UNION: assert(false);
 
             case AST_Declaration_Kind::ENUM: {
-                printf(" :: enum\n");
-                ast_print_indent(indent);
-                printf("{\n");
+                string_builder_append(sb, " :: enum\n");
+                ast_print_indent(sb, indent);
+                string_builder_append(sb, "{\n");
 
                 for (int64_t i = 0; i < ast_decl->enum_decl.member_declarations.count; i++) {
                     auto mem_decl = ast_decl->enum_decl.member_declarations[i];
-                    ast_print_declaration(mem_decl, indent + 1);
+                    ast_print_declaration(sb, mem_decl, indent + 1);
                 }
 
-                ast_print_indent(indent);
-                printf("}\n");
+                ast_print_indent(sb, indent);
+                string_builder_append(sb, "}\n");
                 break;
             }
 
             case AST_Declaration_Kind::POLY_TYPE: {
-                if (ast_decl->poly_type.specification_identifier)
-                {
-                    printf("/");
-                    ast_print(ast_decl->poly_type.specification_identifier);
+                if (ast_decl->poly_type.specification_identifier) {
+                    string_builder_append(sb, "/");
+                    ast_print(sb, ast_decl->poly_type.specification_identifier);
                 }
                 break;
             }
 
             case AST_Declaration_Kind::RUN: {
-                printf("#run ");
-                ast_print_expression(ast_decl->run.expression, 0);
-                printf("\n");
+                string_builder_append(sb, "#run ");
+                ast_print_expression(sb, ast_decl->run.expression, 0);
+                string_builder_append(sb, "\n");
                 break;
             }
 
             case AST_Declaration_Kind::STATIC_IF: {
-                printf("#if (");
-                ast_print_expression(ast_decl->static_if.cond_expression, 0);
-                printf(") {\n");
+                string_builder_append(sb, "#if (");
+                ast_print_expression(sb, ast_decl->static_if.cond_expression, 0);
+                string_builder_append(sb, ") {\n");
 
                 for (int64_t i = 0; i < ast_decl->static_if.then_declarations.count; i++) {
                     auto decl = ast_decl->static_if.then_declarations[i];
-                    ast_print_declaration(decl, indent + 1);
+                    ast_print_declaration(sb, decl, indent + 1);
                     if (decl->kind == AST_Declaration_Kind::FUNCTION) {
-                        printf("\n");
+                        string_builder_append(sb, "\n");
                     }
                 }
 
-                ast_print_indent(indent);
-                printf("}");
+                ast_print_indent(sb, indent);
+                string_builder_append(sb, "}");
 
                 auto else_decls = ast_decl->static_if.else_declarations;
 
                 if (else_decls.count == 1 &&
                     else_decls[0]->kind == AST_Declaration_Kind::STATIC_IF) {
-                    printf(" else ");
-                    ast_print_declaration(else_decls[0], 0);
+                    string_builder_append(sb, " else ");
+                    ast_print_declaration(sb, else_decls[0], 0);
                 } else {
-                    printf(" else {\n");
+                    string_builder_append(sb, " else {\n");
                     for (int64_t i = 0; i < else_decls.count; i++) {
-                        ast_print_declaration(else_decls[i], indent + 1);
+                        ast_print_declaration(sb, else_decls[i], indent + 1);
                     }
-                    printf("\n");
-                    ast_print_indent(indent);
-                    printf("}\n");
+                    string_builder_append(sb, "\n");
+                    ast_print_indent(sb, indent);
+                    string_builder_append(sb, "}\n");
                 }
 
                 break;
             }
 
             case AST_Declaration_Kind::STATIC_ASSERT: {
-                printf("static_assert(");
-                ast_print_expression(ast_decl->static_assert_decl.cond_expression, 0);
-                printf(");");
+                string_builder_append(sb, "static_assert(");
+                ast_print_expression(sb, ast_decl->static_assert_decl.cond_expression, 0);
+                string_builder_append(sb, ");");
                 break;
             }
 
@@ -3477,448 +3477,419 @@ namespace Zodiac
         }
     }
 
-    void ast_print_statement(AST_Statement *ast_stmt, uint64_t indent,
+    void ast_print_statement(String_Builder *sb, AST_Statement *ast_stmt, uint64_t indent,
                              bool newline/*=false*/)
     {
-        ast_print_indent(indent);
+        ast_print_indent(sb, indent);
 
         switch (ast_stmt->kind) {
             case AST_Statement_Kind::INVALID: assert(false);
 
             case AST_Statement_Kind::BLOCK: {
-                printf("\n");
-                ast_print_indent(indent);
-                printf("{\n");
+                string_builder_appendf(sb, "\n");
+                ast_print_indent(sb, indent);
+                string_builder_appendf(sb, "{\n");
                 for (int64_t i = 0; i < ast_stmt->block.statements.count; i++) {
-                    if (i > 0) printf("\n");
-                    ast_print_statement(ast_stmt->block.statements[i], indent + 1);
+                    if (i > 0) string_builder_appendf(sb, "\n");
+                    ast_print_statement(sb, ast_stmt->block.statements[i], indent + 1);
                 }
-                printf("\n");
-                ast_print_indent(indent);
-                printf("}");
-                if (newline) printf("\n");
+                string_builder_appendf(sb, "\n");
+                ast_print_indent(sb, indent);
+                string_builder_appendf(sb, "}");
+                if (newline) string_builder_appendf(sb, "\n");
                 break;
             }
 
             case AST_Statement_Kind::ASSIGNMENT: {
-                ast_print_expression(ast_stmt->assignment.identifier_expression, 0);
-                printf(" = ");
-                ast_print_expression(ast_stmt->assignment.rhs_expression, 0);
-                if (newline) printf("\n");
+                ast_print_expression(sb, ast_stmt->assignment.identifier_expression, 0);
+                string_builder_appendf(sb, " = ");
+                ast_print_expression(sb, ast_stmt->assignment.rhs_expression, 0);
+                if (newline) string_builder_appendf(sb, "\n");
                 break;
             }
 
             case AST_Statement_Kind::RETURN: {
-                printf("return");
+                string_builder_appendf(sb, "return");
                 if (ast_stmt->expression) {
-                    printf(" ");
-                    ast_print_expression(ast_stmt->expression, 0);
+                    string_builder_appendf(sb, " ");
+                    ast_print_expression(sb, ast_stmt->expression, 0);
                 }
-                printf(";\n");
+                string_builder_appendf(sb, ";\n");
                 break;
             }
 
             case AST_Statement_Kind::BREAK: {
-                printf("break;");
-                if (newline) printf("\n");
+                string_builder_appendf(sb, "break;");
+                if (newline) string_builder_appendf(sb, "\n");
                 break;
             }
 
-            case AST_Statement_Kind::DECLARATION:
-            {
-                ast_print_declaration(ast_stmt->declaration, 0, false);
+            case AST_Statement_Kind::DECLARATION: {
+                ast_print_declaration(sb, ast_stmt->declaration, 0, false);
                 break;
             }
 
-            case AST_Statement_Kind::EXPRESSION:
-            {
-                ast_print_expression(ast_stmt->expression, 0);
-                printf(";");
-                if (newline) printf("\n");
+            case AST_Statement_Kind::EXPRESSION: {
+                ast_print_expression(sb, ast_stmt->expression, 0);
+                string_builder_appendf(sb, ";");
+                if (newline) string_builder_appendf(sb, "\n");
                 break;
             }
 
-            case AST_Statement_Kind::WHILE:
-            {
-                printf("while (");
-                ast_print_expression(ast_stmt->while_stmt.cond_expr, 0);
-                printf(")");
-                ast_print_statement(ast_stmt->while_stmt.body, indent, false);
+            case AST_Statement_Kind::WHILE: {
+                string_builder_appendf(sb, "while (");
+                ast_print_expression(sb, ast_stmt->while_stmt.cond_expr, 0);
+                string_builder_appendf(sb, ")");
+                ast_print_statement(sb, ast_stmt->while_stmt.body, indent, false);
                 break;
             }
 
-            case AST_Statement_Kind::FOR:
-            {
-                printf("for (");
-                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++)
-                {
-                    if (i > 0) printf(", ");
+            case AST_Statement_Kind::FOR: {
+                string_builder_appendf(sb, "for (");
+                for (int64_t i = 0; i < ast_stmt->for_stmt.init_statements.count; i++) {
+                    if (i > 0) string_builder_appendf(sb, ", ");
                     auto init_stmt = ast_stmt->for_stmt.init_statements[i];
-                    ast_print_statement(init_stmt, 0);
+                    ast_print_statement(sb, init_stmt, 0);
                 }
-                printf(" ");
-                ast_print_expression(ast_stmt->for_stmt.cond_expr, 0);
-                printf("; ");
+                string_builder_appendf(sb, " ");
+                ast_print_expression(sb, ast_stmt->for_stmt.cond_expr, 0);
+                string_builder_appendf(sb, "; ");
 
-                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++)
-                {
-                    if (i > 0) printf(", ");
+                for (int64_t i = 0; i < ast_stmt->for_stmt.step_statements.count; i++) {
+                    if (i > 0) string_builder_appendf(sb, ", ");
                     auto step_stmt = ast_stmt->for_stmt.step_statements[i];
-                    ast_print_statement(step_stmt, 0);
+                    ast_print_statement(sb, step_stmt, 0);
                 }
-                printf(")");
-                ast_print_statement(ast_stmt->for_stmt.body_stmt, indent);
+                string_builder_appendf(sb, ")");
+                ast_print_statement(sb, ast_stmt->for_stmt.body_stmt, indent);
                 break;
             }
 
-            case AST_Statement_Kind::IF:
-            {
-                printf("if (");
-                ast_print_expression(ast_stmt->if_stmt.cond_expr, 0);
-                printf(")");
+            case AST_Statement_Kind::IF: {
+                string_builder_appendf(sb, "if (");
+                ast_print_expression(sb, ast_stmt->if_stmt.cond_expr, 0);
+                string_builder_appendf(sb, ")");
 
                 auto then_stmt = ast_stmt->if_stmt.then_stmt;
                 auto then_indent = indent;
-                if (then_stmt->kind != AST_Statement_Kind::BLOCK)
-                {
-                    printf("\n");
+                if (then_stmt->kind != AST_Statement_Kind::BLOCK) {
+                    string_builder_appendf(sb, "\n");
                     then_indent += 1;
                 }
 
-                ast_print_statement(then_stmt, then_indent);
+                ast_print_statement(sb, then_stmt, then_indent);
 
                 auto else_stmt = ast_stmt->if_stmt.else_stmt;
-                if (else_stmt)
-                {
-                    ast_print_indent(indent);
-                    printf("else");
+                if (else_stmt) {
+                    ast_print_indent(sb, indent);
+                    string_builder_appendf(sb, "else");
 
                     auto else_indent = indent;
-                    if (else_stmt->kind == AST_Statement_Kind::IF)
-                    {
-                        printf("\n");
-                    }
-                    else if (else_stmt->kind != AST_Statement_Kind::BLOCK)
-                    {
-                        printf("\n");
+                    if (else_stmt->kind == AST_Statement_Kind::IF) {
+                        string_builder_appendf(sb, "\n");
+                    } else if (else_stmt->kind != AST_Statement_Kind::BLOCK) {
+                        string_builder_appendf(sb, "\n");
                         else_indent += 1;
                     }
 
-                    ast_print_statement(else_stmt, else_indent);
+                    ast_print_statement(sb, else_stmt, else_indent);
                 }
                 break;
             }
 
-            case AST_Statement_Kind::SWITCH:
-            {
-                printf("switch (");
-                ast_print_expression(ast_stmt->switch_stmt.expression, 0);
-                printf(")\n");
-                ast_print_indent(indent);
-                printf("{\n");
+            case AST_Statement_Kind::SWITCH: {
+                string_builder_appendf(sb, "switch (");
+                ast_print_expression(sb, ast_stmt->switch_stmt.expression, 0);
+                string_builder_appendf(sb, ")\n");
+                ast_print_indent(sb, indent);
+                string_builder_appendf(sb, "{\n");
 
                 indent += 1;
 
-                for (int i = 0; i < ast_stmt->switch_stmt.cases.count; i++)
-                {
-                    ast_print_indent(indent);
+                for (int i = 0; i < ast_stmt->switch_stmt.cases.count; i++) {
+                    ast_print_indent(sb, indent);
 
                     AST_Switch_Case *switch_case = ast_stmt->switch_stmt.cases[i];
 
-                    if (switch_case->is_default)
-                    {
-                        printf("default:");
-                    }
-                    else
-                    {
-                        printf("case ");
+                    if (switch_case->is_default) {
+                        string_builder_appendf(sb, "default:");
+                    } else {
+                        string_builder_appendf(sb, "case ");
 
                         auto el = bucket_array_first(&switch_case->expressions);
                         bool first = true;
                         while (el.bucket) {
                             auto case_expr = *bucket_locator_get_ptr(el);
-                            if (first) printf(", ");
+                            if (first) string_builder_appendf(sb, ", ");
 
-                            ast_print_expression(case_expr, 0);
+                            ast_print_expression(sb, case_expr, 0);
 
                             first = false;
                             bucket_locator_advance(&el);
                         }
 
-                        printf(":");
+                        string_builder_appendf(sb, ":");
                     }
 
-                    ast_print_statement(switch_case->body, indent);
+                    ast_print_statement(sb, switch_case->body, indent);
 
-                    printf("\n");
+                    string_builder_appendf(sb, "\n");
                 }
 
                 indent -= 1;
 
-                ast_print_indent(indent);
-                printf("}\n");
+                ast_print_indent(sb, indent);
+                string_builder_appendf(sb, "}\n");
                 break;
             }
         }
     }
 
-    void ast_print_type_spec(AST_Type_Spec *type_spec, bool newline /*=false*/)
+    void ast_print_type_spec(String_Builder *sb, AST_Type_Spec *type_spec, bool newline /*=false*/)
     {
         switch (type_spec->kind) {
             case AST_Type_Spec_Kind::INVALID: assert(false);
 
             case AST_Type_Spec_Kind::IDENTIFIER: {
-                printf("%s", type_spec->identifier->atom.data);
+                string_builder_appendf(sb, "%s", type_spec->identifier->atom.data);
                 break;
             }
 
             case AST_Type_Spec_Kind::POINTER: {
-                printf("*");
-                ast_print_type_spec(type_spec->base_type_spec);
+                string_builder_appendf(sb, "*");
+                ast_print_type_spec(sb, type_spec->base_type_spec);
                 break;
             }
 
             case AST_Type_Spec_Kind::DOT: {
-                ast_print_expression(type_spec->dot_expression, 0);
+                ast_print_expression(sb, type_spec->dot_expression, 0);
                 break;
             }
 
             case AST_Type_Spec_Kind::FUNCTION: {
-                printf("func (");
+                string_builder_appendf(sb, "func (");
                 for (int64_t i = 0; i < type_spec->function.parameter_type_specs.count; i++) {
-                    if (i > 0) printf(", ");
-                    ast_print_type_spec(type_spec->function.parameter_type_specs[i]);
+                    if (i > 0) string_builder_appendf(sb, ", ");
+                    ast_print_type_spec(sb, type_spec->function.parameter_type_specs[i]);
                 }
-                printf(")");
-                if (type_spec->function.return_type_spec) {
-                    printf(" -> ");
-                    ast_print_type_spec(type_spec->function.return_type_spec);
+                string_builder_appendf(sb, ")");
+                auto return_ts = type_spec->function.return_type_spec;
+                if (return_ts) {
+                    string_builder_appendf(sb, " -> ");
+                    if (return_ts->kind == AST_Type_Spec_Kind::FROM_TYPE) {
+                        ast_print_type(sb, return_ts->type);
+                    } else {
+                        ast_print_type_spec(sb, return_ts);
+                    }
                 }
                 break;
             }
 
             case AST_Type_Spec_Kind::ARRAY: {
-                printf("[]");
-                ast_print_type_spec(type_spec->array.element_type_spec);
+                string_builder_appendf(sb, "[]");
+                ast_print_type_spec(sb, type_spec->array.element_type_spec);
                 break;
             }
 
             case AST_Type_Spec_Kind::TEMPLATED: {
-                ast_print_expression(type_spec->templated.ident_expression, 0);
-                printf("(");
+                ast_print_expression(sb, type_spec->templated.ident_expression, 0);
+                string_builder_appendf(sb, "(");
                 for (int64_t i = 0; i < type_spec->templated.argument_expressions.count; i++) {
-                    if (i > 0) printf(", ");
-                    ast_print_expression(type_spec->templated.argument_expressions[i], 0);
+                    if (i > 0) string_builder_appendf(sb, ", ");
+                    ast_print_expression(sb, type_spec->templated.argument_expressions[i], 0);
                 }
-                printf(")");
+                string_builder_appendf(sb, ")");
                 break;
             }
 
             case AST_Type_Spec_Kind::POLY_IDENTIFIER: {
-                printf("$");
-                ast_print(type_spec->poly_identifier.declaration);
+                string_builder_appendf(sb, "$");
+                ast_print(sb, type_spec->poly_identifier.declaration);
                 if (type_spec->poly_identifier.specification_identifier) {
-                    printf("/");
-                    ast_print(type_spec->poly_identifier.specification_identifier);
+                    string_builder_appendf(sb, "/");
+                    ast_print(sb, type_spec->poly_identifier.specification_identifier);
                 }
                 break;
             }
 
             case AST_Type_Spec_Kind::FROM_TYPE: {
-                printf("type_spec_from_type(");
-                ast_print_type(type_spec->type);
-                printf(")");
+                string_builder_appendf(sb, "type_spec_from_type(");
+                ast_print_type(sb, type_spec->type);
+                string_builder_appendf(sb, ")");
                 break;
             }
         }
 
-        if (newline) printf("\n");
+        if (newline) string_builder_appendf(sb, "\n");
     }
 
-    void ast_print_expression(AST_Expression *ast_expr, uint64_t indent)
+    void ast_print_expression(String_Builder *sb, AST_Expression *ast_expr, uint64_t indent)
     {
-        ast_print_indent(indent);
+        ast_print_indent(sb, indent);
 
         switch (ast_expr->kind)
         {
             case AST_Expression_Kind::INVALID: assert(false);
 
-            case AST_Expression_Kind::IDENTIFIER:
-            {
-                printf("%s", ast_expr->identifier->atom.data);
+            case AST_Expression_Kind::IDENTIFIER: {
+                string_builder_appendf(sb, "%s", ast_expr->identifier->atom.data);
                 break;
             }
 
-            case AST_Expression_Kind::POLY_IDENTIFIER:
-            {
-                ast_print(ast_expr->poly_identifier.poly_type_decl);
+            case AST_Expression_Kind::POLY_IDENTIFIER: {
+                ast_print(sb, ast_expr->poly_identifier.poly_type_decl);
                 break;
             }
 
-            case AST_Expression_Kind::DOT:
-            {
-                ast_print_expression(ast_expr->dot.parent_expression, 0);
-                printf(".%s", ast_expr->dot.child_identifier->atom.data);
+            case AST_Expression_Kind::DOT: {
+                ast_print_expression(sb, ast_expr->dot.parent_expression, 0);
+                string_builder_appendf(sb, ".%s", ast_expr->dot.child_identifier->atom.data);
                 break;
             }
 
-            case AST_Expression_Kind::BINARY:
-            {
-                ast_print_expression(ast_expr->binary.lhs, 0);
-                switch (ast_expr->binary.op)
-                {
+            case AST_Expression_Kind::BINARY: {
+                ast_print_expression(sb, ast_expr->binary.lhs, 0);
+                switch (ast_expr->binary.op) {
                     case BINOP_INVALID: assert(false);
-                    case BINOP_EQ: printf(" == "); break;
-                    case BINOP_NEQ: printf(" != "); break;
-                    case BINOP_LT: printf(" < "); break;
-                    case BINOP_LTEQ: printf(" <= "); break;
-                    case BINOP_GT: printf(" > "); break;
-                    case BINOP_GTEQ: printf(" >= "); break;
-                    case BINOP_ADD: printf(" + "); break;
-                    case BINOP_SUB: printf(" - "); break;
-                    case BINOP_REMAINDER: printf(" %% "); break;
-                    case BINOP_MUL: printf("  *"); break;
-                    case BINOP_DIV: printf(" / "); break;
+                    case BINOP_EQ: string_builder_appendf(sb, " == ");        break;
+                    case BINOP_NEQ: string_builder_appendf(sb, " != ");       break;
+                    case BINOP_LT: string_builder_appendf(sb, " < ");         break;
+                    case BINOP_LTEQ: string_builder_appendf(sb, " <= ");      break;
+                    case BINOP_GT: string_builder_appendf(sb, " > ");         break;
+                    case BINOP_GTEQ: string_builder_appendf(sb, " >= ");      break;
+                    case BINOP_ADD: string_builder_appendf(sb, " + ");        break;
+                    case BINOP_SUB: string_builder_appendf(sb, " - ");        break;
+                    case BINOP_REMAINDER: string_builder_appendf(sb, " %% "); break;
+                    case BINOP_MUL: string_builder_appendf(sb, "  *");        break;
+                    case BINOP_DIV: string_builder_appendf(sb, " / ");        break;
                 }
-                ast_print_expression(ast_expr->binary.rhs, 0);
+                ast_print_expression(sb, ast_expr->binary.rhs, 0);
                 break;
             }
 
             case AST_Expression_Kind::UNARY: {
                 switch(ast_expr->unary.op) {
                     case UNOP_INVALID: assert(false); break;
-                    case UNOP_DEREF: printf("<"); break;
-                    case UNOP_MINUS: printf("-"); break;
-                    case UNOP_NOT:   printf("!"); break;
+                    case UNOP_DEREF: string_builder_appendf(sb, "<"); break;
+                    case UNOP_MINUS: string_builder_appendf(sb, "-"); break;
+                    case UNOP_NOT:   string_builder_appendf(sb, "!"); break;
                 }
 
-                ast_print_expression(ast_expr->unary.operand_expression, 0);
+                ast_print_expression(sb, ast_expr->unary.operand_expression, 0);
                 break;
             }
 
             case AST_Expression_Kind::CALL: {
-                ast_print_expression(ast_expr->call.ident_expression, 0);
-                printf("(");
+                ast_print_expression(sb, ast_expr->call.ident_expression, 0);
+                string_builder_appendf(sb, "(");
                 for (int64_t i = 0; i < ast_expr->call.arg_expressions.count; i++) {
-                    if (i > 0) printf(", ");
-                    ast_print_expression(ast_expr->call.arg_expressions[i], 0);
+                    if (i > 0) string_builder_appendf(sb, ", ");
+                    ast_print_expression(sb, ast_expr->call.arg_expressions[i], 0);
                 }
-                printf(")");
+                string_builder_appendf(sb, ")");
                 break;
             }
 
             case AST_Expression_Kind::BUILTIN_CALL: {
-                printf("%s", ast_expr->builtin_call.identifier->atom.data);
-                printf("(");
+                string_builder_appendf(sb, "%s", ast_expr->builtin_call.identifier->atom.data);
+                string_builder_appendf(sb, "(");
                 for (int64_t i = 0; i < ast_expr->builtin_call.arg_expressions.count; i++) {
-                    if (i > 0) printf(", ");
-                    ast_print_expression(ast_expr->builtin_call.arg_expressions[i], 0);
+                    if (i > 0) string_builder_appendf(sb, ", ");
+                    ast_print_expression(sb, ast_expr->builtin_call.arg_expressions[i], 0);
                 }
-                printf(")");
+                string_builder_appendf(sb, ")");
                 break;
             }
 
             case AST_Expression_Kind::ADDROF: {
-                printf("*");
-                ast_print_expression(ast_expr->addrof.operand_expr, 0);
+                string_builder_appendf(sb, "*");
+                ast_print_expression(sb, ast_expr->addrof.operand_expr, 0);
                 break;
             }
 
             case AST_Expression_Kind::COMPOUND: {
 
                 if (ast_expr->compound.type_spec) {
-                    ast_print_type_spec(ast_expr->compound.type_spec);
-                    printf(" ");
+                    ast_print_type_spec(sb, ast_expr->compound.type_spec);
+                    string_builder_appendf(sb, " ");
                 }
 
-                printf("{");
+                string_builder_appendf(sb, "{");
                 for (int64_t i = 0; i < ast_expr->compound.expressions.count; i++) {
-                    if (i > 0) printf(", ");
-                    else printf(" ");
+                    if (i > 0) string_builder_appendf(sb, ", ");
+                    else string_builder_appendf(sb, " ");
 
-                    ast_print_expression(ast_expr->compound.expressions[i], 0);
+                    ast_print_expression(sb, ast_expr->compound.expressions[i], 0);
                 }
-                printf(" }");
+                string_builder_appendf(sb, " }");
                 break;
             }
 
             case AST_Expression_Kind::SUBSCRIPT: {
-                ast_print_expression(ast_expr->subscript.pointer_expression, indent);
-                printf("[");
-                ast_print_expression(ast_expr->subscript.index_expression, 0);
-                printf("]");
+                ast_print_expression(sb, ast_expr->subscript.pointer_expression, indent);
+                string_builder_appendf(sb, "[");
+                ast_print_expression(sb, ast_expr->subscript.index_expression, 0);
+                string_builder_appendf(sb, "]");
                 break;
             }
 
             case AST_Expression_Kind::CAST: {
-                printf("@compiler_cast(");
-                ast_print_type(ast_expr->cast.target_type);
-                printf(", ");
-                ast_print_expression(ast_expr->cast.operand_expression, 0);
-                printf(")");
+                string_builder_appendf(sb, "@compiler_cast(");
+                ast_print_type(sb, ast_expr->cast.target_type);
+                string_builder_appendf(sb, ", ");
+                ast_print_expression(sb, ast_expr->cast.operand_expression, 0);
+                string_builder_appendf(sb, ")");
                 break;
             };
 
-            case AST_Expression_Kind::INTEGER_LITERAL:
-            {
-                printf("%" PRId64, ast_expr->integer_literal.s64);
+            case AST_Expression_Kind::INTEGER_LITERAL: {
+                string_builder_appendf(sb, "%" PRId64, ast_expr->integer_literal.s64);
                 break;
             }
 
-            case AST_Expression_Kind::FLOAT_LITERAL:
-            {
-                printf("%f", ast_expr->float_literal.r32);
+            case AST_Expression_Kind::FLOAT_LITERAL: {
+                string_builder_appendf(sb, "%f", ast_expr->float_literal.r32);
                 break;
             }
 
-            case AST_Expression_Kind::STRING_LITERAL:
-            {
-                printf("\"");
-                for (uint64_t i = 0; i < ast_expr->string_literal.atom.length; i++)
-                {
+            case AST_Expression_Kind::STRING_LITERAL: {
+                string_builder_appendf(sb, "\"");
+                for (uint64_t i = 0; i < ast_expr->string_literal.atom.length; i++) {
                     char c;
-                    if (parser_make_escape_char(ast_expr->string_literal.atom.data[i], &c))
-                    {
-                        printf("\\%c", c);
-                    }
-                    else
-                    {
-                        printf("%c", c);
+                    if (parser_make_escape_char(ast_expr->string_literal.atom.data[i], &c)) {
+                        string_builder_appendf(sb, "\\%c", c);
+                    } else {
+                        string_builder_appendf(sb, "%c", c);
                     }
                 }
-                printf("\"");
+                string_builder_appendf(sb, "\"");
                 break;
             }
 
-            case AST_Expression_Kind::CHAR_LITERAL:
-            {
+            case AST_Expression_Kind::CHAR_LITERAL: {
                 const char *prefix = "";
                 char c;
-                if (parser_make_escape_char(ast_expr->char_literal.c, &c))
-                {
+                if (parser_make_escape_char(ast_expr->char_literal.c, &c)) {
                     prefix = "\\";
                 }
-                printf("'%s%c'", prefix, c);
+                string_builder_appendf(sb, "'%s%c'", prefix, c);
                 break;
             }
 
-            case AST_Expression_Kind::BOOL_LITERAL:
-            {
-                printf("%s", ast_expr->bool_literal.value ? "true" : "false");
+            case AST_Expression_Kind::BOOL_LITERAL: {
+                string_builder_appendf(sb, "%s", ast_expr->bool_literal.value ? "true" : "false");
                 break;
             }
 
-            case AST_Expression_Kind::NULL_LITERAL:
-            {
-                printf("null");
+            case AST_Expression_Kind::NULL_LITERAL: {
+                string_builder_appendf(sb, "null");
                 break;
             }
 
-            case AST_Expression_Kind::RANGE:
-            {
-                ast_print_expression(ast_expr->range.begin, 0);
-                printf(" .. ");
-                ast_print_expression(ast_expr->range.end, 0);
+            case AST_Expression_Kind::RANGE: {
+                ast_print_expression(sb, ast_expr->range.begin, 0);
+                string_builder_appendf(sb, " .. ");
+                ast_print_expression(sb, ast_expr->range.end, 0);
                 break;
             }
         }
@@ -4063,12 +4034,10 @@ namespace Zodiac
 
     void ast_print_type(String_Builder *sb, AST_Type *type)
     {
-        switch (type->kind)
-        {
+        switch (type->kind) {
             case AST_Type_Kind::INVALID: assert(false);
 
-            case AST_Type_Kind::INTEGER:
-            {
+            case AST_Type_Kind::INTEGER: {
                 if (type->integer.sign) string_builder_append(sb, "s");
                 else string_builder_append(sb, "u");
 
@@ -4076,29 +4045,25 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FLOAT:
-            {
+            case AST_Type_Kind::FLOAT: {
                 if (type->bit_size == 32) string_builder_append(sb, "float");
                 else if (type->bit_size == 64) string_builder_append(sb, "double");
                 else assert(false);
                 break;
             }
 
-            case AST_Type_Kind::BOOL:
-            {
+            case AST_Type_Kind::BOOL: {
                 string_builder_appendf(sb, "b%" PRIu64, type->bit_size);
                 break;
             }
 
-            case AST_Type_Kind::POINTER:
-            {
+            case AST_Type_Kind::POINTER: {
                 string_builder_append(sb, "*");
                 ast_print_type(sb, type->pointer.base);
                 break;
             }
 
-            case AST_Type_Kind::VOID:
-            {
+            case AST_Type_Kind::VOID: {
                 string_builder_append(sb, "void");
                 break;
             }
@@ -4108,8 +4073,7 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::STRUCTURE:
-            {
+            case AST_Type_Kind::STRUCTURE: {
                 auto decl = type->structure.declaration;
                 string_builder_appendf(sb, "struct(%s)", decl->identifier->atom.data);
                 break;
@@ -4117,15 +4081,13 @@ namespace Zodiac
 
             case AST_Type_Kind::UNION: assert(false);
 
-            case AST_Type_Kind::ENUM:
-            {
+            case AST_Type_Kind::ENUM: {
                 auto decl = type->enum_type.declaration;
                 string_builder_appendf(sb, "enum(%s)", decl->identifier->atom.data);
                 break;
             }
 
-            case AST_Type_Kind::ARRAY:
-            {
+            case AST_Type_Kind::ARRAY: {
                 string_builder_appendf(sb, "[%" PRId64 "]", type->array.element_count);
                 ast_print_type(sb, type->array.element_type);
                 break;
