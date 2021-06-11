@@ -31,6 +31,7 @@ namespace Zodiac
         result.ffi = ffi_create(allocator, build_data);
 
         result.functions = {};
+        result.foreign_functions = {};
 
         return result;
     }
@@ -57,7 +58,10 @@ namespace Zodiac
                            Array<BC_Function *> foreign_functions)
     {
         assert(interp->functions.count == 0 && interp->functions.capacity == 0);
-        interp->functions = functions; 
+        interp->functions = functions;
+
+        assert(interp->foreign_functions.count == 0 && interp->foreign_functions.capacity == 0);
+        interp->foreign_functions = foreign_functions;
 
         interpreter_initialize_globals(interp, global_info, global_size);
         interpreter_initialize_foreigns(interp, foreign_functions);
@@ -454,7 +458,7 @@ namespace Zodiac
                         auto _callee = interp_load_value(interp, callee_val);
                         assert(_callee.type);
                         callee = (BC_Function *)_callee.pointer;
-                        assert(interp_is_known_function_pointer(interp, callee));
+                        assert(interp_is_known_or_foreign_function_pointer(interp, callee));
                     } else {
                         callee = callee_val->function;
                     }
@@ -1745,12 +1749,16 @@ namespace Zodiac
         }
     }
 
-    bool interp_is_known_function_pointer(Interpreter *interp, BC_Function *func)
+    bool interp_is_known_or_foreign_function_pointer(Interpreter *interp, BC_Function *func)
     {
-        for (int64_t i = 0; i < interp->functions.count; i++) {
-            if (interp->functions[i] == func) {
-                return true;
+        if (func->flags & BC_FUNC_FLAG_FOREIGN) {
+            for (int64_t i = 0; i < interp->foreign_functions.count; i++) {
+                if (interp->foreign_functions[i] == func) return true;
             }
+        }
+
+        for (int64_t i = 0; i < interp->functions.count; i++) {
+            if (interp->functions[i] == func) return true;
         }
 
         return false;

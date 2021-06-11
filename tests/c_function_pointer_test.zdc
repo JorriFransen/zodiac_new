@@ -1,0 +1,15 @@
+
+#foreign puts :: func(cstr: *u8) -> s32;
+
+#run main();
+
+main :: func() -> s64
+{
+    puts("Calling puts directly...");
+
+    puts_ptr := *puts;
+
+    puts_ptr("Calling puts_ptr...");
+
+    return 0;
+}

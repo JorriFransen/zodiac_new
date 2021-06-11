@@ -356,8 +356,8 @@ Resolve_Result resolver_finish(Resolver *resolver)
 
                 for (int64_t i = 0; i < resolver->bytecode_builder.functions.count; i++) {
                     auto &func_info = resolver->bytecode_builder.functions[i];
-                    assert(!(func_info.declaration->decl_flags & AST_DECL_FLAG_FOREIGN));
-                    if (!(func_info.declaration->decl_flags & AST_DECL_FLAG_COMPILER_FUNC)) {
+                    if (!(func_info.declaration->decl_flags & AST_DECL_FLAG_COMPILER_FUNC) &&
+                        !(func_info.declaration->decl_flags & AST_DECL_FLAG_FOREIGN)) {
                         array_append(&functions, func_info.bc_func);
                     }
                 }

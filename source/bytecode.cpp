@@ -1337,11 +1337,6 @@ namespace Zodiac
             bc_emit_instruction(builder, PUSH_ARG, arg_val, nullptr, nullptr);
         }
 
-        BC_Value *return_value = nullptr;
-        if (func_type->function.return_type->kind != AST_Type_Kind::VOID) {
-            return_value = bc_temporary_new(builder, func_type->function.return_type);
-        }
-
         BC_Value *func_val = nullptr;
         if (expr->call.callee_is_pointer) {
             assert(!func);
@@ -1360,6 +1355,11 @@ namespace Zodiac
             func_val = bc_function_value_new(builder, func);
         }
         assert(func_val);
+
+        BC_Value *return_value = nullptr;
+        if (func_type->function.return_type->kind != AST_Type_Kind::VOID) {
+            return_value = bc_temporary_new(builder, func_type->function.return_type);
+        }
 
         auto arg_count_val = bc_integer_literal_new(builder, Builtin::type_s64,
                                                           { .s64 = arg_exprs.count });

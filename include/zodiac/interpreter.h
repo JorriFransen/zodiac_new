@@ -81,6 +81,7 @@ namespace Zodiac
         FFI_Context ffi = {};
 
         Array<BC_Function *> functions = {};
+        Array<BC_Function *> foreign_functions = {};
 
         int64_t exit_code = 0;
     };
@@ -118,5 +119,5 @@ namespace Zodiac
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
                                                int64_t arg_count);
 
-    bool interp_is_known_function_pointer(Interpreter *interp, BC_Function *func);
+    bool interp_is_known_or_foreign_function_pointer(Interpreter *interp, BC_Function *func);
 }
