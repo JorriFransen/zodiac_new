@@ -198,6 +198,7 @@ namespace Zodiac
                     auto dest_val = interp_load_lvalue(interp, inst.result);
                     assert(dest_val.type == ptr_val.type->pointer.base);
 
+                    assert(ptr_val.pointer);
                     interp_store(interp, ptr_val.pointer, ptr_val.type, dest_val);
                     break;
                 }
@@ -440,8 +441,18 @@ namespace Zodiac
 
                 case CALL: {
                     auto callee_val = inst.a;
-                    assert(callee_val->kind == BC_Value_Kind::FUNCTION);
-                    auto callee = callee_val->function;
+                    BC_Function *callee = nullptr;
+                    if (callee_val->kind != BC_Value_Kind::FUNCTION) {
+                        assert(callee_val->type->kind == AST_Type_Kind::POINTER &&
+                               callee_val->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                        auto _callee = interp_load_value(interp, callee_val);
+                        assert(_callee.type);
+                        callee = (BC_Function *)_callee.pointer;
+                        // assert(interp_is_known_function_pointer(interp, callee));
+                    } else {
+                        callee = callee_val->function;
+                    }
+                    assert(callee);
 
                     assert((callee->flags & BC_FUNC_FLAG_EMITTED) ||
                            (callee->flags & BC_FUNC_FLAG_FOREIGN));
@@ -1261,7 +1272,13 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::FUNCTION: assert(false);
+            case BC_Value_Kind::FUNCTION: {
+               assert(result.type->kind == AST_Type_Kind::POINTER &&
+                      result.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                result.pointer = bc_val->function;
+                break;
+            }
+
             case BC_Value_Kind::BLOCK: assert(false);
             case BC_Value_Kind::TYPE: assert(false);
             case BC_Value_Kind::SWITCH_DATA: assert(false);

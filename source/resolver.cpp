@@ -431,6 +431,7 @@ Resolve_Result resolver_finish(Resolver *resolver)
             queue_count(&resolver->resolve_jobs) == 0 &&
             queue_count(&resolver->size_jobs) == 0 &&
             queue_count(&resolver->bytecode_jobs) == 0 &&
+            queue_count(&resolver->run_jobs) == 0 &&
             queue_count(&resolver->llvm_jobs) == 0 &&
             resolver->llvm_builder.struct_types_to_finalize.count == 0 &&
             resolver->llvm_builder.union_types_to_finalize.count == 0) {
@@ -774,7 +775,14 @@ bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
 
                     auto callee = expr->call.callee_declaration;
                     assert(callee);
-                    array_append_unique(&decl->function.called_functions, callee);
+                    if (callee->kind == AST_Declaration_Kind::FUNCTION) {
+                        array_append_unique(&decl->function.called_functions, callee);
+                    } else {
+                        assert(callee->kind == AST_Declaration_Kind::VARIABLE ||
+                               callee->kind == AST_Declaration_Kind::PARAMETER);
+                        assert(callee->type->kind == AST_Type_Kind::POINTER);
+                        assert(callee->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                    }
                 }
                 break;
             }

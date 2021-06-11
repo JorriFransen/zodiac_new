@@ -1,12 +1,11 @@
 std :: import std;
 
-// #run main();
+#run main();
 
 main :: func() -> s64
 {
-    std.println("Function pointer test");
+    std.println("Function pointer test\n");
 
-    std.println("");
 
     f1 := *func1;
     f2 : *func() = *func2;
@@ -16,13 +15,14 @@ main :: func() -> s64
     f2();
     f3();
 
-    std.println("");
+    std.print("\n");
 
     call_void_func(f1);
     call_void_func(f2);
 
     return 0;
 }
+
 
 void_func_p :: typedef *func() -> void;
 
