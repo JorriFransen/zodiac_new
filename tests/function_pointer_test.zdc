@@ -20,6 +20,10 @@ main :: func() -> s64
     call_void_func(f1);
     call_void_func(f2);
 
+    std.print("\n");
+
+    call_void_func(return_fn_ptr(f2));
+
     return 0;
 }
 
@@ -37,4 +41,9 @@ func2 :: func() {
 call_void_func :: func(func_ptr : void_func_p)
 {
     func_ptr();
+}
+
+return_fn_ptr :: func(func_ptr : void_func_p) -> void_func_p
+{
+    return func_ptr;
 }

@@ -30,6 +30,8 @@ namespace Zodiac
 
         result.ffi = ffi_create(allocator, build_data);
 
+        result.functions = {};
+
         return result;
     }
 
@@ -51,8 +53,12 @@ namespace Zodiac
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
                            Array<BC_Global_Info> global_info, int64_t global_size,
+                           Array<BC_Function *> functions,
                            Array<BC_Function *> foreign_functions)
     {
+        assert(interp->functions.count == 0 && interp->functions.capacity == 0);
+        interp->functions = functions; 
+
         interpreter_initialize_globals(interp, global_info, global_size);
         interpreter_initialize_foreigns(interp, foreign_functions);
 
@@ -448,7 +454,7 @@ namespace Zodiac
                         auto _callee = interp_load_value(interp, callee_val);
                         assert(_callee.type);
                         callee = (BC_Function *)_callee.pointer;
-                        // assert(interp_is_known_function_pointer(interp, callee));
+                        assert(interp_is_known_function_pointer(interp, callee));
                     } else {
                         callee = callee_val->function;
                     }
@@ -1737,5 +1743,16 @@ namespace Zodiac
         } else {
             assert(false && "Unimplemented compiler function!");
         }
+    }
+
+    bool interp_is_known_function_pointer(Interpreter *interp, BC_Function *func)
+    {
+        for (int64_t i = 0; i < interp->functions.count; i++) {
+            if (interp->functions[i] == func) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

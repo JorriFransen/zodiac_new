@@ -54,7 +54,7 @@ void array_init(Allocator *allocator, Array<Element_Type> *array)
 }
 
 template <typename Element_Type>
-Array<Element_Type> array_create(Allocator *allocator, int64_t capacity)
+Array<Element_Type> array_create(Allocator *allocator, int64_t capacity = DEFAULT_ARRAY_CAPACITY)
 {
     Array<Element_Type> result = {};
     array_init(allocator, &result, capacity);

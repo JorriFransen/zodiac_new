@@ -352,9 +352,22 @@ Resolve_Result resolver_finish(Resolver *resolver)
                 Interpreter interp =
                     interpreter_create(resolver->allocator, resolver->build_data);
 
+                auto functions = array_create<BC_Function *>(resolver->allocator);
+
+                for (int64_t i = 0; i < resolver->bytecode_builder.functions.count; i++) {
+                    auto &func_info = resolver->bytecode_builder.functions[i];
+                    assert(!(func_info.declaration->decl_flags & AST_DECL_FLAG_FOREIGN));
+                    if (!(func_info.declaration->decl_flags & AST_DECL_FLAG_COMPILER_FUNC)) {
+                        array_append(&functions, func_info.bc_func);
+                    }
+                }
+
                 interpreter_start(&interp, job.wrapper, resolver->bytecode_builder.globals,
                                   resolver->bytecode_builder.global_data_size,
+                                  functions,
                                   resolver->bytecode_builder.foreign_functions);
+
+                array_free(&functions);
 
                 if (interp.build_data->options->verbose) {
                     printf("Interpreter exited with code: %" PRId64

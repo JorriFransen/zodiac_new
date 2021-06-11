@@ -80,6 +80,8 @@ namespace Zodiac
 
         FFI_Context ffi = {};
 
+        Array<BC_Function *> functions = {};
+
         int64_t exit_code = 0;
     };
 
@@ -88,6 +90,7 @@ namespace Zodiac
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
                            Array<BC_Global_Info> global_info, int64_t global_size,
+                           Array<BC_Function *>functions,
                            Array<BC_Function *> foreign_functions);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
@@ -114,4 +117,6 @@ namespace Zodiac
 
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
                                                int64_t arg_count);
+
+    bool interp_is_known_function_pointer(Interpreter *interp, BC_Function *func);
 }
