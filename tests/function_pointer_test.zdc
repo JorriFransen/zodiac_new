@@ -6,16 +6,24 @@ main :: func() -> s64
 {
     std.println("Function pointer test");
 
-    f1 : func() = func1;
-    // f2 : *func() = *func2;
+    std.println("");
 
-    // f1();
-    // f2();
+    f1 := *func1;
+    f2 : *func() = *func2;
+    f3 := f1;
+
+    f1();
+    f2();
+    f3();
+
+    std.println("");
+
+    call_void_func(f1);
+    call_void_func(f2);
 
     return 0;
 }
 
-void_func :: typedef func() -> void;
 void_func_p :: typedef *func() -> void;
 
 func1 :: func() {
@@ -24,4 +32,9 @@ func1 :: func() {
 
 func2 :: func() {
     std.println("func2");
+}
+
+call_void_func :: func(func_ptr : void_func_p)
+{
+    func_ptr();
 }

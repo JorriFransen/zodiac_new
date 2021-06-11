@@ -1026,7 +1026,7 @@ bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration)
                             auto exp_str = ast_type_to_tstring(ts->type);
                             zodiac_report_info(resolver->build_data, ts, "Expected type: %.*s",
                                                (int)exp_str.length, exp_str.data);
-                            auto got_str = ast_type_to_tstring(ts->type);
+                            auto got_str = ast_type_to_tstring(init_expr->type);
                             zodiac_report_info(resolver->build_data, init_expr,
                                                "Given type: %.*s", (int)got_str.length,
                                                got_str.data);
@@ -1042,6 +1042,12 @@ bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration)
             }
 
             assert(type);
+            if (type->kind == AST_Type_Kind::FUNCTION) {
+                AST_Node *err_node = ts ? (AST_Node *)ts : declaration;
+                zodiac_report_error(resolver->build_data, Zodiac_Error_Kind::INVALID, err_node,
+                                "Variable cannot have function type, use a pointer to function.");
+                return false;
+            }
 
             declaration->type = type;
             declaration->flags |= AST_NODE_FLAG_RESOLVED_ID;
@@ -2329,22 +2335,39 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
             }
             assert(callee_decl);
 
+            bool is_pointer = false;
+
+            if (callee_decl->kind != AST_Declaration_Kind::FUNCTION) {
+                assert(callee_decl->kind == AST_Declaration_Kind::VARIABLE ||
+                       callee_decl->kind == AST_Declaration_Kind::PARAMETER);
+                assert(callee_decl->type->kind == AST_Type_Kind::POINTER);
+                assert(callee_decl->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+
+                is_pointer = true;
+            }
+
             bool recursive = false;
             bool use_fn_ts = false;
 
-            AST_Type *func_type = callee_decl->type;
-            if (!func_type) {
-                if (ident_expr->expr_flags & AST_EXPR_FLAG_RECURSIVE_IDENT) {
-                    recursive = true;
-                } else if (ident_expr->expr_flags & AST_EXPR_FLAG_IDENT_USES_FN_TS) {
-                    use_fn_ts = true;
-                } else {
-                    assert(false);
+            AST_Type *func_type = nullptr;
+            if (is_pointer) {
+                func_type = callee_decl->type->pointer.base;
+            } else {
+                func_type = callee_decl->type;
+                if (!func_type) {
+                    if (ident_expr->expr_flags & AST_EXPR_FLAG_RECURSIVE_IDENT) {
+                        recursive = true;
+                    } else if (ident_expr->expr_flags & AST_EXPR_FLAG_IDENT_USES_FN_TS) {
+                        use_fn_ts = true;
+                    } else {
+                        assert(false);
+                    }
+                    assert(callee_decl->function.type_spec->type);
+                    func_type = callee_decl->function.type_spec->type;
                 }
-                assert(callee_decl->function.type_spec->type);
-                func_type = callee_decl->function.type_spec->type;
             }
             assert(func_type);
+            assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
             if (!(recursive || use_fn_ts ||
                   (callee_decl->flags & AST_NODE_FLAG_RESOLVED_ID)))
@@ -2361,14 +2384,15 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 assert(ts->flags & AST_NODE_FLAG_TYPED);
             }
 
-            if (!(callee_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE)) {
+            if (!is_pointer && !(callee_decl->decl_flags & AST_DECL_FLAG_REGISTERED_BYTECODE)) {
                 bc_register_function(&resolver->bytecode_builder, callee_decl);
             }
 
+            expression->call.callee_is_pointer = is_pointer;
             expression->call.callee_declaration = callee_decl;
 
             auto args = expression->call.arg_expressions;
-            auto params = callee_decl->function.parameter_declarations;
+            auto params = func_type->function.param_types;
 
             if (args.count != params.count) {
                 zodiac_report_error(
@@ -2383,13 +2407,13 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 AST_Expression **p_arg_expr = &args[i];
                 auto arg_expr = *p_arg_expr;
                 assert(arg_expr->type);
-                if (arg_expr->type != params[i]->type) {
+                if (arg_expr->type != params[i]) {
 
-                    if (is_valid_type_conversion(arg_expr, params[i]->type)) {
-                        do_type_conversion(resolver, p_arg_expr, params[i]->type);
+                    if (is_valid_type_conversion(arg_expr, params[i])) {
+                        do_type_conversion(resolver, p_arg_expr, params[i]);
                     } else {
                         resolver_report_mismatching_call_arg(resolver, i, arg_expr,
-                                               params[i]);
+                                               params[i], false);
                         return false;
                     }
                 }
@@ -3370,13 +3394,15 @@ bool try_size_expression(Resolver *resolver, AST_Expression *expression)
 
             expression->flags |= AST_NODE_FLAG_SIZED;
 
-            AST_Declaration *callee = expression->call.callee_declaration;
-            assert(callee);
+            if (!expression->call.callee_is_pointer) {
+                AST_Declaration *callee = expression->call.callee_declaration;
+                assert(callee);
 
-            auto bc_func = bc_find_function(&resolver->bytecode_builder, callee);
+                auto bc_func = bc_find_function(&resolver->bytecode_builder, callee);
 
-            if (!resolver->build_data->options->dont_emit_llvm)
-                llvm_register_function(&resolver->llvm_builder, bc_func);
+                if (!resolver->build_data->options->dont_emit_llvm)
+                    llvm_register_function(&resolver->llvm_builder, bc_func);
+            }
 
             return true;
             break;
@@ -3926,8 +3952,6 @@ bool is_valid_type_conversion(AST_Type *type, AST_Type *target_type)
         }
 
         case AST_Type_Kind::FUNCTION:
-            assert(false);
-
         case AST_Type_Kind::STRUCTURE:
             return false;
 

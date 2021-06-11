@@ -286,11 +286,6 @@ namespace Zodiac
                 break;
             }
 
-            case LOAD_FUNC: {
-                assert(false);
-                break;
-            }
-
             case ADD_S:
             case ADD_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
@@ -509,9 +504,31 @@ namespace Zodiac
             }
 
             case CALL: {
-                BC_Function *bc_func = inst->a->function;
-                llvm::Function *callee = llvm_find_function(builder, bc_func);
-                assert(callee);
+                llvm::Value *callee_val = nullptr;
+                llvm::FunctionType *fn_type = nullptr;
+                bool emit_unreachable_after = false;
+
+                if (inst->a->kind == BC_Value_Kind::FUNCTION) {
+                    BC_Function *bc_func = inst->a->function;
+                    if (bc_func->flags & BC_FUNC_FLAG_NORETURN) {
+                        emit_unreachable_after = true;
+                    }
+                    llvm::Function *callee = llvm_find_function(builder, bc_func);
+                    assert(callee);
+                    callee_val = callee;
+                    fn_type = callee->getFunctionType();
+                } else {
+                    assert(inst->a->type->kind == AST_Type_Kind::POINTER);
+                    assert(inst->a->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                    callee_val = llvm_emit_value(builder, inst->a);
+                    auto _fn_type = llvm_type_from_ast(builder, inst->a->type->pointer.base);
+                    assert(_fn_type->isFunctionTy());
+                    fn_type = static_cast<llvm::FunctionType *>(_fn_type);
+                }
+
+                assert(callee_val);
+                assert(fn_type);
+                assert(fn_type->isFunctionTy());
 
                 auto bc_arg_count = inst->b;
                 assert(bc_arg_count->kind == BC_Value_Kind::INTEGER_LITERAL);
@@ -532,13 +549,14 @@ namespace Zodiac
 
                 llvm::ArrayRef<llvm::Value *> llvm_args(_llvm_args.data, arg_count);
 
-                llvm::Value *return_val = builder->llvm_builder->CreateCall(callee, llvm_args, "");
+                llvm::Value *return_val = builder->llvm_builder->CreateCall(fn_type, callee_val,
+                                                                            llvm_args, "");
 
                 if (inst->result) {
                     result = return_val;
                 }
 
-                if (bc_func->flags & BC_FUNC_FLAG_NORETURN) {
+                if (emit_unreachable_after) {
                     builder->llvm_builder->CreateUnreachable();
                 }
                 break;
@@ -929,7 +947,12 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::FUNCTION: assert(false);
+            case BC_Value_Kind::FUNCTION: {
+                auto llvm_func = llvm_find_function(builder, bc_value->function);
+                return llvm_func;
+                break;
+            }
+
             case BC_Value_Kind::BLOCK: assert(false);
             case BC_Value_Kind::TYPE: assert(false);
             case BC_Value_Kind::SWITCH_DATA: assert(false);

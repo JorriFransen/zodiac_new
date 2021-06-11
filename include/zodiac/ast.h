@@ -431,6 +431,7 @@ namespace Zodiac
                 AST_Expression *ident_expression;
                 Array<AST_Expression*> arg_expressions;
 
+                bool callee_is_pointer;
                 AST_Declaration *callee_declaration;
             } call;
 

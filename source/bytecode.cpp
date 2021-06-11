@@ -151,6 +151,7 @@ namespace Zodiac
         for (int64_t i = 0; i < decl->function.variable_declarations.count; i++) {
             auto var_decl = decl->function.variable_declarations[i];
             assert(var_decl->kind == AST_Declaration_Kind::VARIABLE);
+            assert(var_decl->type->kind != AST_Type_Kind::FUNCTION);
 
             auto name = var_decl->identifier->atom;
 
@@ -953,11 +954,9 @@ namespace Zodiac
 
             case AST_Expression_Kind::ADDROF: {
                 result = bc_emit_lvalue(builder, expr->addrof.operand_expr);
-                if (result->kind == BC_Value_Kind::ALLOCL) {
-                    // assert(false);
-                } else {
-                    assert(result->kind == BC_Value_Kind::TEMP);
-                }
+                assert(result->kind == BC_Value_Kind::TEMP ||
+                       result->kind == BC_Value_Kind::ALLOCL ||
+                       result->kind == BC_Value_Kind::FUNCTION);
                 break;
             }
 
@@ -1311,13 +1310,27 @@ namespace Zodiac
 
         auto decl = expr->call.callee_declaration;
         assert(decl);
-        assert(decl->kind == AST_Declaration_Kind::FUNCTION);
 
-        auto func = bc_find_function(builder, decl);
-        assert(func);
+        AST_Type *func_type = nullptr;
+        BC_Function *func = nullptr;
+
+        if (expr->call.callee_is_pointer) {
+            assert(decl->kind == AST_Declaration_Kind::VARIABLE ||
+                   decl->kind == AST_Declaration_Kind::PARAMETER);
+            assert(decl->type->kind == AST_Type_Kind::POINTER);
+            func_type = decl->type->pointer.base;
+        } else {
+            assert(decl->kind == AST_Declaration_Kind::FUNCTION);
+            func = bc_find_function(builder, decl);
+            assert(func);
+            func_type = func->type;
+        }
+
+        assert(func_type);
+        assert(func_type->kind == AST_Type_Kind::FUNCTION);
 
         auto arg_exprs = expr->call.arg_expressions;
-        assert(arg_exprs.count == func->parameters.count);
+        assert(arg_exprs.count == func_type->function.param_types.count);
 
         for (int64_t i = 0; i < arg_exprs.count; i++) {
             BC_Value *arg_val = bc_emit_expression(builder, arg_exprs[i]);
@@ -1325,11 +1338,29 @@ namespace Zodiac
         }
 
         BC_Value *return_value = nullptr;
-        if (func->type->function.return_type->kind != AST_Type_Kind::VOID) {
-            return_value = bc_temporary_new(builder, func->type->function.return_type);
+        if (func_type->function.return_type->kind != AST_Type_Kind::VOID) {
+            return_value = bc_temporary_new(builder, func_type->function.return_type);
         }
 
-        auto func_val = bc_function_value_new(builder, func);
+        BC_Value *func_val = nullptr;
+        if (expr->call.callee_is_pointer) {
+            assert(!func);
+            if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+                auto var_alloc = bc_find_variable(builder, decl);
+                func_val = bc_emit_load(builder, var_alloc);
+            } else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
+                auto param_val = bc_find_parameter(builder, decl);
+                func_val = bc_emit_load(builder, param_val);
+            } else {
+                assert(false);
+            }
+            assert(func_val);
+        } else {
+            assert(func);
+            func_val = bc_function_value_new(builder, func);
+        }
+        assert(func_val);
+
         auto arg_count_val = bc_integer_literal_new(builder, Builtin::type_s64,
                                                           { .s64 = arg_exprs.count });
 
@@ -1729,7 +1760,7 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::FUNCTION: {
-                bc_emit_instruction(builder, LOAD_FUNC, source, nullptr, result);
+                assert(false);
                 break;
             }
 
@@ -1973,6 +2004,8 @@ namespace Zodiac
 
     BC_Value *bc_local_alloc_new(BC_Builder *builder, AST_Type *type, Atom name)
     {
+        assert(type->kind != AST_Type_Kind::FUNCTION);
+
         auto pointer_type = type->pointer_to;
         if (!pointer_type) {
             pointer_type = build_data_find_or_create_pointer_type(builder->allocator,
@@ -2181,7 +2214,6 @@ namespace Zodiac
             case LOAD_PARAM: string_builder_append(sb, "LOAD_PARAM "); break;
             case LOAD_GLOBAL: string_builder_append(sb, "LOAD_GLOBAL "); break;
             case LOAD_PTR: string_builder_append(sb, "LOAD_PTR "); break;
-            case LOAD_FUNC: string_builder_append(sb, "LOAD_FUNC "); break;
 
             case ADD_S: string_builder_append(sb, "ADD_S "); break;
             case SUB_S: string_builder_append(sb, "SUB_S "); break;

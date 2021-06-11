@@ -2746,6 +2746,7 @@ namespace Zodiac
 
         result->call.ident_expression = ident_expr;
         result->call.arg_expressions = arg_expressions;
+        result->call.callee_is_pointer = false;
         result->call.callee_declaration = nullptr;
 
         return result;
@@ -3206,8 +3207,7 @@ namespace Zodiac
 
     void ast_print_indent(String_Builder *sb, uint64_t indent)
     {
-        for (uint64_t i = 0; i < indent; i++)
-        {
+        for (uint64_t i = 0; i < indent; i++) {
             string_builder_append(sb, "    ");
         }
     }
@@ -4069,7 +4069,14 @@ namespace Zodiac
             }
 
             case AST_Type_Kind::FUNCTION: {
-                string_builder_append(sb, "func()");
+                string_builder_append(sb, "func(");
+                for (int64_t i = 0; i < type->function.param_types.count; i++) {
+                    if (i > 0) string_builder_append(sb, ", ");
+                    auto param_type = type->function.param_types[i];
+                    ast_print_type(sb, param_type);
+                }
+                string_builder_append(sb, ") -> ");
+                ast_print_type(sb, type->function.return_type);
                 break;
             }
 

@@ -202,11 +202,6 @@ namespace Zodiac
                     break;
                 }
 
-                case LOAD_FUNC: {
-                    assert(false);
-                    break;
-                }
-
 #define MAKE_INT_NAME(sign, size) sign##size
 
 #define BINOP_INT_CASE(sign, size, op) \
