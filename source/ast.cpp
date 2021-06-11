@@ -4103,7 +4103,10 @@ namespace Zodiac
                 break;
             }
 
-            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::FUNCTION: {
+                string_builder_append(sb, "func()");
+                break;
+            }
 
             case AST_Type_Kind::STRUCTURE:
             {

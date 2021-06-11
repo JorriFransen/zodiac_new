@@ -286,6 +286,11 @@ namespace Zodiac
                 break;
             }
 
+            case LOAD_FUNC: {
+                assert(false);
+                break;
+            }
+
             case ADD_S:
             case ADD_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);

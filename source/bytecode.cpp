@@ -1045,6 +1045,12 @@ namespace Zodiac
                     source_val = bc_find_parameter(builder, decl);
                 } else if (decl->kind == AST_Declaration_Kind::CONSTANT) {
                     assert(false && "Cannot take the lvalue of a constant declaration.");
+                } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                    auto func = bc_find_function(builder, decl);
+                    auto type = func->type->pointer_to;
+                    assert(type);
+                    source_val = bc_value_new(builder, BC_Value_Kind::FUNCTION, type);
+                    source_val->function = func;
                 } else {
                     assert(false);
                 }
@@ -1722,7 +1728,11 @@ namespace Zodiac
                 break;
             }
 
-            case BC_Value_Kind::FUNCTION: assert(false);
+            case BC_Value_Kind::FUNCTION: {
+                bc_emit_instruction(builder, LOAD_FUNC, source, nullptr, result);
+                break;
+            }
+
             case BC_Value_Kind::BLOCK: assert(false);
             case BC_Value_Kind::TYPE: assert(false);
             case BC_Value_Kind::SWITCH_DATA: assert(false);
@@ -2171,6 +2181,7 @@ namespace Zodiac
             case LOAD_PARAM: string_builder_append(sb, "LOAD_PARAM "); break;
             case LOAD_GLOBAL: string_builder_append(sb, "LOAD_GLOBAL "); break;
             case LOAD_PTR: string_builder_append(sb, "LOAD_PTR "); break;
+            case LOAD_FUNC: string_builder_append(sb, "LOAD_FUNC "); break;
 
             case ADD_S: string_builder_append(sb, "ADD_S "); break;
             case SUB_S: string_builder_append(sb, "SUB_S "); break;
