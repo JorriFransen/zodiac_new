@@ -13,8 +13,9 @@ namespace Zodiac
 
     char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *userdata)
     {
-        auto callback_data = (Callback_Data *)userdata;
-        assert(callback_data);
+        assert(false);
+        // auto callback_data = (Callback_Data *)userdata;
+        // assert(callback_data);
 
         return 'v';
     }
