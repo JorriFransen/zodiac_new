@@ -70,20 +70,21 @@ target_link_libraries(zodiac ${llvm_libs})
 
 # add_subdirectory(lib/dyncall-1.2)
 target_include_directories(zodiac PRIVATE lib/dyncall-1.2/dyncall)
+target_include_directories(zodiac PRIVATE lib/dyncall-1.2/dyncallback)
 target_include_directories(zodiac PRIVATE lib/dyncall-1.2/dynload)
-target_link_directories(zodiac PRIVATE lib/dyncall-1.2/dyncall lib/dyncall-1.2/dynload)
+target_link_directories(zodiac PRIVATE lib/dyncall-1.2/dyncall lib/dyncall-1.2/dyncallback lib/dyncall-1.2/dynload)
 
 if(MSVC)
     target_compile_options(zodiac PRIVATE /W3 /WX)
 
-    target_link_libraries(zodiac libdyncall_s libdynload_s)
+    target_link_libraries(zodiac libdyncall_s libdyncallback_s libdynload_s)
     set(platform_libs shlwapi.lib)
 
     # add_definitions(-D_DEBUG)
     # add_definitions(-D_ITERATOR_DEBUG_LEVEL=2)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDebugDLL)
 else()
-   target_link_libraries(zodiac dyncall_s dynload_s)
+   target_link_libraries(zodiac dyncall_s dyncallback_s dynload_s)
 
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -pedantic -Werror)
    #target_compile_options(zodiac PRIVATE -Wall -Wextra -Werror)

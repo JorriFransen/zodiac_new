@@ -371,6 +371,7 @@ namespace Zodiac
         result->type = type;
         result->name_prefix = name_prefix;
         result->name = name;
+        result->callback_ptr = nullptr;
 
         array_init(builder->allocator, &result->parameters);
         array_init(builder->allocator, &result->locals, 4);
@@ -717,6 +718,10 @@ namespace Zodiac
                 if (decl->kind == AST_Declaration_Kind::CONSTANT) {
                     assert(decl->constant.init_expression);
                     result = bc_emit_expression(builder, decl->constant.init_expression);
+                } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+                    BC_Function *func = bc_find_function(builder, decl);
+                    assert(func);
+                    result = bc_function_value_new(builder, func);
                 } else {
                     BC_Value *source_val = bc_emit_lvalue(builder, expr);
                     result = bc_emit_load(builder, source_val);
@@ -953,7 +958,12 @@ namespace Zodiac
             }
 
             case AST_Expression_Kind::ADDROF: {
-                result = bc_emit_lvalue(builder, expr->addrof.operand_expr);
+                auto operand = expr->addrof.operand_expr;
+                if (operand->type->kind == AST_Type_Kind::FUNCTION) {
+                    result = bc_emit_addrof_function(builder, operand);
+                } else {
+                    result = bc_emit_lvalue(builder, operand);
+                }
                 assert(result->kind == BC_Value_Kind::TEMP ||
                        result->kind == BC_Value_Kind::ALLOCL ||
                        result->kind == BC_Value_Kind::FUNCTION);
@@ -1204,6 +1214,21 @@ namespace Zodiac
         return result;
     }
 
+    BC_Value *bc_emit_addrof_function(BC_Builder *builder, AST_Expression *func_expr)
+    {
+        assert(func_expr->type->kind == AST_Type_Kind::FUNCTION);
+
+        auto func_ptr_type = func_expr->type->pointer_to;
+        assert(func_ptr_type);
+
+        BC_Value *func_val = bc_emit_expression(builder, func_expr);
+
+        BC_Value *result = bc_temporary_new(builder, func_ptr_type);
+        bc_emit_instruction(builder, ADDROF_FUNC, func_val, nullptr, result);
+
+        return result;
+    }
+
     BC_Value *bc_emit_struct_dereference(BC_Builder *builder, AST_Type *struct_type,
                                          BC_Value *parent_lvalue, AST_Declaration *import_link,
                                          AST_Type *result_type)
@@ -1299,6 +1324,10 @@ namespace Zodiac
             return_value = bc_temporary_new(builder, callee->type->function.return_type);
         }
 
+        if (callee->type->kind == AST_Type_Kind::POINTER) {
+            assert(callee->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+            assert(false);
+        }
         bc_emit_instruction(builder, CALL, callee_val, arg_count_val, return_value);
 
         return return_value;
@@ -1364,7 +1393,15 @@ namespace Zodiac
         auto arg_count_val = bc_integer_literal_new(builder, Builtin::type_s64,
                                                           { .s64 = arg_exprs.count });
 
-        bc_emit_instruction(builder, CALL, func_val, arg_count_val, return_value);
+
+        if (func_val->type->kind == AST_Type_Kind::POINTER) {
+            assert(func_val->type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+            bc_emit_instruction(builder, CALL_PTR, func_val, arg_count_val, return_value);
+        } else {
+            assert(func_val->type->kind == AST_Type_Kind::FUNCTION);
+            bc_emit_instruction(builder, CALL, func_val, arg_count_val, return_value);
+        }
+
 
         return return_value;
     }
@@ -2267,6 +2304,7 @@ namespace Zodiac
                 break;
             }
 
+            case CALL_PTR: string_builder_append(sb, "CALL_PTR "); break;
             case RETURN: string_builder_append(sb, "RETURN "); break;
             case RETURN_VOID: string_builder_append(sb, "RETURN_VOID "); break;
             case JUMP: string_builder_append(sb, "JUMP "); break;
@@ -2308,6 +2346,7 @@ namespace Zodiac
 
             case PTR_OFFSET: string_builder_append(sb, "PTR_OFFSET "); break;
             case AGG_OFFSET: string_builder_append(sb, "AGG_OFFSET "); break;
+            case ADDROF_FUNC: string_builder_append(sb, "ADDROF_FUNC "); break;
 
             case ZEXT: string_builder_append(sb, "ZEXT "); break;
             case SEXT: string_builder_append(sb, "SEXT "); break;

@@ -65,31 +65,34 @@ namespace Zodiac
 
         PUSH_ARG     = 0x2b,
         CALL         = 0x2c,
-        RETURN       = 0x2d,
-        RETURN_VOID  = 0x2e,
+        CALL_PTR     = 0x2d,
+        RETURN       = 0x2e,
+        RETURN_VOID  = 0x2f,
 
-        JUMP         = 0x2f,
-        JUMP_IF      = 0x30,
-        SWITCH       = 0x31,
+        JUMP         = 0x30,
+        JUMP_IF      = 0x31,
+        SWITCH       = 0x32,
 
-        PTR_OFFSET   = 0x32,
-        AGG_OFFSET   = 0x33,
+        PTR_OFFSET   = 0x33,
+        AGG_OFFSET   = 0x34,
 
-        ZEXT         = 0x34,
-        SEXT         = 0x35,
-        TRUNC        = 0x36,
-        F_TO_S       = 0x37,
-        S_TO_F       = 0x38,
-        U_TO_F       = 0x39,
-        F_TO_F       = 0x3a,
-        PTR_TO_INT   = 0x3b,
-        PTR_TO_PTR   = 0x3c,
+        ADDROF_FUNC  = 0x35,
 
-        SIZEOF       = 0x3d,
-        OFFSETOF     = 0x3e,
+        ZEXT         = 0x36,
+        SEXT         = 0x37,
+        TRUNC        = 0x38,
+        F_TO_S       = 0x39,
+        S_TO_F       = 0x3a,
+        U_TO_F       = 0x3b,
+        F_TO_F       = 0x3c,
+        PTR_TO_INT   = 0x3d,
+        PTR_TO_PTR   = 0x3e,
 
-        EXIT         = 0x3f,
-        SYSCALL      = 0x40,
+        SIZEOF       = 0x3f,
+        OFFSETOF     = 0x40,
+
+        EXIT         = 0x41,
+        SYSCALL      = 0x42,
     };
 
     enum class BC_Value_Kind
@@ -162,6 +165,11 @@ namespace Zodiac
         BC_FUNC_FLAG_COMPILER_FUNC   = 0x040,
     };
 
+    struct Callback_Data
+    {
+        BC_Function *func = nullptr;
+        void *interp = nullptr;
+    };
 
     struct BC_Function
     {
@@ -176,6 +184,10 @@ namespace Zodiac
         Array<BC_Value *> parameters = {};
         Array<BC_Value *> locals = {};
         Array<BC_Value *> temps = {};
+
+        void *callback_ptr = nullptr;
+
+        Callback_Data cb_data = {};
     };
 
     struct BC_Function_Info
@@ -284,6 +296,7 @@ namespace Zodiac
     void bc_emit_if_statement(BC_Builder *builder, AST_Statement *stmt);
     BC_Value *bc_emit_expression(BC_Builder *builder, AST_Expression *expr);
     BC_Value *bc_emit_lvalue(BC_Builder *builder, AST_Expression *expr);
+    BC_Value *bc_emit_addrof_function(BC_Builder *builder, AST_Expression *func_expr);
 
     BC_Value *bc_emit_struct_dereference(BC_Builder *builder,
                                          AST_Type *struct_type,

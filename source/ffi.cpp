@@ -22,7 +22,7 @@ namespace Zodiac {
         dcMode(result.dc_vm, DC_CALL_C_DEFAULT);
         dcReset(result.dc_vm);
 
-        hash_table_init(allocator, &result.functions, operator==);
+        hash_table_init(allocator, &result.foreign_functions, operator==);
 
         DLLib *this_exe_lib = dlLoadLibrary(nullptr);
         assert(this_exe_lib);
@@ -61,31 +61,23 @@ namespace Zodiac {
 
         if (symbol) {
             // printf("Loaded symbol '%s': %p\n", name.data, symbol);
-            hash_table_add(&ffi->functions, name, symbol);
+            hash_table_add(&ffi->foreign_functions, name, symbol);
             return true;
         }
         return false;
     }
 
-    void ffi_call(FFI_Context *ffi, const Atom &name, void *return_val_ptr,
+    void ffi_call(FFI_Context *ffi, void *fn_ptr, void *return_val_ptr,
                   AST_Type *return_type)
     {
-        DCpointer func_ptr = nullptr;
-        bool found = hash_table_find(&ffi->functions, name, &func_ptr);
-        assert(found);
-        if (!found) {
-            fprintf(stderr, "Failed to find foreign function: '%s'\n", name.data);
-            return;
-        }
-
-        // printf("Calling function '%s': %p\n", name.data, func_ptr);
-
-        if (return_type != Builtin::type_void) {
-            assert(return_val_ptr);
-        }
-
         switch (return_type->kind) {
             default: assert(false);
+
+            case AST_Type_Kind::VOID: {
+                assert(!return_val_ptr);
+                dcCallVoid(ffi->dc_vm, fn_ptr);
+                break;
+            }
 
             case AST_Type_Kind::INTEGER: {
                 if (return_type->integer.sign) {
@@ -97,15 +89,15 @@ namespace Zodiac {
                         case 32: {
                             assert(sizeof(int) == 4);
                             assert(sizeof(DCint) == 4);
-                            int32_t result = dcCallInt(ffi->dc_vm, func_ptr);
-                            *(int32_t*)return_val_ptr = result;
+                            int32_t result = dcCallInt(ffi->dc_vm, fn_ptr);
+                            if (return_val_ptr) *(int32_t*)return_val_ptr = result;
                             break;
                         }
 
                         case 64: {
                             assert(sizeof(DClonglong) == 8);
-                            int64_t result = dcCallLongLong(ffi->dc_vm, func_ptr);
-                            *(int64_t*)return_val_ptr = result;
+                            int64_t result = dcCallLongLong(ffi->dc_vm, fn_ptr);
+                            if (return_val_ptr) *(int64_t*)return_val_ptr = result;
                             break;
                         }
 
@@ -119,15 +111,15 @@ namespace Zodiac {
                         case 32: {
                             assert(sizeof(int) == 4);
                             assert(sizeof(DCint) == 4);
-                            int32_t result = dcCallInt(ffi->dc_vm, func_ptr);
-                            *(uint32_t*)return_val_ptr = result;
+                            int32_t result = dcCallInt(ffi->dc_vm, fn_ptr);
+                            if (return_val_ptr) *(uint32_t*)return_val_ptr = result;
                             break;
                         }
 
                         case 64: {
                             assert(sizeof(DClonglong) == 8);
-                            int64_t result = dcCallLongLong(ffi->dc_vm, func_ptr);
-                            *(uint64_t*)return_val_ptr = result;
+                            int64_t result = dcCallLongLong(ffi->dc_vm, fn_ptr);
+                            if (return_val_ptr) *(uint64_t*)return_val_ptr = result;
                             break;
                         }
 
@@ -137,11 +129,32 @@ namespace Zodiac {
             }
 
             case AST_Type_Kind::POINTER: {
-                void *result = dcCallPointer(ffi->dc_vm, func_ptr);
-                *(void**)return_val_ptr = result;
+                void *result = dcCallPointer(ffi->dc_vm, fn_ptr);
+                if (return_val_ptr) *(void**)return_val_ptr = result;
                 break;
             }
         }
+    }
+
+    void ffi_call(FFI_Context *ffi, const Atom &name, void *return_val_ptr,
+                  AST_Type *return_type)
+    {
+        bool found = false;
+        DCpointer fn_ptr = ffi_find_function(ffi, name, &found);
+        if (!found) {
+            fprintf(stderr, "Failed to find foreign function: '%s'\n", name.data);
+            return;
+        }
+
+        ffi_call(ffi, fn_ptr, return_val_ptr, return_type);
+    }
+
+    void *ffi_find_function(FFI_Context *ffi, const Atom &name, bool *found)
+    {
+        DCpointer result = nullptr;
+        *found = hash_table_find(&ffi->foreign_functions, name, &result);
+
+        return result;
     }
 
     void ffi_reset(FFI_Context *ffi)

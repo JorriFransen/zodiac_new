@@ -503,6 +503,7 @@ namespace Zodiac
                 break;
             }
 
+            case CALL_PTR: 
             case CALL: {
                 llvm::Value *callee_val = nullptr;
                 llvm::FunctionType *fn_type = nullptr;
@@ -660,6 +661,11 @@ namespace Zodiac
                 llvm::Value *indices[2] = { zero_val, index_val };
 
                 result = builder->llvm_builder->CreateGEP(ptr_val, { indices, 2 }, "");
+                break;
+            }
+
+            case ADDROF_FUNC: {
+                result = llvm_emit_value(builder, inst->a);
                 break;
             }
 

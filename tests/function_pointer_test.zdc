@@ -2,10 +2,11 @@ std :: import std;
 
 #run main();
 
+#foreign puts :: func(cstr: *u8) -> s32
+
 main :: func() -> s64
 {
     std.println("Function pointer test\n");
-
 
     f1 := *func1;
     f2 : *func() = *func2;
@@ -23,6 +24,11 @@ main :: func() -> s64
     std.print("\n");
 
     call_void_func(return_fn_ptr(f2));
+
+    puts_ptr := *puts;
+    puts_ptr("Calling puts through a pointer!");
+
+    // (*puts_ptr)("Calling puts through a pointer!");
 
     return 0;
 }

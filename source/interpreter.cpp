@@ -2,11 +2,23 @@
 
 #include "builtin.h"
 #include "os.h"
-
+#include "temp_allocator.h"
 #include <stdio.h>
+
+#include "string_builder.h"
+#include <dyncall_callback.h>
 
 namespace Zodiac
 {
+
+    char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *userdata)
+    {
+        auto callback_data = (Callback_Data *)userdata;
+        assert(callback_data);
+
+        return 'v';
+    }
+
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data)
     {
         Interpreter result = {
@@ -449,6 +461,22 @@ namespace Zodiac
                     break;
                 }
 
+                case CALL_PTR: {
+                    Interpreter_Value ptr_val = interp_load_value(interp, inst.a);
+                    Interpreter_Value arg_count_val = interp_load_value(interp, inst.b);
+
+                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                    assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                    auto fn_type = ptr_val.type->pointer.base;
+
+                    assert(arg_count_val.type == Builtin::type_s64);
+
+                    interpreter_execute_foreign_function(interp, ptr_val.pointer, fn_type,
+                                                         arg_count_val.integer_literal.s64,
+                                                         inst.result);
+                    break;
+                }
+
                 case CALL: {
                     auto callee_val = inst.a;
                     BC_Function *callee = nullptr;
@@ -458,7 +486,6 @@ namespace Zodiac
                         auto _callee = interp_load_value(interp, callee_val);
                         assert(_callee.type);
                         callee = (BC_Function *)_callee.pointer;
-                        assert(interp_is_known_or_foreign_function_pointer(interp, callee));
                     } else {
                         callee = callee_val->function;
                     }
@@ -847,6 +874,67 @@ namespace Zodiac
                     };
 
                     interp_store(interp, result_ptr_val, result_val);
+                    break;
+                }
+
+                case ADDROF_FUNC: {
+                    assert(inst.a->kind == BC_Value_Kind::FUNCTION);
+
+                    BC_Function *func = inst.a->function;
+                    auto dest_lval = interp_load_lvalue(interp, inst.result);
+
+                    if (func->flags & BC_FUNC_FLAG_COMPILER_FUNC) {
+                        assert(false);
+                    }
+
+                    void *fn_ptr = nullptr;
+
+                    if (func->flags & BC_FUNC_FLAG_FOREIGN) {
+                        bool found;
+                        fn_ptr = ffi_find_function(&interp->ffi, func->name, &found);
+                        assert(found);
+                    } else {
+                        if (!func->callback_ptr) {
+
+                            auto ta = temp_allocator_get();
+                            String_Builder _sb;
+                            string_builder_init(ta, &_sb);
+                            auto sb = &_sb;
+
+                            for (int64_t i = 0; i < func->type->function.param_types.count; i++) {
+                                auto param_type = func->type->function.param_types[i];
+
+                                switch (param_type->kind) {
+                                    default: assert(false);
+                                }
+                            }
+
+                            string_builder_append(sb, ")");
+
+                            switch (func->type->function.return_type->kind) {
+                                default: assert(false);
+                                case AST_Type_Kind::VOID:
+                                {
+                                    string_builder_append(sb, "v");
+                                    break;
+                                }
+                            }
+
+                            auto signature = string_builder_to_string(interp->allocator, sb);
+                            string_builder_free(sb);
+
+
+                            func->cb_data = { .func = func, .interp = interp };
+
+                            func->callback_ptr = dcbNewCallback(signature.data, callback_handler,
+                                                                &func->cb_data);
+                        }
+                        fn_ptr = func->callback_ptr;
+                    }
+
+                    assert(fn_ptr);
+                    interp_store(interp, &fn_ptr, func->type->pointer_to, dest_lval, true);
+
                     break;
                 }
 
@@ -1676,24 +1764,37 @@ namespace Zodiac
         }
     }
 
-    void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *func,
+    void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *bc_func,
                                               int64_t arg_count, BC_Value *result_value)
     {
-        assert(func->parameters.count == arg_count);
+        bool found = false;
+        void *fn_ptr = ffi_find_function(&interp->ffi, bc_func->name, &found);
+        assert(found);
+        assert(fn_ptr);
+
+        interpreter_execute_foreign_function(interp, fn_ptr, bc_func->type, arg_count, result_value);
+    }
+
+    void interpreter_execute_foreign_function(Interpreter *interp, void *fn_ptr, AST_Type *fn_type,
+                                              int64_t arg_count, BC_Value *result_value)
+    {
+        assert(fn_ptr);
+        assert(fn_type->kind == AST_Type_Kind::FUNCTION);
+
+        assert(fn_type->function.param_types.count == arg_count);
         assert(stack_count(&interp->arg_stack) >= arg_count);
 
         if (result_value) {
             assert(result_value->kind == BC_Value_Kind::TEMP);
-            assert(func->type->function.return_type);
+            assert(fn_type->function.return_type);
         }
 
         ffi_reset(&interp->ffi);
 
         for (int64_t i = 0; i < arg_count; i++) {
-            auto param = func->parameters[i];
-            auto param_type = param->type;
-            assert(param_type->kind == AST_Type_Kind::POINTER);
-            param_type = param_type->pointer.base;
+            auto param_type = fn_type->function.param_types[i];
+            // assert(param_type->kind == AST_Type_Kind::POINTER);
+            // param_type = param_type->pointer.base;
 
             void *arg_ptr = nullptr;
 
@@ -1713,11 +1814,12 @@ namespace Zodiac
             ffi_push_arg(&interp->ffi, arg_ptr, param_type);
         }
 
-        AST_Type *return_type = nullptr;
+        AST_Type *return_type = fn_type->function.return_type;
         void *return_val_ptr = nullptr;
 
         if (result_value) {
             return_type = result_value->type;
+            assert(return_type == result_value->type);
 
             assert(result_value->kind == BC_Value_Kind::TEMP);
             assert(return_type->kind != AST_Type_Kind::ARRAY ||
@@ -1728,9 +1830,10 @@ namespace Zodiac
             return_val_ptr = &result_val_ptr.pointer;
         }
 
-        ffi_call(&interp->ffi, func->name, return_val_ptr, return_type);
+        assert(return_type);
+        ffi_call(&interp->ffi, fn_ptr, return_val_ptr, return_type);
 
-        stack_pop(&interp->arg_stack, arg_count);
+        if (arg_count) stack_pop(&interp->arg_stack, arg_count);
     }
 
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,
@@ -1747,20 +1850,5 @@ namespace Zodiac
         } else {
             assert(false && "Unimplemented compiler function!");
         }
-    }
-
-    bool interp_is_known_or_foreign_function_pointer(Interpreter *interp, BC_Function *func)
-    {
-        if (func->flags & BC_FUNC_FLAG_FOREIGN) {
-            for (int64_t i = 0; i < interp->foreign_functions.count; i++) {
-                if (interp->foreign_functions[i] == func) return true;
-            }
-        }
-
-        for (int64_t i = 0; i < interp->functions.count; i++) {
-            if (interp->functions[i] == func) return true;
-        }
-
-        return false;
     }
 }
