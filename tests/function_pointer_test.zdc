@@ -25,6 +25,22 @@ main :: func() -> s64
 
     call_void_func(return_fn_ptr(f2));
 
+    print_func("Calling print_func()");
+    print_func_ptr := *print_func;
+    print_func_ptr("Calling print_func_ptr()");
+
+    print_2_func("Calling print2 func arg 1", "Calling print2 func arg 2");
+    print_2_func_ptr := *print_2_func;
+    print_2_func_ptr("Calling print2ptr func arg 1", "Calling print2ptr func arg 2");
+
+    print_str_and_int("Printing string and int", 1234);
+    print_str_and_int_ptr := *print_str_and_int;
+    print_str_and_int_ptr("(ptr) Printing string and int", 1234);
+
+    call_fn_ptr(*print_func, "Calling print_func through call_fn_ptr");
+    call_fn_ptr_ptr := *call_fn_ptr;
+    call_fn_ptr_ptr(*print_func, "Calling print_func through call_fn_ptr_ptr");
+
     puts_ptr := *puts;
     puts_ptr("Calling puts through a pointer!");
 
@@ -47,6 +63,27 @@ func2 :: func() {
 call_void_func :: func(func_ptr : void_func_p)
 {
     func_ptr();
+}
+
+print_func :: func(str: *u8) -> void {
+    std.println(str);
+}
+
+print_2_func :: func(str1: *u8, str2: *u8) {
+    std.println(str1);
+    std.println(str2);
+}
+
+print_str_and_int :: func(str: *u8, x: int) {
+    std.print(str);
+    std.print_char(' ');
+    std.print_numln(x);
+}
+
+print_func_p_type :: typedef *func(str: *u8) ->void;
+
+call_fn_ptr :: func(ptr: print_func_p_type, arg: *u8) {
+    ptr(arg);
 }
 
 return_fn_ptr :: func(func_ptr : void_func_p) -> void_func_p

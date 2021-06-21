@@ -977,6 +977,7 @@ namespace Zodiac
             case Zodiac_Target_Platform::LINUX:
             {
                 auto ta = temp_allocator_get();
+                temp_allocator_reset(ta);
 
                 auto asm_string = string_ref("syscall");
 

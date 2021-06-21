@@ -2639,6 +2639,13 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 resolver->allocator, resolver->build_data, op_expr->type);
             assert(pointer_type);
 
+            if (op_expr->type->kind == AST_Type_Kind::FUNCTION) {
+                AST_Declaration *func_decl = resolver_get_declaration(op_expr);
+                assert(func_decl);
+                assert(func_decl->kind == AST_Declaration_Kind::FUNCTION);
+                bc_register_function(&resolver->bytecode_builder, func_decl);
+            }
+
             expression->type = pointer_type;
             expression->flags |= AST_NODE_FLAG_RESOLVED_ID;
             expression->flags |= AST_NODE_FLAG_TYPED;

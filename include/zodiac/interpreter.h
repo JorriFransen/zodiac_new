@@ -61,6 +61,8 @@ namespace Zodiac
 
         bool running = false;
         bool aborted = false;
+        bool globals_initialized = false;
+        bool foreigns_initialized = false;
 
         Stack<Interpreter_Value> temp_stack = {};
         Stack<Interpreter_Value> local_stack = {};
@@ -93,6 +95,10 @@ namespace Zodiac
                            Array<BC_Global_Info> global_info, int64_t global_size,
                            Array<BC_Function *>functions,
                            Array<BC_Function *> foreign_functions);
+    void interpreter_start(Interpreter *interp, BC_Function *entry_funcm,
+                           int64_t first_arg_index = 0,
+                           int64_t first_temp_index = 1,// @TODO: FIXME: CLEANUP: Why o why would this be 1???
+                           int64_t first_local_index = 0);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);

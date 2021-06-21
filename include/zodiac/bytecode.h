@@ -167,8 +167,9 @@ namespace Zodiac
 
     struct Callback_Data
     {
-        BC_Function *func = nullptr;
+        int32_t arg_count = 0;
         void *interp = nullptr;
+        BC_Function *func = nullptr;
     };
 
     struct BC_Function

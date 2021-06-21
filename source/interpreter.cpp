@@ -13,9 +13,95 @@ namespace Zodiac
 
     char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *userdata)
     {
-        assert(false);
-        // auto callback_data = (Callback_Data *)userdata;
-        // assert(callback_data);
+        auto callback_data = (Callback_Data *)userdata;
+        auto interp = static_cast<Interpreter *>(callback_data->interp);
+        auto bc_func = callback_data->func;
+        auto func_type = bc_func->type;
+
+        auto first_arg_index = stack_count(&interp->arg_stack);
+        auto first_temp_index = stack_count(&interp->temp_stack);
+        auto first_local_index = stack_count(&interp->local_stack);
+
+        for (int64_t i = 0; i < func_type->function.param_types.count; i++) {
+            auto param_type = func_type->function.param_types[i];
+
+            Interpreter_Value arg_val;
+
+            switch (param_type->kind) {
+
+                case AST_Type_Kind::INVALID: assert(false);
+                case AST_Type_Kind::VOID: assert(false);
+
+                case AST_Type_Kind::INTEGER: {
+
+                    AST_Type *t = nullptr;
+                    Integer_Literal l = {};
+
+                    if (param_type->integer.sign) {
+                        switch (param_type->bit_size) {
+                            default: assert(false);
+                            case 8:  t = Builtin::type_s8;  l.s8 = dcbArgChar(args); break;
+                            case 16: t = Builtin::type_s16; l.s16 = dcbArgShort(args); break;
+                            case 32: t = Builtin::type_s32; l.s32 = dcbArgInt(args); break;
+                            case 64: t = Builtin::type_s64; l.s64 = dcbArgLongLong(args); break;
+                        }
+                    } else {
+                        switch (param_type->bit_size) {
+                            default: assert(false);
+                            case 8:  t = Builtin::type_s8;  l.u8 = dcbArgUChar(args); break;
+                            case 16: t = Builtin::type_s16; l.u16 = dcbArgUShort(args); break;
+                            case 32: t = Builtin::type_s32; l.u32 = dcbArgUInt(args); break;
+                            case 64: t = Builtin::type_s64; l.u64 = dcbArgULongLong(args); break;
+                        }
+                    }
+                    assert(t);
+                    arg_val = { .type = t, .integer_literal = l };
+                    break;
+                }
+
+                case AST_Type_Kind::FLOAT: {
+
+                    AST_Type *t = nullptr;
+                    Float_Literal fl = {};
+
+                    switch (param_type->bit_size) {
+                        default: assert(false);
+                        case 32: t = Builtin::type_float; fl.r32 = dcbArgFloat(args); break;
+                        case 64: t = Builtin::type_double; fl.r64 = dcbArgDouble(args); break;
+                    }
+
+                    assert(t);
+                    arg_val = { .type = t, .float_literal = fl };
+                    break;
+                }
+
+                case AST_Type_Kind::BOOL: {
+                    arg_val = { .type = Builtin::type_bool,
+                                .boolean_literal = static_cast<bool>(dcbArgBool(args)) };
+                    break;
+                }
+
+                case AST_Type_Kind::POINTER: {
+                    auto arg = dcbArgPointer(args);
+                    arg_val = { .type = param_type, .pointer = arg };
+                    break;
+                }
+
+                case AST_Type_Kind::FUNCTION: assert(false);
+                case AST_Type_Kind::STRUCTURE: assert(false);
+                case AST_Type_Kind::UNION: assert(false);
+                case AST_Type_Kind::ENUM: assert(false);
+                case AST_Type_Kind::ARRAY: assert(false);
+            }
+
+            stack_push(&interp->arg_stack, arg_val);
+        }
+
+        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, first_local_index);
+
+        assert(interp->running == false);
+        assert(interp->aborted == false);
+        interp->running = true;
 
         return 'v';
     }
@@ -27,6 +113,8 @@ namespace Zodiac
             .build_data = build_data,
             .running = false,
             .aborted = false,
+            .globals_initialized = false,
+            .foreigns_initialized = false,
             .exit_code = 0,
         };
 
@@ -66,18 +154,15 @@ namespace Zodiac
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-                           Array<BC_Global_Info> global_info, int64_t global_size,
-                           Array<BC_Function *> functions,
-                           Array<BC_Function *> foreign_functions)
+                           int64_t first_arg_index /*= 0*/,
+                           int64_t first_temp_index /*= 1*/,
+                           int64_t first_local_index /*= 0*/)
     {
-        assert(interp->functions.count == 0 && interp->functions.capacity == 0);
-        interp->functions = functions;
+        assert(interp->functions.count);
+        assert(interp->globals_initialized);
+        assert(interp->foreigns_initialized);
 
-        assert(interp->foreign_functions.count == 0 && interp->foreign_functions.capacity == 0);
-        interp->foreign_functions = foreign_functions;
-
-        interpreter_initialize_globals(interp, global_info, global_size);
-        interpreter_initialize_foreigns(interp, foreign_functions);
+        auto frame_count_on_entry = stack_count(&interp->frames);
 
         AST_Type *return_type = entry_func->type->function.return_type;
         bool returns_void = return_type->kind == AST_Type_Kind::VOID;
@@ -89,7 +174,10 @@ namespace Zodiac
                 .index = 0,
                 .block = entry_func->blocks[0],
             },
-            .first_temp_index = 1,
+
+            .first_arg_index = first_arg_index,
+            .first_temp_index = first_temp_index,
+            .first_alloc_index = first_local_index,
             .result_index = returns_void ? -1 : 0,
             .previous_alloc_sp = interp->alloc_sp,
         };
@@ -102,7 +190,7 @@ namespace Zodiac
         }
 
         assert(entry_func->locals.count == 0);
-        assert(entry_func->parameters.count == 0);
+        assert(entry_func->parameters.count <= stack_count(&interp->arg_stack));
 
         for (int64_t i = 0; i < entry_func->temps.count; i++) {
             Interpreter_Value temp { .type = entry_func->temps[i]->type };
@@ -589,6 +677,10 @@ namespace Zodiac
 
                     auto current_frame = stack_pop(&interp->frames);
 
+                    if (frame_count_on_entry == stack_count(&interp->frames)) {
+                        interp->running = false;
+                    }
+
                     if (current_frame.function->parameters.count) {
                         stack_pop(&interp->arg_stack, current_frame.function->parameters.count);
                     }
@@ -620,6 +712,10 @@ namespace Zodiac
                     advance_ip = false;
                     auto old_frame = stack_pop(&interp->frames);
                     assert(old_frame.result_index == -1);
+
+                    if (frame_count_on_entry == stack_count(&interp->frames)) {
+                        interp->running = false;
+                    }
 
                     if (old_frame.function->parameters.count) {
                         stack_pop(&interp->arg_stack, old_frame.function->parameters.count);
@@ -898,6 +994,8 @@ namespace Zodiac
                         if (!func->callback_ptr) {
 
                             auto ta = temp_allocator_get();
+                            temp_allocator_reset(ta);
+
                             String_Builder _sb;
                             string_builder_init(ta, &_sb);
                             auto sb = &_sb;
@@ -905,17 +1003,72 @@ namespace Zodiac
                             for (int64_t i = 0; i < func->type->function.param_types.count; i++) {
                                 auto param_type = func->type->function.param_types[i];
 
+                                char c = 0;
+
                                 switch (param_type->kind) {
-                                    default: assert(false);
+
+                                    case AST_Type_Kind::INVALID: assert(false);
+
+                                    case AST_Type_Kind::VOID: c = 'v'; break;
+
+                                    case AST_Type_Kind::INTEGER: {
+                                        if (param_type->integer.sign) {
+                                            switch (param_type->bit_size) {
+                                                default: assert(false);
+                                                case 8:  c = 'c'; break;
+                                                case 16: c = 's'; break;
+                                                case 32: c = 'i'; break;
+                                                case 64: c = 'l'; break;
+                                            }
+                                        } else {
+                                            switch (param_type->bit_size) {
+                                                default: assert(false);
+                                                case 8:  c = 'C'; break;
+                                                case 16: c = 'S'; break;
+                                                case 32: c = 'I'; break;
+                                                case 64: c = 'L'; break;
+                                            }
+                                        }
+
+                                        break;
+                                    }
+
+                                    case AST_Type_Kind::FLOAT: {
+                                        if (param_type == Builtin::type_float) {
+                                            c = 'f';
+                                        } else if (param_type == Builtin::type_double) {
+                                            c = 'd';
+                                        } else { assert(false); }
+                                        break;
+                                    }
+
+                                    case AST_Type_Kind::BOOL: c = 'B'; break;
+
+                                    case AST_Type_Kind::POINTER: {
+                                        if (param_type == Builtin::type_ptr_u8) {
+                                            c = 'Z';
+                                        } else {
+                                            c = 'p';
+                                        }
+                                        break;
+                                    }
+
+                                    case AST_Type_Kind::FUNCTION: assert(false);
+                                    case AST_Type_Kind::STRUCTURE: assert(false);
+                                    case AST_Type_Kind::UNION: assert(false);
+                                    case AST_Type_Kind::ENUM: assert(false);
+                                    case AST_Type_Kind::ARRAY: assert(false);
+
                                 }
+
+                                string_builder_appendf(sb, "%c", c);
                             }
 
                             string_builder_append(sb, ")");
 
                             switch (func->type->function.return_type->kind) {
                                 default: assert(false);
-                                case AST_Type_Kind::VOID:
-                                {
+                                case AST_Type_Kind::VOID: {
                                     string_builder_append(sb, "v");
                                     break;
                                 }
@@ -925,7 +1078,7 @@ namespace Zodiac
                             string_builder_free(sb);
 
 
-                            func->cb_data = { .func = func, .interp = interp };
+                            func->cb_data = { .interp = interp, .func = func };
 
                             func->callback_ptr = dcbNewCallback(signature.data, callback_handler,
                                                                 &func->cb_data);
@@ -1290,6 +1443,23 @@ namespace Zodiac
         } else {
             fprintf(stderr, "Bytecode aborted!\n");
         }
+    }
+
+    void interpreter_start(Interpreter *interp, BC_Function *entry_func,
+                           Array<BC_Global_Info> global_info, int64_t global_size,
+                           Array<BC_Function *> functions,
+                           Array<BC_Function *> foreign_functions)
+    {
+        assert(interp->functions.count == 0 && interp->functions.capacity == 0);
+        interp->functions = functions;
+
+        assert(interp->foreign_functions.count == 0 && interp->foreign_functions.capacity == 0);
+        interp->foreign_functions = foreign_functions;
+
+        interpreter_initialize_globals(interp, global_info, global_size);
+        interpreter_initialize_foreigns(interp, foreign_functions);
+
+        interpreter_start(interp, entry_func);
     }
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val)
@@ -1690,7 +1860,10 @@ namespace Zodiac
     void interpreter_initialize_globals(Interpreter *interp, Array<BC_Global_Info> global_info,
                                         int64_t global_data_size)
     {
-        if (global_info.count < 1) return;
+        if (global_info.count < 1) {
+            interp->globals_initialized = true;
+            return;
+        }
 
         array_init(interp->allocator, &interp->globals, global_info.count);
 
@@ -1732,6 +1905,8 @@ namespace Zodiac
                 memset(val_ptr->pointer, 0 , byte_size);
             }
         }
+
+        interp->globals_initialized = true;
     }
 
     void interp_store_constant(Interpreter *interp, Const_Value const_val,
@@ -1763,6 +1938,8 @@ namespace Zodiac
             }
             assert(found);
         }
+
+        interp->foreigns_initialized = true;
     }
 
     void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *bc_func,
