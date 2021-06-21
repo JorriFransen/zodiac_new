@@ -29,7 +29,10 @@ namespace Zodiac
                   AST_Type *return_type);
 
     void *ffi_find_function(FFI_Context *ffi, const Atom &name, bool *found);
-    
+
     void ffi_reset(FFI_Context *ffi);
     void ffi_push_arg(FFI_Context *ffi, void *arg_ptr, AST_Type *type);
+
+    char ffi_dcb_type_sig_char(AST_Type *type);
+    String ffi_dcb_func_sig(Allocator *allocator, AST_Type *func_type);
 }

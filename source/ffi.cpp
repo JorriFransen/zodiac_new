@@ -1,6 +1,8 @@
 #include "ffi.h"
 
 #include "builtin.h"
+#include "string_builder.h"
+#include "temp_allocator.h"
 
 #include <cstdio>
 
@@ -191,5 +193,92 @@ namespace Zodiac {
                 break;
             }
         }
+    }
+
+    char ffi_dcb_type_sig_char(AST_Type *type)
+    {
+        char result = 0;
+
+        switch (type->kind) {
+
+            case AST_Type_Kind::INVALID: assert(false);
+
+            case AST_Type_Kind::VOID: result = 'v'; break;
+
+            case AST_Type_Kind::INTEGER: {
+                if (type->integer.sign) {
+                    switch (type->bit_size) {
+                        default: assert(false);
+                        case 8:  result = 'c'; break;
+                        case 16: result = 's'; break;
+                        case 32: result = 'i'; break;
+                        case 64: result = 'l'; break;
+                    }
+                } else {
+                    switch (type->bit_size) {
+                        default: assert(false);
+                        case 8:  result = 'C'; break;
+                        case 16: result = 'S'; break;
+                        case 32: result = 'I'; break;
+                        case 64: result = 'L'; break;
+                    }
+                }
+
+                break;
+            }
+
+            case AST_Type_Kind::FLOAT: {
+                if (type == Builtin::type_float) {
+                    result = 'f';
+                } else if (type == Builtin::type_double) {
+                    result = 'd';
+                } else { assert(false); }
+                break;
+            }
+
+            case AST_Type_Kind::BOOL: result = 'B'; break;
+
+            case AST_Type_Kind::POINTER: {
+                if (type == Builtin::type_ptr_u8) {
+                    result = 'Z';
+                } else {
+                    result = 'p';
+                }
+                break;
+            }
+
+            case AST_Type_Kind::FUNCTION: assert(false);
+            case AST_Type_Kind::STRUCTURE: assert(false);
+            case AST_Type_Kind::UNION: assert(false);
+            case AST_Type_Kind::ENUM: assert(false);
+            case AST_Type_Kind::ARRAY: assert(false);
+
+        }
+
+        return result;
+    }
+
+    String ffi_dcb_func_sig(Allocator *allocator, AST_Type *func_type)
+    {
+        assert(func_type->kind == AST_Type_Kind::FUNCTION);
+
+        auto ta = temp_allocator_get();
+        temp_allocator_reset(ta);
+
+        String_Builder _sb; auto sb = &_sb;
+        string_builder_init(ta, sb);
+
+        for (int64_t i = 0; i < func_type->function.param_types.count; i++) {
+            auto param_type = func_type->function.param_types[i];
+            char c = ffi_dcb_type_sig_char(param_type);
+            string_builder_appendf(sb, "%c", c);
+        }
+
+        string_builder_append(sb, ")");
+
+        char c = ffi_dcb_type_sig_char(func_type->function.return_type);
+        string_builder_appendf(sb, "%c", c);
+
+        return string_builder_to_string(allocator, sb);
     }
 }

@@ -97,13 +97,87 @@ namespace Zodiac
             stack_push(&interp->arg_stack, arg_val);
         }
 
-        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, first_local_index);
+        int64_t return_value_index = -1;
+        auto return_type = bc_func->type->function.return_type;
+
+        if (return_type->kind != AST_Type_Kind::VOID) {
+
+            assert(return_type->kind == AST_Type_Kind::INTEGER ||
+                   return_type->kind == AST_Type_Kind::FLOAT ||
+                   return_type->kind == AST_Type_Kind::POINTER ||
+                   return_type->kind == AST_Type_Kind::BOOL);
+
+            return_value_index = stack_count(&interp->temp_stack);
+
+            Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
+            stack_push(&interp->temp_stack, return_val);
+        }
+
+        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, first_local_index,
+                          return_value_index);
+
+        if (return_value_index != -1) {
+            // We have just poppped this of at the end of interpreter_start,
+            //  but it should not be possible for this memory to have changed
+            //  inbetween.
+            Interpreter_Value bc_return_val = interp->temp_stack.buffer[return_value_index];
+
+            switch (return_type->kind) {
+                default: assert(false);
+
+                case AST_Type_Kind::INTEGER: {
+                    auto il = bc_return_val.integer_literal;
+                    if (return_type->integer.sign) {
+                        switch (return_type->bit_size) {
+                            default: assert(false);
+                            case 8: result->c = il.s8; break;
+                            case 16: result->s = il.s16; break;
+                            case 32: result->i = il.s32; break;
+                            case 64: result->l = il.s64; break;
+                        }
+                    } else {
+                        switch (return_type->bit_size) {
+                            default: assert(false);
+                            case 8: result->C = il.u8; break;
+                            case 16: result->S = il.u16; break;
+                            case 32: result->I = il.u32; break;
+                            case 64: result->L = il.u64; break;
+                        }
+                    }
+                    break;
+                }
+
+                case AST_Type_Kind::FLOAT: {
+                    auto fl = bc_return_val.float_literal;
+                    switch (return_type->bit_size) {
+                        default: assert(false);
+                        case 32: result->f = fl.r32; break;
+                        case 64: result->d = fl.r64; break;
+                    }
+                    break;
+                }
+
+                case AST_Type_Kind::POINTER: {
+                    if (return_type == Builtin::type_ptr_u8) {
+                        result->Z = bc_return_val.string_literal;
+                    } else {
+                        result->p = bc_return_val.pointer;
+                    }
+                    break;
+                }
+
+                case AST_Type_Kind::BOOL: {
+                    result->B = bc_return_val.boolean_literal;
+                    break;
+                }
+            }
+        }
 
         assert(interp->running == false);
         assert(interp->aborted == false);
         interp->running = true;
 
-        return 'v';
+        return ffi_dcb_type_sig_char(bc_func->type->function.return_type);
     }
 
     Interpreter interpreter_create(Allocator *allocator, Build_Data *build_data)
@@ -156,7 +230,8 @@ namespace Zodiac
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
                            int64_t first_arg_index /*= 0*/,
                            int64_t first_temp_index /*= 1*/,
-                           int64_t first_local_index /*= 0*/)
+                           int64_t first_local_index /*= 0*/,
+                           int64_t return_value_index /*= 0*/)
     {
         assert(interp->functions.count);
         assert(interp->globals_initialized);
@@ -168,6 +243,10 @@ namespace Zodiac
         bool returns_void = return_type->kind == AST_Type_Kind::VOID;
         assert(return_type->kind == AST_Type_Kind::INTEGER || returns_void);
 
+        if (returns_void) {
+            assert(return_value_index == -1);
+        }
+
         Interp_Stack_Frame first_frame = {
             .function = entry_func,
             .ip = {
@@ -178,16 +257,11 @@ namespace Zodiac
             .first_arg_index = first_arg_index,
             .first_temp_index = first_temp_index,
             .first_alloc_index = first_local_index,
-            .result_index = returns_void ? -1 : 0,
+            .result_index = return_value_index,
             .previous_alloc_sp = interp->alloc_sp,
         };
 
         stack_push(&interp->frames, first_frame);
-
-        if (!returns_void) {
-            Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
-            stack_push(&interp->temp_stack, return_val);
-        }
 
         assert(entry_func->locals.count == 0);
         assert(entry_func->parameters.count <= stack_count(&interp->arg_stack));
@@ -992,94 +1066,8 @@ namespace Zodiac
                         assert(found);
                     } else {
                         if (!func->callback_ptr) {
-
-                            auto ta = temp_allocator_get();
-                            temp_allocator_reset(ta);
-
-                            String_Builder _sb;
-                            string_builder_init(ta, &_sb);
-                            auto sb = &_sb;
-
-                            for (int64_t i = 0; i < func->type->function.param_types.count; i++) {
-                                auto param_type = func->type->function.param_types[i];
-
-                                char c = 0;
-
-                                switch (param_type->kind) {
-
-                                    case AST_Type_Kind::INVALID: assert(false);
-
-                                    case AST_Type_Kind::VOID: c = 'v'; break;
-
-                                    case AST_Type_Kind::INTEGER: {
-                                        if (param_type->integer.sign) {
-                                            switch (param_type->bit_size) {
-                                                default: assert(false);
-                                                case 8:  c = 'c'; break;
-                                                case 16: c = 's'; break;
-                                                case 32: c = 'i'; break;
-                                                case 64: c = 'l'; break;
-                                            }
-                                        } else {
-                                            switch (param_type->bit_size) {
-                                                default: assert(false);
-                                                case 8:  c = 'C'; break;
-                                                case 16: c = 'S'; break;
-                                                case 32: c = 'I'; break;
-                                                case 64: c = 'L'; break;
-                                            }
-                                        }
-
-                                        break;
-                                    }
-
-                                    case AST_Type_Kind::FLOAT: {
-                                        if (param_type == Builtin::type_float) {
-                                            c = 'f';
-                                        } else if (param_type == Builtin::type_double) {
-                                            c = 'd';
-                                        } else { assert(false); }
-                                        break;
-                                    }
-
-                                    case AST_Type_Kind::BOOL: c = 'B'; break;
-
-                                    case AST_Type_Kind::POINTER: {
-                                        if (param_type == Builtin::type_ptr_u8) {
-                                            c = 'Z';
-                                        } else {
-                                            c = 'p';
-                                        }
-                                        break;
-                                    }
-
-                                    case AST_Type_Kind::FUNCTION: assert(false);
-                                    case AST_Type_Kind::STRUCTURE: assert(false);
-                                    case AST_Type_Kind::UNION: assert(false);
-                                    case AST_Type_Kind::ENUM: assert(false);
-                                    case AST_Type_Kind::ARRAY: assert(false);
-
-                                }
-
-                                string_builder_appendf(sb, "%c", c);
-                            }
-
-                            string_builder_append(sb, ")");
-
-                            switch (func->type->function.return_type->kind) {
-                                default: assert(false);
-                                case AST_Type_Kind::VOID: {
-                                    string_builder_append(sb, "v");
-                                    break;
-                                }
-                            }
-
-                            auto signature = string_builder_to_string(interp->allocator, sb);
-                            string_builder_free(sb);
-
-
+                            auto signature = ffi_dcb_func_sig(interp->allocator, func->type);
                             func->cb_data = { .interp = interp, .func = func };
-
                             func->callback_ptr = dcbNewCallback(signature.data, callback_handler,
                                                                 &func->cb_data);
                         }
@@ -1458,6 +1446,13 @@ namespace Zodiac
 
         interpreter_initialize_globals(interp, global_info, global_size);
         interpreter_initialize_foreigns(interp, foreign_functions);
+
+        auto return_type = entry_func->type->function.return_type;
+
+        if (return_type->kind != AST_Type_Kind::VOID) {
+            Interpreter_Value return_val = { .type = return_type, .integer_literal = {} };
+            stack_push(&interp->temp_stack, return_val);
+        }
 
         interpreter_start(interp, entry_func);
     }
@@ -2004,8 +1999,8 @@ namespace Zodiac
                    return_type->kind != AST_Type_Kind::STRUCTURE ||
                    return_type->kind != AST_Type_Kind::UNION);
             auto rv_lval = interp_load_lvalue(interp, result_value);
-            auto result_val_ptr = interp->temp_stack.buffer[rv_lval.index];
-            return_val_ptr = &result_val_ptr.pointer;
+            auto result_val_ptr = &interp->temp_stack.buffer[rv_lval.index];
+            return_val_ptr = &result_val_ptr->pointer;
         }
 
         assert(return_type);

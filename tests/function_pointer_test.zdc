@@ -44,6 +44,12 @@ main :: func() -> s64
     puts_ptr := *puts;
     puts_ptr("Calling puts through a pointer!");
 
+    x := times_two(42);
+    times_two_ptr := *times_two;
+
+    std.print("times_two(42) = "); std.print_numln(x);
+    std.print("times_two_ptr(42) = "); std.print_numln(times_two_ptr(42));
+
     // (*puts_ptr)("Calling puts through a pointer!");
 
     return 0;
@@ -84,6 +90,10 @@ print_func_p_type :: typedef *func(str: *u8) ->void;
 
 call_fn_ptr :: func(ptr: print_func_p_type, arg: *u8) {
     ptr(arg);
+}
+
+times_two :: func(x: int) -> int {
+    return x * 2;
 }
 
 return_fn_ptr :: func(func_ptr : void_func_p) -> void_func_p

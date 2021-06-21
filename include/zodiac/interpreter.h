@@ -98,7 +98,8 @@ namespace Zodiac
     void interpreter_start(Interpreter *interp, BC_Function *entry_funcm,
                            int64_t first_arg_index = 0,
                            int64_t first_temp_index = 1,// @TODO: FIXME: CLEANUP: Why o why would this be 1???
-                           int64_t first_local_index = 0);
+                           int64_t first_local_index = 0,
+                           int64_t return_value_index = 0);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);
     Interpreter_LValue interp_load_lvalue(Interpreter *interp, BC_Value *bc_val);
