@@ -1,0 +1,35 @@
+
+std :: import std;
+
+#run main();
+
+main :: func() -> int
+{
+    std.println("callback_perf_test");
+
+    call_c_pointers();
+    // call_bc_pointers();
+
+    return 0;
+}
+
+#foreign puts :: func(cstr: *u8) -> s32;
+
+
+call_c_pointers :: func() {
+    puts_ptr := *puts;
+    for (i := 0; i < 1000; i += 1) {
+        puts_ptr("t");
+    }
+}
+
+print :: func(cstr: *u8) {
+    puts(cstr); 
+}
+
+call_bc_pointers :: func() {
+    print_ptr := *print;
+    for (i := 0; i < 1000; i += 1) {
+        print_ptr("t");
+    }
+}
