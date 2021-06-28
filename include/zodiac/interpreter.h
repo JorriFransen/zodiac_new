@@ -121,8 +121,8 @@ namespace Zodiac
 
     void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *bc_func,
                                               int64_t arg_count, BC_Value *result_value);
-    void interpreter_execute_foreign_function(Interpreter *interp, void *fn_ptr, AST_Type *fn_type,
-                                              int64_t arg_count, BC_Value *result_value);
+    void interpreter_call_function_pointer(Interpreter *interp, void *fn_ptr, AST_Type *fn_type,
+                                           int64_t arg_count, BC_Value *result_value);
     // void interpreter_push_foreign_arg(Interpreter *interp, uint8_t *arg_ptr, AST_Type *type);
 
     void interpreter_execute_compiler_function(Interpreter *interp, BC_Function *func,

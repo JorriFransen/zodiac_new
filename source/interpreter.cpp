@@ -634,9 +634,9 @@ namespace Zodiac
 
                     assert(arg_count_val.type == Builtin::type_s64);
 
-                    interpreter_execute_foreign_function(interp, ptr_val.pointer, fn_type,
-                                                         arg_count_val.integer_literal.s64,
-                                                         inst.result);
+                    interpreter_call_function_pointer(interp, ptr_val.pointer, fn_type,
+                                                      arg_count_val.integer_literal.s64,
+                                                      inst.result);
                     break;
                 }
 
@@ -1061,9 +1061,8 @@ namespace Zodiac
                     void *fn_ptr = nullptr;
 
                     if (func->flags & BC_FUNC_FLAG_FOREIGN) {
-                        bool found;
-                        fn_ptr = ffi_find_function(&interp->ffi, func->name, &found);
-                        assert(found);
+                        assert(func->ffi_data.c_fn_ptr);
+                        fn_ptr = func->ffi_data.c_fn_ptr;
                     } else {
                         if (!func->callback_ptr) {
                             auto signature = ffi_dcb_func_sig(interp->allocator, func->type);
@@ -1927,7 +1926,7 @@ namespace Zodiac
     {
         for (int64_t i = 0; i < foreign_functions.count; i++) {
             auto func = foreign_functions[i];
-            bool found = ffi_load_function(&interp->ffi, func->name);
+            bool found = ffi_load_function(&interp->ffi, func->name, func->type, &func->ffi_data);
             if (!found) {
                 fprintf(stderr, "Did not find foreign function: '%s'\n", func->name.data);
             }
@@ -1940,16 +1939,15 @@ namespace Zodiac
     void interpreter_execute_foreign_function(Interpreter *interp, BC_Function *bc_func,
                                               int64_t arg_count, BC_Value *result_value)
     {
-        bool found = false;
-        void *fn_ptr = ffi_find_function(&interp->ffi, bc_func->name, &found);
-        assert(found);
-        assert(fn_ptr);
+        assert(bc_func->flags & BC_FUNC_FLAG_FOREIGN);
+        assert(bc_func->ffi_data.c_fn_ptr);
 
-        interpreter_execute_foreign_function(interp, fn_ptr, bc_func->type, arg_count, result_value);
+        interpreter_call_function_pointer(interp, bc_func->ffi_data.c_fn_ptr,
+                                          bc_func->type, arg_count, result_value);
     }
 
-    void interpreter_execute_foreign_function(Interpreter *interp, void *fn_ptr, AST_Type *fn_type,
-                                              int64_t arg_count, BC_Value *result_value)
+    void interpreter_call_function_pointer(Interpreter *interp, void *fn_ptr, AST_Type *fn_type,
+                                           int64_t arg_count, BC_Value *result_value)
     {
         assert(fn_ptr);
         assert(fn_type->kind == AST_Type_Kind::FUNCTION);

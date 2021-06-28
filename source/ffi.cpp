@@ -24,7 +24,7 @@ namespace Zodiac {
         dcMode(result.dc_vm, DC_CALL_C_DEFAULT);
         dcReset(result.dc_vm);
 
-        hash_table_init(allocator, &result.foreign_functions, operator==);
+        // hash_table_init(allocator, &result.foreign_functions, __bytecode_fn_ptr_eq);
 
         DLLib *this_exe_lib = dlLoadLibrary(nullptr);
         assert(this_exe_lib);
@@ -50,11 +50,14 @@ namespace Zodiac {
         return result;
     }
 
-    bool ffi_load_function(FFI_Context *ffi, const Atom &name)
+    bool ffi_load_function(FFI_Context *ffi, const Atom &fn_name, AST_Type *fn_type,
+                           FFI_Function_Data *fn_data)
     {
+        assert(fn_data);
+
         DCpointer symbol = nullptr;
         for (int64_t i = 0; i < ffi->libs.count; i++) {
-            auto sym = dlFindSymbol(ffi->libs[i], name.data);
+            auto sym = dlFindSymbol(ffi->libs[i], fn_name.data);
             if (sym) {
                 symbol = sym;
                 break;
@@ -62,10 +65,11 @@ namespace Zodiac {
         }
 
         if (symbol) {
-            // printf("Loaded symbol '%s': %p\n", name.data, symbol);
-            hash_table_add(&ffi->foreign_functions, name, symbol);
+            // printf("Loaded symbol '%s': %p\n", fn_name.data, symbol);
+            fn_data->c_fn_ptr = symbol;
             return true;
         }
+
         return false;
     }
 
@@ -136,27 +140,6 @@ namespace Zodiac {
                 break;
             }
         }
-    }
-
-    void ffi_call(FFI_Context *ffi, const Atom &name, void *return_val_ptr,
-                  AST_Type *return_type)
-    {
-        bool found = false;
-        DCpointer fn_ptr = ffi_find_function(ffi, name, &found);
-        if (!found) {
-            fprintf(stderr, "Failed to find foreign function: '%s'\n", name.data);
-            return;
-        }
-
-        ffi_call(ffi, fn_ptr, return_val_ptr, return_type);
-    }
-
-    void *ffi_find_function(FFI_Context *ffi, const Atom &name, bool *found)
-    {
-        DCpointer result = nullptr;
-        *found = hash_table_find(&ffi->foreign_functions, name, &result);
-
-        return result;
     }
 
     void ffi_reset(FFI_Context *ffi)

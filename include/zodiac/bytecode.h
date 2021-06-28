@@ -2,6 +2,7 @@
 
 #include "array_ref.h"
 #include "build_data.h"
+#include "ffi.h"
 
 #include <inttypes.h>
 
@@ -188,6 +189,7 @@ namespace Zodiac
 
         void *callback_ptr = nullptr;
 
+        FFI_Function_Data ffi_data = {};
         Callback_Data cb_data = {};
     };
 
