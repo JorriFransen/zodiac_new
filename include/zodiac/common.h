@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cassert>
+#include <inttypes.h>
 
 namespace Zodiac
 {
@@ -27,5 +28,7 @@ namespace Zodiac
         if (b > a) return b;
         return a;
     }
+
+    uint64_t hash_pointer(void *ptr);
 
 }

@@ -31,7 +31,7 @@ uint64_t hash_key(const char *str);
 
 template <typename T>
 uint64_t hash_key(T *ptr) {
-    return (uint64_t)ptr;
+    return hash_pointer(ptr);
 }
 
 #define HASH_TABLE_INITIAL_CAPACITY 16
