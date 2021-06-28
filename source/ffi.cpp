@@ -12,7 +12,8 @@ namespace Zodiac {
         return a == b;
     }
 
-    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data)
+    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data,
+                           FFI_Callback_Handler *callback_handler)
     {
         FFI_Context result = {};
 
@@ -24,7 +25,7 @@ namespace Zodiac {
         dcMode(result.dc_vm, DC_CALL_C_DEFAULT);
         dcReset(result.dc_vm);
 
-        // hash_table_init(allocator, &result.foreign_functions, __bytecode_fn_ptr_eq);
+        result.callback_handler = callback_handler;
 
         DLLib *this_exe_lib = dlLoadLibrary(nullptr);
         assert(this_exe_lib);
@@ -176,6 +177,21 @@ namespace Zodiac {
                 break;
             }
         }
+    }
+
+    void ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func, AST_Type *fn_type)
+    {
+        assert(!func->c_fn_ptr);
+        assert(fn_type->kind == AST_Type_Kind::FUNCTION);
+        assert(ffi->callback_handler);
+
+        // @TODO: @CLEANUP: Can we safely free this string?
+        auto sig = ffi_dcb_func_sig(ffi->allocator, fn_type);
+
+        auto callback_ptr = dcbNewCallback(sig.data, ffi->callback_handler, func);
+        assert(callback_ptr);
+
+        func->c_fn_ptr = callback_ptr;
     }
 
     char ffi_dcb_type_sig_char(AST_Type *type)

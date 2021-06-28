@@ -2,6 +2,7 @@
 
 #include "ast.h"
 
+#include <dyncall_callback.h>
 #include <dyncall.h>
 #include <dynload.h>
 
@@ -10,7 +11,10 @@ namespace Zodiac
     struct FFI_Function_Data
     {
         DCpointer c_fn_ptr = nullptr;
+        void *interpreter = nullptr;
     };
+
+    typedef DCCallbackHandler FFI_Callback_Handler;
 
     struct FFI_Context
     {
@@ -18,10 +22,13 @@ namespace Zodiac
 
         DCCallVM *dc_vm = nullptr;
 
+        FFI_Callback_Handler *callback_handler = nullptr;
+
         Array<DLLib *> libs = {};
     };
 
-    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data);
+    FFI_Context ffi_create(Allocator *allocator, Build_Data *build_data,
+                           FFI_Callback_Handler *callback_handler);
 
     /////////////////////////////////////////////////////////////////
     ///// Symbol loading interface //////////////////////////////////
@@ -40,6 +47,7 @@ namespace Zodiac
     /////////////////////////////////////////////////////////////////
     ///// Callback interface ////////////////////////////////////////
     /////////////////////////////////////////////////////////////////
+    void ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func, AST_Type *fn_type);
     char ffi_dcb_type_sig_char(AST_Type *type);
     String ffi_dcb_func_sig(Allocator *allocator, AST_Type *func_type);
 }

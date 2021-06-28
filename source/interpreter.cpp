@@ -2,20 +2,24 @@
 
 #include "builtin.h"
 #include "os.h"
-#include "temp_allocator.h"
-#include <stdio.h>
-
 #include "string_builder.h"
-#include <dyncall_callback.h>
+#include "temp_allocator.h"
+
+#include <stdio.h>
 
 namespace Zodiac
 {
-
-    char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *userdata)
+    char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *_userdata)
     {
-        auto callback_data = (Callback_Data *)userdata;
-        auto interp = static_cast<Interpreter *>(callback_data->interp);
-        auto bc_func = callback_data->func;
+        assert(_userdata);
+        auto userdata = (uint8_t *)_userdata;
+
+        auto bc_func = (BC_Function *)(userdata - offsetof(BC_Function, ffi_data));
+        assert(bc_func);
+
+        auto interp = (Interpreter *)bc_func->ffi_data.interpreter;
+        assert(interp);
+
         auto func_type = bc_func->type;
 
         auto first_arg_index = stack_count(&interp->arg_stack);
@@ -203,7 +207,7 @@ namespace Zodiac
         result.alloc_sp = result.alloc_stack;
         result.alloc_stack_end = result.alloc_stack + stack_size;
 
-        result.ffi = ffi_create(allocator, build_data);
+        result.ffi = ffi_create(allocator, build_data, callback_handler);
 
         result.functions = {};
         result.foreign_functions = {};
@@ -1060,17 +1064,17 @@ namespace Zodiac
 
                     void *fn_ptr = nullptr;
 
-                    if (func->flags & BC_FUNC_FLAG_FOREIGN) {
-                        assert(func->ffi_data.c_fn_ptr);
+                    if (func->ffi_data.c_fn_ptr) {
                         fn_ptr = func->ffi_data.c_fn_ptr;
                     } else {
-                        if (!func->callback_ptr) {
-                            auto signature = ffi_dcb_func_sig(interp->allocator, func->type);
-                            func->cb_data = { .interp = interp, .func = func };
-                            func->callback_ptr = dcbNewCallback(signature.data, callback_handler,
-                                                                &func->cb_data);
-                        }
-                        fn_ptr = func->callback_ptr;
+                        // Pointers for foreign functions are loaded when the
+                        //  interpreter starts.
+                        assert(!(func->flags & BC_FUNC_FLAG_FOREIGN));
+
+                        func->ffi_data.interpreter = interp;
+                        ffi_create_callback(&interp->ffi, &func->ffi_data, func->type);
+                        assert(func->ffi_data.c_fn_ptr);
+                        fn_ptr = func->ffi_data.c_fn_ptr;
                     }
 
                     assert(fn_ptr);

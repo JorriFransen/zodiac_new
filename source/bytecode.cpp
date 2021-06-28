@@ -371,7 +371,7 @@ namespace Zodiac
         result->type = type;
         result->name_prefix = name_prefix;
         result->name = name;
-        result->callback_ptr = nullptr;
+        result->ffi_data = {};
 
         array_init(builder->allocator, &result->parameters);
         array_init(builder->allocator, &result->locals, 4);

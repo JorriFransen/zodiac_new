@@ -166,13 +166,7 @@ namespace Zodiac
         BC_FUNC_FLAG_COMPILER_FUNC   = 0x040,
     };
 
-    struct Callback_Data
-    {
-        int32_t arg_count = 0;
-        void *interp = nullptr;
-        BC_Function *func = nullptr;
-    };
-
+    struct Interpreter;
     struct BC_Function
     {
         Bytecode_Function_Flags flags = BC_FUNC_FLAG_NONE;
@@ -187,10 +181,7 @@ namespace Zodiac
         Array<BC_Value *> locals = {};
         Array<BC_Value *> temps = {};
 
-        void *callback_ptr = nullptr;
-
         FFI_Function_Data ffi_data = {};
-        Callback_Data cb_data = {};
     };
 
     struct BC_Function_Info
