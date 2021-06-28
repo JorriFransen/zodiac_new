@@ -7,15 +7,21 @@
 
 #include <stdio.h>
 
+#include <tracy/Tracy.hpp>
+
 namespace Zodiac
 {
     char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *_userdata)
     {
+        ZoneScopedN("callback_handler");
+
         assert(_userdata);
         auto userdata = (uint8_t *)_userdata;
 
         auto bc_func = (BC_Function *)(userdata - offsetof(BC_Function, ffi_data));
         assert(bc_func);
+
+        ZoneText(bc_func->name.data, bc_func->name.length);
 
         auto interp = (Interpreter *)bc_func->ffi_data.interpreter;
         assert(interp);
@@ -629,8 +635,12 @@ namespace Zodiac
                 }
 
                 case CALL_PTR: {
+                    ZoneScopedN("CALL_PTR");
+
                     Interpreter_Value ptr_val = interp_load_value(interp, inst.a);
                     Interpreter_Value arg_count_val = interp_load_value(interp, inst.b);
+
+                    ZoneValue((uint64_t)ptr_val.pointer);
 
                     assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
                     assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
