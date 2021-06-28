@@ -7,8 +7,8 @@ main :: func() -> int
 {
     std.println("callback_perf_test");
 
-    call_c_pointers();
-    // call_bc_pointers();
+    // call_c_pointers();
+    call_bc_pointers();
 
     return 0;
 }
