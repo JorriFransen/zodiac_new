@@ -21,6 +21,8 @@ _deps
 
 
 lib/dyncall-1.2/
+lib/tracy-0.7.8-1/
+lib/tracy
 
 zodiac.sln
 .vs/
