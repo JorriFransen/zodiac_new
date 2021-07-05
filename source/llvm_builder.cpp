@@ -286,12 +286,20 @@ namespace Zodiac
                 break;
             }
 
+            case LSHIFT: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateShl(lhs, rhs);
+                break;
+            }
+
             case ADD_S:
             case ADD_U: {
                 auto lhs = llvm_emit_value(builder, inst->a);
                 auto rhs = llvm_emit_value(builder, inst->b);
 
-                result = builder->llvm_builder->CreateAdd(lhs, rhs, "");
+                result = builder->llvm_builder->CreateAdd(lhs, rhs);
                 break;
             }
 
@@ -374,6 +382,40 @@ namespace Zodiac
                 auto rhs = llvm_emit_value(builder, inst->b);
 
                 result = builder->llvm_builder->CreateFDiv(lhs, rhs, "");
+                break;
+            }
+
+            case OR_S:
+            case OR_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateOr(lhs, rhs, "");
+                break;
+            }
+
+            case AND_S:
+            case AND_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateAnd(lhs, rhs, "");
+                break;
+            }
+
+            case RSHIFT_S: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateAShr(lhs, rhs);
+                break;
+            }
+
+            case RSHIFT_U: {
+                auto lhs = llvm_emit_value(builder, inst->a);
+                auto rhs = llvm_emit_value(builder, inst->b);
+
+                result = builder->llvm_builder->CreateLShr(lhs, rhs);
                 break;
             }
 
@@ -503,7 +545,7 @@ namespace Zodiac
                 break;
             }
 
-            case CALL_PTR: 
+            case CALL_PTR:
             case CALL: {
                 llvm::Value *callee_val = nullptr;
                 llvm::FunctionType *fn_type = nullptr;

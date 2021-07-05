@@ -1376,12 +1376,9 @@ Statement_PTN *parser_parse_self_assignment_statement(Parser *parser, Token_Stre
 
     Binary_Operator op = BINOP_INVALID;
 
-    if (parser_is_add_op(ts))
-    {
+    if (parser_is_add_op(ts)) {
         op = parser_parse_add_op(ts);
-    }
-    else if (parser_is_mul_op(ts))
-    {
+    } else if (parser_is_mul_op(ts)) {
         op = parser_parse_mul_op(ts);
     }
     else assert(false);
@@ -1392,15 +1389,14 @@ Statement_PTN *parser_parse_self_assignment_statement(Parser *parser, Token_Stre
            op == BINOP_DIV ||
            op == BINOP_REMAINDER);
 
-    if (!parser_expect_token(parser, ts, TOK_EQ))
-    {
+    if (!parser_expect_token(parser, ts, TOK_EQ)) {
         assert(false);
     }
 
 
     Expression_PTN *rhs_expr = parser_parse_expression(parser, ts);
     assert(rhs_expr);
-
+ 
     auto begin_fp = ident_expression->self.begin_file_pos;
     auto end_fp = rhs_expr->self.end_file_pos;
 
@@ -2157,8 +2153,18 @@ Binary_Operator parser_parse_mul_op(Token_Stream *ts) {
             break;
         }
 
+        case TOK_LSHIFT: {
+            result = BINOP_LSHIFT;
+            break;
+        }
+
+        case TOK_RSHIFT: {
+            result = BINOP_RSHIFT;
+            break;
+        }
+
         default:
-        assert(false);
+            assert(false);
     }
 
     ts->next_token();
@@ -2216,8 +2222,8 @@ bool parser_is_add_op(Token_Stream *ts) {
 
 bool parser_is_mul_op(Token_Stream *ts) {
     auto ct = ts->current_token();
-    return ct.kind == TOK_PERCENT || ct.kind == TOK_STAR ||
-           ct.kind == TOK_FORWARD_SLASH;
+    return ct.kind == TOK_PERCENT || ct.kind == TOK_STAR || ct.kind == TOK_FORWARD_SLASH ||
+           ct.kind == TOK_LSHIFT || ct.kind == TOK_RSHIFT;
 }
 
 Unary_Operator parser_parse_unary_op(Token_Stream *ts) {

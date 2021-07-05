@@ -156,6 +156,8 @@ namespace Zodiac
             case Binary_Operator::BINOP_REMAINDER: assert(false);
             case Binary_Operator::BINOP_MUL: assert(false);
             case Binary_Operator::BINOP_DIV: assert(false);
+            case Binary_Operator::BINOP_LSHIFT: assert(false);
+            case Binary_Operator::BINOP_RSHIFT: assert(false);
 
             case Binary_Operator::BINOP_OR: assert(false);
             case Binary_Operator::BINOP_AND: assert(false);

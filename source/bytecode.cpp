@@ -839,6 +839,7 @@ namespace Zodiac
             bc_emit_instruction(builder, int_unsigned_op, lhs, rhs, result); \
         } \
     } else if (type->kind == AST_Type_Kind::FLOAT) { \
+        assert(float_op != NOP); \
         bc_emit_instruction(builder, float_op, lhs, rhs, result); \
     } else if (type->kind == AST_Type_Kind::POINTER) { \
         bc_emit_instruction(builder, int_unsigned_op, lhs, rhs, result); \
@@ -863,10 +864,11 @@ namespace Zodiac
                     case BINOP_REMAINDER: _binop_arithmetic(REM_S, REM_U, NOP);
                     case BINOP_MUL:       _binop_arithmetic(MUL_S, MUL_U, MUL_F);
                     case BINOP_DIV:       _binop_arithmetic(DIV_S, DIV_U, DIV_F);
+                    case BINOP_LSHIFT:    _binop_arithmetic(LSHIFT, LSHIFT, NOP);
+                    case BINOP_RSHIFT:    _binop_arithmetic(RSHIFT_S, RSHIFT_U, NOP);
 
-                    case BINOP_OR: assert(false);
-                    case BINOP_AND: assert(false);
-
+                    case BINOP_OR:  _binop_arithmetic(OR_S, OR_U, NOP);
+                    case BINOP_AND: _binop_arithmetic(AND_S, AND_U, NOP);
                 }
 
 #undef _binop_compare
@@ -2261,11 +2263,15 @@ namespace Zodiac
             case LOAD_GLOBAL: string_builder_append(sb, "LOAD_GLOBAL "); break;
             case LOAD_PTR: string_builder_append(sb, "LOAD_PTR "); break;
 
+            case LSHIFT: string_builder_append(sb, "LSHIFT "); break;
             case ADD_S: string_builder_append(sb, "ADD_S "); break;
             case SUB_S: string_builder_append(sb, "SUB_S "); break;
             case REM_S: string_builder_append(sb, "REM_S "); break;
             case MUL_S: string_builder_append(sb, "MUL_S "); break;
             case DIV_S: string_builder_append(sb, "DIV_S "); break;
+            case OR_S: string_builder_append(sb, "OR_S "); break;
+            case AND_S: string_builder_append(sb, "AND_S "); break;
+            case RSHIFT_S: string_builder_append(sb, "RSHIFT_S "); break;
 
             case EQ_S: string_builder_append(sb, "EQ_S "); break;
             case NEQ_S: string_builder_append(sb, "NEQ_S "); break;
@@ -2279,6 +2285,9 @@ namespace Zodiac
             case REM_U: string_builder_append(sb, "REM_U "); break;
             case MUL_U: string_builder_append(sb, "MUL_U "); break;
             case DIV_U: string_builder_append(sb, "DIV_U "); break;
+            case OR_U: string_builder_append(sb, "OR_U "); break;
+            case AND_U: string_builder_append(sb, "AND_U "); break;
+            case RSHIFT_U: string_builder_append(sb, "RSHIFT_U "); break;
 
             case EQ_U: string_builder_append(sb, "EQ_U "); break;
             case NEQ_U: string_builder_append(sb, "NEQ_U "); break;
