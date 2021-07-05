@@ -6,49 +6,50 @@ std :: import std;
 
 main :: func() -> s64
 {
-    std.println("Function pointer test\n");
+    // std.println("Function pointer test\n");
 
-    f1 := *func1;
-    f2 : *func() = *func2;
-    f3 := f1;
+    // f1 := *func1;
+    // f2 : *func() = *func2;
+    // f3 := f1;
 
-    f1();
-    f2();
-    f3();
+    // f1();
+    // f2();
+    // f3();
 
-    std.print("\n");
+    // std.print("\n");
 
-    call_void_func(f1);
-    call_void_func(f2);
+    // call_void_func(f1);
+    // call_void_func(f2);
 
-    std.print("\n");
+    // std.print("\n");
 
-    call_void_func(return_fn_ptr(f2));
+    // call_void_func(return_fn_ptr(f2));
 
-    print_func("Calling print_func()");
-    print_func_ptr := *print_func;
-    print_func_ptr("Calling print_func_ptr()");
+    // print_func("Calling print_func()");
+    // print_func_ptr := *print_func;
+    // print_func_ptr("Calling print_func_ptr()");
 
-    print_2_func("Calling print2 func arg 1", "Calling print2 func arg 2");
-    print_2_func_ptr := *print_2_func;
-    print_2_func_ptr("Calling print2ptr func arg 1", "Calling print2ptr func arg 2");
+    // print_2_func("Calling print2 func arg 1", "Calling print2 func arg 2");
+    // print_2_func_ptr := *print_2_func;
+    // print_2_func_ptr("Calling print2ptr func arg 1", "Calling print2ptr func arg 2");
 
-    print_str_and_int("Printing string and int", 1234);
-    print_str_and_int_ptr := *print_str_and_int;
-    print_str_and_int_ptr("(ptr) Printing string and int", 1234);
+    // print_str_and_int("Printing string and int", 1234);
+    // print_str_and_int_ptr := *print_str_and_int;
+    // print_str_and_int_ptr("(ptr) Printing string and int", 1234);
 
-    call_fn_ptr(*print_func, "Calling print_func through call_fn_ptr");
-    call_fn_ptr_ptr := *call_fn_ptr;
-    call_fn_ptr_ptr(*print_func, "Calling print_func through call_fn_ptr_ptr");
+    // call_fn_ptr(*print_func, "Calling print_func through call_fn_ptr");
+    // call_fn_ptr_ptr := *call_fn_ptr;
+    // call_fn_ptr_ptr(*print_func, "Calling print_func through call_fn_ptr_ptr");
 
-    puts_ptr := *puts;
-    puts_ptr("Calling puts through a pointer!");
+    // puts_ptr := *puts;
+    // puts_ptr("Calling puts through a pointer!");
 
-    x := times_two(42);
+    // x := times_two(42);
     times_two_ptr := *times_two;
 
-    std.print("times_two(42) = "); std.print_numln(x);
-    std.print("times_two_ptr(42) = "); std.print_numln(times_two_ptr(42));
+    // std.print("times_two(42) = "); std.print_numln(x);
+    // std.print("times_two_ptr(42) = ");
+    std.print_numln(times_two_ptr(42));
 
     // (*puts_ptr)("Calling puts through a pointer!");
 

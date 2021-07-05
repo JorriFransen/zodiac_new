@@ -5,6 +5,18 @@
 namespace Zodiac
 {
 
+bool hash_table_strings_equal(const String a, const String b)
+{
+    if (a.length != b.length) return false;
+
+    for (int64_t i = 0; i < a.length; i++)
+    {
+        if (a.data[i] != b.data[i]) return false;
+    }
+
+    return true;
+}
+
 uint64_t hash_key(const String& str)
 {
     auto length = (uint64_t)str.length;
@@ -46,17 +58,4 @@ uint64_t hash_key(const char *str)
 
     return hash;
 }
-
-bool hash_table_strings_equal(const String& a, const String& b)
-{
-    if (a.length != b.length) return false;
-
-    for (int64_t i = 0; i < a.length; i++)
-    {
-        if (a.data[i] != b.data[i]) return false;
-    }
-
-    return true;
-}
-
 }

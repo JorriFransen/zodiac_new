@@ -179,7 +179,8 @@ namespace Zodiac {
         }
     }
 
-    void ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func, AST_Type *fn_type)
+    void *ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func,
+                              AST_Type *fn_type)
     {
         assert(!func->c_fn_ptr);
         assert(fn_type->kind == AST_Type_Kind::FUNCTION);
@@ -192,6 +193,8 @@ namespace Zodiac {
         assert(callback_ptr);
 
         func->c_fn_ptr = callback_ptr;
+
+        return callback_ptr;
     }
 
     char ffi_dcb_type_sig_char(AST_Type *type)

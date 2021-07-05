@@ -9,9 +9,15 @@ namespace Zodiac
 {
 
 template <typename Key_Type>
-using Hash_Table_Keys_Equal_FN = bool (*)(const Key_Type& a, const Key_Type& b);
+using Hash_Table_Keys_Equal_FN = bool (*)(Key_Type a, Key_Type b);
 
-bool hash_table_strings_equal(const String& a, const String& b);
+bool hash_table_strings_equal(const String a, const String b);
+
+template <typename Key_Type>
+bool hash_table_pointers_equal(Key_Type *a, Key_Type *b)
+{
+    return a == b;
+}
 
 template <typename Key_Type, typename Value_Type>
 struct Hash_Table
@@ -61,6 +67,15 @@ void hash_table_init(Allocator *allocator, Hash_Table<Key_Type, Value_Type> *has
     hash_table->capacity = HASH_TABLE_INITIAL_CAPACITY;
     hash_table->keys_equal = keys_equal;
     hash_table->allocator = allocator;
+}
+
+template <typename Key_Type, typename Value_Type>
+void hash_table_free(Hash_Table<Key_Type, Value_Type> *ht)
+{
+    if (ht->hashes) {
+        free(ht->allocator, ht->hashes);
+        *ht = {};
+    }
 }
 
 template <typename Key_Type, typename Value_Type>
@@ -116,10 +131,8 @@ void hash_table_grow(Hash_Table<Key_Type, Value_Type> *ht)
 
     memset(ht->hashes, 0, new_hashes_size);
 
-    for (int64_t i = 0; i < old_cap; i++)
-    {
-        if (old_hashes[i])
-        {
+    for (int64_t i = 0; i < old_cap; i++) {
+        if (old_hashes[i]) {
             hash_table_add(ht, old_keys[i], old_values[i]);
         }
     }

@@ -215,6 +215,8 @@ namespace Zodiac
 
         result.ffi = ffi_create(allocator, build_data, callback_handler);
 
+        hash_table_init(allocator, &result.callbacks, &hash_table_pointers_equal);
+
         result.functions = {};
         result.foreign_functions = {};
 
@@ -233,6 +235,8 @@ namespace Zodiac
         if (interp->global_mem) {
             free(interp->allocator, interp->global_mem);
         }
+
+        hash_table_free(&interp->callbacks);
 
         *interp = {};
     }
@@ -638,19 +642,51 @@ namespace Zodiac
                     ZoneScopedN("CALL_PTR");
 
                     Interpreter_Value ptr_val = interp_load_value(interp, inst.a);
-                    Interpreter_Value arg_count_val = interp_load_value(interp, inst.b);
-
                     ZoneValue((uint64_t)ptr_val.pointer);
 
-                    assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
-                    assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
-                    auto fn_type = ptr_val.type->pointer.base;
-
+                    Interpreter_Value arg_count_val = interp_load_value(interp, inst.b);
                     assert(arg_count_val.type == Builtin::type_s64);
+                    auto arg_count = arg_count_val.integer_literal.s64;
 
-                    interpreter_call_function_pointer(interp, ptr_val.pointer, fn_type,
-                                                      arg_count_val.integer_literal.s64,
-                                                      inst.result);
+                    BC_Function *bc_func = nullptr;
+                    if (hash_table_find(&interp->callbacks, ptr_val.pointer, &bc_func)) {
+
+                        auto first_arg_index_ = stack_count(&interp->arg_stack) - arg_count;
+                        auto first_temp_index_ = stack_count(&interp->temp_stack);
+                        auto first_local_index_ = stack_count(&interp->local_stack);
+
+                        int64_t return_value_index_ = -1;
+                        auto return_type_ = bc_func->type->function.return_type;
+
+                        if (return_type_->kind != AST_Type_Kind::VOID) {
+                            assert(return_type_->kind == AST_Type_Kind::INTEGER ||
+                                   return_type_->kind == AST_Type_Kind::FLOAT ||
+                                   return_type_->kind == AST_Type_Kind::POINTER ||
+                                   return_type_->kind == AST_Type_Kind::BOOL);
+
+
+                            return_value_index = stack_count(&interp->temp_stack);
+                            Interpreter_Value return_val = { .type = return_type,
+                                                             .integer_literal = {} };
+                            stack_push(&interp->temp_stack, return_val);
+                        }
+
+                        interpreter_start(interp, bc_func, first_arg_index_, first_temp_index_,
+                                          first_local_index_, return_value_index_);
+                        assert(interp->running == false);
+                        if (!(interp->aborted)) {
+                            interp->running = true;
+                        }
+
+                    } else {
+
+                        assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
+                        assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
+                        auto fn_type = ptr_val.type->pointer.base;
+
+                        interpreter_call_function_pointer(interp, ptr_val.pointer, fn_type,
+                                                          arg_count, inst.result);
+                    }
                     break;
                 }
 
@@ -1082,9 +1118,12 @@ namespace Zodiac
                         assert(!(func->flags & BC_FUNC_FLAG_FOREIGN));
 
                         func->ffi_data.interpreter = interp;
-                        ffi_create_callback(&interp->ffi, &func->ffi_data, func->type);
+                        fn_ptr = ffi_create_callback(&interp->ffi, &func->ffi_data,
+                                                          func->type);
                         assert(func->ffi_data.c_fn_ptr);
-                        fn_ptr = func->ffi_data.c_fn_ptr;
+                        assert(fn_ptr == func->ffi_data.c_fn_ptr);
+
+                        hash_table_add(&interp->callbacks, fn_ptr, func);
                     }
 
                     assert(fn_ptr);

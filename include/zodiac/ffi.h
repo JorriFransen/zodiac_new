@@ -47,7 +47,8 @@ namespace Zodiac
     /////////////////////////////////////////////////////////////////
     ///// Callback interface ////////////////////////////////////////
     /////////////////////////////////////////////////////////////////
-    void ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func, AST_Type *fn_type);
+    void *ffi_create_callback(FFI_Context *ffi, FFI_Function_Data *func,
+                              AST_Type *fn_type);
     char ffi_dcb_type_sig_char(AST_Type *type);
     String ffi_dcb_func_sig(Allocator *allocator, AST_Type *func_type);
 }

@@ -10,6 +10,7 @@
 #include "temp_allocator.h"
 
 #include <inttypes.h>
+
 #include <tracy/Tracy.hpp>
 
 namespace Zodiac

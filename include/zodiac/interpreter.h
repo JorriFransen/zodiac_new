@@ -82,6 +82,8 @@ namespace Zodiac
 
         FFI_Context ffi = {};
 
+        Hash_Table<void *, BC_Function *> callbacks;
+
         Array<BC_Function *> functions = {};
         Array<BC_Function *> foreign_functions = {};
 
