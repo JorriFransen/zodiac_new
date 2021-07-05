@@ -664,8 +664,7 @@ namespace Zodiac
                                    return_type_->kind == AST_Type_Kind::POINTER ||
                                    return_type_->kind == AST_Type_Kind::BOOL);
 
-
-                            return_value_index = stack_count(&interp->temp_stack);
+                            return_value_index_ = stack_count(&interp->temp_stack);
                             Interpreter_Value return_val = { .type = return_type,
                                                              .integer_literal = {} };
                             stack_push(&interp->temp_stack, return_val);
@@ -673,6 +672,17 @@ namespace Zodiac
 
                         interpreter_start(interp, bc_func, first_arg_index_, first_temp_index_,
                                           first_local_index_, return_value_index_);
+
+                        if (return_value_index_ != -1) {
+                            assert(inst.result);
+                            assert(inst.result->type == return_type_);
+
+                            auto return_val = interp->temp_stack.buffer[return_value_index_];
+                            auto rv_lval = interp_load_lvalue(interp, inst.result);
+
+                            interp_store(interp, return_val, rv_lval);
+                        }
+
                         assert(interp->running == false);
                         if (!(interp->aborted)) {
                             interp->running = true;
