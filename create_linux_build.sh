@@ -39,12 +39,12 @@ if  [ ! -d "lib/tracy-0.7.8-1" ]; then
     popd
 fi
 
-if  [ ! -f "lib/tracy-0.7.8-1/profiler/build/unix/Tracy-Profiler" ]; then
-    echo Building tracy profiler
-    pushd lib/tracy-0.7.8-1/profiler/build/unix
-    make -j $(nproc)
-    popd
-fi
+# if  [ ! -f "lib/tracy-0.7.8-1/profiler/build/unix/Tracy-Profiler" ]; then
+#     echo Building tracy profiler
+#     pushd lib/tracy-0.7.8-1/profiler/build/unix
+#     make -j $(nproc)
+#     popd
+# fi
 
 rm -rf build_gcc
 rm -rf build_clang
