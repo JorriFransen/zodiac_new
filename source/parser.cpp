@@ -1628,7 +1628,7 @@ Expression_PTN *parser_parse_and_expression(Parser *parser, Token_Stream *ts, bo
         auto begin_fp = lhs->self.begin_file_pos;
         auto end_fp = rhs->self.end_file_pos;
 
-        lhs = new_binary_expression_ptn(parser->allocator, Binary_Operator::BINOP_OR, lhs, rhs,
+        lhs = new_binary_expression_ptn(parser->allocator, Binary_Operator::BINOP_AND, lhs, rhs,
                                         begin_fp, end_fp);
     }
 
