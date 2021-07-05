@@ -3763,6 +3763,8 @@ namespace Zodiac
                     case BINOP_REMAINDER: string_builder_appendf(sb, " %% "); break;
                     case BINOP_MUL: string_builder_appendf(sb, "  *");        break;
                     case BINOP_DIV: string_builder_appendf(sb, " / ");        break;
+                    case BINOP_OR: string_builder_appendf(sb, " | ");         break;
+                    case BINOP_AND: string_builder_appendf(sb, " & ");        break;
                 }
                 ast_print_expression(sb, ast_expr->binary.rhs, 0);
                 break;

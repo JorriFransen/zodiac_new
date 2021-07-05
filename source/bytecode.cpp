@@ -883,6 +883,9 @@ namespace Zodiac
                     case BINOP_MUL:       _binop_arithmetic(MUL_S, MUL_U, MUL_F);
                     case BINOP_DIV:       _binop_arithmetic(DIV_S, DIV_U, DIV_F);
 
+                    case BINOP_OR: assert(false);
+                    case BINOP_AND: assert(false);
+
                 }
 
 #undef _binop_compare

@@ -1578,18 +1578,57 @@ Expression_PTN *parser_parse_expression(Parser *parser, Token_Stream *ts,
 
 Expression_PTN *parser_parse_cmp_expression(Parser *parser, Token_Stream *ts,
                                             bool is_type /*=false*/) {
-    auto lhs = parser_parse_add_expression(parser, ts, is_type);
+    auto lhs = parser_parse_or_expression(parser, ts, is_type);
     if (!lhs)
         return nullptr;
 
     while (parser_is_cmp_op(ts)) {
         auto op = parser_parse_cmp_op(ts);
-        auto rhs = parser_parse_add_expression(parser, ts, is_type);
+        auto rhs = parser_parse_or_expression(parser, ts, is_type);
         assert(rhs);
 
         auto begin_fp = lhs->self.begin_file_pos;
         auto end_fp = rhs->self.end_file_pos;
         lhs = new_binary_expression_ptn(parser->allocator, op, lhs, rhs,
+                                        begin_fp, end_fp);
+    }
+
+    return lhs;
+}
+
+Expression_PTN *parser_parse_or_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)
+{
+    auto lhs = parser_parse_and_expression(parser, ts, is_type);
+    if (!lhs) return nullptr;
+
+    while (parser_is_token(ts, TOK_OR)) {
+        if (!parser_expect_token(parser, ts, TOK_OR)) return nullptr;
+        auto rhs = parser_parse_and_expression(parser, ts, is_type);
+
+        auto begin_fp = lhs->self.begin_file_pos;
+        auto end_fp = rhs->self.end_file_pos;
+
+        lhs = new_binary_expression_ptn(parser->allocator, Binary_Operator::BINOP_AND, lhs, rhs,
+                                        begin_fp, end_fp);
+
+    }
+
+    return lhs;
+}
+
+Expression_PTN *parser_parse_and_expression(Parser *parser, Token_Stream *ts, bool is_type/*=false*/)
+{
+    auto lhs = parser_parse_add_expression(parser, ts, is_type);
+    if (!lhs) return nullptr;
+
+    while (parser_is_token(ts, TOK_AND)) {
+        if (!parser_expect_token(parser, ts, TOK_AND)) return nullptr;
+        auto rhs = parser_parse_add_expression(parser, ts, is_type);
+
+        auto begin_fp = lhs->self.begin_file_pos;
+        auto end_fp = rhs->self.end_file_pos;
+
+        lhs = new_binary_expression_ptn(parser->allocator, Binary_Operator::BINOP_OR, lhs, rhs,
                                         begin_fp, end_fp);
     }
 
