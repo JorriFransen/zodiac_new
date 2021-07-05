@@ -138,6 +138,8 @@ restart:
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
+        __2_CHAR_TOKEN_CASE('&', TOK_AND, '&', TOK_AND_AND);
+        __2_CHAR_TOKEN_CASE('|', TOK_OR, '|', TOK_OR_OR);
         __2_CHAR_TOKEN_CASE('.', TOK_DOT, '.', TOK_DOT_DOT);
         __2_CHAR_TOKEN_CASE('<', TOK_LT, '=', TOK_LTEQ);
         __2_CHAR_TOKEN_CASE('>', TOK_GT, '=', TOK_GTEQ);

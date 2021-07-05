@@ -127,8 +127,7 @@ namespace Zodiac
         Const_Value result = {};
         result.type = type;
 
-        switch (expr->binary.op)
-        {
+        switch (expr->binary.op) {
             case Binary_Operator::BINOP_INVALID: assert(false);
             case Binary_Operator::BINOP_EQ: assert(false);
             case Binary_Operator::BINOP_NEQ: assert(false);
@@ -137,18 +136,12 @@ namespace Zodiac
             case Binary_Operator::BINOP_GT: assert(false);
             case Binary_Operator::BINOP_GTEQ: assert(false);
 
-            case Binary_Operator::BINOP_ADD:
-            {
-                switch (type->bit_size)
-                {
-                    case 64:
-                    {
-                        if (sign)
-                        {
+            case Binary_Operator::BINOP_ADD: {
+                switch (type->bit_size) {
+                    case 64: {
+                        if (sign) {
                             result.integer.s64 = lhs_val.integer.s64 + rhs_val.integer.s64;
-                        }
-                        else
-                        {
+                        } else {
                             assert(false);
                         }
                         break;
@@ -163,6 +156,9 @@ namespace Zodiac
             case Binary_Operator::BINOP_REMAINDER: assert(false);
             case Binary_Operator::BINOP_MUL: assert(false);
             case Binary_Operator::BINOP_DIV: assert(false);
+
+            case Binary_Operator::BINOP_OR: assert(false);
+            case Binary_Operator::BINOP_AND: assert(false);
         }
 
         return result;
