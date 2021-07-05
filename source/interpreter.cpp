@@ -649,7 +649,15 @@ namespace Zodiac
                     auto arg_count = arg_count_val.integer_literal.s64;
 
                     BC_Function *bc_func = nullptr;
-                    if (hash_table_find(&interp->callbacks, ptr_val.pointer, &bc_func)) {
+                    bool found = false;
+                    {
+                        ZoneScopedN("Hash check");
+                        found = hash_table_find(&interp->callbacks, ptr_val.pointer, &bc_func);
+                    }
+
+                    if (found) {
+
+                        ZoneScopedN("Calling BC callback");
 
                         auto first_arg_index_ = stack_count(&interp->arg_stack) - arg_count;
                         auto first_temp_index_ = stack_count(&interp->temp_stack);
@@ -689,6 +697,8 @@ namespace Zodiac
                         }
 
                     } else {
+
+                        ZoneScopedN("Calling c callback");
 
                         assert(ptr_val.type->kind == AST_Type_Kind::POINTER);
                         assert(ptr_val.type->pointer.base->kind == AST_Type_Kind::FUNCTION);
