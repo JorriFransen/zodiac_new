@@ -26,7 +26,7 @@ if  [ ! -d "lib/dyncall-1.2" ]; then
     echo Building dyncall
     pushd dyncall-1.2
     ./configure
-    make
+    make -j $(nproc)
     popd
     popd
 fi
@@ -42,7 +42,7 @@ fi
 if  [ ! -f "lib/tracy-0.7.8-1/profiler/build/unix/Tracy-Profiler" ]; then
     echo Building tracy profiler
     pushd lib/tracy-0.7.8-1/profiler/build/unix
-    make -j 6
+    make -j $(nproc)
     popd
 fi
 
