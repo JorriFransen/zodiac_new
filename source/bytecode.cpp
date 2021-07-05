@@ -713,26 +713,7 @@ namespace Zodiac
             case AST_Expression_Kind::INVALID: assert(false);
 
             case AST_Expression_Kind::IDENTIFIER: {
-                auto decl = expr->identifier->declaration;
-
-                if (decl->kind == AST_Declaration_Kind::CONSTANT) {
-                    assert(decl->constant.init_expression);
-                    result = bc_emit_expression(builder, decl->constant.init_expression);
-                } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
-                    BC_Function *func = bc_find_function(builder, decl);
-                    assert(func);
-                    result = bc_function_value_new(builder, func);
-                } else {
-                    BC_Value *source_val = bc_emit_lvalue(builder, expr);
-                    result = bc_emit_load(builder, source_val);
-                }
-
-                if (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER &&
-                    result->type->kind != AST_Type_Kind::ENUM) {
-                    assert(result->type->kind == AST_Type_Kind::INTEGER);
-                    assert(result->type == expr->type->enum_type.base_type);
-                    result->type = expr->type;
-                }
+                result = bc_emit_identifier(builder, expr->identifier, expr);
                 break;
             }
 
@@ -1044,28 +1025,7 @@ namespace Zodiac
             case AST_Expression_Kind::INVALID: assert(false);
 
             case AST_Expression_Kind::IDENTIFIER: {
-                auto decl = expr->identifier->declaration;
-                assert(decl);
-
-                BC_Value *source_val = nullptr;
-                if (decl->kind == AST_Declaration_Kind::VARIABLE) {
-                    source_val = bc_find_variable(builder, decl);
-                } else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
-                    source_val = bc_find_parameter(builder, decl);
-                } else if (decl->kind == AST_Declaration_Kind::CONSTANT) {
-                    assert(false && "Cannot take the lvalue of a constant declaration.");
-                } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
-                    auto func = bc_find_function(builder, decl);
-                    auto type = func->type->pointer_to;
-                    assert(type);
-                    source_val = bc_value_new(builder, BC_Value_Kind::FUNCTION, type);
-                    source_val->function = func;
-                } else {
-                    assert(false);
-                }
-
-                assert(source_val);
-                result = source_val;
+                result = bc_emit_identifier_lvalue(builder, expr->identifier);
                 break;
             }
 
@@ -1291,18 +1251,64 @@ namespace Zodiac
         }
     }
 
-    BC_Value *bc_emit_identifier(BC_Builder *builder,
-                                             AST_Identifier *identifier)
+    BC_Value *bc_emit_identifier(BC_Builder *builder, AST_Identifier *identifier,
+                                 AST_Expression *expression_context/*=nullptr*/)
     {
-        assert(false && "bc_emit_identifier is not implemented!!!");
-        return nullptr;
+        auto decl = identifier->declaration;
+
+        BC_Value *result = nullptr;
+
+        if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+            assert(decl->constant.init_expression);
+            result = bc_emit_expression(builder, decl->constant.init_expression);
+        } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+            BC_Function *func = bc_find_function(builder, decl);
+            assert(func);
+            result = bc_function_value_new(builder, func);
+        } else if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+            auto source_val = bc_find_variable(builder, decl);
+            result = bc_emit_load(builder, source_val);
+        } else {
+            assert(expression_context);
+            auto source_val = bc_emit_lvalue(builder, expression_context);
+            result = bc_emit_load(builder, source_val);
+        }
+
+        if (decl->decl_flags & AST_DECL_FLAG_IS_ENUM_MEMBER &&
+            result->type->kind != AST_Type_Kind::ENUM) {
+            assert(result->type->kind == AST_Type_Kind::INTEGER);
+            assert(result->type == decl->type->enum_type.base_type);
+            result->type = decl->type;
+        }
+
+        assert(result);
+        return result;
     }
 
-    BC_Value *bc_emit_identifier_lvalue(BC_Builder *builder,
-                                                    AST_Identifier *identifier)
+    BC_Value *bc_emit_identifier_lvalue(BC_Builder *builder, AST_Identifier *identifier)
     {
-        assert(false && "bc_emit_identifier_lvalue is not implemented!!!");
-        return nullptr;
+        auto decl = identifier->declaration;
+        assert(decl);
+
+        BC_Value *source_val = nullptr;
+        if (decl->kind == AST_Declaration_Kind::VARIABLE) {
+            source_val = bc_find_variable(builder, decl);
+        } else if (decl->kind == AST_Declaration_Kind::PARAMETER) {
+            source_val = bc_find_parameter(builder, decl);
+        } else if (decl->kind == AST_Declaration_Kind::CONSTANT) {
+            assert(false && "Cannot take the lvalue of a constant declaration.");
+        } else if (decl->kind == AST_Declaration_Kind::FUNCTION) {
+            auto func = bc_find_function(builder, decl);
+            auto type = func->type->pointer_to;
+            assert(type);
+            source_val = bc_value_new(builder, BC_Value_Kind::FUNCTION, type);
+            source_val->function = func;
+        } else {
+            assert(false);
+        }
+
+        assert(source_val);
+        return source_val;
     }
 
     BC_Value *bc_emit_call(BC_Builder *builder,
@@ -2496,12 +2502,12 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::ALLOCL:
+            case BC_Value_Kind::GLOBAL:
             case BC_Value_Kind::PARAM: {
                 string_builder_appendf(sb, "%%%s", value->global.name.data);
                 break;
             }
 
-            case BC_Value_Kind::GLOBAL: assert(false);
 
             case BC_Value_Kind::FUNCTION: {
                 string_builder_appendf(sb, "%s", value->function->name.data);

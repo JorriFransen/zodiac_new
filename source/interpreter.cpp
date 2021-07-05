@@ -1367,7 +1367,7 @@ namespace Zodiac
                     // @TODO: @Cleanup: There should be a general way to get a pointer from an lvalue
                     if (inst.a->kind == BC_Value_Kind::ALLOCL) {
                         Interpreter_LValue allocl_lval = interp_load_lvalue(interp, inst.a);
-                        assert(allocl_lval.kind);
+                        assert(allocl_lval.type);
                         pointer_type = allocl_lval.type->pointer_to;
                         assert(pointer_type);
                         auto index = frame->first_alloc_index + inst.a->allocl.index;

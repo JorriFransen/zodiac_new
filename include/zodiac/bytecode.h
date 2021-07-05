@@ -298,7 +298,8 @@ namespace Zodiac
                                          AST_Declaration *import_link,
                                          AST_Type *result_type);
 
-    BC_Value *bc_emit_identifier(BC_Builder *builder, AST_Identifier *identifier);
+    BC_Value *bc_emit_identifier(BC_Builder *builder, AST_Identifier *identifier,
+                                 AST_Expression *expression_context = nullptr);
     BC_Value *bc_emit_identifier_lvalue(BC_Builder *builder, AST_Identifier *identifier);
 
     BC_Value *bc_emit_call(BC_Builder *builder, BC_Function *callee,
