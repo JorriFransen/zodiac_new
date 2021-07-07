@@ -7,8 +7,24 @@
 #include "command_line_parser.h"
 #include "zodiac_error.h"
 
+#define zodiac_disable_msvc_mc_warnings() \
+__pragma(warning(push)) \
+__pragma(warning(disable:4189)) \
+__pragma(warning(disable:4244)) \
+__pragma(warning(disable:4267)) \
+__pragma(warning(disable:4456))
+
+
 #ifdef WIN32
-#include "microsoft_craziness.h"
+	#ifdef _MSC_VER
+		zodiac_disable_msvc_mc_warnings()
+	#endif // _MSC_VER
+
+	#include "microsoft_craziness.h"
+
+	#ifdef _MSC_VER
+		#pragma warning(pop)
+	#endif // _MSC_VER
 #endif // WIN32
 
 namespace Zodiac

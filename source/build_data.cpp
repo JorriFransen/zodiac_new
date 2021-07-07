@@ -4,7 +4,16 @@
 
 #ifdef WIN32
 #define MICROSOFT_CRAZINESS_IMPLEMENTATION
-#include "microsoft_craziness.h"
+
+	#ifdef _MSC_VER
+		zodiac_disable_msvc_mc_warnings()
+	#endif // _MSC_VER
+
+	#include "microsoft_craziness.h"
+
+	#ifdef _MSC_VER
+		#pragma warning(disable:4189)
+	#endif // _MSC_VER
 #endif // WIN32
 
 namespace Zodiac

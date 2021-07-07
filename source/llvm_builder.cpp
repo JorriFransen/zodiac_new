@@ -7,6 +7,9 @@
 #include "string_builder.h"
 #include "temp_allocator.h"
 
+#ifdef _MSC_VER
+zodiac_disable_msvc_llvm_warnings()
+#endif // _MSC_VER
 #include <llvm/IR/InlineAsm.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Verifier.h>
@@ -16,6 +19,9 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif // _MSC_VER
 
 #include <tracy/Tracy.hpp>
 

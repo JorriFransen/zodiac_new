@@ -4,7 +4,26 @@
 #include "build_data.h"
 #include "stack.h"
 
+#define zodiac_disable_msvc_llvm_warnings() \
+__pragma(warning(push)) \
+__pragma(warning(disable:4100)) \
+__pragma(warning(disable:4244)) \
+__pragma(warning(disable:4245)) \
+__pragma(warning(disable:4267)) \
+__pragma(warning(disable:4310)) \
+__pragma(warning(disable:4324)) \
+__pragma(warning(disable:4458)) \
+__pragma(warning(disable:4624)) \
+__pragma(warning(disable:4996)) \
+
+
+#ifdef _MSC_VER
+zodiac_disable_msvc_llvm_warnings()
+#endif // _MSC_VER
 #include <llvm/IR/IRBuilder.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif // _MSC_VER
 
 namespace Zodiac
 {
