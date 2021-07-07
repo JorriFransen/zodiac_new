@@ -8,7 +8,11 @@
 namespace Zodiac
 {
 
+#ifdef _WIN32
+#define EMPTY_STRING ( String{} )
+#else
 #define EMPTY_STRING ( (String){ nullptr, 0 } )
+#endif
 
 #define CMD_OPTION_LIST                                                                  \
     DEFINE_OPTION(bool, help, false, "Print this message")                               \

@@ -173,7 +173,7 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
     Process_Info result = {};
 
     PROCESS_INFORMATION process_info;
-    STARTUPINFO startup_info;
+    STARTUPINFOW startup_info;
     ZeroMemory(&startup_info, sizeof(startup_info));
     ZeroMemory(&process_info, sizeof(process_info));
     startup_info.cb = sizeof(startup_info);

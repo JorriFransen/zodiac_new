@@ -13,13 +13,13 @@ struct String
     char *data = nullptr;
     int64_t length = 0;
 
-    char& operator[](int index)
+    char& operator[](int64_t index)
     {
         assert(index < length);
         return data[index];
     }
 
-    const char& operator[](int index) const
+    const char& operator[](int64_t index) const
     {
         assert(index < length);
         return data[index];

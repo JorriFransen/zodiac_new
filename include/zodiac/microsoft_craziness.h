@@ -14,7 +14,9 @@
 
 #ifdef WIN32
 
+#ifdef clang
 #pragma clang diagnostic ignored "-Wunused-variable"
+#endif
 
 //
 // HOW TO USE THIS CODE

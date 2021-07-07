@@ -75,7 +75,7 @@ target_include_directories(zodiac PRIVATE lib/dyncall-1.2/dynload)
 target_link_directories(zodiac PRIVATE lib/dyncall-1.2/dyncall lib/dyncall-1.2/dyncallback lib/dyncall-1.2/dynload)
 
 if(MSVC)
-    target_compile_options(zodiac PRIVATE /W3 /WX)
+    target_compile_options(zodiac PRIVATE /std:c++latest -D_CRT_SECURE_NO_WARNINGS)
 
     target_link_libraries(zodiac libdyncall_s libdyncallback_s libdynload_s)
     set(platform_libs shlwapi.lib)
