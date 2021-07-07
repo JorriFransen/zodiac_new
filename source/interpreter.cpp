@@ -413,8 +413,8 @@ namespace Zodiac
 #define IS_CMP_OP(op) \
     ((#op[0] == '=' && #op[1] == '=') || \
      (#op[0] == '!' && #op[1] == '=') || \
-     (#op[0] == '<') || \
-     (#op[0] == '>'))
+     (#op[0] == '<' && #op[1] != '<') || \
+     (#op[0] == '>' && #op[1] != '>'))
 
 #define BINOP_INT_(sign_, op) { \
     Interpreter_Value lhs = interp_load_value(interp, inst.a); \
@@ -485,18 +485,32 @@ namespace Zodiac
 #define BINOP_CMP_INT(op) BINOP_CMP_INT_(s, op)
 #define BINOP_CMP_UINT(op) BINOP_CMP_INT_(u, op)
 
+                case LSHIFT: {
+                    assert(inst.a->type->kind == AST_Type_Kind::INTEGER);
+                    if (inst.a->type->integer.sign) {
+                        BINOP_INT(<<);
+                    } else {
+                        BINOP_UINT(<<);
+                    }
+                }
 
-                case ADD_S: BINOP_INT(+);
-                case SUB_S: BINOP_INT(-);
-                case REM_S: BINOP_INT(%);
-                case MUL_S: BINOP_INT(*);
-                case DIV_S: BINOP_INT(/);
+                case ADD_S:    BINOP_INT(+);
+                case SUB_S:    BINOP_INT(-);
+                case REM_S:    BINOP_INT(%);
+                case MUL_S:    BINOP_INT(*);
+                case DIV_S:    BINOP_INT(/);
+                case OR_S:     BINOP_INT(|);
+                case AND_S:    BINOP_INT(&);
+                case RSHIFT_S: BINOP_INT(>>);
 
-                case ADD_U: BINOP_UINT(+);
-                case SUB_U: BINOP_UINT(-);
-                case REM_U: BINOP_UINT(%);
-                case MUL_U: BINOP_UINT(*);
-                case DIV_U: BINOP_UINT(/);
+                case ADD_U:    BINOP_UINT(+);
+                case SUB_U:    BINOP_UINT(-);
+                case REM_U:    BINOP_UINT(%);
+                case MUL_U:    BINOP_UINT(*);
+                case DIV_U:    BINOP_UINT(/);
+                case OR_U:     BINOP_UINT(|);
+                case AND_U:    BINOP_UINT(&);
+                case RSHIFT_U: BINOP_UINT(>>);
 
                 case EQ_S:   BINOP_CMP_INT(==);
                 case NEQ_S:  BINOP_CMP_INT(!=);

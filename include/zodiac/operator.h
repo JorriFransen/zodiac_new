@@ -21,6 +21,11 @@ namespace Zodiac
         BINOP_REMAINDER,
         BINOP_MUL,
         BINOP_DIV,
+        BINOP_LSHIFT,
+        BINOP_RSHIFT,
+
+        BINOP_AND,
+        BINOP_OR,
     };
 
     enum Unary_Operator

@@ -119,6 +119,25 @@ restart:
             return token_create(fp, kind, atom); \
         }
 
+#define __3_CHAR_TOKEN_CASE(_c1, kind1, _c2, kind2, _c3, kind3) \
+        case _c1: { \
+            auto fp = get_file_pos(ld); \
+            auto ccp = current_char_ptr(ld); \
+            uint64_t len = 2; \
+            Token_Kind kind = TOK_INVALID; \
+            if (peek_char(ld, 1) == _c2) { \
+                kind = kind2; \
+            } else if (peek_char(ld, 1) == _c3) { \
+                kind = kind3; \
+            } else { \
+                kind = kind1; \
+                len = 1; \
+            } \
+            advance(ld, len); \
+            auto atom = atom_get(&ld->lexer->build_data->atom_table, ccp, len); \
+            return token_create(fp, kind, atom); \
+        }
+
     switch (c) {
         __1_CHAR_TOKEN_CASE('#', TOK_POUND);
         __1_CHAR_TOKEN_CASE(':', TOK_COLON);
@@ -138,12 +157,15 @@ restart:
         __1_CHAR_TOKEN_CASE('*', TOK_STAR);
         __1_CHAR_TOKEN_CASE('%', TOK_PERCENT);
 
+        __2_CHAR_TOKEN_CASE('&', TOK_AND, '&', TOK_AND_AND);
+        __2_CHAR_TOKEN_CASE('|', TOK_OR, '|', TOK_OR_OR);
         __2_CHAR_TOKEN_CASE('.', TOK_DOT, '.', TOK_DOT_DOT);
-        __2_CHAR_TOKEN_CASE('<', TOK_LT, '=', TOK_LTEQ);
-        __2_CHAR_TOKEN_CASE('>', TOK_GT, '=', TOK_GTEQ);
         __2_CHAR_TOKEN_CASE('=', TOK_EQ, '=', TOK_EQ_EQ);
         __2_CHAR_TOKEN_CASE('-', TOK_MINUS, '>', TOK_RARROW);
         __2_CHAR_TOKEN_CASE('!', TOK_BANG, '=', TOK_NEQ);
+
+        __3_CHAR_TOKEN_CASE('<', TOK_LT, '=', TOK_LTEQ, '<', TOK_LSHIFT);
+        __3_CHAR_TOKEN_CASE('>', TOK_GT, '=', TOK_GTEQ, '>', TOK_RSHIFT);
 
         case '/': {
             if (peek_char(ld, 1) == '/') {

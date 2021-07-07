@@ -43,6 +43,12 @@ namespace Zodiac
     DEFINE_TOKEN(TOK_COMMA),                               \
     DEFINE_TOKEN(TOK_DOLLAR),                              \
     DEFINE_TOKEN(TOK_BANG),                                \
+    DEFINE_TOKEN(TOK_AND),                                 \
+    DEFINE_TOKEN(TOK_AND_AND),                             \
+    DEFINE_TOKEN(TOK_OR),                                  \
+    DEFINE_TOKEN(TOK_OR_OR),                               \
+    DEFINE_TOKEN(TOK_LSHIFT),                              \
+    DEFINE_TOKEN(TOK_RSHIFT),                              \
                                                            \
     DEFINE_TOKEN(TOK_LPAREN),                              \
     DEFINE_TOKEN(TOK_RPAREN),                              \

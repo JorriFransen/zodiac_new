@@ -1598,8 +1598,12 @@ void print_expression_ptn(Expression_PTN *expression, uint64_t indent)
                 case BINOP_ADD:        printf(" + "); break;
                 case BINOP_SUB:        printf(" - "); break;
                 case BINOP_REMAINDER:  printf(" %% "); break;
-                case BINOP_MUL:        printf("  *"); break;
+                case BINOP_MUL:        printf(" * "); break;
                 case BINOP_DIV:        printf(" / "); break;
+                case BINOP_LSHIFT:     printf(" << "); break;
+                case BINOP_RSHIFT:     printf(" >> "); break;
+                case BINOP_OR:         printf(" | "); break;
+                case BINOP_AND:        printf(" & "); break;
             }
             print_expression_ptn(expression->binary.rhs, 0);
             printf(")");

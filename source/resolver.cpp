@@ -2057,6 +2057,15 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 assert(parent_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
                 assert(parent_decl->flags & AST_NODE_FLAG_TYPED);
 
+                if (expression->dot.kind != AST_Dot_Expression_Kind::UNKNOWN) {
+                    assert(expression->flags & AST_NODE_FLAG_RESOLVED_ID);
+                    assert(expression->flags & AST_NODE_FLAG_TYPED);
+                    assert(expression->dot.kind == AST_Dot_Expression_Kind::MODULE_MEMBER);
+                    return true;
+                }
+                assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN);
+
+
                 AST_Module *ast_module = parent_decl->import.ast_module;
                 assert(ast_module);
                 // assert(ast_module->flags & AST_NODE_FLAG_RESOLVED_ID);
@@ -2083,7 +2092,6 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
                 assert(child_decl->type);
                 assert(child_decl->flags & AST_NODE_FLAG_TYPED);
 
-                assert(expression->dot.kind == AST_Dot_Expression_Kind::UNKNOWN);
                 expression->dot.kind = AST_Dot_Expression_Kind::MODULE_MEMBER;
 
                 expression->dot.child_decl = child_decl;
