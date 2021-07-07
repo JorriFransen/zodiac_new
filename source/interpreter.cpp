@@ -311,7 +311,7 @@ namespace Zodiac
 
                     if (dest.type->kind == AST_Type_Kind::ARRAY ||
                         dest.type->kind == AST_Type_Kind::STRUCTURE ||
-                        dest.type->kind == AST_Type_Kind::ARRAY) {
+                        dest.type->kind == AST_Type_Kind::UNION) {
 
                         assert(dest.kind == Interp_LValue_Kind::ALLOCL);
                         auto dest_ptr = interp->local_stack.buffer[dest.index];
@@ -1590,7 +1590,7 @@ namespace Zodiac
 
                 auto frame = stack_top_ptr(&interp->frames);
                 auto alloc_index = frame->first_alloc_index + bc_val->allocl.index;
-                assert(stack_count(&interp->temp_stack) > alloc_index);
+                assert(stack_count(&interp->local_stack) > alloc_index);
 
                 Interpreter_Value *value = &interp->local_stack.buffer[alloc_index];
 
