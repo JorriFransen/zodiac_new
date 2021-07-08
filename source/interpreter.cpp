@@ -814,7 +814,7 @@ namespace Zodiac
 
                         auto index = bc_allocl->allocl.index;
                         assert(index < new_frame.local_count);
-                        new_frame.locals[bc_allocl->allocl.index] = alloc_value;
+                        new_frame.locals[index] = alloc_value;
                     }
 
                     advance_ip = false;
@@ -1659,8 +1659,11 @@ namespace Zodiac
             case BC_Value_Kind::ALLOCL: {
                 assert(bc_val->type->kind == AST_Type_Kind::POINTER);
 
-                auto frame = stack_top_ptr(&interp->frames);
                 auto index = bc_val->allocl.index;
+
+#ifndef NDEBUG
+                auto frame = stack_top_ptr(&interp->frames);
+#endif
                 assert(index < frame->local_count);
 
                 result.kind = Interp_LValue_Kind::ALLOCL;
