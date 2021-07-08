@@ -209,9 +209,6 @@ restart:
             break;
         }
     }
-
-    assert(false);
-    return {};
 }
 
 Token lex_keyword_or_identifier(Lexer_Data *ld)

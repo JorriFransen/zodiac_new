@@ -74,25 +74,23 @@ int64_t atom_to_s64(const Atom& atom, uint64_t base /*= 10*/)
 
     uint64_t start_index = 0;
     bool negate = false;
-    if (atom.data[0] == '-')
-    {
+    if (atom.data[0] == '-') {
         negate = true;
         start_index = 1;
     }
 
-    for (uint64_t i = start_index; i < atom.length; i++)
-    {
+    for (uint64_t i = start_index; i < atom.length; i++) {
         result *= base;
         uint64_t digit_value = _digit_value(atom.data[i]);
         result += digit_value;
     }
 
-    if (negate)
-    {
-        result = -result;
+    int64_t _result = result;
+    if (negate) {
+        _result = -_result;
     }
 
-    return result;
+    return _result;
 }
 
 uint64_t atom_to_u64(const Atom& atom, uint64_t base /*= 10*/)

@@ -111,7 +111,7 @@ bool parser_is_mul_op(Token_Stream *ts);
 
 Unary_Operator parser_parse_unary_op(Token_Stream *ts);
 
-void parser_report_unexpected_token(Parser *parser, Token_Stream *ts, const Token &tok);
+void parser_report_unexpected_token(Parser *parser, const Token &tok);
 
 bool parser_make_escape_char(char c, char *dest);
 

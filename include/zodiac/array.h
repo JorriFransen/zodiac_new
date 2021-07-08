@@ -21,13 +21,13 @@ struct Array
     int64_t capacity = 0;
     Allocator *allocator = nullptr;
 
-    Element_Type& operator[](int index)
+    Element_Type& operator[](int64_t index)
     {
         assert(index < count);
         return data[index];
     }
 
-    const Element_Type& operator[](int index) const
+    const Element_Type& operator[](int64_t index) const
     {
         assert(index < count);
         return data[index];

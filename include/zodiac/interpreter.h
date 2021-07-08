@@ -13,17 +13,6 @@ namespace Zodiac
         BC_Block *block = nullptr;
     };
 
-    struct Interp_Stack_Frame
-    {
-        BC_Function *function = nullptr;
-        Interp_Instruction_Pointer ip = {};
-        int64_t first_arg_index = 0;
-        int64_t first_temp_index = 0;
-        int64_t first_alloc_index = 0;
-        int64_t result_index = -1;
-        uint8_t *previous_alloc_sp = nullptr;
-    };
-
     struct Interpreter_Value
     {
         AST_Type *type = nullptr;
@@ -52,6 +41,20 @@ namespace Zodiac
         Interp_LValue_Kind kind = Interp_LValue_Kind::INVALID;
         AST_Type *type = nullptr;
         int64_t index = 0;
+    };
+
+    struct Interp_Stack_Frame
+    {
+        BC_Function *function = nullptr;
+        Interp_Instruction_Pointer ip = {};
+        int64_t first_arg_index = 0;
+        int64_t first_temp_index = 0;
+        int64_t first_alloc_index = 0;
+        int64_t result_index = -1;
+        uint8_t *previous_alloc_sp = nullptr;
+
+        Interpreter_Value *locals = nullptr;
+        int64_t local_count = 0;
     };
 
     struct Interpreter

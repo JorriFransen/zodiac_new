@@ -26,7 +26,7 @@ Unicode_String widen(Allocator *allocator, const char *cstr);
 
 String narrow(Allocator *allocator, const Unicode_String &wide_str);
 
-Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args);
+Process_Info os_execute_process(const String &command, const String &args);
 }
 
 #endif // #ifdef WIN32

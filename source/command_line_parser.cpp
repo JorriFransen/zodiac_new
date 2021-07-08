@@ -67,10 +67,8 @@ namespace Zodiac
             for (int64_t j = 0; j < arg.length; j++) {
                 auto c = arg[j];
 
-                if (c == '=')
-                {
-                    if (length)
-                    {
+                if (c == '=') {
+                    if (length) {
                         String token = string_ref(arg.data + begin, length);
                         array_append(tokens, token);
                     }
@@ -79,20 +77,18 @@ namespace Zodiac
                     begin = j + 1;
 
                     array_append(tokens, string_ref("="));
-                }
-                else if (c == '-' || c == '_' || c == '.' || c == '/' || c == '\\' ||
-                         is_alpha_num(c))
-                {
+
+                } else if (c == '-' || c == '_' || c == '.' || c == '/' || c == '\\' ||
+                           is_alpha_num(c)) {
+
                     length++;
-                }
-                else
-                {
+
+                } else {
                     assert(false);
                 }
             }
 
-            if (length)
-            {
+            if (length) {
                 String token = string_ref(arg.data + begin, length);
                 array_append(tokens, token);
             }
@@ -103,8 +99,7 @@ namespace Zodiac
     {
         OPC opc = { tokens, 0 };
 
-        while (opc.current_index < opc.tokens.count)
-        {
+        while (opc.current_index < opc.tokens.count) {
             auto option = current_token(&opc);
             advance(&opc);
 
@@ -113,33 +108,24 @@ namespace Zodiac
 
             bool invalid_path = false;
 
-            if (string_starts_with(option, "-"))
-            {
-                if (string_starts_with(option, "--"))
-                {
+            if (string_starts_with(option, "-")) {
+                if (string_starts_with(option, "--")) {
                     option_name = string_ref(option.data + 2, option.length - 2);
-                }
-                else
-                {
+                } else {
                     option_name = string_ref(option.data + 1, option.length - 1);
                 }
-            }
-            else if (!options->file_path.data)
-            {
-                if (is_regular_file(option))
-                {
+
+            } else if (!options->file_path.data) {
+                if (is_regular_file(option)) {
                     options->file_path = option;
                     continue;
-                }
-                else
-                {
+                } else {
                     valid = false;
                     invalid_path = true;
                     fprintf(stderr, "zodiac: Invalid FILE_PATH: '%s'\n", option.data);
                 }
-            }
-            else
-            {
+
+            } else {
                 valid = false;
                 invalid_path = true;
                 fprintf(stderr, "zodiac: Invalid option: '%s'\n", option.data);
@@ -147,10 +133,8 @@ namespace Zodiac
                         options->file_path.data);
             }
 
-            if (!valid)
-            {
-                if (!invalid_path)
-                {
+            if (!valid) {
+                if (!invalid_path) {
                     fprintf(stderr, "zodiac: Invalid option format: '%.*s'\n",
                             (int)option.length, option.data);
                 }
@@ -159,49 +143,37 @@ namespace Zodiac
 
             const Option_Template *ot = nullptr;
 
-            for (uint64_t ti = 0; ti < STATIC_ARRAY_LENGTH(option_templates); ti++)
-            {
+            for (uint64_t ti = 0; ti < STATIC_ARRAY_LENGTH(option_templates); ti++) {
                 auto cot = &option_templates[ti];
-                if (string_equal(string_ref(cot->name), option_name))
-                {
+                if (string_equal(string_ref(cot->name), option_name)) {
                     ot = cot;
                     break;
                 }
             }
 
-            if (!ot)
-            {
+            if (!ot) {
                 fprintf(stderr, "zodiac: Unknown option: '%.*s'\n",
                         (int)option.length, option.data);
                 return false;
             }
 
-            switch (ot->kind)
-            {
+            switch (ot->kind) {
                 case OT_Kind_invalid: assert(false);
 
-                case OT_Kind_bool:
-                {
+                case OT_Kind_bool: {
                     bool value = true;
-                    if (tokens_remaining(&opc))
-                    {
+                    if (tokens_remaining(&opc)) {
                         auto next = current_token(&opc);
 
-                        if (string_equal(next, "="))
-                        {
+                        if (string_equal(next, "=")) {
                             advance(&opc);
                             auto val_str = current_token(&opc);
 
-                            if (string_equal(val_str, "true"))
-                            {
+                            if (string_equal(val_str, "true")) {
                                 value = true;
-                            }
-                            else if (string_equal(val_str, "false"))
-                            {
+                            } else if (string_equal(val_str, "false")) {
                                 value = false;
-                            }
-                            else
-                            {
+                            } else {
                                 fprintf(stderr,
                                         "zodiac: Invalid value for boolean option: '%.*s'\n",
                                         (int)val_str.length, val_str.data);
@@ -217,30 +189,21 @@ namespace Zodiac
                     break;
                 }
 
-                case OT_Kind_String:
-                {
-                    bool valid = true;
-                    if (!tokens_remaining(&opc))
-                    {
+                case OT_Kind_String: {
+                    if (!tokens_remaining(&opc)) {
                         valid = false;
-                    }
-                    else
-                    {
+                    } else {
                         auto eq = current_token(&opc);
-                        if (!string_equal(eq, "="))
-                        {
+                        if (!string_equal(eq, "=")) {
                             valid = false;
-                        }
-                        else advance(&opc);
+                        } else advance(&opc);
                     }
 
-                    if (!tokens_remaining(&opc))
-                    {
+                    if (!tokens_remaining(&opc)) {
                         valid = false;
                     }
 
-                    if (!valid)
-                    {
+                    if (!valid) {
                         fprintf(stderr, "zodiac: Execpted '=value' after string option: '-%s'\n",
                                 ot->name);
                         return false;
@@ -285,14 +248,12 @@ namespace Zodiac
         printf("\noptions:\n");
 
         size_t longest_option_length = 0;
-        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++)
-        {
+        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++) {
             auto len = strlen(option_templates[i].name);
             if (len > longest_option_length) longest_option_length = len;
         }
 
-        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++)
-        {
+        for (uint64_t i = 0; i < STATIC_ARRAY_LENGTH(option_templates); i++) {
             auto &ot = option_templates[i];
             printf("-%s", ot.name);
 
@@ -300,8 +261,7 @@ namespace Zodiac
             auto space_count = longest_option_length + 4 - name_len;
             printf("%*s", (int)space_count, "");
 
-            if (ot.description)
-            {
+            if (ot.description) {
                 printf("%s", ot.description);
             }
             printf("\n");

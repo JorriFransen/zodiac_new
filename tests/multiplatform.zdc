@@ -9,7 +9,7 @@ main :: func() -> s64
     std.print("Hello, World! from multiple platforms...\n");
     // @assert(false);
 
-    @syscall(1, 1, "Test!\n", 6);
+    // @syscall(1, 1, "Test!\n", 6);
 
     std.print_num(42);
     std.print("\n");

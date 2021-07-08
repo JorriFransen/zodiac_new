@@ -29,7 +29,7 @@ struct Process_Info
     String error_sring = {};
 };
 
-Process_Info execute_process(Allocator *allocator, const String &command, const String &args);
+Process_Info execute_process(const String &command, const String &args);
 
 
 String narrow(Allocator *allocator, const Unicode_String &wide_string);

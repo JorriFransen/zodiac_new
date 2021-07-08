@@ -40,6 +40,8 @@ namespace Zodiac
     struct AST_Type_Spec;
     struct AST_Type;
 
+    typedef unsigned int uint;
+
     union Integer_Literal
     {
         uint64_t u64;
@@ -49,16 +51,19 @@ namespace Zodiac
         int32_t s32;
 
         uint16_t u16;
-        int32_t s16;
+        int16_t s16;
 
         uint8_t u8;
         int8_t s8;
     };
 
+    typedef float r32;
+    typedef double r64;
+
     struct Float_Literal
     {
-        float r32;
-        double r64;
+        r32 r32;
+        r64 r64;
     };
 
     struct Const_Value

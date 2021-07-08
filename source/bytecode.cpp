@@ -1834,11 +1834,11 @@ namespace Zodiac
             d = literal_expr->float_literal.r64;
         } else if (literal_expr->kind == AST_Expression_Kind::INTEGER_LITERAL) {
             if (type == Builtin::type_float) {
-                f = literal_expr->integer_literal.s32;
+                f = (r32)literal_expr->integer_literal.s32;
                 d = literal_expr->integer_literal.s32;
             } else if (type == Builtin::type_double) {
-                f = literal_expr->integer_literal.s64;
-                d = literal_expr->integer_literal.s64;
+                f = (r32)literal_expr->integer_literal.s64;
+                d = (r64)literal_expr->integer_literal.s64;
             } else {
                 assert(false);
             }

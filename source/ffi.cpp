@@ -51,8 +51,7 @@ namespace Zodiac {
         return result;
     }
 
-    bool ffi_load_function(FFI_Context *ffi, const Atom &fn_name, AST_Type *fn_type,
-                           FFI_Function_Data *fn_data)
+    bool ffi_load_function(FFI_Context *ffi, const Atom &fn_name, FFI_Function_Data *fn_data)
     {
         assert(fn_data);
 

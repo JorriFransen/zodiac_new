@@ -14,6 +14,7 @@ namespace Zodiac
     char callback_handler(DCCallback *cb, DCArgs *args, DCValue *result, void *_userdata)
     {
         ZoneScopedN("callback_handler");
+        assert(cb);
 
         assert(_userdata);
         auto userdata = (uint8_t *)_userdata;
@@ -1183,10 +1184,10 @@ namespace Zodiac
     uint##size##_t new_val = 0; \
     switch (operand.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.u8; break; \
-        case 16: new_val = operand.integer_literal.u16; break; \
-        case 32: new_val = operand.integer_literal.u32; break; \
-        case 64: new_val = operand.integer_literal.u64; break; \
+        case 8: new_val =  (uint##size##_t)operand.integer_literal.u8; break; \
+        case 16: new_val = (uint##size##_t)operand.integer_literal.u16; break; \
+        case 32: new_val = (uint##size##_t)operand.integer_literal.u32; break; \
+        case 64: new_val = (uint##size##_t)operand.integer_literal.u64; break; \
     } \
     interp_store(interp, &new_val, dest_lval.type->pointer_to, dest_lval); \
     break; \
@@ -1216,10 +1217,10 @@ namespace Zodiac
     int##size##_t new_val; \
     switch (dest_lvalue.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.s8; break;\
-        case 16: new_val = operand.integer_literal.s16; break;\
-        case 32: new_val = operand.integer_literal.s32; break;\
-        case 64: new_val = operand.integer_literal.s64; break;\
+        case 8: new_val =  (int##size##_t)operand.integer_literal.s8; break;\
+        case 16: new_val = (int##size##_t)operand.integer_literal.s16; break;\
+        case 32: new_val = (int##size##_t)operand.integer_literal.s32; break;\
+        case 64: new_val = (int##size##_t)operand.integer_literal.s64; break;\
     } \
     auto source_type = dest_lvalue.type->pointer_to; \
     assert(source_type); \
@@ -1250,10 +1251,10 @@ namespace Zodiac
     uint##size##_t new_val; \
     switch (operand.type->bit_size) { \
         default: assert(false); \
-        case 8: new_val = operand.integer_literal.u8; break;\
-        case 16: new_val = operand.integer_literal.u16; break;\
-        case 32: new_val = operand.integer_literal.u32; break;\
-        case 64: new_val = operand.integer_literal.u64; break;\
+        case 8: new_val =  (uint##size##_t)operand.integer_literal.u8; break;\
+        case 16: new_val = (uint##size##_t)operand.integer_literal.u16; break;\
+        case 32: new_val = (uint##size##_t)operand.integer_literal.u32; break;\
+        case 64: new_val = (uint##size##_t)operand.integer_literal.u64; break;\
     } \
     auto source_type = dest_lvalue.type->pointer_to; \
     assert(source_type); \
@@ -1283,7 +1284,7 @@ namespace Zodiac
                     assert(dest_lvalue.type->integer.sign);
 
 #define F_TO_S_CASE_INT_SIZE(size) case size: { \
-    int##size##_t new_value = v; \
+    auto new_value = (int##size##_t)v; \
     assert(dest_lvalue.type->pointer_to); \
     interp_store(interp, &new_value, dest_lvalue.type->pointer_to, \
                  dest_lvalue); \
@@ -1327,10 +1328,10 @@ namespace Zodiac
     Float_Literal fl; \
     switch (operand.type->bit_size) { \
         default: assert(false); \
-        case 8: fl.r##size = operand.integer_literal.s8; break; \
-        case 16: fl.r##size = operand.integer_literal.s16; break; \
-        case 32: fl.r##size = operand.integer_literal.s32; break; \
-        case 64: fl.r##size = operand.integer_literal.s64; break; \
+        case 8: fl.r##size = (r##size)operand.integer_literal.s8; break; \
+        case 16: fl.r##size = (r##size)operand.integer_literal.s16; break; \
+        case 32: fl.r##size = (r##size)operand.integer_literal.s32; break; \
+        case 64: fl.r##size = (r##size)operand.integer_literal.s64; break; \
     } \
     auto source_type = dest_lvalue.type->pointer_to; \
     assert(source_type); \
@@ -1363,7 +1364,11 @@ namespace Zodiac
 
                     switch (dest_lvalue.type->bit_size) {
                         default: assert(false);
-                        case 32: result_value.float_literal.r32 = operand.float_literal.r64; break;
+
+                        case 32:
+                             result_value.float_literal.r32 = (r32)operand.float_literal.r64;
+                             break;
+
                         case 64: result_value.float_literal.r64 = operand.float_literal.r32; break;
                     }
 
@@ -1799,6 +1804,7 @@ namespace Zodiac
     void interp_store(Interpreter *interp, Interpreter_Value source, void *dest_ptr,
                       AST_Type *dest_type)
     {
+        assert(interp);
         assert(dest_ptr);
         assert(dest_type->kind == AST_Type_Kind::POINTER);
         assert(dest_type->pointer.base == source.type);
@@ -1821,8 +1827,8 @@ namespace Zodiac
             case AST_Type_Kind::FLOAT: {
                 switch (source.type->bit_size) {
                     default: assert(false);
-                    case 32: *(float*)dest_ptr = source.float_literal.r32;
-                    case 64: *(float*)dest_ptr = source.float_literal.r64;
+                    case 32: *(r32*)dest_ptr = source.float_literal.r32; break;
+                    case 64: *(r64*)dest_ptr = source.float_literal.r64; break;
                 }
                 break;
             }
@@ -2013,7 +2019,7 @@ namespace Zodiac
     {
         for (int64_t i = 0; i < foreign_functions.count; i++) {
             auto func = foreign_functions[i];
-            bool found = ffi_load_function(&interp->ffi, func->name, func->type, &func->ffi_data);
+            bool found = ffi_load_function(&interp->ffi, func->name, &func->ffi_data);
             if (!found) {
                 fprintf(stderr, "Did not find foreign function: '%s'\n", func->name.data);
             }

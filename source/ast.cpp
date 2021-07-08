@@ -264,8 +264,7 @@ namespace Zodiac
                         auto param_decl = ast_create_declaration_from_ptn(ast_builder,
                                                                           ptn_params[i],
                                                                           param_ts,
-                                                                          param_scope,
-                                                                          ast_module);
+                                                                          param_scope);
                         assert(param_decl);
 
                         array_append(&ast_param_decls, param_decl);
@@ -364,8 +363,7 @@ namespace Zodiac
 
                         auto ast_param_decl =
                             ast_create_declaration_from_ptn(ast_builder, ptn_param,
-                                                            ast_param_ts, param_scope,
-                                                            ast_module);
+                                                            ast_param_ts, param_scope);
 
                         assert(ast_param_decl);
 
@@ -445,8 +443,7 @@ namespace Zodiac
 
                         auto ast_param_decl =
                             ast_create_declaration_from_ptn(ast_builder, ptn_param,
-                                                            ast_param_ts, param_scope,
-                                                            ast_module);
+                                                            ast_param_ts, param_scope);
 
                         assert(ast_param_decl);
 
@@ -629,8 +626,7 @@ namespace Zodiac
     AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Parameter_PTN *ptn,
                                                      AST_Type_Spec *type_spec,
-                                                     Scope *scope,
-                                                     AST_Module *ast_module)
+                                                     Scope *scope)
     {
         auto ast_ident = ast_create_identifier_from_ptn(ast_builder, ptn->identifier, scope);
         assert(ast_ident);
@@ -1131,7 +1127,8 @@ namespace Zodiac
                             bucket_array_add(&case_expressions, case_expr);
                         }
 
-                        case_expr_count += ptn_exprs.count;
+                        assert(ptn_exprs.count < UINT32_MAX);
+                        case_expr_count += (uint32_t)ptn_exprs.count;
 
                     }
 
@@ -2643,7 +2640,7 @@ namespace Zodiac
         result->switch_stmt.expression = expression;
         result->switch_stmt.default_case = nullptr;
         array_init(allocator, &result->switch_stmt.cases, case_count);
-        result->switch_stmt.case_expr_count = -1;
+        result->switch_stmt.case_expr_count = 0;
         result->switch_stmt.allow_incomplete = allow_incomplete;
 
         return result;

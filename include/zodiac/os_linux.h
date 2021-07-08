@@ -23,7 +23,7 @@ const char *os_get_cwd(Allocator *allocator);
 
 const String os_read_file_string(Allocator *allocator, const String &path);
 
-Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args);
+Process_Info os_execute_process(const String &command, const String &args);
 
 int64_t os_syscall(Array<int64_t> args);
 

@@ -672,7 +672,7 @@ namespace Zodiac
     AST_Declaration *ast_create_declaration_from_ptn(AST_Builder *ast_builder,
                                                      Parameter_PTN *ptn,
                                                      AST_Type_Spec *type_spec,
-                                                     Scope *scope, AST_Module *ast_module);
+                                                     Scope *scope);
 
     AST_Declaration *ast_create_enum_member_from_ptn(AST_Builder *ast_builder, PT_Node *ptn,
                                                      Scope *scope);

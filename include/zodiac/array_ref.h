@@ -22,13 +22,13 @@ struct Array_Ref
 
     constexpr Array_Ref(const Array<Element_Type> &arr) : data(arr.data), count(arr.count) {}
 
-    Element_Type& operator[](int index)
+    Element_Type& operator[](int64_t index)
     {
         assert(index < count);
         return data[index];
     }
 
-    const Element_Type& operator[](int index) const
+    const Element_Type& operator[](int64_t index) const
     {
         assert(index < count);
         return data[index];

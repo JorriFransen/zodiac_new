@@ -84,6 +84,7 @@ const String os_normalize_path(Allocator *allocator, const String &path)
 
 const char *os_get_cwd(Allocator *allocator)
 {
+    assert(allocator);
     assert(false);
     return nullptr;
 }
@@ -117,17 +118,15 @@ String os_read_file_string(Allocator *allocator, const String &path)
 
 Unicode_String widen(Allocator *allocator, const String &str)
 {
-    if (str.length == 0)
-    {
+    if (str.length == 0) {
         assert(str.data == nullptr);
         return {};
     }
 
     auto size = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED,
-                                    str.data, str.length + 1,
+                                    str.data, (int)str.length + 1,
                                     nullptr, 0);
-    if (size == 0)
-    {
+    if (size == 0) {
         assert(false);
     }
 
@@ -135,7 +134,7 @@ Unicode_String widen(Allocator *allocator, const String &str)
 #ifndef NDEBUG
     auto written_size =
 #endif
-        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, str.data, str.length + 1, buf, size);
+        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, str.data, (int)str.length + 1, buf, size);
     assert(written_size == size);
 
     return unicode_string_ref((LPCWSTR)buf, size - 1);
@@ -149,7 +148,7 @@ Unicode_String widen(Allocator *allocator, const char *cstr)
 String narrow(Allocator *allocator, const Unicode_String &wide_str)
 {
     auto required_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
-                                             wide_str.wchars, wide_str.length,
+                                             wide_str.wchars, (int)wide_str.length,
                                              nullptr, 0, nullptr, nullptr);
 
     assert(required_size);
@@ -158,7 +157,7 @@ String narrow(Allocator *allocator, const Unicode_String &wide_str)
     result.data = alloc_array<char>(allocator, required_size + 1);
 
     auto written_size = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
-                                            wide_str.wchars, wide_str.length,
+                                            wide_str.wchars, (int)wide_str.length,
                                             result.data, required_size + 1,
                                             nullptr, nullptr);
 
@@ -168,7 +167,7 @@ String narrow(Allocator *allocator, const Unicode_String &wide_str)
     return result;
 }
 
-Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args)
+Process_Info os_execute_process(const String &command, const String &args)
 {
     Process_Info result = {};
 
@@ -187,8 +186,7 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
                                    nullptr, nullptr, true, 0, nullptr,
                                    nullptr, &startup_info, &process_info);
 
-    if (!proc_res)
-    {
+    if (!proc_res) {
         auto err = GetLastError();
         LPSTR message_buf = nullptr;
         size_t size = FormatMessageA((FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -201,9 +199,8 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
         LocalFree(message_buf);
 
         result.success = false;
-    }
-    else
-    {
+
+    } else {
         WaitForSingleObject(process_info.hProcess, INFINITE);
 
         DWORD exit_code;
@@ -227,6 +224,7 @@ Process_Info os_execute_process(Allocator *allocator, const String &command, con
 int64_t os_syscall(Array<int64_t> args)
 {
     assert(false && "Syscall is not supported on windows...");
+    assert(args.data);
     return 0;
 }
 

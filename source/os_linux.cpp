@@ -164,7 +164,7 @@ const String os_read_file_string(Allocator *allocator, const String &path)
     return result;
 }
 
-Process_Info os_execute_process(Allocator *allocator, const String &command, const String &args)
+Process_Info os_execute_process(const String &command, const String &args)
 {
     assert(allocator);
     assert(command.length);

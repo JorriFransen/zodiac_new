@@ -64,7 +64,7 @@ namespace Zodiac
 {
     struct Builtin
     {
-        static uint64_t pointer_size;
+        static uint pointer_size;
 
 #define DEFINE_BUILTIN_ATOM(name) static Atom atom_ ##name;
 #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) static Atom atom_ ##name;

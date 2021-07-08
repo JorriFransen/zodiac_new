@@ -33,6 +33,8 @@ main :: func() -> s64
     @assert(double_sum >= 6.996);
     @assert(double_sum >= 6.9960001);
 
+    std.print_floatln(42);
+
     return @cast(s64, sum);
 }
 

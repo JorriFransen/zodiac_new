@@ -6,7 +6,7 @@
 namespace Zodiac
 {
 
-uint64_t Builtin::pointer_size = 64;
+uint Builtin::pointer_size = 64;
 
 #define DEFINE_BUILTIN_ATOM(name) Atom Builtin::atom_ ##name = {};
 #define DEFINE_BUILTIN_TYPE(name, kind, size, signed) Atom Builtin::atom_ ##name = {};

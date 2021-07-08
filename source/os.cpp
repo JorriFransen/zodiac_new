@@ -56,9 +56,9 @@ const char *get_cwd(Allocator *allocator)
     return os_get_cwd(allocator);
 }
 
-Process_Info execute_process(Allocator *allocator, const String &command, const String &args)
+Process_Info execute_process(const String &command, const String &args)
 {
-    return os_execute_process(allocator, command, args);
+    return os_execute_process(command, args);
 }
 
 }
