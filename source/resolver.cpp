@@ -96,6 +96,7 @@ void resolver_init(Allocator *allocator, Resolver *resolver,
 void resolver_start(Resolver *resolver)
 {
     // Don't do anything when not running threaded
+    assert(resolver);
 }
 
 Resolve_Result resolver_finish(Resolver *resolver)
@@ -727,7 +728,7 @@ bool try_parse_job(Resolver *resolver, Parse_Job *job)
 bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
 {
     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
-    AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
+    AST_Declaration *flat_decl = static_cast<AST_Declaration *>(job->ast_node);
 
     // if (resolver->build_data->options->verbose) {
     //     if (decl->identifier) {
@@ -750,15 +751,15 @@ bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
     //     }
     // }
 
-    assert(decl->flat);
+    assert(flat_decl->flat);
 
     bool result = true;
 
     AST_Node *waiting_on = nullptr;
-    int64_t was_waiting_on = decl->flat->waiting_on;
+    int64_t was_waiting_on = flat_decl->flat->waiting_on;
 
-    for (int64_t i = decl->flat->waiting_on; i < decl->flat->nodes.count; i++) {
-        AST_Node **p_node = decl->flat->nodes[i];
+    for (int64_t i = flat_decl->flat->waiting_on; i < flat_decl->flat->nodes.count; i++) {
+        AST_Node **p_node = flat_decl->flat->nodes[i];
         AST_Node *node = *p_node;
 
         switch (node->kind) {
@@ -783,13 +784,13 @@ bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
                 auto expr = static_cast<AST_Expression *>(node);
                 result = try_resolve_expression(resolver, expr);
 
-                if (decl->kind == AST_Declaration_Kind::FUNCTION && result &&
+                if (flat_decl->kind == AST_Declaration_Kind::FUNCTION && result &&
                     expr->kind == AST_Expression_Kind::CALL) {
 
                     auto callee = expr->call.callee_declaration;
                     assert(callee);
                     if (callee->kind == AST_Declaration_Kind::FUNCTION) {
-                        array_append_unique(&decl->function.called_functions, callee);
+                        array_append_unique(&flat_decl->function.called_functions, callee);
                     } else {
                         assert(callee->kind == AST_Declaration_Kind::VARIABLE ||
                                callee->kind == AST_Declaration_Kind::PARAMETER);
@@ -821,7 +822,7 @@ bool try_resolve_job(Resolver *resolver, Resolve_Job *job)
             else
                 waiting_on = node;
 
-            decl->flat->waiting_on = i;
+            flat_decl->flat->waiting_on = i;
 
             if (i > was_waiting_on)
                 resolver->progressed = true;
@@ -859,16 +860,16 @@ bool try_size_job(Resolver *resolver, Size_Job *job)
     }
 
     assert(job->ast_node->kind == AST_Node_Kind::DECLARATION);
-    AST_Declaration *decl = static_cast<AST_Declaration *>(job->ast_node);
-    assert(decl->type || decl->kind == AST_Declaration_Kind::IMPORT ||
-           decl->kind == AST_Declaration_Kind::USING);
-           assert(decl->flags & AST_NODE_FLAG_RESOLVED_ID);
-           assert(decl->flags & AST_NODE_FLAG_TYPED);
+    AST_Declaration *flat_decl = static_cast<AST_Declaration *>(job->ast_node);
+    assert(flat_decl->type || flat_decl->kind == AST_Declaration_Kind::IMPORT ||
+           flat_decl->kind == AST_Declaration_Kind::USING);
+           assert(flat_decl->flags & AST_NODE_FLAG_RESOLVED_ID);
+           assert(flat_decl->flags & AST_NODE_FLAG_TYPED);
 
     bool result = true;
 
-    for (int64_t i = 0; i < decl->flat->nodes.count; i++) {
-        AST_Node **p_node = decl->flat->nodes[i];
+    for (int64_t i = 0; i < flat_decl->flat->nodes.count; i++) {
+        AST_Node **p_node = flat_decl->flat->nodes[i];
         AST_Node *node = *p_node;
 
         if (node->flags & AST_NODE_FLAG_SIZED) {
@@ -1257,9 +1258,9 @@ bool try_resolve_declaration(Resolver *resolver, AST_Declaration *declaration)
             if (!all_members_resolved)
                 return false;
 
-            AST_Type *enum_type = find_or_create_enum_type(
-            resolver, declaration, mem_type, declaration->enum_decl.member_scope,
-            declaration->scope);
+            AST_Type *enum_type =
+                find_or_create_enum_type(resolver, declaration, mem_type,
+                                         declaration->enum_decl.member_scope);
 
             assert(enum_type->enum_type.unique_member_values.count == 0);
             array_init(resolver->allocator, &enum_type->enum_type.unique_member_values);
@@ -2632,8 +2633,6 @@ bool try_resolve_expression(Resolver *resolver, AST_Expression *expression)
 
 #undef _ENSURE_ARGS_ARE_TYPED
 
-            assert(false);
-
             break;
         }
 
@@ -3484,6 +3483,7 @@ bool try_size_expression(Resolver *resolver, AST_Expression *expression)
 
 bool try_size_type(Resolver *resolver, AST_Type *type)
 {
+    assert(resolver);
     assert(!(type->flags & AST_NODE_FLAG_SIZED));
 
     switch (type->kind) {
@@ -3645,6 +3645,7 @@ AST_Type *infer_type(AST_Node *ast_node)
 
 AST_Declaration *enclosing_function(Resolver *resolver, Scope *scope)
 {
+    assert(resolver);
     assert(scope->kind != Scope_Kind::PARAMETER);
 
     while (scope->kind != Scope_Kind::MODULE) {
@@ -4443,8 +4444,7 @@ bool resolver_import_from_static_if(Resolver *resolver, AST_Declaration *decl,
 
 AST_Type *find_or_create_enum_type(Resolver *resolver,
                                    AST_Declaration *enum_decl,
-                                   AST_Type *base_type, Scope *mem_scope,
-                                   Scope *current_scope)
+                                   AST_Type *base_type, Scope *mem_scope)
 {
     assert(enum_decl->kind == AST_Declaration_Kind::ENUM);
 
@@ -4549,8 +4549,8 @@ void resolver_check_circular_dependencies(Resolver *resolver)
                                 Zodiac_Error_Kind::CIRCULAR_DEPENDENCY,
                                 first_err_node, "Circular dependency detected");
 
-            for (int64_t i = dup_index; i < nodes_in_chain.count; i++) {
-                AST_Node *w = nodes_in_chain[i];
+            for (int64_t j = dup_index; j < nodes_in_chain.count; j++) {
+                AST_Node *w = nodes_in_chain[j];
                 // zodiac_report_info(resolver->build_data, w, "...");
                 auto waiter = static_cast<AST_Declaration *>(w);
                 auto wait_on = static_cast<AST_Declaration *>(waiter->waiting_on);

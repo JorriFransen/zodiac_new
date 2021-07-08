@@ -92,7 +92,7 @@ const String string_from_int(Allocator *allocator, int64_t val)
 
         while (val > 0) {
             auto d = val % 10;
-            buf[buf_size - 2 - length] = d + '0';
+            buf[buf_size - 2 - length] = (char)d + '0';
             val /= 10;
             length++;
         }
