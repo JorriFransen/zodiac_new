@@ -47,10 +47,12 @@ namespace Zodiac
     {
         BC_Function *function = nullptr;
         Interp_Instruction_Pointer ip = {};
-        int64_t first_arg_index = 0;
         int64_t first_temp_index = 0;
         int64_t result_index = -1;
         uint8_t *previous_alloc_sp = nullptr;
+
+        Interpreter_Value *args = nullptr;
+        int64_t arg_count = 0;
 
         Interpreter_Value *locals = nullptr;
         int64_t local_count = 0;
@@ -99,7 +101,6 @@ namespace Zodiac
                            Array<BC_Function *>functions,
                            Array<BC_Function *> foreign_functions);
     void interpreter_start(Interpreter *interp, BC_Function *entry_funcm,
-                           int64_t first_arg_index = 0,
                            int64_t first_temp_index = 1,// @TODO: FIXME: CLEANUP: Why o why would this be 1???
                            int64_t return_value_index = 0);
 

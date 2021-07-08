@@ -29,7 +29,6 @@ namespace Zodiac
 
         auto func_type = bc_func->type;
 
-        auto first_arg_index = stack_count(&interp->arg_stack);
         auto first_temp_index = stack_count(&interp->temp_stack);
 
         for (int64_t i = 0; i < func_type->function.param_types.count; i++) {
@@ -123,7 +122,7 @@ namespace Zodiac
             stack_push(&interp->temp_stack, return_val);
         }
 
-        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, return_value_index);
+        interpreter_start(interp, bc_func, first_temp_index, return_value_index);
 
         if (return_value_index != -1) {
             // We have just poppped this of at the end of interpreter_start,
@@ -239,7 +238,6 @@ namespace Zodiac
     }
 
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
-                           int64_t first_arg_index /*= 0*/,
                            int64_t first_temp_index /*= 1*/,
                            int64_t return_value_index /*= 0*/)
     {
@@ -264,16 +262,58 @@ namespace Zodiac
                 .block = entry_func->blocks[0],
             },
 
-            .first_arg_index = first_arg_index,
             .first_temp_index = first_temp_index,
             .result_index = return_value_index,
             .previous_alloc_sp = interp->alloc_sp,
         };
 
+        assert(entry_func->parameters.count <= stack_count(&interp->arg_stack));
+
+        auto arg_count = entry_func->parameters.count;
+        if (arg_count) {
+            first_frame.arg_count = arg_count;
+
+            auto arg_size = sizeof(Interpreter_Value) * arg_count;
+            assert(interp->alloc_sp + arg_size < interp->alloc_stack_end);
+            first_frame.args = (Interpreter_Value *)interp->alloc_sp;
+            interp->alloc_sp += arg_size;
+        }
+
+        for (int64_t i = 0; i < arg_count; i++) {
+            auto bc_arg = entry_func->parameters[i];
+            assert(bc_arg->type->kind == AST_Type_Kind::POINTER);
+            auto arg_type = bc_arg->type->pointer.base;
+
+            Interpreter_Value arg_value = stack_peek(&interp->arg_stack,
+                                                     (arg_count - 1) - i);
+            assert(arg_value.type == arg_type);
+
+            if (arg_type->kind == AST_Type_Kind::ARRAY ||
+                arg_type->kind == AST_Type_Kind::STRUCTURE ||
+                arg_type->kind == AST_Type_Kind::UNION) {
+
+                auto old_ptr = arg_value.pointer;
+                assert(old_ptr);
+
+                assert(arg_type->bit_size % 8 == 0);
+                auto byte_size = arg_type->bit_size / 8;
+                assert(interp->alloc_sp + byte_size < interp->alloc_stack_end);
+                arg_value.pointer = interp->alloc_sp;
+                interp->alloc_sp += byte_size;
+
+                memcpy(arg_value.pointer, old_ptr, byte_size);
+            }
+
+            auto index = bc_arg->parameter.index;
+            assert(index < first_frame.arg_count);
+            first_frame.args[index] = arg_value;
+        }
+
+        if (arg_count) stack_pop(&interp->arg_stack, arg_count);
+
         stack_push(&interp->frames, first_frame);
 
         assert(entry_func->locals.count == 0);
-        assert(entry_func->parameters.count <= stack_count(&interp->arg_stack));
 
         for (int64_t i = 0; i < entry_func->temps.count; i++) {
             Interpreter_Value temp { .type = entry_func->temps[i]->type };
@@ -370,11 +410,16 @@ namespace Zodiac
                 }
 
                 case LOAD_PARAM: {
-                    Interpreter_Value param_val = interp_load_value(interp, inst.a);
+                    Interpreter_LValue source_lval = interp_load_lvalue(interp, inst.a);
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
 
-                    assert(dest.type == param_val.type);
-                    interp_store(interp, param_val, dest);
+                    assert(source_lval.type == dest.type);
+                    assert(source_lval.kind == Interp_LValue_Kind::PARAM);
+                    assert(source_lval.index < frame->arg_count);
+                    Interpreter_Value value = frame->args[source_lval.index];
+
+                    assert(dest.type == value.type);
+                    interp_store(interp, value, dest);
                     break;
                 }
 
@@ -671,7 +716,6 @@ namespace Zodiac
 
                         ZoneScopedN("Calling BC callback");
 
-                        auto first_arg_index_ = stack_count(&interp->arg_stack) - arg_count;
                         auto first_temp_index_ = stack_count(&interp->temp_stack);
 
                         int64_t return_value_index_ = -1;
@@ -689,8 +733,7 @@ namespace Zodiac
                             stack_push(&interp->temp_stack, return_val);
                         }
 
-                        interpreter_start(interp, bc_func, first_arg_index_, first_temp_index_,
-                                          return_value_index_);
+                        interpreter_start(interp, bc_func, first_temp_index_, return_value_index_);
 
                         if (return_value_index_ != -1) {
                             assert(inst.result);
@@ -774,9 +817,45 @@ namespace Zodiac
                     };
 
                     if (arg_count) {
-                        assert(stack_count(&interp->arg_stack) >= arg_count);
-                        new_frame.first_arg_index = stack_count(&interp->arg_stack) - arg_count;
+                        new_frame.arg_count = arg_count;
+
+                        auto arg_size = sizeof(Interpreter_Value) * arg_count;
+                        assert(interp->alloc_sp + arg_size < interp->alloc_stack_end);
+                        new_frame.args = (Interpreter_Value *)interp->alloc_sp;
+                        interp->alloc_sp += arg_size;
                     }
+
+                    for (int64_t i = 0; i < arg_count; i++) {
+                        auto bc_arg = callee->parameters[i];
+                        assert(bc_arg->type->kind == AST_Type_Kind::POINTER);
+                        auto arg_type = bc_arg->type->pointer.base;
+
+                        Interpreter_Value arg_value = stack_peek(&interp->arg_stack,
+                                                                 (arg_count - 1) - i);
+                        assert(arg_value.type == arg_type);
+
+                        if (arg_type->kind == AST_Type_Kind::ARRAY ||
+                            arg_type->kind == AST_Type_Kind::STRUCTURE ||
+                            arg_type->kind == AST_Type_Kind::UNION) {
+
+                            auto old_ptr = arg_value.pointer;
+                            assert(old_ptr);
+
+                            assert(arg_type->bit_size % 8 == 0);
+                            auto byte_size = arg_type->bit_size / 8;
+                            assert(interp->alloc_sp + byte_size < interp->alloc_stack_end);
+                            arg_value.pointer = interp->alloc_sp;
+                            interp->alloc_sp += byte_size;
+
+                            memcpy(arg_value.pointer, old_ptr, byte_size);
+                        }
+
+                        auto index = bc_arg->parameter.index;
+                        assert(index < new_frame.arg_count);
+                        new_frame.args[index] = arg_value;
+                    }
+
+                    if (arg_count) stack_pop(&interp->arg_stack, arg_count);
 
                     new_frame.first_temp_index = stack_count(&interp->temp_stack);
 
@@ -840,10 +919,6 @@ namespace Zodiac
                         interp->running = false;
                     }
 
-                    if (current_frame.function->parameters.count) {
-                        stack_pop(&interp->arg_stack, current_frame.function->parameters.count);
-                    }
-
                     assert(current_frame.result_index >= 0);
                     assert(stack_count(&interp->temp_stack) > current_frame.result_index);
 
@@ -870,10 +945,6 @@ namespace Zodiac
 
                     if (frame_count_on_entry == stack_count(&interp->frames)) {
                         interp->running = false;
-                    }
-
-                    if (old_frame.function->parameters.count) {
-                        stack_pop(&interp->arg_stack, old_frame.function->parameters.count);
                     }
 
                     if (old_frame.function->temps.count) {
@@ -1073,8 +1144,8 @@ namespace Zodiac
                     } else if (inst.a->kind == BC_Value_Kind::PARAM) {
                          Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
                         if (pointer_lval.type->kind == AST_Type_Kind::STRUCTURE) {
-                            Interpreter_Value *pointer_val =
-                                &interp->arg_stack.buffer[pointer_lval.index];
+                            assert(pointer_lval.index < frame->arg_count);
+                            Interpreter_Value *pointer_val = &frame->args[pointer_lval.index];
                             assert(pointer_val->pointer);
                             ptr = pointer_val->pointer;
                             struct_type = pointer_lval.type;
@@ -1605,10 +1676,24 @@ namespace Zodiac
             }
 
             case BC_Value_Kind::PARAM: {
+                assert(bc_val->type->kind == AST_Type_Kind::POINTER);
                 auto frame = stack_top_ptr(&interp->frames);
-                auto param_index = frame->first_arg_index + bc_val->parameter.index;
-                assert(stack_count(&interp->arg_stack) > param_index);
-                result = interp->arg_stack.buffer[param_index];
+
+                assert(bc_val->parameter.index < frame->arg_count);
+                Interpreter_Value *value = &frame->args[bc_val->parameter.index];
+
+                AST_Type *base_type = bc_val->type->pointer.base;
+                assert(base_type == value->type);
+
+                if (base_type->kind == AST_Type_Kind::ARRAY ||
+                    base_type->kind == AST_Type_Kind::STRUCTURE ||
+                    base_type->kind == AST_Type_Kind::UNION) {
+
+                    assert(value->pointer);
+                    result.pointer = value->pointer;
+                } else {
+                    result.pointer = &value->integer_literal;
+                }
                 break;
             }
 
@@ -1675,9 +1760,11 @@ namespace Zodiac
             case BC_Value_Kind::PARAM: {
                 assert(bc_val->type->kind == AST_Type_Kind::POINTER);
 
+                auto index = bc_val->parameter.index;
+#ifndef NDEBUG
                 auto frame = stack_top_ptr(&interp->frames);
-                auto index = frame->first_arg_index + bc_val->parameter.index;
-                assert(stack_count(&interp->arg_stack) > index);
+#endif
+                assert(index < frame->arg_count);
 
 
                 result.kind = Interp_LValue_Kind::PARAM;
@@ -1732,8 +1819,9 @@ namespace Zodiac
             }
 
             case Interp_LValue_Kind::PARAM: {
-                assert(stack_count(&interp->arg_stack) > dest.index);
-                dest_ptr = &interp->arg_stack.buffer[dest.index];
+                auto frame = stack_top_ptr(&interp->frames);
+                assert(dest.index < frame->arg_count);
+                dest_ptr = &frame->args[dest.index];
                 break;
             }
 
@@ -1878,8 +1966,9 @@ namespace Zodiac
             }
 
             case Interp_LValue_Kind::PARAM: {
-                dest_ptr = &interp->arg_stack.buffer[dest.index];
-                assert(stack_count(&interp->arg_stack) > dest.index);
+                auto frame = stack_top_ptr(&interp->frames);
+                assert(dest.index < frame->arg_count);
+                dest_ptr = &frame->args[dest.index];
                 break;
             }
 

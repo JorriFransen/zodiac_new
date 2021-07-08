@@ -15,14 +15,25 @@ Rect :: struct
     p2 : Vec2;
 }
 
-main :: func() -> s64
-{
+return_x :: func(v: Vec2) -> s64 {
+    result := v.x;
+    v.x = 4444;
+    return result;
+}
+
+main :: func() -> s64 {
     std.print("Struct assignment test\n");
+
+    v := make_vec2(111, 222);
+    x := return_x(v);    
+    std.print("x: "); std.print_numln(x);
+
+    @assert(v.x == 111);
 
     member_assignment();
     member_struct_assignment();
 
-    return 0;
+    return v.x;
 }
 
 member_struct_assignment :: func ()
@@ -43,7 +54,7 @@ member_assignment :: func ()
     a := make_vec2(11, 22);
     @assert(a.x == 11);
     @assert(a.y == 22);
-
+    
     b := a;
     @assert(b.x == 11);
     @assert(b.y == 22);
