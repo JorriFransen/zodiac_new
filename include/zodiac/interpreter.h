@@ -49,7 +49,6 @@ namespace Zodiac
         Interp_Instruction_Pointer ip = {};
         int64_t first_arg_index = 0;
         int64_t first_temp_index = 0;
-        int64_t first_alloc_index = 0;
         int64_t result_index = -1;
         uint8_t *previous_alloc_sp = nullptr;
 
@@ -68,7 +67,6 @@ namespace Zodiac
         bool foreigns_initialized = false;
 
         Stack<Interpreter_Value> temp_stack = {};
-        Stack<Interpreter_Value> local_stack = {};
         Stack<Interpreter_Value> arg_stack = {};
         Stack<Interp_Stack_Frame> frames = {};
 
@@ -103,7 +101,6 @@ namespace Zodiac
     void interpreter_start(Interpreter *interp, BC_Function *entry_funcm,
                            int64_t first_arg_index = 0,
                            int64_t first_temp_index = 1,// @TODO: FIXME: CLEANUP: Why o why would this be 1???
-                           int64_t first_local_index = 0,
                            int64_t return_value_index = 0);
 
     Interpreter_Value interp_load_value(Interpreter *interp, BC_Value *bc_val);

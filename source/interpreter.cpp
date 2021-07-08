@@ -31,7 +31,6 @@ namespace Zodiac
 
         auto first_arg_index = stack_count(&interp->arg_stack);
         auto first_temp_index = stack_count(&interp->temp_stack);
-        auto first_local_index = stack_count(&interp->local_stack);
 
         for (int64_t i = 0; i < func_type->function.param_types.count; i++) {
             auto param_type = func_type->function.param_types[i];
@@ -124,8 +123,7 @@ namespace Zodiac
             stack_push(&interp->temp_stack, return_val);
         }
 
-        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, first_local_index,
-                          return_value_index);
+        interpreter_start(interp, bc_func, first_arg_index, first_temp_index, return_value_index);
 
         if (return_value_index != -1) {
             // We have just poppped this of at the end of interpreter_start,
@@ -204,7 +202,6 @@ namespace Zodiac
         };
 
         stack_init(allocator, &result.temp_stack);
-        stack_init(allocator, &result.local_stack);
         stack_init(allocator, &result.arg_stack);
         stack_init(allocator, &result.frames);
 
@@ -227,7 +224,6 @@ namespace Zodiac
     void interpreter_free(Interpreter *interp)
     {
         stack_free(&interp->temp_stack);
-        stack_free(&interp->local_stack);
         stack_free(&interp->arg_stack);
         stack_free(&interp->frames);
 
@@ -245,7 +241,6 @@ namespace Zodiac
     void interpreter_start(Interpreter *interp, BC_Function *entry_func,
                            int64_t first_arg_index /*= 0*/,
                            int64_t first_temp_index /*= 1*/,
-                           int64_t first_local_index /*= 0*/,
                            int64_t return_value_index /*= 0*/)
     {
         assert(interp->functions.count);
@@ -271,7 +266,6 @@ namespace Zodiac
 
             .first_arg_index = first_arg_index,
             .first_temp_index = first_temp_index,
-            .first_alloc_index = first_local_index,
             .result_index = return_value_index,
             .previous_alloc_sp = interp->alloc_sp,
         };
@@ -315,7 +309,8 @@ namespace Zodiac
                         dest.type->kind == AST_Type_Kind::UNION) {
 
                         assert(dest.kind == Interp_LValue_Kind::ALLOCL);
-                        auto dest_ptr = interp->local_stack.buffer[dest.index];
+                        assert(dest.index < frame->local_count);
+                        auto dest_ptr = frame->locals[dest.index];
                         assert(dest_ptr.pointer);
                         assert(dest.type->bit_size % 8 == 0);
                         auto byte_size = dest.type->bit_size / 8;
@@ -365,7 +360,9 @@ namespace Zodiac
                     Interpreter_LValue dest = interp_load_lvalue(interp, inst.result);
 
                     assert(source_lval.type == dest.type);
-                    Interpreter_Value value = interp->local_stack.buffer[source_lval.index];
+                    assert(source_lval.kind == Interp_LValue_Kind::ALLOCL);
+                    assert(source_lval.index < frame->local_count);
+                    Interpreter_Value value = frame->locals[source_lval.index];
 
                     assert(dest.type == value.type);
                     interp_store(interp, value, dest);
@@ -676,7 +673,6 @@ namespace Zodiac
 
                         auto first_arg_index_ = stack_count(&interp->arg_stack) - arg_count;
                         auto first_temp_index_ = stack_count(&interp->temp_stack);
-                        auto first_local_index_ = stack_count(&interp->local_stack);
 
                         int64_t return_value_index_ = -1;
                         auto return_type_ = bc_func->type->function.return_type;
@@ -694,7 +690,7 @@ namespace Zodiac
                         }
 
                         interpreter_start(interp, bc_func, first_arg_index_, first_temp_index_,
-                                          first_local_index_, return_value_index_);
+                                          return_value_index_);
 
                         if (return_value_index_ != -1) {
                             assert(inst.result);
@@ -783,7 +779,6 @@ namespace Zodiac
                     }
 
                     new_frame.first_temp_index = stack_count(&interp->temp_stack);
-                    new_frame.first_alloc_index = stack_count(&interp->local_stack);
 
                     for (int64_t i = 0; i < callee->temps.count; i++) {
                         Interpreter_Value new_temp = {
@@ -792,11 +787,14 @@ namespace Zodiac
                         stack_push(&interp->temp_stack, new_temp);
                     }
 
+                    auto local_size = sizeof(Interpreter_Value) * callee->locals.count;
+                    assert(interp->alloc_sp + local_size < interp->alloc_stack_end);
+                    new_frame.locals = (Interpreter_Value *)interp->alloc_sp;
+                    new_frame.local_count = callee->locals.count;
+                    interp->alloc_sp += local_size;
+
                     for (int64_t i = 0; i < callee->locals.count; i++) {
                         auto bc_allocl = callee->locals[i];
-                        assert(stack_count(&interp->local_stack) ==
-                               bc_allocl->allocl.index + new_frame.first_alloc_index);
-
                         auto allocl_type = bc_allocl->type->pointer.base;
 
                         Interpreter_Value alloc_value = {
@@ -814,7 +812,9 @@ namespace Zodiac
                             interp->alloc_sp += byte_size;
                         }
 
-                        stack_push(&interp->local_stack, alloc_value);
+                        auto index = bc_allocl->allocl.index;
+                        assert(index < new_frame.local_count);
+                        new_frame.locals[bc_allocl->allocl.index] = alloc_value;
                     }
 
                     advance_ip = false;
@@ -842,10 +842,6 @@ namespace Zodiac
 
                     if (current_frame.function->parameters.count) {
                         stack_pop(&interp->arg_stack, current_frame.function->parameters.count);
-                    }
-
-                    if (current_frame.function->locals.count) {
-                        stack_pop(&interp->local_stack, current_frame.function->locals.count);
                     }
 
                     assert(current_frame.result_index >= 0);
@@ -882,10 +878,6 @@ namespace Zodiac
 
                     if (old_frame.function->temps.count) {
                         stack_pop(&interp->temp_stack, old_frame.function->temps.count);
-                    }
-
-                    if (old_frame.function->locals.count) {
-                        stack_pop(&interp->local_stack, old_frame.function->locals.count);
                     }
 
                     interp->alloc_sp = old_frame.previous_alloc_sp;
@@ -1003,8 +995,8 @@ namespace Zodiac
                     if (inst.a->kind == BC_Value_Kind::ALLOCL) {
                         Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
                         if (pointer_lval.type->kind == AST_Type_Kind::ARRAY) {
-                            Interpreter_Value *pointer_val =
-                                &interp->local_stack.buffer[pointer_lval.index];
+                            assert(pointer_lval.index < frame->local_count);
+                            Interpreter_Value *pointer_val = &frame->locals[pointer_lval.index];
                             assert(pointer_val->pointer);
                             ptr = pointer_val->pointer;
                         } else {
@@ -1070,8 +1062,8 @@ namespace Zodiac
                     if (inst.a->kind == BC_Value_Kind::ALLOCL) {
                         Interpreter_LValue pointer_lval = interp_load_lvalue(interp, inst.a);
                         if (pointer_lval.type->kind == AST_Type_Kind::STRUCTURE) {
-                            Interpreter_Value *pointer_val =
-                                &interp->local_stack.buffer[pointer_lval.index];
+                            assert(pointer_lval.index < frame->local_count);
+                            Interpreter_Value *pointer_val = &frame->locals[pointer_lval.index];
                             assert(pointer_val->pointer);
                             ptr = pointer_val->pointer;
                             struct_type = pointer_lval.type;
@@ -1389,8 +1381,8 @@ namespace Zodiac
                         assert(allocl_lval.type);
                         pointer_type = allocl_lval.type->pointer_to;
                         assert(pointer_type);
-                        auto index = frame->first_alloc_index + inst.a->allocl.index;
-                        Interpreter_Value *val_ptr = &interp->local_stack.buffer[index];
+                        assert(inst.a->allocl.index < frame->local_count);
+                        Interpreter_Value *val_ptr = &frame->locals[inst.a->allocl.index];
                         ptr = &val_ptr->pointer;
 
                     } else if (inst.a->kind == BC_Value_Kind::TEMP) {
@@ -1594,10 +1586,9 @@ namespace Zodiac
                 assert(bc_val->type->kind == AST_Type_Kind::POINTER);
 
                 auto frame = stack_top_ptr(&interp->frames);
-                auto alloc_index = frame->first_alloc_index + bc_val->allocl.index;
-                assert(stack_count(&interp->local_stack) > alloc_index);
 
-                Interpreter_Value *value = &interp->local_stack.buffer[alloc_index];
+                assert(bc_val->allocl.index < frame->local_count);
+                Interpreter_Value *value = &frame->locals[bc_val->allocl.index];
 
                 AST_Type *base_type = bc_val->type->pointer.base;
 
@@ -1669,9 +1660,8 @@ namespace Zodiac
                 assert(bc_val->type->kind == AST_Type_Kind::POINTER);
 
                 auto frame = stack_top_ptr(&interp->frames);
-                auto index = frame->first_alloc_index + bc_val->allocl.index;
-                assert(stack_count(&interp->local_stack) > index);
-
+                auto index = bc_val->allocl.index;
+                assert(index < frame->local_count);
 
                 result.kind = Interp_LValue_Kind::ALLOCL;
                 result.index = index;
@@ -1732,8 +1722,9 @@ namespace Zodiac
             }
 
             case Interp_LValue_Kind::ALLOCL: {
-                assert(stack_count(&interp->local_stack) > dest.index);
-                dest_ptr = &interp->local_stack.buffer[dest.index];
+                auto frame = stack_top_ptr(&interp->frames);
+                assert(dest.index < frame->local_count);
+                dest_ptr = &frame->locals[dest.index];
                 break;
             }
 
@@ -1877,8 +1868,9 @@ namespace Zodiac
             }
 
             case Interp_LValue_Kind::ALLOCL: {
-                dest_ptr = &interp->local_stack.buffer[dest.index];
-                assert(stack_count(&interp->local_stack) > dest.index);
+                auto frame = stack_top_ptr(&interp->frames);
+                assert(dest.index < frame->local_count);
+                dest_ptr = &frame->locals[dest.index];
                 break;
             }
 
