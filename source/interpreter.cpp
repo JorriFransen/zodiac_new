@@ -269,23 +269,23 @@ namespace Zodiac
 
         assert(entry_func->parameters.count <= stack_count(&interp->arg_stack));
 
-        auto arg_count = entry_func->parameters.count;
-        if (arg_count) {
-            first_frame.arg_count = arg_count;
+        auto entry_arg_count = entry_func->parameters.count;
+        if (entry_arg_count) {
+            first_frame.arg_count = entry_arg_count;
 
-            auto arg_size = sizeof(Interpreter_Value) * arg_count;
+            auto arg_size = sizeof(Interpreter_Value) * entry_arg_count;
             assert(interp->alloc_sp + arg_size < interp->alloc_stack_end);
             first_frame.args = (Interpreter_Value *)interp->alloc_sp;
             interp->alloc_sp += arg_size;
         }
 
-        for (int64_t i = 0; i < arg_count; i++) {
+        for (int64_t i = 0; i < entry_arg_count; i++) {
             auto bc_arg = entry_func->parameters[i];
             assert(bc_arg->type->kind == AST_Type_Kind::POINTER);
             auto arg_type = bc_arg->type->pointer.base;
 
             Interpreter_Value arg_value = stack_peek(&interp->arg_stack,
-                                                     (arg_count - 1) - i);
+                                                     (entry_arg_count - 1) - i);
             assert(arg_value.type == arg_type);
 
             if (arg_type->kind == AST_Type_Kind::ARRAY ||
@@ -309,7 +309,7 @@ namespace Zodiac
             first_frame.args[index] = arg_value;
         }
 
-        if (arg_count) stack_pop(&interp->arg_stack, arg_count);
+        if (entry_arg_count) stack_pop(&interp->arg_stack, entry_arg_count);
 
         stack_push(&interp->frames, first_frame);
 
