@@ -62,8 +62,8 @@ namespace Zodiac
 
     struct Float_Literal
     {
-        r32 r32;
-        r64 r64;
+        float  r32;
+        double r64;
     };
 
     struct Const_Value
