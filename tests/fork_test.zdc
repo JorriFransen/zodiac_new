@@ -17,6 +17,7 @@ main :: func() -> int {
         std.println("This is the child");
         std.print("Fork returned: "); std.print_numln(fork_res);
         return_value = 42;
+        // os.abort();
     } else {
         // Parent
         status : s32;
@@ -25,9 +26,17 @@ main :: func() -> int {
         std.println("This is the parent");
         std.print("Fork returned: "); std.print_numln(fork_res);
         std.print("Wait returned: "); std.print_numln(wait_res);
-        std.print("Wait status: "); std.print_numln(status);
+        // std.print("Wait status: "); std.print_numln(status);
 
-        std.print("WTERMSIG(0): "); std.print_numln(WTERMSIG(0));
+        if (WIFSIGNALED(status)) {
+            signal_status := WTERMSIG(status);
+            std.print("Signal status: "); std.print_numln(signal_status);
+        }
+
+        if (WIFSTOPPED(status)) {
+            stop_status := WSTOPSIG(status);
+            std.print("Stop status: "); std.print_numln(stop_status);
+        }
 
         if (WIFEXITED(status)) {
             exit_status := WEXITSTATUS(status);
@@ -39,14 +48,26 @@ main :: func() -> int {
     return return_value;
 }
 
+WEXITSTATUS :: func(status: s32) -> s32 {
+    return (status & 65280) >> 8;
+}
+
 WTERMSIG :: func(status: s32) -> s32 {
     return status & 127;
+}
+
+WSTOPSIG :: func(status: s32) -> s32 {
+    return WEXITSTATUS(status);
 }
 
 WIFEXITED :: func(status: s32) -> bool {
     return WTERMSIG(status) == 0;
 }
 
-WEXITSTATUS :: func(status: s32) -> s32 {
-    return (status & 65280) >> 8;
+WIFSIGNALED :: func(status: s32) -> bool {
+    return (((status) & 127) + 1) >> 1 > 1;
+}
+
+WIFSTOPPED :: func(status: s32) -> bool {
+    return ((status & 255) == 127);
 }
